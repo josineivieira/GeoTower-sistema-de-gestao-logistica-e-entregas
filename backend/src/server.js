@@ -118,6 +118,8 @@ app.use("/api/auth", require("./routes/auth"));
 app.use("/api/deliveries", require("./routes/delivery"));
 app.use("/api/admin", require("./routes/admin"));
 app.use("/api/admin/reconciliation", require("./routes/reconciliation"));
+// Meta routes (version/debug)
+app.use("/api/meta", require("./routes/meta"));
 
 // Health check
 app.get("/api/health", (req, res) => {

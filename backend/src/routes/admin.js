@@ -256,16 +256,27 @@ router.get("/deliveries/:id/documents/:documentType/download", auth, onlyAdmin, 
 
     // Normalize delivery first to ensure documents are properly parsed
     const normalized = normalizeDeliveryForResponse(delivery);
+    console.log(`[DOWNLOAD] Entrega normalizada, docs keys:`, Object.keys(normalized.documents || {}));
     const normalizedEntry = normalized.documents[documentType];
+    console.log(`[DOWNLOAD] Entry para tipo "${documentType}":`, JSON.stringify(normalizedEntry));
+    
     let docArray = Array.isArray(normalizedEntry) ? normalizedEntry : (normalizedEntry ? [normalizedEntry] : []);
+    console.log(`[DOWNLOAD] Array antes de processar:`, JSON.stringify(docArray));
+    
     // Converte elementos simples (string paths) em objetos { path }
-    docArray = docArray.map(el => {
+    docArray = docArray.map((el, i) => {
       if (!el) return el;
-      if (typeof el === 'string') return { path: el };
-      if (typeof el === 'object' && !el.path && !el.id && el.name) return { ...el, path: el.name };
+      if (typeof el === 'string') {
+        console.log(`[DOWNLOAD] Convertendo string [${i}] em objeto path: ${el}`);
+        return { path: el };
+      }
+      if (typeof el === 'object' && !el.path && !el.id && el.name) {
+        console.log(`[DOWNLOAD] Adicionando path a objeto [${i}] com name: ${el.name}`);
+        return { ...el, path: el.name };
+      }
       return el;
     });
-    console.log(`[DOWNLOAD] Documentos após normalizar:`, JSON.stringify(docArray));
+    console.log(`[DOWNLOAD] Documentos após processar:`, JSON.stringify(docArray));
     
     const idx = parseInt(req.query.index || '0', 10);
     if (isNaN(idx) || idx < 0 || idx >= docArray.length) {
@@ -275,6 +286,58 @@ router.get("/deliveries/:id/documents/:documentType/download", auth, onlyAdmin, 
     
     const docInfo = docArray[idx];
     console.log(`[DOWNLOAD] Informações do documento [${idx}]:`, JSON.stringify(docInfo));
+
+    // Se docInfo é uma string simples, trata como path direto
+    if (typeof docInfo === 'string') {
+      console.log(`[DOWNLOAD] docInfo é string simples, tratando como path: ${docInfo}`);
+      const simpleDocInfo = { path: docInfo };
+      
+      // Trata como arquivo local
+      const uploadsPath1 = path.join(__dirname, "../uploads");
+      const uploadsPath2 = path.join(__dirname, "../src/uploads");
+      const city = delivery.city || 'manaus';
+      
+      let filePath = null;
+      const candidate1 = path.join(uploadsPath1, simpleDocInfo.path);
+      const candidate2 = path.join(uploadsPath2, simpleDocInfo.path);
+      const candidate3 = path.join(uploadsPath1, city, simpleDocInfo.path);
+      const candidate4 = path.join(uploadsPath2, city, simpleDocInfo.path);
+      
+      if (fs.existsSync(candidate1)) filePath = candidate1;
+      else if (fs.existsSync(candidate2)) filePath = candidate2;
+      else if (fs.existsSync(candidate3)) filePath = candidate3;
+      else if (fs.existsSync(candidate4)) filePath = candidate4;
+      
+      console.log(`[DOWNLOAD] Testadas rotas para string: ${candidate1}, ${candidate2}, ${candidate3}, ${candidate4}`);
+      
+      if (!filePath) {
+        console.error(`[DOWNLOAD] Arquivo não encontrado: ${simpleDocInfo.path}`);
+        return res.status(404).json({ message: 'Arquivo não encontrado no servidor' });
+      }
+      
+      try {
+        const stat = fs.statSync(filePath);
+        const filename = path.basename(filePath);
+        console.log(`[DOWNLOAD] Arquivo encontrado, tamanho: ${stat.size} bytes`);
+        
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Length', stat.size);
+        
+        const readStream = fs.createReadStream(filePath);
+        readStream.on('error', (err) => {
+          console.error(`[DOWNLOAD] Erro ao ler arquivo:`, err.message);
+          if (!res.headersSent) {
+            res.status(500).json({ message: 'Erro ao ler arquivo' });
+          }
+        });
+        
+        console.log(`[DOWNLOAD] ✓ Iniciando stream do arquivo local: ${filename}`);
+        return readStream.pipe(res);
+      } catch (err) {
+        console.error(`[DOWNLOAD] ✗ Erro ao servir arquivo local:`, err && err.message ? err.message : err);
+        return res.status(500).json({ message: 'Erro ao servir arquivo' });
+      }
+    }
 
     // Se tem ID do Google Drive, baixa de lá
     if (docInfo && docInfo.id) {

@@ -56,19 +56,69 @@ function normalizeDeliveryForResponse(delivery) {
   d.documents = d.documents || {};
   for (const [k, v] of Object.entries(d.documents)) {
     if (!v) { d.documents[k] = null; continue; }
-    if (Array.isArray(v)) { d.documents[k] = v; continue; }
-    if (typeof v === 'string') {
-      // Try to parse as JSON first (e.g., '[{...}]' arrays)
-      try {
-        const parsed = JSON.parse(v);
-        if (Array.isArray(parsed)) {
-          d.documents[k] = parsed;
+    if (Array.isArray(v)) {
+      // Normalize array elements which may be JSON strings or double-encoded
+      const out = [];
+      for (const el of v) {
+        if (!el && el !== 0) continue;
+        if (typeof el === 'string') {
+          let parsed = el;
+          for (let i = 0; i < 5; i++) {
+            if (typeof parsed !== 'string') break;
+            try { parsed = JSON.parse(parsed); } catch (e) { break; }
+          }
+          if (Array.isArray(parsed)) {
+            for (const sub of parsed) {
+              if (typeof sub === 'string') {
+                try { out.push(JSON.parse(sub)); } catch (e) { out.push(sub); }
+              } else out.push(sub);
+            }
+          } else if (parsed && typeof parsed === 'object') {
+            out.push(parsed);
+          } else {
+            out.push(parsed);
+          }
         } else {
-          // Single object parsed
+          out.push(el);
+        }
+      }
+      d.documents[k] = out;
+      continue;
+    }
+    if (typeof v === 'string') {
+      // Try to robustly parse JSON strings, including nested/double-encoded JSON.
+      try {
+        let parsed = v;
+        // attempt repeated JSON.parse if the value is nested-encoded
+        for (let i = 0; i < 5; i++) {
+          if (typeof parsed !== 'string') break;
+          try {
+            parsed = JSON.parse(parsed);
+          } catch (err) {
+            break;
+          }
+        }
+
+        if (Array.isArray(parsed)) {
+          // If array elements are themselves JSON strings, parse them
+          d.documents[k] = parsed.map((el) => {
+            if (typeof el === 'string') {
+              try {
+                return JSON.parse(el);
+              } catch (e) {
+                return el;
+              }
+            }
+            return el;
+          });
+        } else if (parsed && typeof parsed === 'object') {
           d.documents[k] = [parsed];
+        } else {
+          // Fallback: comma-separated or single string entry
+          if (v.indexOf(',') !== -1) d.documents[k] = v.split(',').map(s => s.trim()).filter(Boolean);
+          else d.documents[k] = [v];
         }
       } catch (e) {
-        // Not JSON: treat as simple string or comma-separated
         if (v.indexOf(',') !== -1) d.documents[k] = v.split(',').map(s => s.trim()).filter(Boolean);
         else d.documents[k] = [v];
       }

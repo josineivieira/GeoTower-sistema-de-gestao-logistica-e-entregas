@@ -151,11 +151,10 @@ const DocumentUpload = ({
       </div>
 
       <div className="mt-3 flex gap-2 flex-wrap">
-        {((currentFiles && currentFiles.length) || (selectedFiles && selectedFiles.length)) ? (
-          <>
-            {currentFiles && currentFiles.length ? currentFiles.map((f, i) => renderPreview(f, i, false)) : null}
-            {selectedFiles && selectedFiles.length ? selectedFiles.map((f, i) => renderPreview(f, i, true)) : null}
-          </>
+        {currentFiles && currentFiles.length > 0 ? (
+          currentFiles.map((f, i) => renderPreview(f, i, false))
+        ) : selectedFiles && selectedFiles.length > 0 ? (
+          selectedFiles.map((f, i) => renderPreview(f, i, true))
         ) : (
           <div className="text-sm text-gray-500">Nenhuma foto anexada</div>
         )}

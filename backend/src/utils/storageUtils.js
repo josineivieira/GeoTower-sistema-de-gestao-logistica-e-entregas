@@ -58,8 +58,20 @@ function normalizeDeliveryForResponse(delivery) {
     if (!v) { d.documents[k] = null; continue; }
     if (Array.isArray(v)) { d.documents[k] = v; continue; }
     if (typeof v === 'string') {
-      if (v.indexOf(',') !== -1) d.documents[k] = v.split(',').map(s => s.trim()).filter(Boolean);
-      else d.documents[k] = [v];
+      // Try to parse as JSON first (e.g., '[{...}]' arrays)
+      try {
+        const parsed = JSON.parse(v);
+        if (Array.isArray(parsed)) {
+          d.documents[k] = parsed;
+        } else {
+          // Single object parsed
+          d.documents[k] = [parsed];
+        }
+      } catch (e) {
+        // Not JSON: treat as simple string or comma-separated
+        if (v.indexOf(',') !== -1) d.documents[k] = v.split(',').map(s => s.trim()).filter(Boolean);
+        else d.documents[k] = [v];
+      }
     }
   }
   return d;

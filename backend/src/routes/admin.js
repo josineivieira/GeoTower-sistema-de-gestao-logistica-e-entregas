@@ -1023,8 +1023,6 @@ router.get('/gdrive/test', auth, onlyAdmin, async (req, res) => {
   }
 });
 
-module.exports = router;
-
 // DEBUG: export drivers to JSON file (admin only) - useful for backup
 // Use: GET /api/admin/debug/export-drivers
 router.get('/debug/export-drivers', auth, onlyAdmin, async (req, res) => {
@@ -1042,3 +1040,5 @@ router.get('/debug/export-drivers', auth, onlyAdmin, async (req, res) => {
     return res.status(500).json({ success: false, message: 'Erro ao exportar drivers' });
   }
 });
+
+module.exports = router;

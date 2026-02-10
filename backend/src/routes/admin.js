@@ -981,6 +981,48 @@ router.get('/persistence/test', auth, onlyAdmin, async (req, res) => {
   }
 });
 
+// Google Drive test endpoint - verifies if Google Drive integration is working
+router.get('/gdrive/test', auth, onlyAdmin, async (req, res) => {
+  try {
+    console.log('[GDRIVE-TEST] Iniciando teste...');
+    
+    const { uploadFileToDrive } = require('../storage/gdrive');
+    
+    // Test file (1KB of random data)
+    const testBuffer = Buffer.from('GDRIVE_TEST_' + Date.now() + '_' + Math.random().toString(36).substring(7));
+    const testFilename = `TEST_GDRIVE_${Date.now()}.txt`;
+    
+    console.log('[GDRIVE-TEST] Tentando fazer upload de teste:', testFilename);
+    
+    const result = await uploadFileToDrive(testBuffer, testFilename, 'text/plain');
+    
+    console.log('[GDRIVE-TEST] ✓ Sucesso! Arquivo ID:', result.id);
+    
+    return res.json({ 
+      success: true, 
+      message: 'Google Drive está funcionando!',
+      fileId: result.id,
+      fileName: testFilename,
+      webViewLink: result.webViewLink,
+      folderId: process.env.GDRIVE_FOLDER_ID,
+      note: 'Arquivo de teste foi criado no Google Drive. Você pode deletá-lo manualmente.'
+    });
+  } catch (err) {
+    console.error('[GDRIVE-TEST] ✗ Erro:', err.message);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Google Drive NÃO está funcionando',
+      error: err.message,
+      troubleshooting: [
+        '1. Verifique se GOOGLE_CREDENTIALS_JSON está setado no Render',
+        '2. Verifique se GOOGLE_TOKEN_JSON está setado no Render',
+        '3. Verifique se GDRIVE_FOLDER_ID está setado no Render',
+        '4. Acesse https://drive.google.com/drive/folders/YOUR_FOLDER_ID para confirmar que você tem acesso'
+      ]
+    });
+  }
+});
+
 module.exports = router;
 
 // DEBUG: export drivers to JSON file (admin only) - useful for backup

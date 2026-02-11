@@ -74,12 +74,62 @@ async function ensureFreshCredentials(oAuth2Client) {
   }
 }
 
-async function uploadFileToDrive(buffer, filename, mimetype) {
+// Criar ou encontrar pasta de entrega
+async function createOrFindDeliveryFolder(deliveryNumber) {
+  try {
+    const auth = getOAuth2Client();
+    await ensureFreshCredentials(auth);
+    const parentFolderId = process.env.GDRIVE_FOLDER_ID;
+    
+    if (!parentFolderId) {
+      throw new Error('GDRIVE_FOLDER_ID não está definido nas variáveis de ambiente');
+    }
+
+    const drive = google.drive({ version: 'v3', auth });
+    const folderName = `${deliveryNumber}`;
+    
+    // Procurar por pasta existente com esse nome
+    console.log(`[GDRIVE] Procurando pasta: ${folderName} dentro de ${parentFolderId}`);
+    const searchRes = await drive.files.list({
+      q: `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and '${parentFolderId}' in parents and trashed=false`,
+      spaces: 'drive',
+      fields: 'files(id, name)',
+      pageSize: 1,
+    });
+
+    if (searchRes.data.files && searchRes.data.files.length > 0) {
+      const existingFolder = searchRes.data.files[0];
+      console.log(`[GDRIVE] ✓ Pasta encontrada: ${existingFolder.name} (ID: ${existingFolder.id})`);
+      return existingFolder.id;
+    }
+
+    // Se não encontrou, criar nova pasta
+    console.log(`[GDRIVE] Pasta não encontrada. Criando nova pasta: ${folderName}`);
+    const createRes = await drive.files.create({
+      requestBody: {
+        name: folderName,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [parentFolderId],
+      },
+      fields: 'id',
+    });
+
+    console.log(`[GDRIVE] ✓ Nova pasta criada: ${folderName} (ID: ${createRes.data.id})`);
+    return createRes.data.id;
+  } catch (err) {
+    console.error('[GDRIVE] ✗ Erro ao criar/encontrar pasta:', err.message);
+    throw err;
+  }
+}
+
+async function uploadFileToDrive(buffer, filename, mimetype, parentFolderId = null) {
   try {
     const auth = getOAuth2Client();
     // Garantir que temos um access token válido antes de tentar o upload
     try { await ensureFreshCredentials(auth); } catch (e) { /* continue to let upload fail with clear error */ }
-    const folderId = process.env.GDRIVE_FOLDER_ID;
+    
+    // Se não foi passado parentFolderId, usar a pasta padrão
+    let folderId = parentFolderId || process.env.GDRIVE_FOLDER_ID;
     
     if (!folderId) {
       throw new Error('GDRIVE_FOLDER_ID não está definido nas variáveis de ambiente');
@@ -108,7 +158,7 @@ async function uploadFileToDrive(buffer, filename, mimetype) {
   }
 }
 
-module.exports = { uploadFileToDrive };
+module.exports = { uploadFileToDrive, createOrFindDeliveryFolder };
 
 module.exports.getOAuth2Client = getOAuth2Client;
 module.exports.ensureFreshCredentials = ensureFreshCredentials;

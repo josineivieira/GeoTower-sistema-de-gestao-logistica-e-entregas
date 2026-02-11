@@ -185,10 +185,25 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
 
     const savedDriveFiles = [];
     let uploadFileToDrive = null;
+    let createOrFindDeliveryFolder = null;
+    let deliveryFolderId = null;
+    
     try {
       uploadFileToDrive = require("../storage/gdrive").uploadFileToDrive;
+      createOrFindDeliveryFolder = require("../storage/gdrive").createOrFindDeliveryFolder;
     } catch (err) {
       console.warn('[UPLOAD] Google Drive module unavailable:', err && err.message ? err.message : err);
+    }
+
+    // Criar ou encontrar pasta da entrega no Google Drive
+    if (typeof createOrFindDeliveryFolder === 'function') {
+      try {
+        deliveryFolderId = await createOrFindDeliveryFolder(delivery.deliveryNumber);
+        console.log(`[UPLOAD] ✓ Pasta de entrega obtida no Drive: ${deliveryFolderId}`);
+      } catch (err) {
+        console.warn('[UPLOAD] ⚠️ Falha ao criar/encontrar pasta de entrega:', err && err.message ? err.message : err);
+        // Continuar mesmo assim, os arquivos serão salvos na raiz da pasta principal
+      }
     }
 
     if (req.files && req.files.length) {
@@ -205,7 +220,7 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
           try {
             console.log(`[UPLOAD] Tentando Google Drive...`);
             const fileBuffer = file.buffer || fs.readFileSync(file.path);
-            const driveFile = await uploadFileToDrive(fileBuffer, finalFilename, file.mimetype);
+            const driveFile = await uploadFileToDrive(fileBuffer, finalFilename, file.mimetype, deliveryFolderId);
             fileEntry = { id: driveFile.id, name: finalFilename, link: driveFile.webViewLink || driveFile.webContentLink };
             console.log(`[UPLOAD] ✓ Google Drive OK: ${finalFilename} (ID: ${driveFile.id})`);
           } catch (err) {

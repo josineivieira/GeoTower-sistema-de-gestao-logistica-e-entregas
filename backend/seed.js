@@ -40,6 +40,7 @@ const seedDatabase = async () => {
 
     // Cria usuários de teste
     const adminPassword = await bcrypt.hash('admin123', 10);
+    const managerPassword = await bcrypt.hash('gerente123', 10);
     const driverPassword = await bcrypt.hash('driver123', 10);
 
     const admin = await Driver.create({
@@ -48,6 +49,16 @@ const seedDatabase = async () => {
       email: 'admin@test.com',
       fullName: 'Administrador',
       role: 'admin',
+      phoneNumber: '1199999999',
+      cnh: '12345678901'
+    });
+
+    const manager = await Driver.create({
+      username: 'gerente',
+      password: managerPassword,
+      email: 'gerente@test.com',
+      fullName: 'Gerente da Entrega',
+      role: 'manager',
       phoneNumber: '1199999999',
       cnh: '12345678901'
     });
@@ -74,6 +85,7 @@ const seedDatabase = async () => {
 
     console.log('✓ Usuários criados:');
     console.log('  - admin / admin123');
+    console.log('  - gerente / gerente123');
     console.log('  - motorista1 / driver123');
     console.log('  - motorista2 / driver123');
 

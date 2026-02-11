@@ -40,9 +40,11 @@ const seedData = () => {
   const crypto = require('crypto');
 
   const adminHash = crypto.createHash('sha256').update('admin123').digest('hex');
+  const managerHash = crypto.createHash('sha256').update('gerente123').digest('hex');
   const driverHash = crypto.createHash('sha256').update('driver123').digest('hex');
 
   const adminId = crypto.randomUUID();
+  const managerId = crypto.randomUUID();
   const driver1Id = crypto.randomUUID();
   const driver2Id = crypto.randomUUID();
 
@@ -51,6 +53,11 @@ const seedData = () => {
     INSERT INTO drivers (id, username, password, email, fullName, role, phoneNumber, cnh, createdAt)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(adminId, 'admin', adminHash, 'admin@test.com', 'Administrador', 'admin', '1199999999', '12345678901', Date.now());
+
+  db.prepare(`
+    INSERT INTO drivers (id, username, password, email, fullName, role, phoneNumber, cnh, createdAt)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(managerId, 'gerente', managerHash, 'gerente@test.com', 'Gerente da Entrega', 'manager', '1199999999', '12345678901', Date.now());
 
   db.prepare(`
     INSERT INTO drivers (id, username, password, email, fullName, role, phoneNumber, cnh, createdAt)

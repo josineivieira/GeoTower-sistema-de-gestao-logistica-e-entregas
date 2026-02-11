@@ -274,6 +274,89 @@ Obter detalhes motorista (admin)
 
 ---
 
+## Manager Routes (User Management)
+Requer autenticação e role `manager` ou `admin`
+
+### GET /admin/users
+Listar todos os usuários
+
+**Response:**
+```json
+{
+  "users": [
+    {
+      "_id": "user_id",
+      "username": "gerente",
+      "email": "gerente@test.com",
+      "name": "Gerente da Entrega",
+      "role": "manager"
+    }
+  ]
+}
+```
+
+---
+
+### POST /admin/users
+Criar novo usuário
+
+**Request:**
+```json
+{
+  "username": "novo_usuario",
+  "email": "novo@test.com",
+  "name": "Novo Usuário",
+  "password": "senha123",
+  "role": "driver"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Usuário criado com sucesso",
+  "user": { ... }
+}
+```
+
+---
+
+### PUT /admin/users/:id
+Atualizar usuário
+
+**Request:**
+```json
+{
+  "email": "novo@email.com",
+  "name": "Nome Atualizado",
+  "role": "manager"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Usuário atualizado com sucesso"
+}
+```
+
+---
+
+### DELETE /admin/users/:id
+Deletar usuário
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Usuário deletado com sucesso"
+}
+```
+
+---
+
 ## Error Responses
 
 ```json

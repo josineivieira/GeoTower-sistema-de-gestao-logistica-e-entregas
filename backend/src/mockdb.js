@@ -68,6 +68,7 @@ class MockDatabase {
 
     // Se não existir, cria dados iniciais
     const adminId = 'admin_' + crypto.randomUUID();
+    const managerId = 'manager_' + crypto.randomUUID();
     const driver1Id = 'driver1_' + crypto.randomUUID();
     const driver2Id = 'driver2_' + crypto.randomUUID();
 
@@ -84,6 +85,19 @@ class MockDatabase {
         name: 'Administrador',
         fullName: 'Administrador',
         role: 'admin',
+        phoneNumber: '1199999999',
+        cnh: '12345678901',
+        isActive: true,
+        createdAt: now.toISOString()
+      },
+      {
+        _id: managerId,
+        username: 'gerente',
+        password: hashPassword('gerente123'),
+        email: 'gerente@test.com',
+        name: 'Gerente',
+        fullName: 'Gerente da Entrega',
+        role: 'manager',
         phoneNumber: '1199999999',
         cnh: '12345678901',
         isActive: true,

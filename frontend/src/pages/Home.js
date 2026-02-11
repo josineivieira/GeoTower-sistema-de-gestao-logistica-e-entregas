@@ -158,32 +158,34 @@ const Home = () => {
               </div>
             </button>
 
-            <button
-              onClick={() => navigate('/usuarios')}
-              className="group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-purple-200 overflow-hidden text-left"
-            >
-              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-purple-100 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
+            {(user?.role === 'manager' || user?.role === 'admin') && (
+              <button
+                onClick={() => navigate('/usuarios')}
+                className="group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-purple-200 overflow-hidden text-left"
+              >
+                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-purple-100 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
 
-              <div className="relative z-10">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <FaUsers className="text-2xl text-white" />
+                <div className="relative z-10">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <FaUsers className="text-2xl text-white" />
+                  </div>
+
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Gerenciar Usuários
+                  </h2>
+                  <p className="text-gray-600 mb-4">
+                    Criar, editar e definir perfis de usuários (motorista, gerente, admin) - Acesso exclusivo para Gerentes
+                  </p>
+
+                  <div className="flex items-center gap-2 text-purple-600 font-semibold">
+                    <span>Acessar</span>
+                    <span className="text-lg group-hover:translate-x-1 transition-transform duration-300">
+                      →
+                    </span>
+                  </div>
                 </div>
-
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Gerenciar Usuários
-                </h2>
-                <p className="text-gray-600 mb-4">
-                  Criar, editar e definir perfis de usuários (admin, motorista)
-                </p>
-
-                <div className="flex items-center gap-2 text-purple-600 font-semibold">
-                  <span>Acessar</span>
-                  <span className="text-lg group-hover:translate-x-1 transition-transform duration-300">
-                    →
-                  </span>
-                </div>
-              </div>
-            </button>
+              </button>
+            )}
 
 
           </div>

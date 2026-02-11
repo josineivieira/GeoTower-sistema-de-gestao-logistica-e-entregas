@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import { adminService } from '../services/authService';
+import { useAuth } from '../services/authContext';
 import { FaArrowLeft, FaEdit, FaTrash, FaPlus, FaUser } from 'react-icons/fa';
 
 const UserManagement = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
@@ -20,8 +22,13 @@ const UserManagement = () => {
   });
 
   useEffect(() => {
+    // Proteger rota - só gerentes e admins podem acessar
+    if (!user || (user.role !== 'manager' && user.role !== 'admin')) {
+      navigate('/');
+      return;
+    }
     loadUsers();
-  }, []);
+  }, [user, navigate]);
 
   const loadUsers = async () => {
     try {
@@ -176,6 +183,7 @@ const UserManagement = () => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
                     <option value="driver">Motorista</option>
+                    <option value="manager">Gerente</option>
                     <option value="admin">Admin</option>
                   </select>
                 </div>
@@ -256,10 +264,12 @@ const UserManagement = () => {
                         <span className={`px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1 w-fit ${
                           user.role === 'admin'
                             ? 'bg-red-100 text-red-800'
+                            : user.role === 'manager'
+                            ? 'bg-purple-100 text-purple-800'
                             : 'bg-blue-100 text-blue-800'
                         }`}>
-                          {user.role === 'admin' ? '👑' : '🚗'}
-                          {user.role === 'admin' ? 'Admin' : 'Motorista'}
+                          {user.role === 'admin' ? '👑' : user.role === 'manager' ? '📋' : '🚗'}
+                          {user.role === 'admin' ? 'Admin' : user.role === 'manager' ? 'Gerente' : 'Motorista'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">

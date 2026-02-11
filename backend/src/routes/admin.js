@@ -6,6 +6,8 @@ const multer = require('multer');
 const os = require('os');
 const mockdb = require("../mockdb");
 const auth = require("../middleware/auth");
+const onlyAdminMiddleware = require("../middleware/adminOnly");
+const managerOnly = require("../middleware/managerOnly");
 const { normalizeDeliveryForResponse } = require("../utils/storageUtils");
 
 const router = express.Router();
@@ -753,7 +755,7 @@ router.delete("/deliveries/:id", auth, onlyAdmin, async (req, res) => {
  * GET /api/admin/users
  * Lista todos os usuários
  */
-router.get("/users", auth, onlyAdmin, async (req, res) => {
+router.get("/users", auth, managerOnly, async (req, res) => {
   try {
     const db = await getDb(req);
     const users = await db.find("drivers", {}) || [];
@@ -775,7 +777,7 @@ router.get("/users", auth, onlyAdmin, async (req, res) => {
  * POST /api/admin/users
  * Criar novo usuário
  */
-router.post("/users", auth, onlyAdmin, async (req, res) => {
+router.post("/users", auth, managerOnly, async (req, res) => {
   try {
     const { username, email, name, password, role } = req.body;
 
@@ -836,7 +838,7 @@ router.post("/users", auth, onlyAdmin, async (req, res) => {
  * PUT /api/admin/users/:id
  * Atualizar usuário
  */
-router.put("/users/:id", auth, onlyAdmin, async (req, res) => {
+router.put("/users/:id", auth, managerOnly, async (req, res) => {
   try {
     const { id } = req.params;
     const { email, name, role } = req.body;
@@ -871,7 +873,7 @@ router.put("/users/:id", auth, onlyAdmin, async (req, res) => {
  * DELETE /api/admin/users/:id
  * Deletar usuário
  */
-router.delete("/users/:id", auth, onlyAdmin, async (req, res) => {
+router.delete("/users/:id", auth, managerOnly, async (req, res) => {
   try {
     const { id } = req.params;
 

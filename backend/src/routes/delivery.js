@@ -209,8 +209,13 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
             fileEntry = { id: driveFile.id, name: finalFilename, link: driveFile.webViewLink || driveFile.webContentLink };
             console.log(`[UPLOAD] ✓ Google Drive OK: ${finalFilename} (ID: ${driveFile.id})`);
           } catch (err) {
-            console.warn(`[UPLOAD] Google Drive falhou:`, err && err.message ? err.message : err);
+            console.warn(`[UPLOAD] ⚠️  Google Drive FALHOU:`, err && err.message ? err.message : err);
+            console.warn(`[UPLOAD] Motivo: ${err && err.code ? 'HTTP ' + err.code + ' - ' : ''}${err && err.message ? err.message : 'erro desconhecido'}`);
+            console.warn(`[UPLOAD] ⚠️  Fazendo fallback para armazenamento local...`);
           }
+        }
+        else {
+          console.warn(`[UPLOAD] ⚠️  Google Drive module não disponível (uploadFileToDrive não é função)`);
         }
         
         // If Google Drive failed or unavailable, use local storage
@@ -219,8 +224,8 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
             const dest = path.join(containerDir, finalFilename);
             const fileBuffer = file.buffer || fs.readFileSync(file.path);
             fs.writeFileSync(dest, fileBuffer);
-            fileEntry = { name: finalFilename, path: path.join(city, containerFolder, finalFilename) };
-            console.log(`[UPLOAD] ✓ Arquivo salvo localmente: ${finalFilename}`);
+            fileEntry = { name: finalFilename, path: path.join(city, containerFolder, finalFilename), storage: 'local' };
+            console.log(`[UPLOAD] ✓ Arquivo salvo LOCALMENTE (não foi para Drive): ${finalFilename}`);
           } catch (err) {
             console.error(`[UPLOAD] ✗ Local save falhou:`, err && err.message ? err.message : err);
             continue; // skip this file

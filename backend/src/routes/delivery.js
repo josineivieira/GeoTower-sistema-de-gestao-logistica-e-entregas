@@ -235,8 +235,15 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
         // Add the entry (either Google Drive or local)
         if (fileEntry) {
           savedDriveFiles.push(fileEntry);
+          console.log(`[UPLOAD] ✅ Arquivo ${idx + 1} adicionado a savedDriveFiles. Total: ${savedDriveFiles.length}`);
         }
       }
+      
+      console.log(`[UPLOAD] ===== RESUMO DO UPLOAD =====`);
+      console.log(`[UPLOAD] Arquivos recebidos: ${req.files.length}`);
+      console.log(`[UPLOAD] Arquivos salvos com sucesso: ${savedDriveFiles.length}`);
+      console.log(`[UPLOAD] Tipo de documento: ${type}`);
+      console.log(`[UPLOAD] savedDriveFiles:`, JSON.stringify(savedDriveFiles));
 
       if (req.files.length > 0 && savedDriveFiles.length === 0) {
         console.error('[UPLOAD] Nenhum arquivo foi salvo durante upload. Aborting.');
@@ -259,6 +266,8 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
       const deduped = [];
       const seen = new Set();
       
+      console.log(`[UPLOAD] Antes dedup - existing: ${existing.length}, savedDriveFiles: ${savedDriveFiles.length}, total: ${allFiles.length}`);
+      
       for (const item of allFiles) {
         if (!item) continue;
         // Use id (Google Drive) or path (local) as unique key
@@ -270,6 +279,9 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
         seen.add(uniqueKey);
         deduped.push(item);
       }
+      
+      console.log(`[UPLOAD] Depois dedup: ${deduped.length} itens mantidos`);
+      console.log(`[UPLOAD] deduped array:`, JSON.stringify(deduped));
 
       // normalize: store arrays as JSON string, single item as string/object as before
       const normalizedDocs = {};

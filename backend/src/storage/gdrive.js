@@ -1,6 +1,7 @@
 const { google } = require('googleapis');
 const path = require('path');
 const fs = require('fs');
+const { Readable } = require('stream');
 
 // Carrega as credenciais do Google (você precisará gerar um arquivo credentials.json no Google Cloud Console)
 const CREDENTIALS_PATH = path.join(__dirname, '../../google-credentials.json');
@@ -40,7 +41,21 @@ function getOAuth2Client() {
       console.log('[GDRIVE] Token carregado e configurado');
       oAuth2Client.setCredentials(token);
     }
-    
+    // Quando o client obtiver/atualizar tokens (refresh automático), persista no disco
+    oAuth2Client.on && oAuth2Client.on('tokens', (tokens) => {
+      try {
+        let existing = {};
+        if (fs.existsSync(TOKEN_PATH)) {
+          existing = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf8')) || {};
+        }
+        const merged = Object.assign({}, existing, tokens);
+        fs.writeFileSync(TOKEN_PATH, JSON.stringify(merged));
+        console.log('[GDRIVE] Tokens atualizados e salvos em', TOKEN_PATH);
+      } catch (e) {
+        console.error('[GDRIVE] Falha ao salvar tokens:', e.message);
+      }
+    });
+
     return oAuth2Client;
   } catch (err) {
     console.error('[GDRIVE] Erro ao carregar OAuth2Client:', err.message);
@@ -48,9 +63,22 @@ function getOAuth2Client() {
   }
 }
 
+async function ensureFreshCredentials(oAuth2Client) {
+  try {
+    // This will trigger a refresh if needed and emit 'tokens' event
+    await oAuth2Client.getAccessToken();
+    return true;
+  } catch (err) {
+    console.error('[GDRIVE] Falha ao atualizar access token:', err && err.message ? err.message : err);
+    throw err;
+  }
+}
+
 async function uploadFileToDrive(buffer, filename, mimetype) {
   try {
     const auth = getOAuth2Client();
+    // Garantir que temos um access token válido antes de tentar o upload
+    try { await ensureFreshCredentials(auth); } catch (e) { /* continue to let upload fail with clear error */ }
     const folderId = process.env.GDRIVE_FOLDER_ID;
     
     if (!folderId) {
@@ -67,7 +95,7 @@ async function uploadFileToDrive(buffer, filename, mimetype) {
       },
       media: {
         mimeType: mimetype,
-        body: buffer instanceof Buffer ? buffer : Buffer.from(buffer),
+        body: Readable.from(buffer instanceof Buffer ? buffer : Buffer.from(buffer)),
       },
       fields: 'id,webViewLink,webContentLink',
     });
@@ -81,3 +109,6 @@ async function uploadFileToDrive(buffer, filename, mimetype) {
 }
 
 module.exports = { uploadFileToDrive };
+
+module.exports.getOAuth2Client = getOAuth2Client;
+module.exports.ensureFreshCredentials = ensureFreshCredentials;

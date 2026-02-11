@@ -73,9 +73,9 @@ export const deliveryService = {
     // files can be a single File, an array of Files or a FileList
     const arr = Array.isArray(files) ? files : files instanceof FileList ? Array.from(files) : [files];
     arr.forEach((f) => formData.append('file', f));
-    return api.post(`/deliveries/${deliveryId}/documents/${documentType}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    // Don't set Content-Type manually — let axios handle it for FormData
+    // This allows the interceptor to properly set Authorization and X-City headers
+    return api.post(`/deliveries/${deliveryId}/documents/${documentType}`, formData);
   },
   deleteDocument: (deliveryId, documentType, index) =>
     api.delete(`/deliveries/${deliveryId}/documents/${documentType}/${index}`),

@@ -59,26 +59,4 @@ api.interceptors.response.use(
   }
 );
 
-// Handle errors
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Token expirado ou inválido
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      // Não fazer redirect automático para deixar a UI tratar
-      return Promise.reject({ ...error, isAuthError: true });
-    }
-
-    // Erro de rede
-    if (!error.response) {
-      console.error('Erro de conexão com o servidor');
-      return Promise.reject(error);
-    }
-
-    return Promise.reject(error);
-  }
-);
-
 export default api;

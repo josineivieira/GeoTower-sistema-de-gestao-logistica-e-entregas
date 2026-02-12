@@ -20,6 +20,7 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
-    "googleapis": "^118.0.0"
+    "googleapis": "^118.0.0",
+    "xlsx": "^0.18.5"
   }
 }

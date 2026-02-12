@@ -1366,4 +1366,87 @@ router.delete("/programacoes/:id", auth, onlyAdminMiddleware, async (req, res) =
   }
 });
 
+/**
+ * POST /api/admin/programacoes/import
+ * Importar múltiplas programações em batch
+ */
+router.post("/programacoes/import", auth, onlyAdminMiddleware, async (req, res) => {
+  try {
+    const programacoes = req.body;
+
+    if (!Array.isArray(programacoes)) {
+      return res.status(400).json({ message: "Body deve ser um array de programações" });
+    }
+
+    if (programacoes.length === 0) {
+      return res.status(400).json({ message: "Nenhuma programação para importar" });
+    }
+
+    console.log('[PROGRAMACAO] Importando', programacoes.length, 'programações em batch');
+
+    const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
+    
+    const resultados = [];
+    let importados = 0;
+    let erros = 0;
+
+    for (const prog of programacoes) {
+      try {
+        const { processo, recebedor, container, dataAgendamento, contratado, motorista, status, observacoes } = prog;
+
+        // Validar campos obrigatórios
+        if (!processo || !recebedor || !dataAgendamento || !contratado) {
+          erros++;
+          resultados.push({
+            processo: processo || 'N/A',
+            sucesso: false,
+            erro: 'Campos obrigatórios faltando: processo, recebedor, dataAgendamento, contratado'
+          });
+          continue;
+        }
+
+        // Tenta criar a programação
+        const novaProgramacao = new ProgramacaoEntrega({
+          processo,
+          recebedor,
+          container: container || '',
+          dataAgendamento,
+          contratado,
+          motorista: motorista || '',
+          status: status || 'AGENDADO',
+          observacoes: observacoes || ''
+        });
+
+        await novaProgramacao.save();
+        importados++;
+        resultados.push({
+          processo,
+          sucesso: true,
+          _id: novaProgramacao._id
+        });
+      } catch (err) {
+        erros++;
+        resultados.push({
+          processo: prog.processo || 'N/A',
+          sucesso: false,
+          erro: err.code === 11000 ? 'Processo já existe' : err.message
+        });
+      }
+    }
+
+    console.log('[PROGRAMACAO] ✅ Import concluído:', { importados, erros, total: programacoes.length });
+
+    return res.json({
+      success: true,
+      message: `${importados} programação(ões) importada(s) com sucesso${erros > 0 ? `, ${erros} erro(s)` : ''}`,
+      importados,
+      erros,
+      resultados: erros > 0 ? resultados : undefined
+    });
+  } catch (err) {
+    console.error('[PROGRAMACAO] ❌ Erro ao importar:', err);
+    return res.status(500).json({ message: "Erro ao importar programações", error: err.message });
+  }
+});
+
 module.exports = router;

@@ -55,6 +55,7 @@ export const adminService = {
   createProgramacao: (data) => api.post('/admin/programacoes', data),
   updateProgramacao: (id, data) => api.put(`/admin/programacoes/${id}`, data),
   deleteProgramacao: (id) => api.delete(`/admin/programacoes/${id}`),
+  importProgramacoes: (data) => api.post('/admin/programacoes/import', data),
   // Reconciliação
   uploadReconciliation: (file) => {
     const formData = new FormData();

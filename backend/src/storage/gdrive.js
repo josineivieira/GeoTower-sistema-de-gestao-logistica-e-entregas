@@ -3,9 +3,43 @@ const path = require('path');
 const fs = require('fs');
 const { Readable } = require('stream');
 
-// Carrega as credenciais do Google (você precisará gerar um arquivo credentials.json no Google Cloud Console)
-const CREDENTIALS_PATH = path.join(__dirname, '../../google-credentials.json');
-const TOKEN_PATH = path.join(__dirname, '../../google-token.json');
+// Tenta múltiplos caminhos possíveis para os arquivos de credenciais
+let CREDENTIALS_PATH = path.join(__dirname, '../../google-credentials.json');
+let TOKEN_PATH = path.join(__dirname, '../../google-token.json');
+
+// Se não encontrar, tenta em mais locais
+const possibleCredentialsPaths = [
+  CREDENTIALS_PATH,  // backend/google-credentials.json (quando __dirname é backend/src/storage)
+  path.join(__dirname, '../../backend/google-credentials.json'),  // relativo à raiz
+  path.join(process.cwd(), 'backend/google-credentials.json'),  // CWD + backend
+  path.join(process.cwd(), 'google-credentials.json'),  // CWD direto
+  '/app/backend/google-credentials.json',  // Render container
+  '/app/google-credentials.json'  // Render root
+];
+
+const possibleTokenPaths = [
+  TOKEN_PATH,
+  path.join(__dirname, '../../backend/google-token.json'),
+  path.join(process.cwd(), 'backend/google-token.json'),
+  path.join(process.cwd(), 'google-token.json'),
+  '/app/backend/google-token.json',
+  '/app/google-token.json'
+];
+
+// Encontra o primeiro caminho que existe
+function findPath(possiblePaths, description) {
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      console.log(`[GDRIVE] ✓ ${description} encontrado em: ${p}`);
+      return p;
+    }
+  }
+  console.warn(`[GDRIVE] ⚠️  ${description} não encontrado em nenhum dos caminhos tentados`);
+  return possiblePaths[0];  // retorna o primeiro como fallback
+}
+
+CREDENTIALS_PATH = findPath(possibleCredentialsPaths, 'google-credentials.json');
+TOKEN_PATH = findPath(possibleTokenPaths, 'google-token.json');
 
 function getOAuth2Client() {
   try {
@@ -13,6 +47,7 @@ function getOAuth2Client() {
     if (!fs.existsSync(CREDENTIALS_PATH)) {
       console.warn(`[GDRIVE] ⚠️  Arquivo de credenciais não encontrado: ${CREDENTIALS_PATH}`);
       console.warn(`[GDRIVE] ⚠️  Google Drive está DESATIVADO - usando apenas armazenamento local`);
+      return null;
       return null;
     }
     

@@ -207,49 +207,82 @@ const ProgramacaoManagement = () => {
 
       console.log('Mapeamento de colunas encontrado:', actualColumns);
 
+      // Função para mapear contratado - extrai o primeiro valor válido encontrado
+      const mapearContratado = (valor) => {
+        const valor_upper = String(valor || '').toUpperCase().trim();
+        
+        // Valores válidos do sistema
+        const valoresValidos = ['GEO', 'MACHADO', 'BANDEIRA', 'TRANSCAVALCANTE'];
+        
+        // Procura por cada valor válido na string
+        for (const valido of valoresValidos) {
+          if (valor_upper.includes(valido)) {
+            console.log(`  Contratado mapeado: "${valor}" → "${valido}"`);
+            return valido;
+          }
+        }
+        
+        // Se não encontrou nenhum valor válido, retorna OUTRO
+        console.log(`  Contratado não reconhecido: "${valor}" → OUTRO`);
+        return 'OUTRO';
+      };
+
+      // Função para parsear data DD/MM/YYYY HH:MM corretamente (sem timezone issues)
+      const parseDateString = (dataStr) => {
+        if (!dataStr) return '';
+        
+        try {
+          // Se for número (Excel date serial)
+          if (!isNaN(dataStr) && dataStr.trim() !== '') {
+            const excelDateNum = parseInt(dataStr);
+            // Excel numbers: 1 = 01/01/1900
+            const excelDate = new Date((excelDateNum - 25569) * 86400 * 1000);
+            const year = excelDate.getUTCFullYear();
+            const month = String(excelDate.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(excelDate.getUTCDate()).padStart(2, '0');
+            return `${year}-${month}-${day}T00:00`;
+          } else {
+            // Parse string DD/MM/YYYY ou DD/MM/YYYY HH:MM
+            const parts = dataStr.split(' ');
+            const dateParts = parts[0].split('/');
+            
+            if (dateParts.length === 3) {
+              const day = dateParts[0].padStart(2, '0');
+              const month = dateParts[1].padStart(2, '0');
+              const year = dateParts[2];
+              const time = (parts[1] || '00:00').substr(0, 5); // HH:MM
+              
+              // Retorna em formato ISO sem timezone
+              return `${year}-${month}-${day}T${time}`;
+            }
+          }
+        } catch (err) {
+          console.error(`Erro ao converter data "${dataStr}":`, err);
+        }
+        
+        return '';
+      };
+
       // Mapear e validar dados
       const programacoesImport = data.map((row, index) => {
         const processo = String(row[actualColumns.processo] || '').trim();
         const recebedor = String(row[actualColumns.recebedor] || '').trim();
         const container = String(row[actualColumns.container] || '').trim();
         const dataStr = String(row[actualColumns.dataAgendamento] || '').trim();
-        const contratado = String(row[actualColumns.contratado] || 'GEO').trim();
+        const contratadoRaw = String(row[actualColumns.contratado] || '').trim();
         const motorista = String(row[actualColumns.motorista] || '').trim();
         const status = String(row[actualColumns.status] || 'AGENDADO').trim();
         const observacoes = String(row[actualColumns.observacoes] || '').trim();
 
-        // Converter data do Excel para formato ISO
-        let dataAgendamento = '';
-        if (dataStr) {
-          try {
-            // Se for número (Excel date serial)
-            if (!isNaN(dataStr)) {
-              const excelDate = new Date((parseInt(dataStr) - 25569) * 86400 * 1000);
-              dataAgendamento = excelDate.toISOString().slice(0, 16);
-            } else {
-              // Se for string, tenta parsear DD/MM/YYYY ou DD/MM/YYYY HH:MM
-              const parts = dataStr.split(' ');
-              const dateParts = parts[0].split('/');
-              if (dateParts.length === 3) {
-                const day = dateParts[0];
-                const month = dateParts[1];
-                const year = dateParts[2];
-                const time = parts[1] || '00:00';
-                const date = new Date(`${year}-${month}-${day}T${time}`);
-                dataAgendamento = date.toISOString().slice(0, 16);
-              }
-            }
-          } catch (err) {
-            console.error(`Erro ao converter data na linha ${index + 2}:`, err);
-          }
-        }
+        const dataAgendamento = parseDateString(dataStr);
+        const contratado = mapearContratado(contratadoRaw);
 
         return {
           processo,
           recebedor,
           container,
           dataAgendamento,
-          contratado: contratado || 'GEO',
+          contratado,
           motorista,
           status: status || 'AGENDADO',
           observacoes

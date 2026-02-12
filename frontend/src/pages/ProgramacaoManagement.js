@@ -161,6 +161,7 @@ const ProgramacaoManagement = () => {
               <tr>
                 <th>Processo</th>
                 <th>Recebedor</th>
+                <th>Container</th>
                 <th>Data</th>
                 <th>Contratado</th>
                 <th>Motorista</th>
@@ -173,6 +174,7 @@ const ProgramacaoManagement = () => {
                 <tr key={prog._id}>
                   <td className="processo">{prog.processo}</td>
                   <td>{prog.recebedor}</td>
+                  <td>{prog.container}</td>
                   <td>
                     {new Date(prog.dataAgendamento).toLocaleDateString('pt-BR', {
                       day: '2-digit',

@@ -55,7 +55,10 @@ const driverSchema = new mongoose.Schema({
   resetPasswordToken: { type: String, default: null },
   resetPasswordExpires: { type: Date, default: null }
 });
-
+// Índices para melhorar performance de busca (login)
+driverSchema.index({ username: 1 });
+driverSchema.index({ email: 1 });
+driverSchema.index({ username: 1, email: 1 });
 // Hash password before saving
 driverSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();

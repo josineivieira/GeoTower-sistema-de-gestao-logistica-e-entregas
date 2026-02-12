@@ -12,7 +12,7 @@ if (!process.env.REACT_APP_API_URL && typeof window !== 'undefined' && window.lo
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 30000  // 30 segundos para redes lentas
+  timeout: 60000  // 60 segundos para redes lentas
 });
 
 // Add token to requests

@@ -34,7 +34,15 @@ const motoristaSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Telefone é obrigatório'],
     trim: true,
-    match: [/^[\d\s\-\(\)]{7,}$/, 'Telefone deve conter números, parênteses, hífens ou espaços']
+    validate: {
+      validator: function(v) {
+        // Extrai apenas os dígitos
+        const digitos = v.replace(/\D/g, '');
+        // Deve ter exatamente 11 dígitos (2 de DDD + 9 de número)
+        return digitos.length === 11;
+      },
+      message: 'Telefone deve conter exatamente 11 dígitos (formato correto: (92) 98528-5394)'
+    }
   },
   observacoes: {
     type: String,

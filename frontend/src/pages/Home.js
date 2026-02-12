@@ -217,6 +217,35 @@ const Home = () => {
               </button>
             )}
 
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => navigate('/programacoes')}
+                className="group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-teal-200 overflow-hidden text-left"
+              >
+                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-teal-100 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
+
+                <div className="relative z-10">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <FaDatabase className="text-2xl text-white" />
+                  </div>
+
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Programação de Entregas
+                  </h2>
+                  <p className="text-gray-600 mb-4">
+                    Gerencie processo, recebedor, data, contratado e motorista das entregas - Apenas Admins
+                  </p>
+
+                  <div className="flex items-center gap-2 text-teal-600 font-semibold">
+                    <span>Acessar</span>
+                    <span className="text-lg group-hover:translate-x-1 transition-transform duration-300">
+                      →
+                    </span>
+                  </div>
+                </div>
+              </button>
+            )}
+
 
           </div>
         )}

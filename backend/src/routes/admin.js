@@ -1225,4 +1225,145 @@ router.delete("/motoristas/:id", auth, onlyAdminMiddleware, async (req, res) => 
   }
 });
 
+/**
+ * GET /api/admin/programacoes
+ * Listar todas as programações de entrega
+ */
+router.get("/programacoes", auth, onlyAdminMiddleware, async (req, res) => {
+  try {
+    console.log('[PROGRAMACAO] Listando programações de entrega');
+
+    const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
+    const programacoes = await ProgramacaoEntrega.find().sort({ dataAgendamento: -1 });
+
+    console.log('[PROGRAMACAO] ✅ Encontradas', programacoes.length, 'programações');
+
+    return res.json({
+      success: true,
+      programacoes: programacoes || []
+    });
+  } catch (err) {
+    console.error('[PROGRAMACAO] ❌ Erro ao listar:', err);
+    return res.status(500).json({ message: "Erro ao listar programações", error: err.message });
+  }
+});
+
+/**
+ * POST /api/admin/programacoes
+ * Criar nova programação de entrega
+ */
+router.post("/programacoes", auth, onlyAdminMiddleware, async (req, res) => {
+  try {
+    const { processo, recebedor, container, dataAgendamento, contratado, motorista, status, observacoes } = req.body;
+
+    console.log('[PROGRAMACAO] Criando:', { processo, recebedor, contratado });
+
+    const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
+
+    const novaProgramacao = new ProgramacaoEntrega({
+      processo,
+      recebedor,
+      container,
+      dataAgendamento,
+      contratado,
+      motorista,
+      status,
+      observacoes
+    });
+
+    await novaProgramacao.save();
+    console.log('[PROGRAMACAO] ✅ Criada:', { _id: novaProgramacao._id, processo });
+
+    return res.status(201).json({
+      success: true,
+      message: "Programação criada com sucesso",
+      programacao: novaProgramacao
+    });
+  } catch (err) {
+    console.error('[PROGRAMACAO] ❌ Erro ao criar:', err);
+    
+    if (err.code === 11000) {
+      return res.status(400).json({ message: "Esse processo já existe" });
+    }
+    
+    return res.status(500).json({ message: "Erro ao criar programação", error: err.message });
+  }
+});
+
+/**
+ * PUT /api/admin/programacoes/:id
+ * Atualizar programação de entrega
+ */
+router.put("/programacoes/:id", auth, onlyAdminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { processo, recebedor, container, dataAgendamento, contratado, motorista, status, observacoes } = req.body;
+
+    console.log('[PROGRAMACAO] Atualizando:', id);
+
+    const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
+    
+    const programacao = await ProgramacaoEntrega.findById(id);
+    if (!programacao) {
+      return res.status(404).json({ message: "Programação não encontrada" });
+    }
+
+    // Atualizar apenas os campos fornecidos
+    if (processo !== undefined) programacao.processo = processo;
+    if (recebedor !== undefined) programacao.recebedor = recebedor;
+    if (container !== undefined) programacao.container = container;
+    if (dataAgendamento !== undefined) programacao.dataAgendamento = dataAgendamento;
+    if (contratado !== undefined) programacao.contratado = contratado;
+    if (motorista !== undefined) programacao.motorista = motorista;
+    if (status !== undefined) programacao.status = status;
+    if (observacoes !== undefined) programacao.observacoes = observacoes;
+
+    await programacao.save();
+    console.log('[PROGRAMACAO] ✅ Atualizada:', { _id: id, processo: programacao.processo });
+
+    return res.json({
+      success: true,
+      message: "Programação atualizada com sucesso",
+      programacao
+    });
+  } catch (err) {
+    console.error('[PROGRAMACAO] ❌ Erro ao atualizar:', err);
+    
+    if (err.code === 11000) {
+      return res.status(400).json({ message: "Esse processo já existe" });
+    }
+    
+    return res.status(500).json({ message: "Erro ao atualizar programação", error: err.message });
+  }
+});
+
+/**
+ * DELETE /api/admin/programacoes/:id
+ * Deletar programação de entrega
+ */
+router.delete("/programacoes/:id", auth, onlyAdminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    console.log('[PROGRAMACAO] Deletando:', id);
+
+    const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
+    const programacao = await ProgramacaoEntrega.findById(id);
+    if (!programacao) {
+      return res.status(404).json({ message: "Programação não encontrada" });
+    }
+
+    await ProgramacaoEntrega.findByIdAndDelete(id);
+    console.log('[PROGRAMACAO] 🗑️ Programação deletada:', { _id: id, processo: programacao.processo });
+
+    return res.json({
+      success: true,
+      message: "Programação deletada com sucesso"
+    });
+  } catch (err) {
+    console.error('[PROGRAMACAO] ❌ Erro ao deletar:', err);
+    return res.status(500).json({ message: "Erro ao deletar programação", error: err.message });
+  }
+});
+
 module.exports = router;

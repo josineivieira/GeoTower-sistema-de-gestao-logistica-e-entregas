@@ -49,6 +49,11 @@ export const adminService = {
   createMotorista: (data) => api.post('/admin/motoristas', data),
   updateMotorista: (id, data) => api.put(`/admin/motoristas/${id}`, data),
   deleteMotorista: (id) => api.delete(`/admin/motoristas/${id}`),
+  // Programações de Entrega
+  getProgramacoes: () => api.get('/admin/programacoes'),
+  createProgramacao: (data) => api.post('/admin/programacoes', data),
+  updateProgramacao: (id, data) => api.put(`/admin/programacoes/${id}`, data),
+  deleteProgramacao: (id) => api.delete(`/admin/programacoes/${id}`),
   // Reconciliação
   uploadReconciliation: (file) => {
     const formData = new FormData();

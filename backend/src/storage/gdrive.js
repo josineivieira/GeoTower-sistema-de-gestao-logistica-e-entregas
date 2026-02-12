@@ -11,11 +11,15 @@ function getOAuth2Client() {
   try {
     // Verifica se os arquivos existem
     if (!fs.existsSync(CREDENTIALS_PATH)) {
-      throw new Error(`Arquivo de credenciais não encontrado: ${CREDENTIALS_PATH}`);
+      console.warn(`[GDRIVE] ⚠️  Arquivo de credenciais não encontrado: ${CREDENTIALS_PATH}`);
+      console.warn(`[GDRIVE] ⚠️  Google Drive está DESATIVADO - usando apenas armazenamento local`);
+      return null;
     }
     
     if (!fs.existsSync(TOKEN_PATH)) {
-      throw new Error(`Arquivo de token não encontrado: ${TOKEN_PATH}`);
+      console.warn(`[GDRIVE] ⚠️  Arquivo de token não encontrado: ${TOKEN_PATH}`);
+      console.warn(`[GDRIVE] ⚠️  Google Drive está DESATIVADO - usando apenas armazenamento local`);
+      return null;
     }
 
     console.log('[GDRIVE] Carregando credenciais de:', CREDENTIALS_PATH);
@@ -24,13 +28,15 @@ function getOAuth2Client() {
     // Accept both 'installed' (desktop) and 'web' (web app) credential formats
     const credRoot = credentials.installed || credentials.web;
     if (!credRoot) {
-      throw new Error('Estrutura de credenciais inválida: missing "installed" or "web" property');
+      console.warn('[GDRIVE] ⚠️  Estrutura de credenciais inválida');
+      return null;
     }
 
     const { client_secret, client_id, redirect_uris } = credRoot;
     
     if (!client_id || !client_secret || !redirect_uris) {
-      throw new Error('Credenciais incompletas: faltam client_id, client_secret ou redirect_uris');
+      console.warn('[GDRIVE] ⚠️  Credenciais incompletas');
+      return null;
     }
 
     console.log('[GDRIVE] Credenciais carregadas com sucesso');
@@ -64,6 +70,10 @@ function getOAuth2Client() {
 }
 
 async function ensureFreshCredentials(oAuth2Client) {
+  if (!oAuth2Client) {
+    console.warn('[GDRIVE] OAuth2Client é null - credenciais não disponíveis');
+    return false;
+  }
   try {
     // This will trigger a refresh if needed and emit 'tokens' event
     await oAuth2Client.getAccessToken();
@@ -78,7 +88,16 @@ async function ensureFreshCredentials(oAuth2Client) {
 async function createOrFindDeliveryFolder(deliveryNumber) {
   try {
     const auth = getOAuth2Client();
-    await ensureFreshCredentials(auth);
+    if (!auth) {
+      console.warn('[GDRIVE] Google Drive não configurado - usando armazenamento local');
+      throw new Error('Google Drive não configurado');
+    }
+    
+    const freshOk = await ensureFreshCredentials(auth);
+    if (!freshOk) {
+      throw new Error('Não foi possível garantir credenciais válidas');
+    }
+    
     const parentFolderId = process.env.GDRIVE_FOLDER_ID;
     
     if (!parentFolderId) {
@@ -125,8 +144,21 @@ async function createOrFindDeliveryFolder(deliveryNumber) {
 async function uploadFileToDrive(buffer, filename, mimetype, parentFolderId = null) {
   try {
     const auth = getOAuth2Client();
+    if (!auth) {
+      console.warn('[GDRIVE] Google Drive não configurado - usando armazenamento local');
+      throw new Error('Google Drive não configurado');
+    }
+    
     // Garantir que temos um access token válido antes de tentar o upload
-    try { await ensureFreshCredentials(auth); } catch (e) { /* continue to let upload fail with clear error */ }
+    try { 
+      const freshOk = await ensureFreshCredentials(auth);
+      if (!freshOk) {
+        throw new Error('Não foi possível garantir credenciais válidas');
+      }
+    } catch (e) { 
+      console.error('[GDRIVE] Erro ao garantir credenciais:', e.message);
+      throw e;
+    }
     
     // Se não foi passado parentFolderId, usar a pasta padrão
     let folderId = parentFolderId || process.env.GDRIVE_FOLDER_ID;

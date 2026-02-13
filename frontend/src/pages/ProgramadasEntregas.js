@@ -94,7 +94,7 @@ const ProgramadasEntregas = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-gray-600">
                       <div>
                         <p className="text-gray-500">Data Agendamento</p>
-                        <p className="font-medium">{p.dataAgendamento ? new Date(p.dataAgendamento).toLocaleDateString('pt-BR') : '-'}</p>
+                        <p className="font-medium">{p.dataAgendamento ? new Date(p.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</p>
                       </div>
 
                       <div>
@@ -125,20 +125,13 @@ const ProgramadasEntregas = () => {
                   </div>
 
                     <div className="flex gap-2 ml-4">
-                      <button
-                        onClick={() => navigate(`/programacoes/${p._id}`)}
-                        className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg transition"
-                        title="Ver detalhes"
-                      >
-                        <FaCalendarAlt />
-                      </button>
-
+                      
                       <button
                         onClick={() => handleStartDelivery(p)}
-                        className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition"
+                        className="px-4 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition font-semibold"
                         title="Iniciar Entrega"
                       >
-                        Iniciar
+                        Iniciar Entrega
                       </button>
                     </div>
                 </div>

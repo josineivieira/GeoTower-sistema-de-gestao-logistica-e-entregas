@@ -3,12 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import { deliveryService } from '../services/authService';
 import { FaArrowLeft, FaCalendarAlt, FaSearch } from 'react-icons/fa';
+import { useAuth } from '../services/authContext';
+import { deliveryService } from '../services/authService';
 
 const ProgramadasEntregas = () => {
   const navigate = useNavigate();
   const [programacoes, setProgramacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadProgramacoes();
@@ -23,6 +27,38 @@ const ProgramadasEntregas = () => {
     } catch (err) {
       console.error('Erro ao buscar programações:', err);
       setToast({ message: 'Erro ao carregar entregas programadas', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartDelivery = async (p) => {
+    // Use container as deliveryNumber if available, fallback to processo
+    const deliveryNumber = (p.container && p.container.trim()) || (p.processo && p.processo.trim());
+    if (!deliveryNumber) {
+      setToast({ message: 'Não foi possível iniciar: sem número de container/processo', type: 'error' });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const payload = {
+        deliveryNumber: deliveryNumber.toUpperCase(),
+        vehiclePlate: '',
+        observations: `Criada a partir da Programação ${p.processo || ''}`,
+        driverName: user?.fullName || user?.name || ''
+      };
+
+      const res = await deliveryService.createDelivery(payload);
+      const newDelivery = res.data.delivery;
+      setToast({ message: 'Entrega iniciada', type: 'success' });
+      // Redirect to editor for the new delivery
+      if (newDelivery && newDelivery._id) {
+        navigate(`/nova-entrega/${newDelivery._id}`);
+      }
+    } catch (err) {
+      console.error('Erro ao iniciar entrega:', err);
+      setToast({ message: err.response?.data?.message || 'Erro ao iniciar entrega', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -90,15 +126,23 @@ const ProgramadasEntregas = () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 ml-4">
-                    <button
-                      onClick={() => navigate(`/programacoes/${p._id}`)}
-                      className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg transition"
-                      title="Ver detalhes"
-                    >
-                      <FaCalendarAlt />
-                    </button>
-                  </div>
+                    <div className="flex gap-2 ml-4">
+                      <button
+                        onClick={() => navigate(`/programacoes/${p._id}`)}
+                        className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg transition"
+                        title="Ver detalhes"
+                      >
+                        <FaCalendarAlt />
+                      </button>
+
+                      <button
+                        onClick={() => handleStartDelivery(p)}
+                        className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition"
+                        title="Iniciar Entrega"
+                      >
+                        Iniciar
+                      </button>
+                    </div>
                 </div>
               </div>
             ))}

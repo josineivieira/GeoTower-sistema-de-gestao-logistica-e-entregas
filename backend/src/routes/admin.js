@@ -1083,7 +1083,8 @@ router.get("/motoristas", auth, onlyAdminMiddleware, async (req, res) => {
     const motoristas = await Motorista.find().sort({ createdAt: -1 });
     return res.json({ motoristas });
   } catch (err) {
-    console.error('[MOTORISTA] ❌ Erro ao listar:', err.message);
+    console.error('[MOTORISTA] ❌ Erro ao listar:', err);
+    console.error(err.stack);
     return res.status(500).json({ message: "Erro ao listar motoristas", error: err.message });
   }
 });

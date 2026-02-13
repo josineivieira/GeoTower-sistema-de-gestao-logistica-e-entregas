@@ -75,7 +75,7 @@ const motoristaSchema = new mongoose.Schema({
       },
       message: 'Telefone deve conter exatamente 11 dígitos (formato correto: (92) 98528-5394)'
     }
-  }
+  },
   observacoes: {
     type: String,
     default: '',

@@ -147,12 +147,21 @@ router.get("/:id", auth, async (req, res) => {
 // =======================
 router.get('/programacoes/mine', auth, async (req, res) => {
   try {
-    console.log('[PROGRAMACAO] Buscando programações vinculadas ao contratado do usuário', req.user && req.user.transportadora);
+    console.log('[PROGRAMACAO] Buscando programações vinculadas ao contratado do usuário. req.user.id=', req.user && req.user.id);
     const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
 
-    // Derive contratado value from logged user (transportadora)
-    const contratadoRaw = (req.user && (req.user.transportadora || req.user.contratado)) || '';
-    const contratado = String(contratadoRaw).trim();
+    // Tentar derivar o contratado a partir do registro do usuário (busca no DB por id)
+    const db = await getDb(req);
+    let driverRecord = null;
+    try {
+      driverRecord = await db.findById('drivers', req.user.id);
+    } catch (e) {
+      console.warn('[PROGRAMACAO] Aviso: falha ao buscar registro do usuário no DB:', e && e.message ? e.message : e);
+    }
+
+    // Prioriza campos do registro do usuário, depois valores vindos no token (se houver)
+    const contratadoRaw = (driverRecord && (driverRecord.transportadora || driverRecord.name || driverRecord.fullName)) || (req.user && (req.user.transportadora || req.user.contratado)) || '';
+    const contratado = String(contratadoRaw || '').trim();
 
     // Se não houver contratado claro no usuário, retornar vazio
     if (!contratado) {

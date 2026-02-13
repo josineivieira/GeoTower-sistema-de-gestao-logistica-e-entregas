@@ -30,6 +30,38 @@ const motoristaSchema = new mongoose.Schema({
     trim: true,
     default: '-'
   },
+  expCadastroMotorista: {
+    type: Date,
+    default: null
+  },
+  cavalo: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  rastreadorCavalo: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  expCadastroCavalo: {
+    type: Date,
+    default: null
+  },
+  carreta: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  rastreadorCarreta: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  expCadastroCarreta: {
+    type: Date,
+    default: null
+  },
   telefone: {
     type: String,
     required: [true, 'Telefone é obrigatório'],
@@ -43,7 +75,7 @@ const motoristaSchema = new mongoose.Schema({
       },
       message: 'Telefone deve conter exatamente 11 dígitos (formato correto: (92) 98528-5394)'
     }
-  },
+  }
   observacoes: {
     type: String,
     default: '',

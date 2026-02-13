@@ -17,6 +17,13 @@ const MotoristaManagement = () => {
     cpf: '',
     vinculo: 'AGREGADO',
     rastreador: '',
+    expCadastroMotorista: '',
+    cavalo: '',
+    rastreadorCavalo: '',
+    expCadastroCavalo: '',
+    carreta: '',
+    rastreadorCarreta: '',
+    expCadastroCarreta: '',
     telefone: '',
     observacoes: ''
   });
@@ -29,7 +36,19 @@ const MotoristaManagement = () => {
     try {
       setLoading(true);
       const response = await adminService.getMotoristas();
-      setMotoristas(response.data.motoristas || []);
+      const data = response.data.motoristas || [];
+      const computeStatus = (exp) => {
+        if (!exp) return '';
+        const d = new Date(exp);
+        return d >= new Date() ? 'A VENCER' : 'VENCIDO';
+      };
+      const enriched = data.map(m => ({
+        ...m,
+        statusMotorista: computeStatus(m.expCadastroMotorista),
+        statusCavalo: computeStatus(m.expCadastroCavalo),
+        statusCarreta: computeStatus(m.expCadastroCarreta)
+      }));
+      setMotoristas(enriched);
     } catch (error) {
       setToast({ message: 'Erro ao carregar motoristas', type: 'error' });
       console.error(error);
@@ -54,7 +73,22 @@ const MotoristaManagement = () => {
         await adminService.createMotorista(formData);
         setToast({ message: 'Motorista criado com sucesso', type: 'success' });
       }
-      setFormData({ transportadora: '', nome: '', cpf: '', vinculo: 'AGREGADO', rastreador: '', telefone: '', observacoes: '' });
+      setFormData({
+        transportadora: '',
+        nome: '',
+        cpf: '',
+        vinculo: 'AGREGADO',
+        rastreador: '',
+        expCadastroMotorista: '',
+        cavalo: '',
+        rastreadorCavalo: '',
+        expCadastroCavalo: '',
+        carreta: '',
+        rastreadorCarreta: '',
+        expCadastroCarreta: '',
+        telefone: '',
+        observacoes: ''
+      });
       setEditingMotorista(null);
       setShowForm(false);
       loadMotoristas();
@@ -71,6 +105,13 @@ const MotoristaManagement = () => {
       cpf: motorista.cpf,
       vinculo: motorista.vinculo,
       rastreador: motorista.rastreador || '',
+      expCadastroMotorista: motorista.expCadastroMotorista ? motorista.expCadastroMotorista.split('T')[0] : '',
+      cavalo: motorista.cavalo || '',
+      rastreadorCavalo: motorista.rastreadorCavalo || '',
+      expCadastroCavalo: motorista.expCadastroCavalo ? motorista.expCadastroCavalo.split('T')[0] : '',
+      carreta: motorista.carreta || '',
+      rastreadorCarreta: motorista.rastreadorCarreta || '',
+      expCadastroCarreta: motorista.expCadastroCarreta ? motorista.expCadastroCarreta.split('T')[0] : '',
       telefone: motorista.telefone,
       observacoes: motorista.observacoes || ''
     });
@@ -92,7 +133,22 @@ const MotoristaManagement = () => {
   const handleCloseForm = () => {
     setShowForm(false);
     setEditingMotorista(null);
-    setFormData({ transportadora: '', nome: '', cpf: '', vinculo: 'AGREGADO', rastreador: '', telefone: '', observacoes: '' });
+    setFormData({
+      transportadora: '',
+      nome: '',
+      cpf: '',
+      vinculo: 'AGREGADO',
+      rastreador: '',
+      expCadastroMotorista: '',
+      cavalo: '',
+      rastreadorCavalo: '',
+      expCadastroCavalo: '',
+      carreta: '',
+      rastreadorCarreta: '',
+      expCadastroCarreta: '',
+      telefone: '',
+      observacoes: ''
+    });
   };
 
   const formatCPF = (value) => {
@@ -227,6 +283,90 @@ const MotoristaManagement = () => {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Exp. cadastro motorista
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.expCadastroMotorista}
+                      onChange={(e) => setFormData({ ...formData, expCadastroMotorista: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Cavalo
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.cavalo}
+                      onChange={(e) => setFormData({ ...formData, cavalo: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Rastreador do cavalo
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.rastreadorCavalo}
+                      onChange={(e) => setFormData({ ...formData, rastreadorCavalo: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Exp. cadastro cavalo
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.expCadastroCavalo}
+                      onChange={(e) => setFormData({ ...formData, expCadastroCavalo: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Carreta
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.carreta}
+                      onChange={(e) => setFormData({ ...formData, carreta: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Rastreador da carreta
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.rastreadorCarreta}
+                      onChange={(e) => setFormData({ ...formData, rastreadorCarreta: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Exp. cadastro carreta
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.expCadastroCarreta}
+                      onChange={(e) => setFormData({ ...formData, expCadastroCarreta: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Telefone *
                     </label>
                     <input
@@ -298,6 +438,16 @@ const MotoristaManagement = () => {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">CPF</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Vínculo</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Rastreador</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Exp. cadastro</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Cavalo</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Rastreador Cav.</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Exp. cadastro Cavalo</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Carreta</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Rastreador Carreta</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Exp. cadastro Carreta</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Telefone</th>
                     <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">Ações</th>
                   </tr>
@@ -320,6 +470,58 @@ const MotoristaManagement = () => {
                         </span>
                       </td>
                       <td className="px-6 py-3 text-gray-700">{motorista.rastreador || '-'}</td>
+                      <td className="px-6 py-3 text-gray-700">
+                        {motorista.expCadastroMotorista
+                          ? new Date(motorista.expCadastroMotorista).toLocaleDateString('pt-BR')
+                          : '-'}
+                      </td>
+                      <td className="px-6 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          motorista.statusMotorista === 'VENCIDO'
+                            ? 'bg-red-100 text-red-800'
+                            : motorista.statusMotorista === 'A VENCER'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : ''
+                        }`}>
+                          {motorista.statusMotorista || '-'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3 text-gray-700">{motorista.cavalo || '-'}</td>
+                      <td className="px-6 py-3 text-gray-700">{motorista.rastreadorCavalo || '-'}</td>
+                      <td className="px-6 py-3 text-gray-700">
+                        {motorista.expCadastroCavalo
+                          ? new Date(motorista.expCadastroCavalo).toLocaleDateString('pt-BR')
+                          : '-'}
+                      </td>
+                      <td className="px-6 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          motorista.statusCavalo === 'VENCIDO'
+                            ? 'bg-red-100 text-red-800'
+                            : motorista.statusCavalo === 'A VENCER'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : ''
+                        }`}>
+                          {motorista.statusCavalo || '-'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3 text-gray-700">{motorista.carreta || '-'}</td>
+                      <td className="px-6 py-3 text-gray-700">{motorista.rastreadorCarreta || '-'}</td>
+                      <td className="px-6 py-3 text-gray-700">
+                        {motorista.expCadastroCarreta
+                          ? new Date(motorista.expCadastroCarreta).toLocaleDateString('pt-BR')
+                          : '-'}
+                      </td>
+                      <td className="px-6 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          motorista.statusCarreta === 'VENCIDO'
+                            ? 'bg-red-100 text-red-800'
+                            : motorista.statusCarreta === 'A VENCER'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : ''
+                        }`}>
+                          {motorista.statusCarreta || '-'}
+                        </span>
+                      </td>
                       <td className="px-6 py-3 text-gray-700">{motorista.telefone}</td>
                       <td className="px-6 py-3 text-center">
                         <button

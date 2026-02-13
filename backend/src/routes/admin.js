@@ -1094,7 +1094,22 @@ router.get("/motoristas", auth, onlyAdminMiddleware, async (req, res) => {
  */
 router.post("/motoristas", auth, onlyAdminMiddleware, async (req, res) => {
   try {
-    const { transportadora, nome, cpf, vinculo, rastreador, telefone, observacoes } = req.body;
+    const {
+      transportadora,
+      nome,
+      cpf,
+      vinculo,
+      rastreador,
+      expCadastroMotorista,
+      cavalo,
+      rastreadorCavalo,
+      expCadastroCavalo,
+      carreta,
+      rastreadorCarreta,
+      expCadastroCarreta,
+      telefone,
+      observacoes
+    } = req.body;
 
     console.log('[MOTORISTA] Recebido:', { transportadora, nome, cpf, vinculo, telefone });
 
@@ -1116,6 +1131,13 @@ router.post("/motoristas", auth, onlyAdminMiddleware, async (req, res) => {
       cpf,
       vinculo,
       rastreador: rastreador || '-',
+      expCadastroMotorista: expCadastroMotorista || null,
+      cavalo: cavalo || '',
+      rastreadorCavalo: rastreadorCavalo || '',
+      expCadastroCavalo: expCadastroCavalo || null,
+      carreta: carreta || '',
+      rastreadorCarreta: rastreadorCarreta || '',
+      expCadastroCarreta: expCadastroCarreta || null,
       telefone,
       observacoes: observacoes || '',
       ativo: true,
@@ -1147,7 +1169,23 @@ router.post("/motoristas", auth, onlyAdminMiddleware, async (req, res) => {
 router.put("/motoristas/:id", auth, onlyAdminMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    const { transportadora, nome, cpf, vinculo, rastreador, telefone, observacoes, ativo } = req.body;
+    const {
+      transportadora,
+      nome,
+      cpf,
+      vinculo,
+      rastreador,
+      expCadastroMotorista,
+      cavalo,
+      rastreadorCavalo,
+      expCadastroCavalo,
+      carreta,
+      rastreadorCarreta,
+      expCadastroCarreta,
+      telefone,
+      observacoes,
+      ativo
+    } = req.body;
 
     console.log('[MOTORISTA] Atualizando:', { id, transportadora, nome, cpf });
 
@@ -1174,6 +1212,13 @@ router.put("/motoristas/:id", auth, onlyAdminMiddleware, async (req, res) => {
     motorista.cpf = cpf;
     motorista.vinculo = vinculo;
     motorista.rastreador = rastreador || '-';
+    motorista.expCadastroMotorista = expCadastroMotorista || null;
+    motorista.cavalo = cavalo || '';
+    motorista.rastreadorCavalo = rastreadorCavalo || '';
+    motorista.expCadastroCavalo = expCadastroCavalo || null;
+    motorista.carreta = carreta || '';
+    motorista.rastreadorCarreta = rastreadorCarreta || '';
+    motorista.expCadastroCarreta = expCadastroCarreta || null;
     motorista.telefone = telefone;
     motorista.observacoes = observacoes || '';
     if (ativo !== undefined) motorista.ativo = ativo;

@@ -95,5 +95,6 @@ export const deliveryService = {
   deleteDocument: (deliveryId, documentType, index) =>
     api.delete(`/deliveries/${deliveryId}/documents/${documentType}/${index}`),
   submitDelivery: (id, data = {}) => api.post(`/deliveries/${id}/submit`, data),
-  deleteDelivery: (id) => api.delete(`/deliveries/${id}`)
+  deleteDelivery: (id) => api.delete(`/deliveries/${id}`),
+  updateDelivery: (id, data) => api.put(`/deliveries/${id}`, data)
 };

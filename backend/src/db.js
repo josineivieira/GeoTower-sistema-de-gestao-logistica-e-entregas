@@ -27,6 +27,7 @@ db.exec(`
     deliveryNumber TEXT UNIQUE NOT NULL,
     vehiclePlate TEXT,
     status TEXT DEFAULT 'draft',
+    arrivedAt INTEGER,
     documents TEXT DEFAULT '{}',
     createdAt INTEGER,
     updatedAt INTEGER,
@@ -145,9 +146,9 @@ module.exports = {
     const id = crypto.randomUUID();
     const now = Date.now();
     db.prepare(`
-      INSERT INTO deliveries (id, userId, userName, deliveryNumber, vehiclePlate, status, documents, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, delivery.userId, delivery.userName, delivery.deliveryNumber, delivery.vehiclePlate, delivery.status || 'draft', JSON.stringify(delivery.documents || {}), now, now);
+      INSERT INTO deliveries (id, userId, userName, deliveryNumber, vehiclePlate, status, arrivedAt, documents, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, delivery.userId, delivery.userName, delivery.deliveryNumber, delivery.vehiclePlate, delivery.status || 'draft', delivery.arrivedAt || null, JSON.stringify(delivery.documents || {}), now, now);
     return { id, ...delivery, createdAt: now, updatedAt: now };
   },
 
@@ -161,6 +162,10 @@ module.exports = {
     if (updates.status) {
       query += ', status = ?';
       params.push(updates.status);
+    }
+    if (updates.arrivedAt !== undefined) {
+      query += ', arrivedAt = ?';
+      params.push(updates.arrivedAt);
     }
     if (documents) {
       query += ', documents = ?';

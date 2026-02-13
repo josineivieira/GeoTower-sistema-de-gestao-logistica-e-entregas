@@ -179,6 +179,15 @@ const MinhasEntregas = () => {
                         </p>
                       </div>
 
+                      {delivery.arrivedAt && (
+                        <div>
+                          <p className="text-gray-500">Chegada</p>
+                          <p className="font-medium">
+                            {new Date(delivery.arrivedAt).toLocaleString('pt-BR')}
+                          </p>
+                        </div>
+                      )}
+
                       <div>
                         <p className="text-gray-500">Documentos</p>
                         <p className="font-medium">

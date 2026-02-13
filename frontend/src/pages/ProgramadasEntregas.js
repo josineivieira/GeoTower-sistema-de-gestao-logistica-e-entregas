@@ -50,9 +50,9 @@ const ProgramadasEntregas = () => {
       const res = await deliveryService.createDelivery(payload);
       const newDelivery = res.data.delivery;
       setToast({ message: 'Entrega iniciada', type: 'success' });
-      // Redirect to editor for the new delivery
+      // Redirect to new screen showing arrival button
       if (newDelivery && newDelivery._id) {
-        navigate(`/nova-entrega/${newDelivery._id}`);
+        navigate(`/entrega/${newDelivery._id}`);
       }
     } catch (err) {
       console.error('Erro ao iniciar entrega:', err);

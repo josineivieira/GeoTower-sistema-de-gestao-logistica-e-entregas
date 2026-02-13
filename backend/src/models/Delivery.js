@@ -9,6 +9,9 @@ const DeliverySchema = new mongoose.Schema(
 
     status: { type: String, enum: ["pending", "submitted"], default: "pending" },
 
+    // registrar quando o motorista marcou chegada no cliente
+    arrivedAt: { type: Date },
+
     // Observação e metadata ao submeter com documentos faltando
     submissionObservation: { type: String, default: "" },
     submissionForce: { type: Boolean, default: false },

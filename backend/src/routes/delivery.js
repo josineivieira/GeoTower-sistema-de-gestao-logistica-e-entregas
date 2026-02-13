@@ -133,10 +133,47 @@ router.get("/:id", auth, async (req, res) => {
     const db = await getDb(req);
     const delivery = await db.findById("deliveries", req.params.id);
     if (!delivery) return res.status(404).json({ message: "Entrega não encontrada" });
+    // drivers should only access their own deliveries; admins may view all
+    if (req.user.role !== 'admin' && String(delivery.userId) !== String(req.user.id)) {
+      return res.status(403).json({ message: 'Acesso negado' });
+    }
     res.json({ delivery: normalizeDeliveryForResponse(delivery) });
   } catch (err) {
     console.error('Error fetching delivery', err);
     res.status(500).json({ message: 'Erro ao buscar entrega' });
+  }
+});
+
+// =======================
+// Atualizar entrega (motorista só pode alterar a própria)
+// PUT /api/deliveries/:id
+// fields: status, arrivedAt, observations (other safe ones)
+// =======================
+router.put("/:id", auth, async (req, res) => {
+  try {
+    const db = await getDb(req);
+    const { id } = req.params;
+    const delivery = await db.findById("deliveries", id);
+    if (!delivery) return res.status(404).json({ message: "Entrega não encontrada" });
+    if (String(delivery.userId) !== String(req.user.id)) {
+      return res.status(403).json({ message: 'Acesso negado' });
+    }
+
+    const updates = {};
+    if (req.body.status) updates.status = req.body.status;
+    if (req.body.arrivedAt !== undefined) updates.arrivedAt = req.body.arrivedAt;
+    if (req.body.observations !== undefined) updates.observations = req.body.observations;
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: 'Nada para atualizar' });
+    }
+
+    await db.updateOne("deliveries", { _id: id }, updates);
+    const updated = await db.findById("deliveries", id);
+    res.json({ delivery: normalizeDeliveryForResponse(updated) });
+  } catch (err) {
+    console.error('Error updating delivery', err);
+    res.status(500).json({ message: 'Erro ao atualizar entrega' });
   }
 });
 

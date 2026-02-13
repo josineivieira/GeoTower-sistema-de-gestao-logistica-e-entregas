@@ -20,6 +20,7 @@ import ProgramacaoManagement from './pages/ProgramacaoManagement';
 import ProgramadasEntregas from './pages/ProgramadasEntregas';
 import Reconciliation from './pages/Reconciliation';
 import Profile from './pages/Profile';
+import EntregaEmRota from './pages/EntregaEmRota';
 
 function AppContent() {
   const { isAuthenticated } = useAuth();
@@ -81,6 +82,17 @@ function AppContent() {
           <PrivateRoute>
             <AppLayout>
               <MinhasEntregas />
+            </AppLayout>
+          </PrivateRoute>
+        }
+      />
+
+      <Route
+        path="/entrega/:id"
+        element={
+          <PrivateRoute>
+            <AppLayout>
+              <EntregaEmRota />
             </AppLayout>
           </PrivateRoute>
         }

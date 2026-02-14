@@ -143,7 +143,6 @@ const ProgramadasEntregas = () => {
         setDocumentsUpload({});
         setShowModal(true);
         setToast({ message: 'Entrega retomada', type: 'success' });
-        // Programação saiu da lista
         loadProgramacoes();
       } else {
         const payload = {
@@ -163,7 +162,6 @@ const ProgramadasEntregas = () => {
         setJustification('');
         setDocumentsUpload({});
         setShowModal(true);
-        // remove from list
         loadProgramacoes();
       }
     } catch (err) {
@@ -442,12 +440,18 @@ const ProgramadasEntregas = () => {
 
                     <div className="flex gap-2 ml-4">
                       
+                      {/**
+                       * Show 'Iniciar Entrega' when status is still the initial pending state,
+                       * otherwise let the driver continue an in‑progress delivery.
+                       * The backend already filters out ENTREGUE/CANCELADO so we don't need to
+                       * hide the button in those cases.
+                       */}
                       <button
                         onClick={() => handleStartDelivery(p)}
                         className="px-4 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition font-semibold"
-                        title="Iniciar Entrega"
+                        title={['pending','PENDING'].includes((p.status||'').toString()) ? 'Iniciar Entrega' : 'Continuar Entrega'}
                       >
-                        Iniciar Entrega
+                        {['pending','PENDING'].includes((p.status||'').toString()) ? 'Iniciar Entrega' : 'Continuar Entrega'}
                       </button>
                     </div>
                 </div>

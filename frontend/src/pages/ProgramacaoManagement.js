@@ -234,20 +234,44 @@ const ProgramacaoManagement = () => {
 
       // Função para mapear contratado - extrai o primeiro valor válido encontrado
       const mapearContratado = (valor) => {
-        const valor_upper = String(valor || '').toUpperCase().trim();
-        
-        // Valores válidos do sistema
+        const raw = String(valor || '').trim();
+        if (!raw) return 'OUTRO';
+
+        const normalize = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9 ]/g, '').trim();
+        const target = normalize(raw);
+
+        // Try to find a matching transportadora from motoristas list (best effort)
+        try {
+          const options = Array.from(new Set((motoristasList || []).map(m => (m.transportadora || '').trim()).filter(Boolean)));
+          for (const opt of options) {
+            const on = normalize(opt);
+            if (!on) continue;
+            if (on === target || on.includes(target) || target.includes(on)) {
+              console.log(`  Contratado mapeado via motoristas: "${valor}" → "${opt}"`);
+              return opt;
+            }
+            // token overlap
+            const ot = on.split(/\s+/).filter(Boolean);
+            const tt = target.split(/\s+/).filter(Boolean);
+            if (ot.some(tok => tt.includes(tok)) || tt.some(tok => ot.includes(tok))) {
+              console.log(`  Contratado mapeado via token overlap: "${valor}" → "${opt}"`);
+              return opt;
+            }
+          }
+        } catch (e) {
+          console.warn('Erro ao mapear contratado via motoristas:', e);
+        }
+
+        // Valores fixos conhecidos (legacy)
         const valoresValidos = ['GEO', 'MACHADO', 'BANDEIRA', 'TRANSCAVALCANTE'];
-        
-        // Procura por cada valor válido na string
+        const up = raw.toUpperCase();
         for (const valido of valoresValidos) {
-          if (valor_upper.includes(valido)) {
-            console.log(`  Contratado mapeado: "${valor}" → "${valido}"`);
+          if (up.includes(valido)) {
+            console.log(`  Contratado mapeado legacy: "${valor}" → "${valido}"`);
             return valido;
           }
         }
-        
-        // Se não encontrou nenhum valor válido, retorna OUTRO
+
         console.log(`  Contratado não reconhecido: "${valor}" → OUTRO`);
         return 'OUTRO';
       };
@@ -257,26 +281,29 @@ const ProgramacaoManagement = () => {
         if (!dataStr) return '';
         
         try {
-          // Se for número (Excel date serial)
-          if (!isNaN(dataStr) && dataStr.trim() !== '') {
-            const excelDateNum = parseInt(dataStr);
-            // Excel numbers: 1 = 01/01/1900
-            const excelDate = new Date((excelDateNum - 25569) * 86400 * 1000);
-            const year = excelDate.getUTCFullYear();
-            const month = String(excelDate.getUTCMonth() + 1).padStart(2, '0');
-            const day = String(excelDate.getUTCDate()).padStart(2, '0');
-            return `${year}-${month}-${day}T00:00`;
+          // Se for número (Excel date serial) - pode conter fração para hora
+          if (!isNaN(dataStr) && String(dataStr).trim() !== '') {
+            const excelNum = Number(dataStr);
+            // Excel serial to JS timestamp
+            const ms = (excelNum - 25569) * 86400 * 1000;
+            const d = new Date(ms);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
           } else {
             // Parse string DD/MM/YYYY ou DD/MM/YYYY HH:MM
-            const parts = dataStr.split(' ');
+            const parts = String(dataStr).trim().split(' ');
             const dateParts = parts[0].split('/');
-            
+
             if (dateParts.length === 3) {
               const day = dateParts[0].padStart(2, '0');
               const month = dateParts[1].padStart(2, '0');
               const year = dateParts[2];
               const time = (parts[1] || '00:00').substr(0, 5); // HH:MM
-              
+
               // Retorna em formato ISO sem timezone
               return `${year}-${month}-${day}T${time}`;
             }

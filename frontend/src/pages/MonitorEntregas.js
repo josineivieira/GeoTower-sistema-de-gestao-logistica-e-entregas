@@ -388,60 +388,38 @@ const MonitorEntregas = () => {
             <table className="w-full">
               <thead className="bg-gray-100 border-b border-gray-300">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    <button onClick={() => { const dir = sortBy === 'deliveryNumber' && sortDir === 'asc' ? 'desc' : 'asc'; setSortBy('deliveryNumber'); setSortDir(dir); }} className="flex items-center gap-2">
-                      Número
-                      {sortBy === 'deliveryNumber' && (sortDir === 'asc' ? '↑' : '↓')}
-                    </button>
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Contratado
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Motorista
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    <button onClick={() => { const dir = sortBy === 'createdAt' && sortDir === 'asc' ? 'desc' : 'asc'; setSortBy('createdAt'); setSortDir(dir); }} className="flex items-center gap-2">
-                      Data
-                      {sortBy === 'createdAt' && (sortDir === 'asc' ? '↑' : '↓')}
-                    </button>
-                  </th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">
-                    Documentos
-                  </th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">
-                    Ações
-                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Número</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Contratado</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Motorista</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Recebedor</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Data Agendamento</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Chegada Cliente</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Início Desova</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Fim Desova</th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Documentos</th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredDeliveries.map((delivery, index) => (
                   <tr
                     key={delivery._id}
-                    className={`border-b border-gray-200 hover:bg-gray-50 transition ${
-                      index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                    }`}
+                    className={`border-b border-gray-200 hover:bg-gray-50 transition ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                   >
-                    <td className="px-4 py-3 font-semibold text-gray-800">
-                      {delivery.deliveryNumber}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {delivery.userName}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {delivery.driverName || '-'}
-                    </td>
+                    <td className="px-4 py-3 font-semibold text-gray-800">{delivery.deliveryNumber}</td>
+                    <td className="px-4 py-3 text-gray-700">{delivery.userName}</td>
+                    <td className="px-4 py-3 text-gray-700">{delivery.driverName || '-'}</td>
+                    <td className="px-4 py-3 text-gray-700">{delivery.recebedor || '-'}</td>
                     <td className="px-4 py-3">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(delivery.status)}`}>
-                        {delivery.status === 'submitted' ? '✓ Entregue' : '⏳ Pendente'}
+                        {delivery.status || '-'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {new Date(delivery.createdAt).toLocaleDateString('pt-BR')}
-                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{delivery.dataAgendamento ? new Date(delivery.dataAgendamento).toLocaleDateString('pt-BR') : '-'}</td>
+                    <td className="px-4 py-3 text-gray-700">{delivery.horarioChegada ? new Date(delivery.horarioChegada).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
+                    <td className="px-4 py-3 text-gray-700">{delivery.horarioInicioDesova ? new Date(delivery.horarioInicioDesova).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
+                    <td className="px-4 py-3 text-gray-700">{delivery.horarioFimDesova ? new Date(delivery.horarioFimDesova).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex flex-wrap gap-1 justify-center">
                         {Object.keys(delivery.documents || {})

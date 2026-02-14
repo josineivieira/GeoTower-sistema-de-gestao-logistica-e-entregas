@@ -414,10 +414,22 @@ const MonitorEntregas = () => {
                     <td className="px-4 py-3">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(delivery.status)}`}>
                         {delivery.status || '-'}
+                        {/* Alerta de solicitação de agendamento */}
+                        {delivery.observations && delivery.observations.includes('SOLICITACAO_AGENDAMENTO') && (
+                          <span className="ml-2 px-2 py-1 rounded bg-yellow-100 text-yellow-800 text-xs font-bold">Solicita agendamento devolução</span>
+                        )}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{delivery.dataAgendamento ? new Date(delivery.dataAgendamento).toLocaleDateString('pt-BR') : '-'}</td>
-                    <td className="px-4 py-3 text-gray-700">{delivery.horarioChegada ? new Date(delivery.horarioChegada).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {delivery.dataAgendamento ? new Date(delivery.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {delivery.horarioChegada ? new Date(delivery.horarioChegada).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                      {/* Alerta de atraso */}
+                      {delivery.dataAgendamento && delivery.horarioChegada && new Date(delivery.horarioChegada) > new Date(delivery.dataAgendamento) && (
+                        <span className="ml-2 px-2 py-1 rounded bg-red-100 text-red-700 text-xs font-bold">Atrasado</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-gray-700">{delivery.horarioInicioDesova ? new Date(delivery.horarioInicioDesova).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                     <td className="px-4 py-3 text-gray-700">{delivery.horarioFimDesova ? new Date(delivery.horarioFimDesova).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                     <td className="px-4 py-3 text-center">

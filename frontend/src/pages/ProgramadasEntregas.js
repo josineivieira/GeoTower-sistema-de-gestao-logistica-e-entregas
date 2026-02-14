@@ -102,9 +102,8 @@ const ProgramadasEntregas = () => {
     setLoading(true);
     try {
       const res = await deliveryService.getProgramacoesAssigned();
-      // Só remove da tela se ENTREGUE ou CANCELADO
-      const lista = (res.data.programacoes || []).filter(p => !['ENTREGUE','CANCELADO'].includes((p.status||'').toString()));
-      setProgramacoes(lista);
+      // Não filtra nada além de ENTREGUE/CANCELADO (se backend já filtra, só repassa)
+      setProgramacoes(res.data.programacoes || []);
     } catch (err) {
       console.error('Erro ao buscar programações:', err);
       setToast({ message: 'Erro ao carregar entregas programadas', type: 'error' });

@@ -102,7 +102,9 @@ const ProgramadasEntregas = () => {
     setLoading(true);
     try {
       const res = await deliveryService.getProgramacoesAssigned();
-      setProgramacoes(res.data.programacoes || []);
+      // Só remove da tela se ENTREGUE ou CANCELADO
+      const lista = (res.data.programacoes || []).filter(p => !['ENTREGUE','CANCELADO'].includes((p.status||'').toString()));
+      setProgramacoes(lista);
     } catch (err) {
       console.error('Erro ao buscar programações:', err);
       setToast({ message: 'Erro ao carregar entregas programadas', type: 'error' });
@@ -455,19 +457,9 @@ const ProgramadasEntregas = () => {
                         <button
                           onClick={() => handleStartDelivery(p)}
                           className="px-4 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition font-semibold"
-                          title={
-                            (!p.status || p.status === 'pending' || p.status === 'PENDING') ? 'Iniciar Entrega' :
-                            p.status === 'AGUARDANDO_DESOVA' ? 'Continuar Entrega' :
-                            p.status === 'EM_DESOVA' ? 'Continuar Entrega' :
-                            p.status === 'AGUARDANDO_ANEXO' ? 'Continuar Entrega' :
-                            'Continuar Entrega'
-                          }
+                          title={(!p.status || p.status === 'pending' || p.status === 'PENDING' || p.status === 'AGENDADO') ? 'Iniciar Entrega' : 'Continuar Entrega'}
                         >
-                          {(!p.status || p.status === 'pending' || p.status === 'PENDING') ? 'Iniciar Entrega' :
-                            p.status === 'AGUARDANDO_DESOVA' ? 'Continuar Entrega' :
-                            p.status === 'EM_DESOVA' ? 'Continuar Entrega' :
-                            p.status === 'AGUARDANDO_ANEXO' ? 'Continuar Entrega' :
-                            'Continuar Entrega'}
+                          {(!p.status || p.status === 'pending' || p.status === 'PENDING' || p.status === 'AGENDADO') ? 'Iniciar Entrega' : 'Continuar Entrega'}
                         </button>
                       )}
                     </div>

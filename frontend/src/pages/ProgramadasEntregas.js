@@ -25,10 +25,32 @@ const ElapsedTimer = ({ start }) => {
   return <span>{hh}:{mm}:{ss}</span>;
 };
 
+// SVG Truck component
+const TruckSVG = () => (
+  <svg className="truck-svg" width="50" height="40" viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg">
+    {/* Cabin */}
+    <rect x="10" y="30" width="25" height="25" fill="#2563eb" stroke="#1e40af" strokeWidth="2" />
+    {/* Windshield */}
+    <polygon points="25,32 35,32 33,40 27,40" fill="#87ceeb" />
+    {/* Trailer */}
+    <rect x="35" y="25" width="55" height="35" fill="#3b82f6" stroke="#1e40af" strokeWidth="2" rx="2" />
+    {/* Door line on trailer */}
+    <line x1="65" y1="25" x2="65" y2="60" stroke="#1e40af" strokeWidth="1" />
+    {/* Front wheel */}
+    <circle cx="20" cy="60" r="8" fill="#333" stroke="#000" strokeWidth="1" />
+    <circle cx="20" cy="60" r="5" fill="#555" />
+    {/* Rear wheels */}
+    <circle cx="50" cy="62" r="7" fill="#333" stroke="#000" strokeWidth="1" />
+    <circle cx="50" cy="62" r="4" fill="#555" />
+    <circle cx="62" cy="62" r="7" fill="#333" stroke="#000" strokeWidth="1" />
+    <circle cx="62" cy="62" r="4" fill="#555" />
+  </svg>
+);
+
 // CSS for truck animation
 const truckStyles = `
-@keyframes truckMove { 0% { transform: translateX(0%); } 100% { transform: translateX(120%); } }
-.truck { will-change: transform; }
+@keyframes truckMove { 0% { left: 0%; } 100% { left: calc(100% - 50px); } }
+.truck-svg { animation: truckMove 6s linear infinite; will-change: transform; }
 `;
 
 const ProgramadasEntregas = () => {
@@ -437,13 +459,11 @@ const ProgramadasEntregas = () => {
                   </p>
                   {/* Truck animation + elapsed timer when delivery is en route */}
                   {(currentDelivery && ['pending', 'PENDING', 'EM_ROTA'].includes((currentDelivery.status || '').toString())) && (
-                    <div className="mt-4 flex items-center gap-4">
-                      <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden relative">
-                        <div className="truck absolute left-0 top-[-14px] flex items-center" style={{animation: 'truckMove 6s linear infinite'}}>
-                          <div className="text-2xl">🚚</div>
-                        </div>
+                    <div className="mt-4 flex items-center gap-3">
+                      <div className="flex-1 bg-gray-200 rounded-lg h-16 overflow-hidden relative border border-gray-300 flex items-center">
+                        <TruckSVG />
                       </div>
-                      <div className="text-sm text-gray-700 font-medium">Tempo de rota: <ElapsedTimer start={currentDelivery.createdAt} /></div>
+                      <div className="text-sm text-gray-700 font-medium text-right">Tempo de rota:<br /><span className="text-base font-bold text-blue-600"><ElapsedTimer start={currentDelivery.createdAt} /></span></div>
                     </div>
                   )}
                   <p className="text-gray-600 mt-3">Confirme sua chegada no cliente</p>

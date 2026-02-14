@@ -130,53 +130,38 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       ];
     }
 
-    // Busca inicialmente usando o db (mockdb ou mongo adapter)
-    // db já foi obtido no debug acima, não precisa obter novamente
+    // Busca entregas
     let deliveries = await db.find("deliveries", filter) || [];
     deliveries = deliveries.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    console.log('  → Após db.find com filter:', JSON.stringify(filter), '- Retornou', deliveries.length, 'entregas');
+    // Buscar programações para cruzar dados
+    const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
+    const programacoes = await ProgramacaoEntrega.find({});
 
-    // Filtra por intervalo de datas se fornecido (formato YYYY-MM-DD)
-    if (startDate || endDate) {
-      console.log('  ✓ Aplicando filtro de datas:', { startDate, endDate });
-      const start = startDate ? new Date(startDate + 'T00:00:00Z') : null;
-      const end = endDate ? new Date(endDate + 'T23:59:59Z') : null;
-      console.log('  → Datas parseadas:', { start: start?.toISOString(), end: end?.toISOString() });
-      
-      const deliveriesBefore = deliveries.length;
-      deliveries = deliveries.filter(d => {
-        const created = new Date(d.createdAt);
-        console.log(`    Verificando ${d.deliveryNumber}: createdAt=${created.toISOString()}`);
-        if (start && created < start) {
-          console.log(`      ✗ Antes da data inicial`);
-          return false;
-        }
-        if (end && created > end) {
-          console.log(`      ✗ Depois da data final`);
-          return false;
-        }
-        console.log(`      ✓ Dentro do intervalo`);
-        return true;
-      });
-      console.log('  → Após filtro de datas:', deliveriesBefore, '→', deliveries.length, 'entregas');
-    }
-    
-    console.log('✅ Retornando', deliveries.length, 'entregas');
-    
     // Normaliza documentos para resposta (desserializa JSON strings)
     const normalizedDeliveries = deliveries.map(d => normalizeDeliveryForResponse(d));
-    
+
+    // Cruzar dados de programação (por container)
+    const deliveriesWithProgramacao = normalizedDeliveries.map(delivery => {
+      const prog = programacoes.find(p => (p.container || '').toUpperCase() === (delivery.deliveryNumber || '').toUpperCase());
+      return {
+        ...delivery,
+        recebedor: prog ? prog.recebedor : '',
+        dataAgendamento: prog ? prog.dataAgendamento : '',
+        horarioChegada: delivery.arrivedAt || '',
+        horarioInicioDesova: delivery.desovaStartAt || '',
+        horarioFimDesova: delivery.desovaEndAt || '',
+        status: delivery.status // status do motorista
+      };
+    });
+
     // Consolida arquivos de ambas as pastas (inclui subpastas por cidade) para cada entrega
     const uploadsPath1 = path.join(__dirname, "../uploads");
     const uploadsPath2 = path.join(__dirname, "../src/uploads");
     const cities = ['manaus', 'itajai'];
-    
-    const deliveriesWithFiles = normalizedDeliveries.map(delivery => {
+
+    const deliveriesWithFiles = deliveriesWithProgramacao.map(delivery => {
       const consolidatedFiles = {};
-      
-      // Busca arquivos nas duas pastas e em subpastas por cidade
       [uploadsPath1, uploadsPath2].forEach(uploadsPath => {
-        // Verifica local direto
         const deliveryPath = path.join(uploadsPath, delivery.deliveryNumber);
         if (fs.existsSync(deliveryPath)) {
           try {
@@ -186,8 +171,6 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
             console.error(`Erro ao listar arquivos em ${deliveryPath}:`, err);
           }
         }
-
-        // Verifica subpastas de cidades
         cities.forEach(city => {
           const cPath = path.join(uploadsPath, city, delivery.deliveryNumber);
           if (fs.existsSync(cPath)) {
@@ -200,14 +183,13 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
           }
         });
       });
-      
       return {
         ...delivery,
-        uploadedFiles: Object.keys(consolidatedFiles), // Lista de arquivos consolidados
+        uploadedFiles: Object.keys(consolidatedFiles),
         hasFiles: Object.keys(consolidatedFiles).length > 0
       };
     });
-    
+
     return res.json({ deliveries: deliveriesWithFiles });
   } catch (err) {
     console.error(err);

@@ -76,6 +76,7 @@ const truckStyles = `
 const ProgramadasEntregas = () => {
   const navigate = useNavigate();
   const [programacoes, setProgramacoes] = useState([]);
+  const [allProgramacoes, setAllProgramacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const { user } = useAuth();
@@ -96,14 +97,21 @@ const ProgramadasEntregas = () => {
   useEffect(() => {
     loadProgramacoes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   const loadProgramacoes = async () => {
     setLoading(true);
     try {
       const res = await deliveryService.getProgramacoesAssigned();
-      // Não filtra nada: mostra todas as programações retornadas pelo backend
-      setProgramacoes(res.data.programacoes || []);
+      const todas = res.data.programacoes || [];
+      setAllProgramacoes(todas);
+      // Filtra para mostrar apenas as do contratado igual ao nome do usuário logado
+      if (user && user.name) {
+        const nome = String(user.name).trim().toUpperCase();
+        setProgramacoes(todas.filter(p => String(p.contratado).trim().toUpperCase() === nome));
+      } else {
+        setProgramacoes([]);
+      }
     } catch (err) {
       console.error('Erro ao buscar programações:', err);
       setToast({ message: 'Erro ao carregar entregas programadas', type: 'error' });

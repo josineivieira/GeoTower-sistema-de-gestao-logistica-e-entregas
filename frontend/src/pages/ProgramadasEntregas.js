@@ -110,9 +110,12 @@ const ProgramadasEntregas = () => {
       if (user) {
         nomeFiltro = (user.username || user.name || '').trim().toUpperCase();
         // Log para debug
-        console.log('[Filtro BANDEIRA] user.username:', user.username, '| user.name:', user.name, '| usado:', nomeFiltro);
+        console.log('[DEBUG] user.username:', user.username, '| user.name:', user.name, '| usado para filtro:', nomeFiltro);
       }
+      // Logar todos os contratados das programações
+      console.log('[DEBUG] Contratados das programações:', todas.map(p => p.contratado));
       if (nomeFiltro) {
+        // Mostra todas as entregas do contratado, independente do status
         setProgramacoes(todas.filter(p => String(p.contratado).trim().toUpperCase() === nomeFiltro));
       } else {
         setProgramacoes([]);
@@ -290,7 +293,7 @@ const ProgramadasEntregas = () => {
       await deliveryService.updateDelivery(currentDelivery._id, { status: 'EM_DESOVA' });
       setToast({ message: 'Desova iniciada', type: 'success' });
       goToStep('desovaProgress');
-      // optionally refresh programacoes, though should already be removed
+      // Sempre atualiza programacoes, mas não remove nenhuma entrega
       loadProgramacoes();
     } catch (err) {
       console.error(err);

@@ -1,3 +1,4 @@
+import EntregasEmAndamento from './pages/EntregasEmAndamento';
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './services/authContext';
@@ -23,6 +24,17 @@ import Profile from './pages/Profile';
 import EntregaEmRota from './pages/EntregaEmRota';
 
 function AppContent() {
+
+        <Route
+          path="/entregas-em-andamento"
+          element={
+            <PrivateRoute>
+              <AppLayout>
+                <EntregasEmAndamento />
+              </AppLayout>
+            </PrivateRoute>
+          }
+        />
   const { isAuthenticated } = useAuth();
   const { city } = useCity();
 

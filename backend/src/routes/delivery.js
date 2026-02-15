@@ -235,8 +235,15 @@ router.get('/programacoes/mine', auth, async (req, res) => {
       console.warn('[PROGRAMACAO] Aviso: falha ao buscar registro do usuário no DB:', e && e.message ? e.message : e);
     }
 
-    // Buscar todas as programações do contratado do usuário, independente do status
-    const contratado = (req.user && req.user.username) ? String(req.user.username).trim().toUpperCase() : '';
+    // Buscar o valor do contratado do registro do driver, se existir, senão usar username
+    let contratado = '';
+    if (driverRecord && driverRecord.contratado) {
+      contratado = String(driverRecord.contratado).trim().toUpperCase();
+      console.log('[DEBUG PROGRAMACOES] Contratado do registro do driver:', contratado);
+    } else if (req.user && req.user.username) {
+      contratado = String(req.user.username).trim().toUpperCase();
+      console.log('[DEBUG PROGRAMACOES] Contratado do req.user.username:', contratado);
+    }
     if (!contratado) {
       console.log('[DEBUG PROGRAMACOES] Nenhum contratado disponível para busca.');
       return res.json({ success: true, programacoes: [] });

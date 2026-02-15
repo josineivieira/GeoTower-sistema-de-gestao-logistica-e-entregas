@@ -233,6 +233,12 @@ router.get('/programacoes/mine', auth, async (req, res) => {
 
 
       // Restaurado: prioriza contratado do registro do motorista, aceita variações e usa regex case-insensitive
+      let driverRecord = null;
+      try {
+        driverRecord = await db.findById('drivers', req.user.id);
+      } catch (e) {
+        console.warn('[PROGRAMACAO] Falha ao buscar registro do motorista:', e && e.message ? e.message : e);
+      }
       let contratado = '';
       if (driverRecord && driverRecord.contratado) {
         contratado = String(driverRecord.contratado).trim();

@@ -235,16 +235,14 @@ router.get('/programacoes/mine', auth, async (req, res) => {
       console.warn('[PROGRAMACAO] Aviso: falha ao buscar registro do usuário no DB:', e && e.message ? e.message : e);
     }
 
-    // Prioriza campos do registro do usuário: contratado > transportadora > name > fullName
-    const contratadoRaw = (driverRecord && (driverRecord.contratado || driverRecord.transportadora || driverRecord.name || driverRecord.fullName)) || (req.user && (req.user.transportadora || req.user.contratado)) || '';
-    const contratado = String(contratadoRaw || '').trim();
+    // O campo contratado será igual ao nome de usuário do perfil logado (user.username)
+    const contratado = (req.user && req.user.username) ? String(req.user.username).trim() : '';
 
-    // Se não houver contratado claro no usuário, retornar vazio
     if (!contratado) {
       return res.json({ success: true, programacoes: [] });
     }
 
-    // Buscar todas as programações ativas para o contratado (independente do status)
+    // Buscar todas as programações cujo contratado seja igual ao nome de usuário (case-insensitive)
     const regex = new RegExp(`^${contratado}$`, 'i');
     const programacoes = await ProgramacaoEntrega.find({
       contratado: regex

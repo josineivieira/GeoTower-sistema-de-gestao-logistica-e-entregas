@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import { adminService } from '../services/authService';
-import { FaArrowLeft, FaEye, FaDownload, FaSync, FaFilter, FaTimes, FaTrash, FaEdit, FaEllipsisV } from 'react-icons/fa';
+import { FaArrowLeft, FaEye, FaDownload, FaSync, FaFilter, FaTimes, FaTrash, FaEdit, FaEllipsisV, FaExclamationTriangle } from 'react-icons/fa';
 import manaConfig from '../config/cities/manaus.json';
 import itajaiConfig from '../config/cities/itajai.json';
 
@@ -14,6 +14,7 @@ const MonitorEntregas = () => {
   const [toast, setToast] = useState(null);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [alertInfo, setAlertInfo] = useState(null); // Para tooltip/modal de alerta
   const [refreshInterval, setRefreshInterval] = useState(30);
   const [editingDelivery, setEditingDelivery] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -412,12 +413,31 @@ const MonitorEntregas = () => {
                     <td className="px-4 py-3 text-gray-700">{delivery.driverName || '-'}</td>
                     <td className="px-4 py-3 text-gray-700">{delivery.recebedor || '-'}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(delivery.status)}`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(delivery.status)} flex items-center gap-2`}>
                         {delivery.status || '-'}
-                        {/* Alerta de solicitação de agendamento */}
-                        {delivery.observations && delivery.observations.includes('SOLICITACAO_AGENDAMENTO') && (
-                          <span className="ml-2 px-2 py-1 rounded bg-yellow-100 text-yellow-800 text-xs font-bold">Solicita agendamento devolução</span>
-                        )}
+                        {/* Emoji de alerta para atraso ou solicitação de agendamento */}
+                        {(delivery.observations && delivery.observations.includes('SOLICITACAO_AGENDAMENTO')) ||
+                         (delivery.dataAgendamento && delivery.horarioChegada && new Date(delivery.horarioChegada) > new Date(delivery.dataAgendamento)) ? (
+                          <button
+                            className="ml-2 text-yellow-600 hover:text-yellow-800 focus:outline-none"
+                            title="Ver detalhes do alerta"
+                            onClick={() => {
+                              if (delivery.observations && delivery.observations.includes('SOLICITACAO_AGENDAMENTO')) {
+                                setAlertInfo({
+                                  type: 'agendamento',
+                                  message: 'Solicitação de agendamento de devolução.'
+                                });
+                              } else if (delivery.dataAgendamento && delivery.horarioChegada && new Date(delivery.horarioChegada) > new Date(delivery.dataAgendamento)) {
+                                setAlertInfo({
+                                  type: 'atraso',
+                                  message: 'Entrega atrasada: chegada após o horário agendado.'
+                                });
+                              }
+                            }}
+                          >
+                            <FaExclamationTriangle className="inline text-lg align-middle" />
+                          </button>
+                        ) : null}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
@@ -425,11 +445,22 @@ const MonitorEntregas = () => {
                     </td>
                     <td className="px-4 py-3 text-gray-700">
                       {delivery.horarioChegada ? new Date(delivery.horarioChegada).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}
-                      {/* Alerta de atraso */}
-                      {delivery.dataAgendamento && delivery.horarioChegada && new Date(delivery.horarioChegada) > new Date(delivery.dataAgendamento) && (
-                        <span className="ml-2 px-2 py-1 rounded bg-red-100 text-red-700 text-xs font-bold">Atrasado</span>
-                      )}
                     </td>
+                          {/* Modal/Tooltip de alerta */}
+                          {alertInfo && (
+                            <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+                              <div className="bg-white rounded-lg shadow-lg p-6 max-w-xs w-full flex flex-col items-center">
+                                <FaExclamationTriangle className="text-yellow-500 text-4xl mb-2" />
+                                <p className="text-gray-800 text-center font-semibold mb-4">{alertInfo.message}</p>
+                                <button
+                                  onClick={() => setAlertInfo(null)}
+                                  className="mt-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
+                                >
+                                  Fechar
+                                </button>
+                              </div>
+                            </div>
+                          )}
                     <td className="px-4 py-3 text-gray-700">{delivery.horarioInicioDesova ? new Date(delivery.horarioInicioDesova).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                     <td className="px-4 py-3 text-gray-700">{delivery.horarioFimDesova ? new Date(delivery.horarioFimDesova).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                     <td className="px-4 py-3 text-center">

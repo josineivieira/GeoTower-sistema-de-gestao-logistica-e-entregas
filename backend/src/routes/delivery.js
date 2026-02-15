@@ -246,6 +246,7 @@ router.get('/programacoes/mine', auth, async (req, res) => {
       contratado: contratado
     }).sort({ dataAgendamento: -1 });
     console.log('[PROGRAMACAO] Encontradas', programacoes.length, 'programações para contratado', contratado);
+    console.log('[DEBUG] Status das programações retornadas:', programacoes.map(p => p.status));
     return res.json({ success: true, programacoes: programacoes || [] });
   } catch (err) {
     console.error('[PROGRAMACAO] Erro ao buscar programações do usuário', err);

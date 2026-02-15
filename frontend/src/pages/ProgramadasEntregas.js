@@ -105,10 +105,15 @@ const ProgramadasEntregas = () => {
       const res = await deliveryService.getProgramacoesAssigned();
       const todas = res.data.programacoes || [];
       setAllProgramacoes(todas);
-      // Filtra para mostrar apenas as do contratado igual ao nome do usuário logado
-      if (user && user.name) {
-        const nome = String(user.name).trim().toUpperCase();
-        setProgramacoes(todas.filter(p => String(p.contratado).trim().toUpperCase() === nome));
+      // Preferir username se existir, senão name
+      let nomeFiltro = '';
+      if (user) {
+        nomeFiltro = (user.username || user.name || '').trim().toUpperCase();
+        // Log para debug
+        console.log('[Filtro BANDEIRA] user.username:', user.username, '| user.name:', user.name, '| usado:', nomeFiltro);
+      }
+      if (nomeFiltro) {
+        setProgramacoes(todas.filter(p => String(p.contratado).trim().toUpperCase() === nomeFiltro));
       } else {
         setProgramacoes([]);
       }

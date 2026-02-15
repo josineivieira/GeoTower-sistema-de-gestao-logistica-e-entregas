@@ -246,17 +246,12 @@ router.get('/programacoes/mine', auth, async (req, res) => {
 
     // Buscar todas as programações do contratado (case-insensitive), independente do status
     // Loga todas as programações encontradas
-    const programacoes = await ProgramacaoEntrega.find({
-      contratado: regex,
-      ativo: { $ne: false }
-    }).sort({ dataAgendamento: -1 });
-    console.log('[PROGRAMACAO] Lista completa:', programacoes.map(p => ({ id: p._id, status: p.status, ativo: p.ativo })));
     const regex = new RegExp(`^${contratado}$`, 'i');
     const programacoes = await ProgramacaoEntrega.find({
       contratado: regex,
       ativo: { $ne: false }
     }).sort({ dataAgendamento: -1 });
-
+    console.log('[PROGRAMACAO] Lista completa:', programacoes.map(p => ({ id: p._id, status: p.status, ativo: p.ativo })));
     console.log('[PROGRAMACAO] Encontradas', programacoes.length, 'programações para contratado', contratado);
     return res.json({ success: true, programacoes: programacoes || [] });
   } catch (err) {

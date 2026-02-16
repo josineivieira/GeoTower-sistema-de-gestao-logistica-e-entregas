@@ -7,8 +7,6 @@ import manaConfig from '../config/cities/manaus.json';
 import itajaiConfig from '../config/cities/itajai.json';
 
 const MonitorEntregas = () => {
-  // Modal para visualizar fotos do fluxo
-  const [modalFotos, setModalFotos] = useState(null);
   const navigate = useNavigate();
   const [deliveries, setDeliveries] = useState([]);
   const [filteredDeliveries, setFilteredDeliveries] = useState([]);
@@ -633,13 +631,13 @@ const MonitorEntregas = () => {
                     ));
                     // Fotos do fluxo: chegada, início, fim desova
                     const fotos = [];
-                    if (selectedDelivery.fotosChegada && selectedDelivery.fotosChegada.length > 0) {
+                    if (Array.isArray(selectedDelivery.fotosChegada) && selectedDelivery.fotosChegada.length > 0) {
                       fotos.push({ label: 'Fotos Chegada Cliente', files: selectedDelivery.fotosChegada });
                     }
-                    if (selectedDelivery.fotosInicioDesova && selectedDelivery.fotosInicioDesova.length > 0) {
+                    if (Array.isArray(selectedDelivery.fotosInicioDesova) && selectedDelivery.fotosInicioDesova.length > 0) {
                       fotos.push({ label: 'Fotos Início Desova', files: selectedDelivery.fotosInicioDesova });
                     }
-                    if (selectedDelivery.fotosFimDesova && selectedDelivery.fotosFimDesova.length > 0) {
+                    if (Array.isArray(selectedDelivery.fotosFimDesova) && selectedDelivery.fotosFimDesova.length > 0) {
                       fotos.push({ label: 'Fotos Fim Desova', files: selectedDelivery.fotosFimDesova });
                     }
                     return [

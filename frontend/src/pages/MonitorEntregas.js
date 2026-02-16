@@ -647,12 +647,29 @@ const MonitorEntregas = () => {
                       ...fotos.map((f, idx) => (
                         <div key={f.label + idx} className="bg-gray-50 p-3 rounded flex items-center justify-between">
                           <span className="font-semibold text-gray-800">{f.label}</span>
-                          <button
-                            onClick={() => setModalFotos({ label: f.label, files: f.files })}
-                            className="flex items-center gap-2 px-3 py-1 bg-purple-500 text-white text-sm rounded hover:bg-purple-600 transition"
-                          >
-                            Visualizar Fotos
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setModalFotos({ label: f.label, files: f.files })}
+                              className="flex items-center gap-2 px-3 py-1 bg-purple-500 text-white text-sm rounded hover:bg-purple-600 transition"
+                            >
+                              Visualizar Fotos
+                            </button>
+                            <button
+                              onClick={() => {
+                                f.files.forEach((url, i) => {
+                                  const link = document.createElement('a');
+                                  link.href = url;
+                                  link.setAttribute('download', `${f.label.replace(/\s+/g, '_')}_${i+1}.jpg`);
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  document.body.removeChild(link);
+                                });
+                              }}
+                              className="flex items-center gap-2 px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition"
+                            >
+                              <FaDownload /> Baixar
+                            </button>
+                          </div>
                         </div>
                       ))
                     ];

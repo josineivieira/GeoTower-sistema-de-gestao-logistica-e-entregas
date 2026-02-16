@@ -38,21 +38,23 @@ export default function EntregasEmAndamento() {
       {toast && <Toast message={toast.message} type={toast.type} />}
       {loading ? (
         <div>Carregando...</div>
-      ) : programacoes.length === 0 ? (
-        <div className="bg-white p-4 rounded shadow text-center">Nenhuma entrega em andamento encontrada</div>
       ) : (
-        programacoes.map((p, idx) => (
-          <div key={idx} className="bg-white p-4 rounded shadow mb-4">
-            <div className="mb-2 font-semibold">Processo: {p.processo}</div>
-            <div>Data Agendamento: {new Date(p.dataAgendamento).toLocaleString()}</div>
-            <div>Recebedor: {p.recebedor}</div>
-            <div>Container: {p.container}</div>
-            <div>Status: <span className="font-bold text-blue-600">{p.status}</span></div>
-            <div>Contratado: {p.contratado}</div>
-            <div>Motorista: {p.motorista || '-'}</div>
-          </div>
-        ))
-      )
+        programacoes.length === 0 ? (
+          <div className="bg-white p-4 rounded shadow text-center">Nenhuma entrega em andamento encontrada</div>
+        ) : (
+          programacoes.map((p, idx) => (
+            <div key={idx} className="bg-white p-4 rounded shadow mb-4">
+              <div className="mb-2 font-semibold">Processo: {p.processo}</div>
+              <div>Data Agendamento: {new Date(p.dataAgendamento).toLocaleString()}</div>
+              <div>Recebedor: {p.recebedor}</div>
+              <div>Container: {p.container}</div>
+              <div>Status: <span className="font-bold text-blue-600">{p.status}</span></div>
+              <div>Contratado: {p.contratado}</div>
+              <div>Motorista: {p.motorista || '-'}</div>
+            </div>
+          ))
+        )
+      )}
     </div>
-	);
+  );
 }

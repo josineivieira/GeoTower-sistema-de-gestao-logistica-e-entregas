@@ -162,13 +162,11 @@ const ProgramadasEntregas = () => {
             restoredStep = 'desovaProgress';
             break;
           case 'AGUARDANDO_ANEXO':
+          case 'ANEXANDO_DOCUMENTOS_FINAIS':
             restoredStep = 'finalDocs';
             break;
           case 'AGUARDANDO_AGENDAMENTO_DEVOLUCAO':
             restoredStep = 'askSchedule';
-            break;
-          case 'ANEXANDO_DOCUMENTOS_FINAIS':
-            restoredStep = 'finalDocs';
             break;
           case 'ENTREGUE':
             restoredStep = 'finalDocs';
@@ -178,8 +176,12 @@ const ProgramadasEntregas = () => {
           default:
             restoredStep = 'welcome';
         }
-        // Se currentStep já estiver salvo, prioriza ele
-        setCurrentStep(existing.currentStep || restoredStep);
+        // Se currentStep já estiver salvo, SEMPRE prioriza ele (mesmo se status mudou)
+        if (existing.currentStep) {
+          setCurrentStep(existing.currentStep);
+        } else {
+          setCurrentStep(restoredStep);
+        }
         setPhotos([]);
         setObservations('');
         setJustification('');
@@ -496,27 +498,34 @@ const ProgramadasEntregas = () => {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-gray-800 mb-2">Processo: {p.processo}</h3>
-
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-gray-600">
                       <div>
                         <p className="text-gray-500">Data Agendamento</p>
                         <p className="font-medium">{p.dataAgendamento ? new Date(p.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</p>
                       </div>
-
                       <div>
                         <p className="text-gray-500">Recebedor</p>
                         <p className="font-medium">{p.recebedor || '-'}</p>
                       </div>
-
                       <div>
                         <p className="text-gray-500">Container</p>
                         <p className="font-medium">{p.container || '-'}</p>
                       </div>
-
                       <div>
                         <p className="text-gray-500">Status</p>
-                        <p className="font-medium">
-                          {/* Status amigável para cada etapa */}
+                        <span className={
+                          `font-bold px-2 py-1 rounded-lg text-xs ${
+                            (!p.status || p.status === 'pending' || p.status === 'PENDING') ? 'bg-blue-100 text-blue-700 border border-blue-300' :
+                            p.status === 'AGUARDANDO_DESOVA' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
+                            p.status === 'EM_DESOVA' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
+                            p.status === 'AGUARDANDO_ANEXO' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
+                            p.status === 'AGUARDANDO_AGENDAMENTO_DEVOLUCAO' ? 'bg-pink-100 text-pink-800 border border-pink-300' :
+                            p.status === 'ANEXANDO_DOCUMENTOS_FINAIS' ? 'bg-green-100 text-green-800 border border-green-300' :
+                            p.status === 'ENTREGUE' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                            p.status === 'CANCELADO' ? 'bg-gray-200 text-gray-700 border border-gray-300' :
+                            'bg-gray-100 text-gray-700 border border-gray-300'
+                          }`
+                        }>
                           {(!p.status || p.status === 'pending' || p.status === 'PENDING') ? 'AGENDADO' :
                             p.status === 'AGUARDANDO_DESOVA' ? 'AGUARDANDO DESOVA' :
                             p.status === 'EM_DESOVA' ? 'EM DESOVA' :
@@ -526,14 +535,12 @@ const ProgramadasEntregas = () => {
                             p.status === 'ENTREGUE' ? 'ENTREGUE' :
                             p.status === 'CANCELADO' ? 'CANCELADO' :
                             p.status}
-                        </p>
+                        </span>
                       </div>
-
                       <div>
                         <p className="text-gray-500">Contratado</p>
                         <p className="font-medium">{p.contratado || '-'}</p>
                       </div>
-
                       <div>
                         <p className="text-gray-500">Motorista</p>
                         <p className="font-medium">{p.motorista || '-'}</p>
@@ -542,12 +549,11 @@ const ProgramadasEntregas = () => {
                   </div>
 
                     <div className="flex gap-2 ml-4">
-                      
                       {/* Exibe botão para todos os status, exceto ENTREGUE/CANCELADO */}
                       {(!['ENTREGUE','CANCELADO'].includes((p.status||'').toString())) && (
                         <button
                           onClick={() => handleStartDelivery(p)}
-                          className="px-4 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition font-semibold"
+                          className="px-6 py-2 bg-gradient-to-r from-emerald-400 to-emerald-600 text-white rounded-xl shadow-lg hover:scale-105 hover:shadow-xl transition font-bold text-lg border-2 border-emerald-500"
                           title={(!p.status || p.status === 'pending' || p.status === 'PENDING' || p.status === 'AGENDADO') ? 'Iniciar Entrega' : 'Continuar Entrega'}
                         >
                           {(!p.status || p.status === 'pending' || p.status === 'PENDING' || p.status === 'AGENDADO') ? 'Iniciar Entrega' : 'Continuar Entrega'}
@@ -567,13 +573,13 @@ const ProgramadasEntregas = () => {
 
       {/* Modal de fluxo de entrega */}
       {showModal && currentDelivery && currentProgramacao && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-y-auto p-10 border-4 border-emerald-400">
             <style>{truckStyles}</style>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">Fluxo de Entrega</h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-3xl font-extrabold text-emerald-700">Fluxo de Entrega</h2>
               <button onClick={closeModal} className="text-gray-500 hover:text-gray-800">
-                <FaTimes size={24} />
+                <FaTimes size={28} />
               </button>
             </div>
 

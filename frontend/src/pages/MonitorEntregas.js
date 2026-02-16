@@ -632,31 +632,26 @@ const MonitorEntregas = () => {
                       </div>
                     ));
                     // Fotos do fluxo: chegada, início, fim desova
-                    const fotos = [];
-                    if (Array.isArray(selectedDelivery.documents?.chegadaCliente) && selectedDelivery.documents.chegadaCliente.length > 0) {
-                      fotos.push({ label: 'Registre sua chegada no cliente', files: selectedDelivery.documents.chegadaCliente });
-                    }
-                    if (Array.isArray(selectedDelivery.documents?.inicioDesova) && selectedDelivery.documents.inicioDesova.length > 0) {
-                      fotos.push({ label: 'Registre o início da desova', files: selectedDelivery.documents.inicioDesova });
-                    }
-                    if (Array.isArray(selectedDelivery.documents?.fimDesova) && selectedDelivery.documents.fimDesova.length > 0) {
-                      fotos.push({ label: 'Registre a finalização da desova', files: selectedDelivery.documents.fimDesova });
-                    }
-                    return [
-                      ...docRows,
-                      ...fotos.map((f, idx) => (
+                    const fotosCampos = [
+                      { key: 'chegadaCliente', label: 'Registre sua chegada no cliente' },
+                      { key: 'inicioDesova', label: 'Registre o início da desova' },
+                      { key: 'fimDesova', label: 'Registre a finalização da desova' }
+                    ];
+                    const fotosRows = fotosCampos.map((f, idx) => {
+                      const files = Array.isArray(selectedDelivery.documents?.[f.key]) ? selectedDelivery.documents[f.key] : [];
+                      return files.length > 0 ? (
                         <div key={f.label + idx} className="bg-gray-50 p-3 rounded flex items-center justify-between">
                           <span className="font-semibold text-gray-800">{f.label}</span>
                           <div className="flex gap-2">
                             <button
-                              onClick={() => setModalFotos({ label: f.label, files: f.files })}
+                              onClick={() => setModalFotos({ label: f.label, files })}
                               className="flex items-center gap-2 px-3 py-1 bg-purple-500 text-white text-sm rounded hover:bg-purple-600 transition"
                             >
                               Visualizar Fotos
                             </button>
                             <button
                               onClick={() => {
-                                f.files.forEach((url, i) => {
+                                files.forEach((url, i) => {
                                   const link = document.createElement('a');
                                   link.href = url;
                                   link.setAttribute('download', `${f.label.replace(/\s+/g, '_')}_${i+1}.jpg`);
@@ -671,7 +666,15 @@ const MonitorEntregas = () => {
                             </button>
                           </div>
                         </div>
-                      ))
+                      ) : (
+                        <div key={f.label + idx} className="bg-gray-100 p-3 rounded text-gray-500 text-sm">
+                          {f.label} - Não anexado
+                        </div>
+                      );
+                    });
+                    return [
+                      ...docRows,
+                      ...fotosRows
                     ];
                   })()}
                 </div>

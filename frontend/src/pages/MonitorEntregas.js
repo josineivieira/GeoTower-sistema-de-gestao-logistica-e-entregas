@@ -208,10 +208,16 @@ const MonitorEntregas = () => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      submitted: 'bg-green-100 text-green-800 border border-green-300',
-      pending: 'bg-yellow-100 text-yellow-800 border border-yellow-300'
+      submitted: 'bg-green-200 text-green-900 border-2 border-green-500 shadow font-extrabold text-base',
+      pending: 'bg-yellow-200 text-yellow-900 border-2 border-yellow-500 shadow font-extrabold text-base',
+      AGUARDANDO_DESOVA: 'bg-orange-200 text-orange-900 border-2 border-orange-500 shadow font-extrabold text-base',
+      EM_DESOVA: 'bg-purple-200 text-purple-900 border-2 border-purple-500 shadow font-extrabold text-base',
+      DESOVA_FINALIZADA: 'bg-blue-200 text-blue-900 border-2 border-blue-500 shadow font-extrabold text-base',
+      ANEXANDO_DOCUMENTOS_FINAIS: 'bg-pink-200 text-pink-900 border-2 border-pink-500 shadow font-extrabold text-base',
+      ENTREGUE: 'bg-emerald-200 text-emerald-900 border-2 border-emerald-500 shadow font-extrabold text-base',
+      CANCELADO: 'bg-gray-300 text-gray-800 border-2 border-gray-500 shadow font-extrabold text-base'
     };
-    return badges[status] || 'bg-gray-100 text-gray-800';
+    return badges[status] || 'bg-gray-100 text-gray-800 font-bold text-base';
   };
 
   // Default labels for Manaus; we will pick per-delivery labels when showing modal
@@ -412,31 +418,8 @@ const MonitorEntregas = () => {
                     <td className="px-4 py-3 text-gray-700">{delivery.driverName || '-'}</td>
                     <td className="px-4 py-3 text-gray-700">{delivery.recebedor || '-'}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(delivery.status)} flex items-center gap-2`}>
+                      <span className={`px-4 py-2 rounded-full font-bold uppercase tracking-wide ${getStatusBadge(delivery.status)} flex items-center justify-center`}>
                         {delivery.status || '-'}
-                        {/* Emoji de alerta para atraso ou solicitação de agendamento */}
-                        {(delivery.observations && delivery.observations.includes('SOLICITACAO_AGENDAMENTO')) ||
-                         (delivery.dataAgendamento && delivery.horarioChegada && new Date(delivery.horarioChegada) > new Date(delivery.dataAgendamento)) ? (
-                          <button
-                            className="ml-2 text-yellow-600 hover:text-yellow-800 focus:outline-none"
-                            title="Ver detalhes do alerta"
-                            onClick={() => {
-                              if (delivery.observations && delivery.observations.includes('SOLICITACAO_AGENDAMENTO')) {
-                                setAlertInfo({
-                                  type: 'agendamento',
-                                  message: 'Solicitação de agendamento de devolução.'
-                                });
-                              } else if (delivery.dataAgendamento && delivery.horarioChegada && new Date(delivery.horarioChegada) > new Date(delivery.dataAgendamento)) {
-                                setAlertInfo({
-                                  type: 'atraso',
-                                  message: 'Entrega atrasada: chegada após o horário agendado.'
-                                });
-                              }
-                            }}
-                          >
-                            <FaExclamationTriangle className="inline text-lg align-middle" />
-                          </button>
-                        ) : null}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
@@ -481,7 +464,14 @@ const MonitorEntregas = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center">
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        {/* Mostra todos alertas/observações relevantes */}
+                        {delivery.observations && delivery.observations.trim() !== '' && (
+                          <div className="mb-1 px-2 py-1 bg-yellow-100 text-yellow-900 rounded text-xs font-semibold flex items-center gap-1 max-w-xs break-words">
+                            <FaExclamationTriangle className="inline text-base align-middle mr-1" />
+                            {delivery.observations}
+                          </div>
+                        )}
                         <div className="relative inline-block text-left" ref={openMenuId === delivery._id ? menuRef : null}>
                           <button
                             onClick={(e) => {

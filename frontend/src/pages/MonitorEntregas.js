@@ -7,6 +7,8 @@ import manaConfig from '../config/cities/manaus.json';
 import itajaiConfig from '../config/cities/itajai.json';
 
 const MonitorEntregas = () => {
+  // Modal para visualizar fotos do fluxo
+  const [modalFotos, setModalFotos] = useState(null);
   const navigate = useNavigate();
   const [deliveries, setDeliveries] = useState([]);
   const [filteredDeliveries, setFilteredDeliveries] = useState([]);

@@ -164,6 +164,12 @@ const ProgramadasEntregas = () => {
           case 'AGUARDANDO_ANEXO':
             restoredStep = 'finalDocs';
             break;
+          case 'AGUARDANDO_AGENDAMENTO_DEVOLUCAO':
+            restoredStep = 'askSchedule';
+            break;
+          case 'ANEXANDO_DOCUMENTOS_FINAIS':
+            restoredStep = 'finalDocs';
+            break;
           case 'ENTREGUE':
             restoredStep = 'finalDocs';
             break;
@@ -377,23 +383,21 @@ const ProgramadasEntregas = () => {
   };
 
   const handleFinalUploadAndSubmit = async () => {
-    const docs = Object.keys(documentsUpload).filter(key => documentsUpload[key] && documentsUpload[key].length > 0);
-    if (docs.length === 0) {
-      setToast({ message: 'Envie ao menos um documento', type: 'error' });
+    const requiredDocs = ['canhotNF','canhotCTE','diarioBordo','devolucaoVazio','retiradaCheio'];
+    const allOk = requiredDocs.every(k => documentsUpload[k] && documentsUpload[k].length > 0);
+    if (!allOk) {
+      setToast({ message: 'Anexe todos os documentos obrigatórios!', type: 'error' });
       return;
     }
     setSubmitting(true);
     try {
-      for (const docType of docs) {
+      for (const docType of requiredDocs) {
         const files = documentsUpload[docType];
         await deliveryService.uploadDocument(currentDelivery._id, docType, files);
       }
       await deliveryService.updateDelivery(currentDelivery._id, { status: 'ENTREGUE' });
-      setToast({ message: 'Entrega finalizada com sucesso!', type: 'success' });
-      setTimeout(() => {
-        closeModal();
-        loadProgramacoes();
-      }, 1500);
+      setCurrentStep('agradecimento');
+      loadProgramacoes();
     } catch (err) {
       console.error(err);
       setToast({ message: 'Erro ao enviar documentos', type: 'error' });
@@ -401,6 +405,56 @@ const ProgramadasEntregas = () => {
       setSubmitting(false);
     }
   };
+            {/* STEP 11: Mensagem final de agradecimento e feedback */}
+            {currentStep === 'agradecimento' && (
+              <div className="space-y-6 text-center">
+                <h3 className="text-2xl font-bold text-green-700">Entrega finalizada com sucesso!</h3>
+                <p className="text-lg text-gray-700">Obrigado por utilizar o sistema. Deseja relatar algo sobre esta entrega?</p>
+                <div className="flex gap-2 justify-center">
+                  <button
+                    onClick={() => goToStep('feedbackObs')}
+                    className="px-4 py-2 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600"
+                  >
+                    Sim, quero relatar
+                  </button>
+                  <button
+                    onClick={() => { closeModal(); setTimeout(() => setToast({ message: 'Entrega concluída! Obrigado.', type: 'success' }), 500); }}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300"
+                  >
+                    Não, finalizar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 12: Observação de feedback final */}
+            {currentStep === 'feedbackObs' && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Relate sua experiência ou observação final</h3>
+                <textarea
+                  value={justification}
+                  onChange={(e) => setJustification(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={5}
+                  placeholder="Digite sua observação..."
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => { await handleJustificationSubmit(); closeModal(); setTimeout(() => setToast({ message: 'Obrigado pelo feedback!', type: 'success' }), 500); }}
+                    disabled={submitting || !justification.trim()}
+                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    Enviar e finalizar
+                  </button>
+                  <button
+                    onClick={() => goToStep('agradecimento')}
+                    className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300"
+                  >
+                    Voltar
+                  </button>
+                </div>
+              </div>
+            )}
 
   const dataURLtoBlob = (dataUrl) => {
     const arr = dataUrl.split(',');
@@ -467,6 +521,8 @@ const ProgramadasEntregas = () => {
                             p.status === 'AGUARDANDO_DESOVA' ? 'AGUARDANDO DESOVA' :
                             p.status === 'EM_DESOVA' ? 'EM DESOVA' :
                             p.status === 'AGUARDANDO_ANEXO' ? 'AGUARDANDO ANEXO DOS DOCUMENTOS' :
+                            p.status === 'AGUARDANDO_AGENDAMENTO_DEVOLUCAO' ? 'AGUARDANDO AGENDAMENTO DE DEVOLUÇÃO' :
+                            p.status === 'ANEXANDO_DOCUMENTOS_FINAIS' ? 'ANEXANDO DOCUMENTOS FINAIS' :
                             p.status === 'ENTREGUE' ? 'ENTREGUE' :
                             p.status === 'CANCELADO' ? 'CANCELADO' :
                             p.status}
@@ -779,12 +835,75 @@ const ProgramadasEntregas = () => {
                     ✓ Sim, finalizou
                   </button>
                   <button
-                    onClick={() => goToStep('desovaStart')}
+                    onClick={() => goToStep('desovaNotYet')}
                     className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300"
                   >
                     Ainda não
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* STEP 7.1: Desova ainda não finalizada - relatar algo? */}
+            {currentStep === 'desovaNotYet' && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Deseja relatar algum problema ou observação?</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => goToStep('desovaNotYetObs')}
+                    className="flex-1 px-4 py-3 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600"
+                  >
+                    Sim, quero relatar
+                  </button>
+                  <button
+                    onClick={() => goToStep('desovaNotYetMsg')}
+                    className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300"
+                  >
+                    Não, está tudo certo
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 7.2: Relatar observação */}
+            {currentStep === 'desovaNotYetObs' && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Relate o que está acontecendo</h3>
+                <textarea
+                  value={justification}
+                  onChange={(e) => setJustification(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={5}
+                  placeholder="Digite sua observação..."
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => { await handleJustificationSubmit(); goToStep('desovaProgress'); }}
+                    disabled={submitting || !justification.trim()}
+                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    Enviar observação
+                  </button>
+                  <button
+                    onClick={() => goToStep('desovaProgress')}
+                    className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300"
+                  >
+                    Voltar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 7.3: Mensagem de ok, volta para pergunta */}
+            {currentStep === 'desovaNotYetMsg' && (
+              <div className="space-y-4 text-center">
+                <h3 className="text-lg font-semibold text-green-700">Ok, quando finalizar nos informe!</h3>
+                <button
+                  onClick={() => goToStep('desovaProgress')}
+                  className="mt-4 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700"
+                >
+                  Voltar para a pergunta
+                </button>
               </div>
             )}
 
@@ -885,23 +1004,51 @@ const ProgramadasEntregas = () => {
                     retiradaCheio: 'Retirada Cheio'
                   };
                   return (
-                    <div key={docType} className="border border-gray-300 p-3 rounded-lg">
+                    <div key={docType} className="border border-gray-300 p-3 rounded-lg mb-2">
                       <p className="font-semibold text-sm mb-2">{labels[docType]}</p>
-                      <input
-                        type="file"
-                        multiple
-                        onChange={(e) => {
-                          if (e.target.files) {
-                            setDocumentsUpload({
-                              ...documentsUpload,
-                              [docType]: Array.from(e.target.files)
-                            });
-                          }
-                        }}
-                        className="w-full text-sm"
-                      />
+                      <div className="flex gap-2 mb-2">
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*,application/pdf"
+                          onChange={(e) => {
+                            if (e.target.files) {
+                              setDocumentsUpload({
+                                ...documentsUpload,
+                                [docType]: Array.from(e.target.files)
+                              });
+                            }
+                          }}
+                          className="w-full text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.capture = 'environment';
+                            input.onchange = (e) => {
+                              if (e.target.files && e.target.files.length > 0) {
+                                setDocumentsUpload(prev => ({
+                                  ...prev,
+                                  [docType]: [...(prev[docType] || []), ...Array.from(e.target.files)]
+                                }));
+                              }
+                            };
+                            input.click();
+                          }}
+                          className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs"
+                        >
+                          Tirar foto
+                        </button>
+                      </div>
                       {documentsUpload[docType] && documentsUpload[docType].length > 0 && (
-                        <p className="text-xs text-green-600 mt-2">✓ {documentsUpload[docType].length} arquivo(s)</p>
+                        <ul className="text-xs text-green-600 mt-2 list-disc pl-4">
+                          {documentsUpload[docType].map((file, idx) => (
+                            <li key={idx}>{file.name || `Foto ${idx + 1}`}</li>
+                          ))}
+                        </ul>
                       )}
                     </div>
                   );

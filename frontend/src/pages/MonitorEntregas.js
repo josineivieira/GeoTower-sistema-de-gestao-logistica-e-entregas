@@ -634,13 +634,13 @@ const MonitorEntregas = () => {
                     // Fotos do fluxo: chegada, início, fim desova
                     const fotos = [];
                     if (Array.isArray(selectedDelivery.fotosChegada) && selectedDelivery.fotosChegada.length > 0) {
-                      fotos.push({ label: 'Fotos Chegada Cliente', files: selectedDelivery.fotosChegada });
+                      fotos.push({ label: 'Registre sua chegada no cliente', files: selectedDelivery.fotosChegada });
                     }
                     if (Array.isArray(selectedDelivery.fotosInicioDesova) && selectedDelivery.fotosInicioDesova.length > 0) {
-                      fotos.push({ label: 'Fotos Início Desova', files: selectedDelivery.fotosInicioDesova });
+                      fotos.push({ label: 'Registre o início da desova', files: selectedDelivery.fotosInicioDesova });
                     }
                     if (Array.isArray(selectedDelivery.fotosFimDesova) && selectedDelivery.fotosFimDesova.length > 0) {
-                      fotos.push({ label: 'Fotos Fim Desova', files: selectedDelivery.fotosFimDesova });
+                      fotos.push({ label: 'Registre a finalização da desova', files: selectedDelivery.fotosFimDesova });
                     }
                     return [
                       ...docRows,

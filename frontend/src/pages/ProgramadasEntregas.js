@@ -318,7 +318,8 @@ const ProgramadasEntregas = () => {
         formData.append('file', blob);
       });
       await deliveryService.uploadDocument(currentDelivery._id, 'desovaStartPhotos', Array.from(formData.getAll('file')));
-      await deliveryService.updateDelivery(currentDelivery._id, { status: 'EM_DESOVA' });
+      // Salva status e currentStep juntos para garantir retomada correta
+      await deliveryService.updateDelivery(currentDelivery._id, { status: 'EM_DESOVA', currentStep: 'desovaProgress' });
       setToast({ message: 'Desova iniciada', type: 'success' });
       goToStep('desovaProgress');
       // Sempre atualiza programacoes, mas não remove nenhuma entrega

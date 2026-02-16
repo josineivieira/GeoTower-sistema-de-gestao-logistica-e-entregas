@@ -382,6 +382,8 @@ const ProgramadasEntregas = () => {
         setToast({ message: 'Erro ao enviar solicitação', type: 'error' });
       }
     }
+    // Ao entrar nos documentos finais, salva status ANEXANDO_DOCUMENTOS_FINAIS
+    await deliveryService.updateDelivery(currentDelivery._id, { status: 'ANEXANDO_DOCUMENTOS_FINAIS', currentStep: 'finalDocs' });
     goToStep('finalDocs');
   };
 

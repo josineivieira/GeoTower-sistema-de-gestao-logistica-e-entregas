@@ -91,7 +91,10 @@ const ProgramadasEntregas = () => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const { user } = useAuth();
-  
+
+  // Estado para barra de progresso de upload
+  const [uploadProgress, setUploadProgress] = useState(0);
+
   // Modal flow states
   const [showModal, setShowModal] = useState(false);
   const [currentStep, setCurrentStep] = useState('welcome');

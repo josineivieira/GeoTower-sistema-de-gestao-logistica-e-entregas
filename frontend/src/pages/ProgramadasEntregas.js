@@ -1,3 +1,14 @@
+import imageCompression from 'browser-image-compression';
+// Barra de progresso simples
+const ProgressBar = ({ progress }) => (
+  <div className="w-full bg-gray-200 rounded h-3 mt-2">
+    <div
+      className="bg-blue-500 h-3 rounded transition-all"
+      style={{ width: `${progress}%` }}
+    ></div>
+  </div>
+);
+  const [uploadProgress, setUploadProgress] = useState(0);
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
@@ -284,26 +295,50 @@ const ProgramadasEntregas = () => {
       return;
     }
     setSubmitting(true);
+    setUploadProgress(0);
     try {
+      // Compressão das fotos
+      const compressedFiles = [];
+      for (let i = 0; i < photos.length; i++) {
+        const file = dataURLtoFile(photos[i], `foto_${i}.jpg`);
+        const compressed = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1280 });
+        compressedFiles.push(compressed);
+        setUploadProgress(Math.round(((i + 1) / photos.length) * 30)); // até 30% na compressão
+      }
+      // Upload com barra de progresso
       const formData = new FormData();
-      photos.forEach((photo) => {
-        const blob = dataURLtoBlob(photo);
-        formData.append('file', blob);
-      });
-      await deliveryService.uploadDocument(currentDelivery._id, 'chegadaCliente', Array.from(formData.getAll('file')));
-      // Mudar status para AGUARDANDO_DESOVA
+      compressedFiles.forEach((file) => formData.append('file', file));
+      await deliveryService.uploadDocumentWithProgress(
+        currentDelivery._id,
+        'chegadaCliente',
+        formData,
+        (progressEvent) => {
+          if (progressEvent.total) {
+            setUploadProgress(30 + Math.round((progressEvent.loaded / progressEvent.total) * 70));
+          }
+        }
+      );
+      setUploadProgress(100);
       await deliveryService.updateDelivery(currentDelivery._id, { arrivedAt: new Date().toISOString(), status: 'AGUARDANDO_DESOVA' });
       setToast({ message: 'Chegada confirmada', type: 'success' });
       goToStep('confirmDesova');
-      // Não remover da tela, apenas atualizar status
       loadProgramacoes();
     } catch (err) {
       console.error(err);
       setToast({ message: 'Erro ao enviar fotos', type: 'error' });
     } finally {
       setSubmitting(false);
+      setTimeout(() => setUploadProgress(0), 1000);
     }
   };
+// Função utilitária para converter dataURL em File
+function dataURLtoFile(dataurl, filename) {
+  const arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1], bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+  for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
+  return new File([u8arr], filename, { type: mime });
+}
+  // Adicione a barra de progresso visual onde achar melhor, por exemplo, acima do botão de upload:
+  // {uploadProgress > 0 && <ProgressBar progress={uploadProgress} />}
 
   const handleDesovaStartUpload = async () => {
     if (!photos || photos.length === 0) {
@@ -311,24 +346,39 @@ const ProgramadasEntregas = () => {
       return;
     }
     setSubmitting(true);
+    setUploadProgress(0);
     try {
+      // Compressão das fotos
+      const compressedFiles = [];
+      for (let i = 0; i < photos.length; i++) {
+        const file = dataURLtoFile(photos[i], `foto_${i}.jpg`);
+        const compressed = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1280 });
+        compressedFiles.push(compressed);
+        setUploadProgress(Math.round(((i + 1) / photos.length) * 30));
+      }
       const formData = new FormData();
-      photos.forEach((photo) => {
-        const blob = dataURLtoBlob(photo);
-        formData.append('file', blob);
-      });
-      await deliveryService.uploadDocument(currentDelivery._id, 'inicioDesova', Array.from(formData.getAll('file')));
-      // Salva status e currentStep juntos para garantir retomada correta
+      compressedFiles.forEach((file) => formData.append('file', file));
+      await deliveryService.uploadDocumentWithProgress(
+        currentDelivery._id,
+        'inicioDesova',
+        formData,
+        (progressEvent) => {
+          if (progressEvent.total) {
+            setUploadProgress(30 + Math.round((progressEvent.loaded / progressEvent.total) * 70));
+          }
+        }
+      );
+      setUploadProgress(100);
       await deliveryService.updateDelivery(currentDelivery._id, { status: 'EM_DESOVA', currentStep: 'desovaProgress' });
       setToast({ message: 'Desova iniciada', type: 'success' });
       goToStep('desovaProgress');
-      // Sempre atualiza programacoes, mas não remove nenhuma entrega
       loadProgramacoes();
     } catch (err) {
       console.error(err);
       setToast({ message: 'Erro ao enviar fotos', type: 'error' });
     } finally {
       setSubmitting(false);
+      setTimeout(() => setUploadProgress(0), 1000);
     }
   };
 
@@ -353,13 +403,29 @@ const ProgramadasEntregas = () => {
       return;
     }
     setSubmitting(true);
+    setUploadProgress(0);
     try {
+      // Compressão das fotos
+      const compressedFiles = [];
+      for (let i = 0; i < photos.length; i++) {
+        const file = dataURLtoFile(photos[i], `foto_${i}.jpg`);
+        const compressed = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1280 });
+        compressedFiles.push(compressed);
+        setUploadProgress(Math.round(((i + 1) / photos.length) * 30));
+      }
       const formData = new FormData();
-      photos.forEach((photo) => {
-        const blob = dataURLtoBlob(photo);
-        formData.append('file', blob);
-      });
-      await deliveryService.uploadDocument(currentDelivery._id, 'fimDesova', Array.from(formData.getAll('file')));
+      compressedFiles.forEach((file) => formData.append('file', file));
+      await deliveryService.uploadDocumentWithProgress(
+        currentDelivery._id,
+        'fimDesova',
+        formData,
+        (progressEvent) => {
+          if (progressEvent.total) {
+            setUploadProgress(30 + Math.round((progressEvent.loaded / progressEvent.total) * 70));
+          }
+        }
+      );
+      setUploadProgress(100);
       await deliveryService.updateDelivery(currentDelivery._id, { status: 'DESOVA_FINALIZADA' });
       setToast({ message: 'Desova finalizada', type: 'success' });
       goToStep('askSchedule');
@@ -369,6 +435,7 @@ const ProgramadasEntregas = () => {
       setToast({ message: 'Erro ao enviar fotos', type: 'error' });
     } finally {
       setSubmitting(false);
+      setTimeout(() => setUploadProgress(0), 1000);
     }
   };
 

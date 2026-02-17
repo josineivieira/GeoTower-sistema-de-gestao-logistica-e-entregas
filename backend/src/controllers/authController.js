@@ -4,7 +4,8 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
 const generateToken = (userId, role) => {
-  return jwt.sign({ id: userId, role }, process.env.JWT_SECRET || 'seu_jwt_secret_super_seguro_aqui_mude_em_producao', { expiresIn: '7d' });
+  // Expira em 1 hora
+  return jwt.sign({ id: userId, role }, process.env.JWT_SECRET || 'seu_jwt_secret_super_seguro_aqui_mude_em_producao', { expiresIn: '1h' });
 };
 
 const hashPassword = (pwd) => {

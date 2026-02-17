@@ -20,6 +20,7 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
+    "browser-image-compression": "^2.0.2",
     "googleapis": "^118.0.0",
     "xlsx": "^0.18.5"
   }

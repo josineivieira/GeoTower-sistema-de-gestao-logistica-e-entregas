@@ -1,4 +1,11 @@
+import React, { useState, useEffect, useRef } from 'react';
 import imageCompression from 'browser-image-compression';
+import { useNavigate } from 'react-router-dom';
+import Toast from '../components/Toast';
+import { deliveryService } from '../services/authService';
+import { FaArrowLeft, FaCalendarAlt, FaSearch, FaCamera, FaTimes } from 'react-icons/fa';
+import { useAuth } from '../services/authContext';
+
 // Barra de progresso simples
 const ProgressBar = ({ progress }) => (
   <div className="w-full bg-gray-200 rounded h-3 mt-2">
@@ -8,13 +15,6 @@ const ProgressBar = ({ progress }) => (
     ></div>
   </div>
 );
-  const [uploadProgress, setUploadProgress] = useState(0);
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Toast from '../components/Toast';
-import { deliveryService } from '../services/authService';
-import { FaArrowLeft, FaCalendarAlt, FaSearch, FaCamera, FaTimes } from 'react-icons/fa';
-import { useAuth } from '../services/authContext';
 
 // Small elapsed timer component
 const ElapsedTimer = ({ start }) => {

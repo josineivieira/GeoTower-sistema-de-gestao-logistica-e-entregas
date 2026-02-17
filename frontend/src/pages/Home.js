@@ -358,8 +358,7 @@ const Home = () => {
           </ul>
         </div>
 
-        {/* Se você realmente usa Toast aqui, pode manter; se não usa, pode remover o import */}
-        {/* {toast && <Toast ... />} */}
+        // ...existing code...
       </div>
     </div>
   );

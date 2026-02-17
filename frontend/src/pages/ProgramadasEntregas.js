@@ -356,15 +356,10 @@ function dataURLtoFile(dataurl, filename) {
       }
       const formData = new FormData();
       compressedFiles.forEach((file) => formData.append('file', file));
-      await deliveryService.uploadDocumentWithProgress(
+      await deliveryService.uploadDocument(
         currentDelivery._id,
         'inicioDesova',
-        formData,
-        (progressEvent) => {
-          if (progressEvent.total) {
-            setUploadProgress(30 + Math.round((progressEvent.loaded / progressEvent.total) * 70));
-          }
-        }
+        formData
       );
       setUploadProgress(100);
       await deliveryService.updateDelivery(currentDelivery._id, { status: 'EM_DESOVA', currentStep: 'desovaProgress' });
@@ -413,15 +408,10 @@ function dataURLtoFile(dataurl, filename) {
       }
       const formData = new FormData();
       compressedFiles.forEach((file) => formData.append('file', file));
-      await deliveryService.uploadDocumentWithProgress(
+      await deliveryService.uploadDocument(
         currentDelivery._id,
         'fimDesova',
-        formData,
-        (progressEvent) => {
-          if (progressEvent.total) {
-            setUploadProgress(30 + Math.round((progressEvent.loaded / progressEvent.total) * 70));
-          }
-        }
+        formData
       );
       setUploadProgress(100);
       await deliveryService.updateDelivery(currentDelivery._id, { status: 'DESOVA_FINALIZADA' });

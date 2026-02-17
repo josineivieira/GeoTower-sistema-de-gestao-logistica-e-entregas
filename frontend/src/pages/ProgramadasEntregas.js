@@ -1053,6 +1053,13 @@ function dataURLtoFile(dataurl, filename) {
                 <StepTimer start={currentDelivery?.arrivedAt || currentDelivery?.createdAt} label="Tempo total na entrega" />
                 <p className="text-gray-600 mb-4">Anexe os documentos da entrega</p>
 
+                {submitting && (
+                  <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-300 rounded-lg animate-pulse">
+                    <svg className="animate-spin h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                    <span className="text-blue-700 font-semibold">Enviando documentos finais, aguarde...</span>
+                  </div>
+                )}
+
                 {['canhotNF', 'canhotCTE', 'diarioBordo', 'devolucaoVazio', 'retiradaCheio'].map((docType) => {
                   const labels = {
                     canhotNF: 'Canhoto NF',
@@ -1078,10 +1085,12 @@ function dataURLtoFile(dataurl, filename) {
                             }
                           }}
                           className="w-full text-sm"
+                          disabled={submitting}
                         />
                         <button
                           type="button"
                           onClick={() => {
+                            if (submitting) return;
                             const input = document.createElement('input');
                             input.type = 'file';
                             input.accept = 'image/*';
@@ -1097,6 +1106,7 @@ function dataURLtoFile(dataurl, filename) {
                             input.click();
                           }}
                           className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs"
+                          disabled={submitting}
                         >
                           Tirar foto
                         </button>
@@ -1118,11 +1128,12 @@ function dataURLtoFile(dataurl, filename) {
                     disabled={submitting}
                     className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50"
                   >
-                    Finalizar entrega
+                    {submitting ? 'Enviando...' : 'Finalizar entrega'}
                   </button>
                   <button
                     onClick={() => goToStep('askSchedule')}
                     className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300"
+                    disabled={submitting}
                   >
                     Voltar
                   </button>

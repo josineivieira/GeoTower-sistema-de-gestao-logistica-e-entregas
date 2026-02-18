@@ -198,8 +198,7 @@ const ProgramacaoManagement = () => {
         dataAgendamento: ['dataagendamento', 'dtagendamento', 'dtgendamento', 'data', 'agendamento', 'dataagend', 'dtagend'],
         contratado: ['contratado', 'transportadora', 'empresa'],
         motorista: ['motorista', 'motoristaviagem', 'nomemuotorista'],
-        status: ['status', 'situacao'],
-        observacoes: ['observacoes', 'observacao', 'notas', 'anotacoes', 'obsobdestino', 'observacaodestino']
+        status: ['status', 'situacao']
       };
 
       // Encontrar mapeamento de colunas real
@@ -288,19 +287,25 @@ const ProgramacaoManagement = () => {
           if (!isNaN(strValue) && strValue !== '') {
             const excelNum = Number(strValue);
             
-            // Excel serial date começa em 1900-01-01 (número 1)
-            // Fórmula: (excelNum - 1) * 86400000 ms, mas precisa ajustar para timezone
-            // Usa 25569 como offset para o epoch de 1970-01-01
-            const date = new Date((excelNum - 25569) * 86400 * 1000);
+            // Excel serial date: a parte inteira = dias desde 1/1/1900, fração = parte do dia
+            const days = Math.floor(excelNum);
+            const fraction = excelNum - days;
             
-            // Extrai componentes diretamente sem considerar timezone
-            const year = date.getUTCFullYear();
-            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-            const day = String(date.getUTCDate()).padStart(2, '0');
-            const hours = String(date.getUTCHours()).padStart(2, '0');
-            const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+            // Converter dias para data (1 = 1/1/1900)
+            const baseDate = new Date(1900, 0, 1);
+            const date = new Date(baseDate.getTime() + (days - 1) * 24 * 60 * 60 * 1000);
             
-            console.log(`[DEBUG] Excel serial: ${excelNum} → ${year}-${month}-${day}T${hours}:${minutes}`);
+            // Extrair data sem timezone
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            
+            // Extrair hora da fração (sem timezone! calculado direto)
+            const totalSeconds = Math.round(fraction * 24 * 60 * 60);
+            const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+            const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+            
+            console.log(`[DEBUG-EXCEL] ${excelNum} → ${year}-${month}-${day}T${hours}:${minutes}`);
             return `${year}-${month}-${day}T${hours}:${minutes}`;
           } else {
             // Parse string DD/MM/YYYY ou DD/MM/YYYY HH:MM
@@ -321,8 +326,7 @@ const ProgramacaoManagement = () => {
                 time = `${hh}:${mm}`;
               }
 
-              console.log(`[DEBUG] String date: "${strValue}" → ${year}-${month}-${day}T${time}`);
-              // Retorna em formato ISO sem timezone
+              console.log(`[DEBUG-STRING] "${strValue}" → ${year}-${month}-${day}T${time}`);
               return `${year}-${month}-${day}T${time}`;
             }
           }
@@ -342,7 +346,6 @@ const ProgramacaoManagement = () => {
         const contratadoRaw = String(row[actualColumns.contratado] || '').trim();
         const motorista = String(row[actualColumns.motorista] || '').trim();
         const status = String(row[actualColumns.status] || 'AGENDADO').trim();
-        const observacoes = String(row[actualColumns.observacoes] || '').trim();
 
         const dataAgendamento = parseDateString(dataStr);
         const contratado = mapearContratado(contratadoRaw);
@@ -354,8 +357,7 @@ const ProgramacaoManagement = () => {
           dataAgendamento,
           contratado,
           motorista,
-          status: status || 'AGENDADO',
-          observacoes
+          status: status || 'AGENDADO'
         };
       });
 

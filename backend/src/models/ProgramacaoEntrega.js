@@ -24,11 +24,8 @@ const programacaoEntregaSchema = new mongoose.Schema({
   },
   contratado: {
     type: String,
-    enum: {
-      values: ['GEO', 'MACHADO', 'BANDEIRA', 'TRANSCAVALCANTE', 'OUTRO'],
-      message: 'Contratado inválido: deve ser GEO, MACHADO, BANDEIRA, TRANSCAVALCANTE ou OUTRO'
-    },
-    required: [true, 'Contratado é obrigatório']
+    required: [true, 'Contratado é obrigatório'],
+    trim: true
   },
   motorista: {
     type: String,

@@ -916,7 +916,7 @@ router.post('/programs', auth, onlyAdmin, async (req, res) => {
 const upload = multer({ dest: path.join(os.tmpdir(), 'geo_programs') });
 
 function parseCsv(text) {
-  const requiredHeaders = ['Processo','cliente','FORNECEDOR','Destinatário','Navio','Nr. vi','Nº container','NF','CNTR','Dt. Agendamento','Observação destino','CONTRATADO','PROCESSO2','PERFORMANCE','Ocorrencia'];
+  const requiredHeaders = ['Processo','Recebedor','FORNECEDOR','Destinatário','Navio','Nr. vi','Nº container','NF','CNTR','Dt. Agendamento','Observação destino','CONTRATADO','PROCESSO2','PERFORMANCE','Ocorrencia'];
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
   if (lines.length === 0) return { error: 'CSV vazio' };
 
@@ -957,7 +957,11 @@ router.post('/programs/import', auth, onlyAdmin, upload.single('file'), async (r
 
     const created = [];
     for (const r of parsed.rows) {
-      const program = await db.create('programs', Object.assign({}, r, { createdAt: new Date().toISOString(), createdBy: req.user.id }));
+      // Map 'Recebedor' column to 'recebedor' field (case-insensitive)
+      const recebedor = r['Recebedor'] || r['recebedor'] || r['RECEBEDOR'] || '';
+      // Preserve 'Dt. Agendamento' exactly as in CSV
+      const dtAgendamento = r['Dt. Agendamento'] || r['dt. agendamento'] || r['DT. AGENDAMENTO'] || '';
+      const program = await db.create('programs', Object.assign({}, r, { recebedor, dataAgendamento: dtAgendamento, createdAt: new Date().toISOString(), createdBy: req.user.id }));
       created.push(program);
     }
 
@@ -1346,14 +1350,21 @@ router.put("/programacoes/:id", auth, onlyAdminMiddleware, async (req, res) => {
     if (status !== undefined) programacao.status = status;
     if (observacoes !== undefined) programacao.observacoes = observacoes;
 
-    await programacao.save();
-    console.log('[PROGRAMACAO] ✅ Atualizada:', { _id: id, processo: programacao.processo });
-
-    return res.json({
-      success: true,
-      message: "Programação atualizada com sucesso",
-      programacao
-    });
+    try {
+      await programacao.save();
+      console.log('[PROGRAMACAO] ✅ Atualizada:', { _id: id, processo: programacao.processo });
+      return res.json({
+        success: true,
+        message: "Programação atualizada com sucesso",
+        programacao
+      });
+    } catch (saveErr) {
+      console.error('[PROGRAMACAO] ❌ Erro ao salvar atualização:', saveErr);
+      if (saveErr.code === 11000) {
+        return res.status(400).json({ message: "Esse processo já existe" });
+      }
+      return res.status(500).json({ message: "Erro ao salvar atualização", error: saveErr.message });
+    }
   } catch (err) {
     console.error('[PROGRAMACAO] ❌ Erro ao atualizar:', err);
     
@@ -1420,10 +1431,12 @@ router.post("/programacoes/import", auth, onlyAdminMiddleware, async (req, res) 
 
     for (const prog of programacoes) {
       try {
-        const { processo, recebedor, container, dataAgendamento, contratado, motorista, status, observacoes } = prog;
+        const { processo, container, dataAgendamento, contratado, motorista, status, observacoes } = prog;
+        // Case-insensitive recebedor field
+        const recebedorField = prog.recebedor || prog.Recebedor || prog.RECEBEDOR || '';
 
         // Validar campos obrigatórios
-        if (!processo || !recebedor || !dataAgendamento || !contratado) {
+        if (!processo || !recebedorField || !dataAgendamento || !contratado) {
           erros++;
           resultados.push({
             processo: processo || 'N/A',
@@ -1436,7 +1449,7 @@ router.post("/programacoes/import", auth, onlyAdminMiddleware, async (req, res) 
         // Tenta criar a programação
         const novaProgramacao = new ProgramacaoEntrega({
           processo,
-          recebedor,
+          recebedor: recebedorField,
           container: container || '',
           dataAgendamento,
           contratado,

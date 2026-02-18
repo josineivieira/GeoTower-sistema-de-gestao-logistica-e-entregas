@@ -178,10 +178,12 @@ const ProgramacaoManagement = () => {
         return;
       }
 
-      // Função para normalizar nomes de colunas
+      console.log('📋 Colunas encontradas na planilha:', Object.keys(data[0]));
+
+      // Função para normalizar nomes de colunas (remove acentos, maiúsculas, espaços)
       const normalizeColumnName = (name) => {
         if (!name) return '';
-        return name
+        return String(name)
           .toLowerCase()
           .trim()
           .normalize('NFD')
@@ -190,47 +192,60 @@ const ProgramacaoManagement = () => {
           .replace(/\s+/g, ''); // Remove espaços
       };
 
-      // Mapeamento de variações de nomes de colunas
+      // Mapeamento com variações de nomes de colunas esperadas
       const columnMapping = {
-        processo: ['processo'],
-        recebedor: ['recebedor'],
-        container: ['container', 'ncontainer', 'numercontainer', 'nrcontainer'],
-        dataAgendamento: ['dataagendamento', 'dtagendamento', 'dtgendamento', 'data', 'agendamento', 'dataagend', 'dtagend'],
-        contratado: ['contratado', 'transportadora', 'empresa'],
-        motorista: ['motorista', 'motoristaviagem', 'nomemuotorista'],
-        status: ['status', 'situacao'],
-        observacoes: ['observacoes', 'observacao', 'notas', 'anotacoes', 'obsobdestino', 'observacaodestino']
+        processo: ['processo', 'process'],
+        recebedor: ['recebedor', 'receiver'], // APENAS recebedor, não cliente!
+        container: ['container', 'ncontainer', 'nrcontainer', 'nmcontainer', 'nrvi'],
+        dataAgendamento: ['dtagendamento', 'dataagendamento', 'agendamento', 'data', 'dtagen', 'datasched'],
+        contratado: ['contratado', 'transportadora', 'empresa', 'carrier'],
+        motorista: ['motorista', 'driver', 'motoristaviagem', 'nombremotorista'],
+        status: ['status', 'situacao', 'situation']
       };
 
-      // Encontrar mapeamento de colunas real
+      // Encontrar mapeamento de colunas mais inteligentemente
       const firstRow = data[0];
       const actualColumns = {};
+      const availableColumns = Object.keys(firstRow);
+
+      console.log('🔍 Iniciando busca inteligente de colunas...');
 
       Object.keys(columnMapping).forEach((expectedCol) => {
-        const normalizedExpected = normalizeColumnName(expectedCol);
-        for (const key of Object.keys(firstRow)) {
-          const normalizedActual = normalizeColumnName(key);
-          if (columnMapping[expectedCol].includes(normalizedActual)) {
+        let found = false;
+
+        // Procura 1: Match exato normalizado
+        for (const key of availableColumns) {
+          const normalizedKey = normalizeColumnName(key);
+          if (columnMapping[expectedCol].includes(normalizedKey)) {
             actualColumns[expectedCol] = key;
+            console.log(`  ✓ ${expectedCol} encontrado: "${key}" (match exato)`);
+            found = true;
             break;
           }
         }
-        // Se não encontrou, tenta buscar por substring
-        if (!actualColumns[expectedCol]) {
-          for (const key of Object.keys(firstRow)) {
-            const normalizedActual = normalizeColumnName(key);
+
+        // Procura 2: Substring normalizadas
+        if (!found) {
+          for (const key of availableColumns) {
+            const normalizedKey = normalizeColumnName(key);
             for (const variation of columnMapping[expectedCol]) {
-              if (normalizedActual.includes(variation) || variation.includes(normalizedActual)) {
+              if (normalizedKey.includes(variation) || variation.includes(normalizedKey)) {
                 actualColumns[expectedCol] = key;
+                console.log(`  ✓ ${expectedCol} encontrado: "${key}" (substring match)`);
+                found = true;
                 break;
               }
             }
-            if (actualColumns[expectedCol]) break;
+            if (found) break;
           }
+        }
+
+        if (!found) {
+          console.log(`  ✗ ${expectedCol} NÃO encontrado (coluna obrigatória)`);
         }
       });
 
-      console.log('Mapeamento de colunas encontrado:', actualColumns);
+      console.log('📊 Mapeamento final:', actualColumns);
 
       // Função para mapear contratado - aceita qualquer contratado com busca case-insensitive
       const mapearContratado = (valor) => {
@@ -333,16 +348,48 @@ const ProgramacaoManagement = () => {
         return '';
       };
 
-      // Mapear e validar dados
+      // Mapear e validar dados - EXTRAIR APENAS AS COLUNAS RELEVANTES
       const programacoesImport = data.map((row, index) => {
+        // Busca case-insensitive para Recebedor
+        const recebedorRaw = String(row[actualColumns.recebedor] || '').trim();
+        const recebedor = recebedorRaw; // Preserva exatamente como veio (caso de negócio)
+
+        // Extrai processo
         const processo = String(row[actualColumns.processo] || '').trim();
-        const recebedor = String(row[actualColumns.recebedor] || '').trim();
+        
+        // Extrai container
         const container = String(row[actualColumns.container] || '').trim();
+        
+        // Extrai e parseia data corretamente preservando hora
         const dataStr = String(row[actualColumns.dataAgendamento] || '').trim();
+        
+        // Extrai contratado
         const contratadoRaw = String(row[actualColumns.contratado] || '').trim();
-        const motorista = String(row[actualColumns.motorista] || '').trim();
-        const status = String(row[actualColumns.status] || 'AGENDADO').trim();
-        const observacoes = String(row[actualColumns.observacoes] || '').trim();
+        
+        // Extrai motorista (opcional)
+        const motorista = actualColumns.motorista ? String(row[actualColumns.motorista] || '').trim() : '';
+        
+        // Extrai status (opcional, default AGENDADO)
+        const status = actualColumns.status ? String(row[actualColumns.status] || 'AGENDADO').trim() : 'AGENDADO';
+
+        // Parse data preservando hora exatamente como no Excel
+        const dataAgendamento = parseDateString(dataStr);
+        
+        // Map contratado com suporte case-insensitive
+        const contratado = mapearContratado(contratadoRaw);
+
+        console.log(`Linha ${index + 2}: processo="${processo}", recebedor="${recebedor}", dataAgendamento="${dataAgendamento}"`);
+
+        return {
+          processo,
+          recebedor,
+          container,
+          dataAgendamento,
+          contratado,
+          motorista,
+          status: status || 'AGENDADO'
+        };
+      });
 
         const dataAgendamento = parseDateString(dataStr);
         const contratado = mapearContratado(contratadoRaw);

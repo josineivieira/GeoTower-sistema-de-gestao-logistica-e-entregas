@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Docs - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 50px;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .logo {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            color: #999;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-login:active {
+            transform: translateY(0);
+        }
+        
+        .divider {
+            text-align: center;
+            margin: 30px 0;
+            color: #999;
+            font-size: 13px;
+        }
+        
+        .demo-info {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .demo-title {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        
+        .demo-item {
+            color: #666;
+            font-size: 12px;
+            margin: 5px 0;
+            font-family: 'Courier New', monospace;
+            padding: 5px;
+            background: white;
+            border-radius: 4px;
+        }
+        
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #28a745;
+            font-weight: 600;
+        }
+        
+        .copy-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 8px;
+            text-decoration: underline;
+        }
+        
+        .copy-btn:hover {
+            color: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">📦</div>
+            <h1>Delivery Docs</h1>
+            <p class="subtitle">Sistema de Documentação de Entregas</p>
+        </div>
+        
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="seu@email.com" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <input type="password" id="password" name="password" placeholder="••••••••" required>
+            </div>
+            
+            <button type="submit" class="btn-login">ENTRAR</button>
+        </form>
+        
+        <div class="divider">OU TESTE COM CREDENCIAL DE DEMO</div>
+        
+        <div class="demo-info">
+            <div class="demo-title">🔐 Acesso de Teste (Motorista):</div>
+            <div class="demo-item">
+                Email: motorista@example.com
+                <button type="button" class="copy-btn" onclick="copiar('motorista@example.com')">copiar</button>
+            </div>
+            <div class="demo-item">
+                Senha: senha123
+                <button type="button" class="copy-btn" onclick="copiar('senha123')">copiar</button>
+            </div>
+        </div>
+        
+        <div class="status">
+            ✅ Sistema Online
+        </div>
+    </div>
+    
+    <script>
+        function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            // Redirecionar para a aplicação com as credenciais
+            window.location.href = `/?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`;
+        }
+        
+        function copiar(texto) {
+            navigator.clipboard.writeText(texto).then(() => {
+                alert('Copiado!');
+            });
+        }
+    </script>
+</body>
+</html>

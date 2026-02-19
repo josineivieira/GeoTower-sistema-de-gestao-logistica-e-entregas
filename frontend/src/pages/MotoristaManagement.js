@@ -224,8 +224,8 @@ const MotoristaManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-20">
-      <div className="max-w-7xl mx-auto px-4 py-10">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-20 w-full">
+      <div className="max-w-screen-2xl mx-auto px-6 py-10">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -255,14 +255,14 @@ const MotoristaManagement = () => {
         {/* Fullscreen Form */}
         {showForm && (
           <div className="fixed inset-0 z-50 bg-white overflow-auto">
-            <div className="max-w-7xl mx-auto p-6">
-              <div className="flex items-center justify-between mb-6">
+            <div className="max-w-screen-2xl mx-auto px-6 py-8">
+              <div className="flex items-center justify-between mb-6 relative">
                 <h2 className="text-2xl font-bold text-gray-900">
                   {editingMotorista ? 'Editar Motorista' : 'Novo Motorista'}
                 </h2>
                 <button
                   onClick={handleCloseForm}
-                  className="text-gray-500 hover:text-gray-700 text-2xl rounded-full p-2 hover:bg-gray-100 transition"
+                  className="text-gray-500 hover:text-gray-700 text-2xl rounded-full p-2 hover:bg-gray-100 transition absolute right-4 top-4 sm:static sm:top-0 sm:right-0"
                   aria-label="Fechar"
                 >
                   ×
@@ -271,7 +271,7 @@ const MotoristaManagement = () => {
 
               <div className="bg-white rounded-lg shadow-sm border border-gray-100">
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Transportadora *</label>
                       <input
@@ -389,10 +389,8 @@ const MotoristaManagement = () => {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Observações
-                  </label>
+                <div className="sm:col-span-2 md:col-span-3 lg:col-span-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Observações</label>
                   <textarea
                     value={formData.observacoes}
                     onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
@@ -402,7 +400,7 @@ const MotoristaManagement = () => {
                   />
                 </div>
 
-                <div className="flex gap-4 pt-4 border-t">
+                <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t">
                   <button
                     type="submit"
                     className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"

@@ -252,151 +252,103 @@ const MotoristaManagement = () => {
           </button>
         </div>
 
-        {/* Form Modal */}
+        {/* Fullscreen Form */}
         {showForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-96 overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-8 py-6 flex justify-between items-center">
+          <div className="fixed inset-0 z-50 bg-white overflow-auto">
+            <div className="max-w-7xl mx-auto p-6">
+              <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">
                   {editingMotorista ? 'Editar Motorista' : 'Novo Motorista'}
                 </h2>
                 <button
                   onClick={handleCloseForm}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className="text-gray-500 hover:text-gray-700 text-2xl rounded-full p-2 hover:bg-gray-100 transition"
+                  aria-label="Fechar"
                 >
                   ×
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Transportadora *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.transportadora}
-                      onChange={(e) => setFormData({ ...formData, transportadora: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Ex: GEO TRANSPORTES"
-                    />
-                  </div>
+              <div className="bg-white rounded-lg shadow-sm border border-gray-100">
+                <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Transportadora *</label>
+                      <input
+                        type="text"
+                        value={formData.transportadora}
+                        onChange={(e) => setFormData({ ...formData, transportadora: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Ex: GEO TRANSPORTES"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Nome do Motorista *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.nome}
-                      onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Ex: João Silva"
-                    />
-                  </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Nome do Motorista *</label>
+                      <input
+                        type="text"
+                        value={formData.nome}
+                        onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Ex: João Silva"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      CPF *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.cpf}
-                      onChange={(e) => setFormData({ ...formData, cpf: formatCPF(e.target.value) })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="000.000.000-00"
-                      maxLength="14"
-                    />
-                  </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">CPF *</label>
+                      <input
+                        type="text"
+                        value={formData.cpf}
+                        onChange={(e) => setFormData({ ...formData, cpf: formatCPF(e.target.value) })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="000.000.000-00"
+                        maxLength="14"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Vínculo *
-                    </label>
-                    <select
-                      value={formData.vinculo}
-                      onChange={(e) => setFormData({ ...formData, vinculo: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="PRÓPRIO">PRÓPRIO</option>
-                      <option value="AGREGADO">AGREGADO</option>
-                      <option value="TERCEIRO">TERCEIRO</option>
-                    </select>
-                  </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Vínculo *</label>
+                      <select
+                        value={formData.vinculo}
+                        onChange={(e) => setFormData({ ...formData, vinculo: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="PRÓPRIO">PRÓPRIO</option>
+                        <option value="AGREGADO">AGREGADO</option>
+                        <option value="TERCEIRO">TERCEIRO</option>
+                      </select>
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Rastreador
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.rastreador}
-                      onChange={(e) => setFormData({ ...formData, rastreador: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Ex: SASCAR"
-                    />
-                  </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Rastreador</label>
+                      <input
+                        type="text"
+                        value={formData.rastreador}
+                        onChange={(e) => setFormData({ ...formData, rastreador: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Ex: SASCAR"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Exp. cadastro motorista
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.expCadastroMotorista}
-                      onChange={(e) => setFormData({ ...formData, expCadastroMotorista: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Exp. cadastro motorista</label>
+                      <input
+                        type="date"
+                        value={formData.expCadastroMotorista}
+                        onChange={(e) => setFormData({ ...formData, expCadastroMotorista: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Cavalo
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.cavalo}
-                      onChange={(e) => setFormData({ ...formData, cavalo: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Rastreador do cavalo
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.rastreadorCavalo}
-                      onChange={(e) => setFormData({ ...formData, rastreadorCavalo: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Exp. cadastro cavalo
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.expCadastroCavalo}
-                      onChange={(e) => setFormData({ ...formData, expCadastroCavalo: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Carreta
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.carreta}
-                      onChange={(e) => setFormData({ ...formData, carreta: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Cavalo</label>
+                      <input
+                        type="text"
+                        value={formData.cavalo}
+                        onChange={(e) => setFormData({ ...formData, cavalo: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -465,7 +417,8 @@ const MotoristaManagement = () => {
                     Cancelar
                   </button>
                 </div>
-              </form>
+                </form>
+              </div>
             </div>
           </div>
         )}

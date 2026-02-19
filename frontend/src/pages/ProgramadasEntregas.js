@@ -358,7 +358,7 @@ function dataURLtoFile(dataurl, filename) {
         compressedFiles
       );
       setUploadProgress(100);
-      await deliveryService.updateDelivery(currentDelivery._id, { status: 'EM_DESOVA', currentStep: 'desovaProgress' });
+      await deliveryService.updateDelivery(currentDelivery._id, { status: 'EM_DESOVA', currentStep: 'desovaProgress', desovaStartAt: new Date().toISOString() });
       setToast({ message: 'Desova iniciada', type: 'success' });
       goToStep('desovaProgress');
       loadProgramacoes();
@@ -408,7 +408,7 @@ function dataURLtoFile(dataurl, filename) {
         compressedFiles
       );
       setUploadProgress(100);
-      await deliveryService.updateDelivery(currentDelivery._id, { status: 'DESOVA_FINALIZADA' });
+      await deliveryService.updateDelivery(currentDelivery._id, { status: 'DESOVA_FINALIZADA', desovaEndAt: new Date().toISOString() });
       setToast({ message: 'Desova finalizada', type: 'success' });
       goToStep('askSchedule');
       loadProgramacoes();

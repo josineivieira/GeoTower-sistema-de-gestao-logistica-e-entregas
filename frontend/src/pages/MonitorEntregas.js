@@ -253,7 +253,7 @@ const MonitorEntregas = () => {
             <FaArrowLeft /> VOLTAR
           </button>
           <h1 className="text-3xl lg:text-4xl font-extrabold text-gray-900 tracking-widest uppercase flex items-center gap-3 drop-shadow-sm">
-            <span role="img" aria-label="Gráfico">📊</span> MONITOR DE ENTREGAS
+            <span role="img" aria-label="Gráfico">📊</span> TORRE DE CONTROLE
           </h1>
           <button
             onClick={loadDeliveries}

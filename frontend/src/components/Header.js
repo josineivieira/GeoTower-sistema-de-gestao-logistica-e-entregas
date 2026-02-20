@@ -35,7 +35,11 @@ const Header = () => {
         const notifications = [];
         deliveries.forEach((d) => {
           // Solicitação de devolução do vazio
-          if (d.observations && d.observations.toUpperCase().includes('SOLICITACAO_AGENDAMENTO')) {
+          if (
+            d.observations &&
+            d.observations.toUpperCase().includes('SOLICITACAO_AGENDAMENTO') &&
+            d.userType !== 'Motorista' // Remove notificações do perfil Motorista
+          ) {
             notifications.push({
               type: 'devolucao',
               title: `Motorista ${d.driverName} solicitou agendamento`,
@@ -48,17 +52,22 @@ const Header = () => {
             });
           }
         });
-        // Verifica novas notificações (não lidas e não duplicadas)
+        // Corrige persistência: só adiciona novas notificações não lidas e não duplicadas
         setNotificationList(prev => {
-          const prevIds = new Set(prev.map(n => n.id));
-          const newOnes = notifications.filter(n => !prevIds.has(n.id));
+          // Carrega notificações lidas/excluídas do localStorage
+          let persisted = [];
+          try {
+            persisted = JSON.parse(localStorage.getItem('notifications')) || [];
+          } catch {}
+          // Filtra notificações já lidas/excluídas
+          const persistedIds = new Set(persisted.map(n => n.id));
+          const newOnes = notifications.filter(n => !persistedIds.has(n.id));
           if (newOnes.length > 0) {
-            // Mostra toast/banner e toca som
             setToastNotification(newOnes[0]);
             const audio = new Audio('/assets/notification.mp3');
             audio.play();
           }
-          const merged = [...newOnes, ...prev.filter(n => notifications.some(nn => nn.id === n.id) || n.read)];
+          const merged = [...newOnes, ...persisted];
           localStorage.setItem('notifications', JSON.stringify(merged));
           return merged;
         });

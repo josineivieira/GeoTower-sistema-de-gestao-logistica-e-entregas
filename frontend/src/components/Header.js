@@ -12,9 +12,10 @@ const Header = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = React.useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
   const [notificationList, setNotificationList] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  // Badge só de não lidas
+  const notificationCount = notificationList.filter(n => !n.read).length;
   // Carrega notificações de devolução do vazio e observações
   useEffect(() => {
     async function fetchNotifications() {
@@ -31,7 +32,8 @@ const Header = () => {
               message: `Solicitação de devolução do vazio: ${d.deliveryNumber} - ${d.driverName}`,
               deliveryNumber: d.deliveryNumber,
               driverName: d.driverName,
-              id: d._id
+              id: d._id,
+              read: false
             });
           }
           // Observações do fluxo de entrega
@@ -41,15 +43,14 @@ const Header = () => {
               message: `Observação: ${d.deliveryNumber} - ${d.driverName}: ${d.observations}`,
               deliveryNumber: d.deliveryNumber,
               driverName: d.driverName,
-              id: d._id
+              id: d._id,
+              read: false
             });
           }
         });
         setNotificationList(notifications);
-        setNotificationCount(notifications.length);
       } catch (err) {
         setNotificationList([]);
-        setNotificationCount(0);
       }
     }
     fetchNotifications();
@@ -111,15 +112,21 @@ const Header = () => {
           <div className="relative">
             <NotificationBell count={notificationCount} onClick={() => setShowNotifications((v) => !v)} />
             {showNotifications && notificationList.length > 0 && (
-              <div className="absolute right-0 mt-2 w-80 max-w-xs bg-white text-gray-900 rounded-lg shadow-lg border border-gray-200 z-50">
-                <div className="p-3 border-b font-bold text-purple-700">Notificações</div>
+              <div className="absolute right-0 mt-2 w-96 max-w-xs bg-white text-gray-900 rounded-lg shadow-lg border border-gray-200 z-50">
+                <div className="p-3 border-b font-bold text-purple-700 flex items-center justify-between">
+                  <span>Notificações</span>
+                  <button className="text-xs text-gray-500 hover:text-red-600" onClick={() => setNotificationList([])}>Excluir todas</button>
+                </div>
                 <ul className="max-h-80 overflow-y-auto divide-y divide-gray-100">
                   {notificationList.map((n, idx) => (
-                    <li key={n.id + idx} className="p-3 text-sm hover:bg-purple-50 cursor-pointer">
+                    <li key={n.id + idx} className={`p-3 text-sm flex items-center gap-2 ${n.read ? 'bg-gray-100' : 'bg-white'} hover:bg-purple-50 cursor-pointer`}>
                       <span className={n.type === 'devolucao' ? 'text-blue-700 font-semibold' : 'text-yellow-700 font-semibold'}>
                         {n.type === 'devolucao' ? 'Devolução do Vazio' : 'Observação'}:
                       </span>
-                      <span className="ml-2">{n.message}</span>
+                      <span className="ml-2 flex-1 truncate">{n.message}</span>
+                      <button className="text-xs text-gray-400 hover:text-red-600" onClick={e => { e.stopPropagation(); setNotificationList(list => list.filter((x, i) => i !== idx)); }}>Excluir</button>
+                      <button className="text-xs text-purple-600 hover:text-purple-800" onClick={e => { e.stopPropagation(); setNotificationList(list => list.map((x, i) => i === idx ? { ...x, read: true } : x)); }}>Marcar como lida</button>
+                      <button className="text-xs text-blue-600 hover:text-blue-800" onClick={e => { e.stopPropagation(); alert(n.message); setNotificationList(list => list.map((x, i) => i === idx ? { ...x, read: true } : x)); }}>Ver detalhes</button>
                     </li>
                   ))}
                 </ul>

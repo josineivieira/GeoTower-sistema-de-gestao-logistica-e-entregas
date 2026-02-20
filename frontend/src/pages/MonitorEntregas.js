@@ -92,11 +92,13 @@ const MonitorEntregas = () => {
       // Calcula stats
       const submitted = data.filter(d => d.status === 'ENTREGUE' || d.status === 'submitted').length;
       const pending = data.filter(d => d.status !== 'ENTREGUE' && d.status !== 'submitted' && d.status !== 'CANCELADO').length;
+      // Corrige indicador de motoristas: conta motoristas distintos
+      const motoristaSet = new Set(data.map(d => d.driverName).filter(Boolean));
       setStats({
         total: data.length,
         submitted,
         pending,
-        byDriver: [...new Set(data.map(d => d.userName))].length
+        byDriver: motoristaSet.size
       });
 
       setToast({ message: `Carregadas ${data.length} entregas`, type: 'success' });

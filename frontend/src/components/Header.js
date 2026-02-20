@@ -16,6 +16,19 @@ const Header = () => {
   // Persistência por usuário logado
   const userId = user?.id || user?._id || user?.email || user?.username || 'anon';
   const NOTIF_KEY = `notifications_${userId}`;
+  // Histórico definitivo de notificações lidas/excluídas por usuário
+  function getUserNotifiedIds() {
+    try {
+      return JSON.parse(localStorage.getItem(NOTIF_KEY + '_ids')) || [];
+    } catch { return []; }
+  }
+  function addUserNotifiedId(id) {
+    const ids = getUserNotifiedIds();
+    if (!ids.includes(id)) {
+      const updated = [...ids, id];
+      localStorage.setItem(NOTIF_KEY + '_ids', JSON.stringify(updated));
+    }
+  }
   const [notificationList, setNotificationList] = useState(() => {
     try {
       const saved = localStorage.getItem(NOTIF_KEY);
@@ -33,6 +46,7 @@ const Header = () => {
     if (user && (user.type === 'Motorista' || user.role === 'motorista')) {
       setNotificationList([]);
       localStorage.setItem(NOTIF_KEY, '[]');
+      localStorage.setItem(NOTIF_KEY + '_ids', '[]');
       return;
     }
     async function fetchNotifications() {
@@ -65,10 +79,10 @@ const Header = () => {
           try {
             persisted = JSON.parse(localStorage.getItem(NOTIF_KEY)) || [];
           } catch {}
-          // Remove duplicadas e mantém lidas/excluídas
-          const persistedIds = new Set(persisted.map(n => n.id));
-          // Nunca mostra notificações já lidas/excluídas
-          const newOnes = notifications.filter(n => !persistedIds.has(n.id));
+          // Histórico definitivo de notificações lidas/excluídas
+          const notifiedIds = new Set(getUserNotifiedIds());
+          // Nunca mostra notificações já lidas/excluídas, mesmo que venham do backend
+          const newOnes = notifications.filter(n => !notifiedIds.has(n.id));
           if (newOnes.length > 0) {
             setToastNotification(newOnes[0]);
             const audio = new Audio('/assets/notification.mp3');
@@ -152,12 +166,12 @@ const Header = () => {
                       <li key={n.id + idx} className="p-4 flex flex-col gap-1 bg-white hover:bg-purple-50 rounded cursor-pointer transition-all">
                         <div className="flex items-center gap-2">
                           <span className="text-blue-700 font-bold text-base"><i className="fa fa-truck" /> {n.title}</span>
-                          <button className="ml-auto text-xs text-gray-400 hover:text-red-600" onClick={e => { e.stopPropagation(); setNotificationList(list => { const updated = list.filter(x => x.id !== n.id); localStorage.setItem(NOTIF_KEY, JSON.stringify(updated)); return updated; }); }}>Excluir</button>
+                          <button className="ml-auto text-xs text-gray-400 hover:text-red-600" onClick={e => { e.stopPropagation(); setNotificationList(list => { addUserNotifiedId(n.id); const updated = list.filter(x => x.id !== n.id); localStorage.setItem(NOTIF_KEY, JSON.stringify(updated)); return updated; }); }}>Excluir</button>
                         </div>
                         <div className="text-xs text-gray-700 font-medium">{n.info}</div>
                         <div className="flex gap-2 mt-2">
-                          <button className="text-xs text-purple-600 hover:text-purple-800 font-semibold" onClick={e => { e.stopPropagation(); setNotificationList(list => { const updated = list.map(x => x.id === n.id ? { ...x, read: true } : x).filter(x => x.id !== n.id); localStorage.setItem(NOTIF_KEY, JSON.stringify(updated)); return updated; }); }}>Marcar como lida</button>
-                          <button className="text-xs text-blue-600 hover:text-blue-800 font-semibold" onClick={e => { e.stopPropagation(); setToastNotification(n); setNotificationList(list => { const updated = list.map(x => x.id === n.id ? { ...x, read: true } : x).filter(x => x.id !== n.id); localStorage.setItem(NOTIF_KEY, JSON.stringify(updated)); return updated; }); }}>Ver detalhes</button>
+                          <button className="text-xs text-purple-600 hover:text-purple-800 font-semibold" onClick={e => { e.stopPropagation(); setNotificationList(list => { addUserNotifiedId(n.id); const updated = list.map(x => x.id === n.id ? { ...x, read: true } : x).filter(x => x.id !== n.id); localStorage.setItem(NOTIF_KEY, JSON.stringify(updated)); return updated; }); }}>Marcar como lida</button>
+                          <button className="text-xs text-blue-600 hover:text-blue-800 font-semibold" onClick={e => { e.stopPropagation(); setToastNotification(n); setNotificationList(list => { addUserNotifiedId(n.id); const updated = list.map(x => x.id === n.id ? { ...x, read: true } : x).filter(x => x.id !== n.id); localStorage.setItem(NOTIF_KEY, JSON.stringify(updated)); return updated; }); }}>Ver detalhes</button>
                         </div>
                       </li>
                   ))}

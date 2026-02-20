@@ -4,6 +4,7 @@ import { useAuth } from '../services/authContext';
 import { useCity } from '../contexts/CityContext';
 import { FaSignOutAlt, FaUser, FaBars, FaHome, FaTimes } from 'react-icons/fa';
 import NotificationBell from './NotificationBell';
+import NotificationToast from './NotificationToast';
 import { adminService } from '../services/authService';
 
 const Header = () => {
@@ -12,9 +13,17 @@ const Header = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = React.useState(false);
-  const [notificationList, setNotificationList] = useState([]);
+  const [notificationList, setNotificationList] = useState(() => {
+    // Persistência: carrega notificações do localStorage
+    try {
+      const saved = localStorage.getItem('notifications');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [showNotifications, setShowNotifications] = useState(false);
-  // Badge só de não lidas
+  const [toastNotification, setToastNotification] = useState(null);
   const notificationCount = notificationList.filter(n => !n.read).length;
   // Carrega notificações de devolução do vazio e observações
   useEffect(() => {
@@ -29,28 +38,32 @@ const Header = () => {
           if (d.observations && d.observations.toUpperCase().includes('SOLICITACAO_AGENDAMENTO')) {
             notifications.push({
               type: 'devolucao',
-              message: `Solicitação de devolução do vazio: ${d.deliveryNumber} - ${d.driverName}`,
+              title: `Motorista ${d.driverName} solicitou agendamento`,
+              info: `Container: ${d.deliveryNumber} | Contratado: ${d.userName}`,
               deliveryNumber: d.deliveryNumber,
               driverName: d.driverName,
               id: d._id,
-              read: false
-            });
-          }
-          // Observações do fluxo de entrega
-          if (d.observations && d.observations.trim() !== '' && !d.observations.toUpperCase().includes('SOLICITACAO_AGENDAMENTO')) {
-            notifications.push({
-              type: 'observacao',
-              message: `Observação: ${d.deliveryNumber} - ${d.driverName}: ${d.observations}`,
-              deliveryNumber: d.deliveryNumber,
-              driverName: d.driverName,
-              id: d._id,
-              read: false
+              read: false,
+              createdAt: Date.now()
             });
           }
         });
-        setNotificationList(notifications);
+        // Verifica novas notificações (não lidas e não duplicadas)
+        setNotificationList(prev => {
+          const prevIds = new Set(prev.map(n => n.id));
+          const newOnes = notifications.filter(n => !prevIds.has(n.id));
+          if (newOnes.length > 0) {
+            // Mostra toast/banner e toca som
+            setToastNotification(newOnes[0]);
+            const audio = new Audio('/assets/notification.mp3');
+            audio.play();
+          }
+          const merged = [...newOnes, ...prev.filter(n => notifications.some(nn => nn.id === n.id) || n.read)];
+          localStorage.setItem('notifications', JSON.stringify(merged));
+          return merged;
+        });
       } catch (err) {
-        setNotificationList([]);
+        // Não altera notificações em caso de erro
       }
     }
     fetchNotifications();
@@ -112,27 +125,37 @@ const Header = () => {
           <div className="relative">
             <NotificationBell count={notificationCount} onClick={() => setShowNotifications((v) => !v)} />
             {showNotifications && notificationList.length > 0 && (
-              <div className="absolute right-0 mt-2 w-96 max-w-xs bg-white text-gray-900 rounded-lg shadow-lg border border-gray-200 z-50">
+              <div className="absolute right-0 mt-2 w-[420px] max-w-xs bg-white text-gray-900 rounded-xl shadow-2xl border border-gray-200 z-50 animate-fade-in">
                 <div className="p-3 border-b font-bold text-purple-700 flex items-center justify-between">
                   <span>Notificações</span>
-                  <button className="text-xs text-gray-500 hover:text-red-600" onClick={() => setNotificationList([])}>Excluir todas</button>
+                  <button className="text-xs text-gray-500 hover:text-red-600" onClick={() => { setNotificationList([]); localStorage.setItem('notifications', '[]'); }}>Excluir todas</button>
                 </div>
-                <ul className="max-h-80 overflow-y-auto divide-y divide-gray-100">
-                  {notificationList.map((n, idx) => (
-                    <li key={n.id + idx} className={`p-3 text-sm flex items-center gap-2 ${n.read ? 'bg-gray-100' : 'bg-white'} hover:bg-purple-50 cursor-pointer`}>
-                      <span className={n.type === 'devolucao' ? 'text-blue-700 font-semibold' : 'text-yellow-700 font-semibold'}>
-                        {n.type === 'devolucao' ? 'Devolução do Vazio' : 'Observação'}:
-                      </span>
-                      <span className="ml-2 flex-1 truncate">{n.message}</span>
-                      <button className="text-xs text-gray-400 hover:text-red-600" onClick={e => { e.stopPropagation(); setNotificationList(list => list.filter((x, i) => i !== idx)); }}>Excluir</button>
-                      <button className="text-xs text-purple-600 hover:text-purple-800" onClick={e => { e.stopPropagation(); setNotificationList(list => list.map((x, i) => i === idx ? { ...x, read: true } : x)); }}>Marcar como lida</button>
-                      <button className="text-xs text-blue-600 hover:text-blue-800" onClick={e => { e.stopPropagation(); alert(n.message); setNotificationList(list => list.map((x, i) => i === idx ? { ...x, read: true } : x)); }}>Ver detalhes</button>
+                <ul className="max-h-96 overflow-y-auto divide-y divide-gray-100">
+                  {notificationList.filter(n => !n.read).map((n, idx) => (
+                    <li key={n.id + idx} className="p-4 flex flex-col gap-1 bg-white hover:bg-purple-50 rounded cursor-pointer transition-all">
+                      <div className="flex items-center gap-2">
+                        <span className="text-blue-700 font-bold text-base"><i className="fa fa-truck" /> {n.title}</span>
+                        <button className="ml-auto text-xs text-gray-400 hover:text-red-600" onClick={e => { e.stopPropagation(); setNotificationList(list => { const updated = list.filter(x => x.id !== n.id); localStorage.setItem('notifications', JSON.stringify(updated)); return updated; }); }}>Excluir</button>
+                      </div>
+                      <div className="text-xs text-gray-700 font-medium">{n.info}</div>
+                      <div className="flex gap-2 mt-2">
+                        <button className="text-xs text-purple-600 hover:text-purple-800 font-semibold" onClick={e => { e.stopPropagation(); setNotificationList(list => { const updated = list.map(x => x.id === n.id ? { ...x, read: true } : x); localStorage.setItem('notifications', JSON.stringify(updated)); return updated; }); }}>Marcar como lida</button>
+                        <button className="text-xs text-blue-600 hover:text-blue-800 font-semibold" onClick={e => { e.stopPropagation(); setToastNotification(n); setNotificationList(list => { const updated = list.map(x => x.id === n.id ? { ...x, read: true } : x); localStorage.setItem('notifications', JSON.stringify(updated)); return updated; }); }}>Ver detalhes</button>
+                      </div>
                     </li>
                   ))}
+                  {notificationList.filter(n => !n.read).length === 0 && (
+                    <li className="p-4 text-center text-gray-400">Nenhuma notificação não lida</li>
+                  )}
                 </ul>
                 <button onClick={() => setShowNotifications(false)} className="w-full py-2 text-center text-xs text-gray-500 hover:text-purple-700">Fechar</button>
               </div>
             )}
+
+          {/* Toast/banner de notificação */}
+          {toastNotification && (
+            <NotificationToast notification={toastNotification} onClose={() => setToastNotification(null)} />
+          )}
           </div>
           {/* Chip do usuário responsivo */}
           <div className="hidden md:flex items-center gap-2 sm:gap-3 text-xs sm:text-sm lg:text-base bg-white/15 border border-white/20 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-full hover:bg-white/20 transition-colors">

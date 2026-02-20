@@ -27,6 +27,12 @@ const Header = () => {
   const notificationCount = notificationList.filter(n => !n.read).length;
   // Carrega notificações de devolução do vazio e observações
   useEffect(() => {
+    // Não exibe notificações para perfil Motorista
+    if (user && (user.type === 'Motorista' || user.role === 'motorista')) {
+      setNotificationList([]);
+      localStorage.setItem('notifications', '[]');
+      return;
+    }
     async function fetchNotifications() {
       try {
         const response = await adminService.getDeliveries();
@@ -37,8 +43,7 @@ const Header = () => {
           // Solicitação de devolução do vazio
           if (
             d.observations &&
-            d.observations.toUpperCase().includes('SOLICITACAO_AGENDAMENTO') &&
-            d.userType !== 'Motorista' // Remove notificações do perfil Motorista
+            d.observations.toUpperCase().includes('SOLICITACAO_AGENDAMENTO')
           ) {
             notifications.push({
               type: 'devolucao',
@@ -52,14 +57,13 @@ const Header = () => {
             });
           }
         });
-        // Corrige persistência: só adiciona novas notificações não lidas e não duplicadas
+        // Persistência definitiva: mantém notificações lidas/excluídas por usuário
         setNotificationList(prev => {
-          // Carrega notificações lidas/excluídas do localStorage
           let persisted = [];
           try {
             persisted = JSON.parse(localStorage.getItem('notifications')) || [];
           } catch {}
-          // Filtra notificações já lidas/excluídas
+          // Remove duplicadas e mantém lidas/excluídas
           const persistedIds = new Set(persisted.map(n => n.id));
           const newOnes = notifications.filter(n => !persistedIds.has(n.id));
           if (newOnes.length > 0) {
@@ -67,7 +71,8 @@ const Header = () => {
             const audio = new Audio('/assets/notification.mp3');
             audio.play();
           }
-          const merged = [...newOnes, ...persisted];
+          // Remove notificações que não existem mais e já estavam lidas/excluídas
+          const merged = [...newOnes, ...persisted.filter(n => notifications.some(nn => nn.id === n.id) || n.read)];
           localStorage.setItem('notifications', JSON.stringify(merged));
           return merged;
         });
@@ -79,7 +84,7 @@ const Header = () => {
     // Atualiza a cada 60s
     const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
 
   const handleLogout = () => {
     logout();

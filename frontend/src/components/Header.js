@@ -1,14 +1,62 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../services/authContext';
 import { useCity } from '../contexts/CityContext';
 import { FaSignOutAlt, FaUser, FaBars, FaHome, FaTimes } from 'react-icons/fa';
+import NotificationBell from './NotificationBell';
+import { adminService } from '../services/authService';
 
 const Header = () => {
+
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notificationList, setNotificationList] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  // Carrega notificações de devolução do vazio e observações
+  useEffect(() => {
+    async function fetchNotifications() {
+      try {
+        const response = await adminService.getDeliveries();
+        const deliveries = response.data.deliveries || [];
+        // Notificações: devolução do vazio e observações relevantes
+        const notifications = [];
+        deliveries.forEach((d) => {
+          // Solicitação de devolução do vazio
+          if (d.observations && d.observations.toUpperCase().includes('SOLICITACAO_AGENDAMENTO')) {
+            notifications.push({
+              type: 'devolucao',
+              message: `Solicitação de devolução do vazio: ${d.deliveryNumber} - ${d.driverName}`,
+              deliveryNumber: d.deliveryNumber,
+              driverName: d.driverName,
+              id: d._id
+            });
+          }
+          // Observações do fluxo de entrega
+          if (d.observations && d.observations.trim() !== '' && !d.observations.toUpperCase().includes('SOLICITACAO_AGENDAMENTO')) {
+            notifications.push({
+              type: 'observacao',
+              message: `Observação: ${d.deliveryNumber} - ${d.driverName}: ${d.observations}`,
+              deliveryNumber: d.deliveryNumber,
+              driverName: d.driverName,
+              id: d._id
+            });
+          }
+        });
+        setNotificationList(notifications);
+        setNotificationCount(notifications.length);
+      } catch (err) {
+        setNotificationList([]);
+        setNotificationCount(0);
+      }
+    }
+    fetchNotifications();
+    // Atualiza a cada 60s
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -59,6 +107,26 @@ const Header = () => {
 
         {/* Ações */}
         <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
+          {/* Sino de notificações */}
+          <div className="relative">
+            <NotificationBell count={notificationCount} onClick={() => setShowNotifications((v) => !v)} />
+            {showNotifications && notificationList.length > 0 && (
+              <div className="absolute right-0 mt-2 w-80 max-w-xs bg-white text-gray-900 rounded-lg shadow-lg border border-gray-200 z-50">
+                <div className="p-3 border-b font-bold text-purple-700">Notificações</div>
+                <ul className="max-h-80 overflow-y-auto divide-y divide-gray-100">
+                  {notificationList.map((n, idx) => (
+                    <li key={n.id + idx} className="p-3 text-sm hover:bg-purple-50 cursor-pointer">
+                      <span className={n.type === 'devolucao' ? 'text-blue-700 font-semibold' : 'text-yellow-700 font-semibold'}>
+                        {n.type === 'devolucao' ? 'Devolução do Vazio' : 'Observação'}:
+                      </span>
+                      <span className="ml-2">{n.message}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button onClick={() => setShowNotifications(false)} className="w-full py-2 text-center text-xs text-gray-500 hover:text-purple-700">Fechar</button>
+              </div>
+            )}
+          </div>
           {/* Chip do usuário responsivo */}
           <div className="hidden md:flex items-center gap-2 sm:gap-3 text-xs sm:text-sm lg:text-base bg-white/15 border border-white/20 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-full hover:bg-white/20 transition-colors">
             <FaUser className="text-white/90" />

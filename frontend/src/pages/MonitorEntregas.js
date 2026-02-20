@@ -222,6 +222,12 @@ const MonitorEntregas = () => {
     return badges[status] || 'bg-gray-100 text-gray-800 font-bold';
   };
 
+  // Função para exibir status sem underline
+  const formatStatus = (status) => {
+    if (!status) return '-';
+    return status.replace(/_/g, ' ');
+  };
+
   // Default labels for Manaus; we will pick per-delivery labels when showing modal
   const defaultDocumentLabels = manaConfig.documents || {
     canhotNF: '📄 NF',
@@ -421,7 +427,7 @@ const MonitorEntregas = () => {
                     <td className="px-2 py-2 text-gray-700 truncate">{delivery.recebedor || '-'}</td>
                     <td className="px-2 py-2">
                       <span className={`px-2 py-1 rounded-full font-bold uppercase tracking-tight text-xs whitespace-nowrap inline-flex items-center justify-center ${getStatusBadge(delivery.status)}`}>
-                        {delivery.status || '-'}
+                        {formatStatus(delivery.status)}
                       </span>
                     </td>
                     <td className="px-2 py-2 text-gray-600 whitespace-nowrap text-center">
@@ -577,7 +583,7 @@ const MonitorEntregas = () => {
                   <span
                     className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${getStatusBadge(selectedDelivery.status)}`}
                   >
-                    {selectedDelivery.status || '-'}
+                    {formatStatus(selectedDelivery.status)}
                   </span>
                 </div>
               </div>

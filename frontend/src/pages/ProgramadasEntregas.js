@@ -223,7 +223,7 @@ const ProgramadasEntregas = () => {
         setDocumentsUpload({});
         setShowModal(true);
         setToast({ message: 'Entrega retomada', type: 'success' });
-        loadProgramacoes();
+        await loadProgramacoes();
       } else {
         const payload = {
           deliveryNumber: deliveryNumber.toUpperCase(),
@@ -242,7 +242,7 @@ const ProgramadasEntregas = () => {
         setJustification('');
         setDocumentsUpload({});
         setShowModal(true);
-        loadProgramacoes();
+        await loadProgramacoes();
       }
     } catch (err) {
       console.error('Erro ao iniciar entrega:', err);
@@ -539,6 +539,8 @@ function dataURLtoFile(dataurl, filename) {
     }
     // Ao entrar nos documentos finais, salva status ANEXANDO_DOCUMENTOS_FINAIS
     await deliveryService.updateDelivery(currentDelivery._id, { status: 'ANEXANDO_DOCUMENTOS_FINAIS', currentStep: 'finalDocs' });
+    // Refresh programações list to show updated status
+    await loadProgramacoes();
     goToStep('finalDocs');
   };
 

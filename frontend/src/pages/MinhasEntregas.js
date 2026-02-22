@@ -6,56 +6,80 @@ import { FaArrowLeft, FaEye, FaTrash, FaPlus } from 'react-icons/fa';
 
 const MinhasEntregas = () => {
   const navigate = useNavigate();
-  const [deliveries, setDeliveries] = useState([]);
+  const [allProgramacoes, setAllProgramacoes] = useState([]);
+  const [displayedProgramacoes, setDisplayedProgramacoes] = useState([]);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
 
-  // Debounce search input and reload when filter or debounced search change
+  // Debounce search input
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(searchTerm), 350);
     return () => clearTimeout(id);
   }, [searchTerm]);
 
+  // Load programações on mount
   useEffect(() => {
-    loadDeliveries();
+    loadProgramacoes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, debouncedSearch]);
+  }, []);
 
-  const loadDeliveries = async () => {
+  // Filter programações when filter or search changes
+  useEffect(() => {
+    filterProgramacoes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, debouncedSearch, allProgramacoes]);
+
+  const loadProgramacoes = async () => {
     setLoading(true);
     try {
-      const params = {};
-      if (filter !== 'all') {
-        params.status = filter;
-      }
-      if (debouncedSearch && debouncedSearch.trim() !== '') {
-        params.q = debouncedSearch.trim();
-      }
-      const response = await deliveryService.getMyDeliveries(params);
-      setDeliveries(response.data.deliveries);
+      const response = await deliveryService.getProgramacoesAssigned();
+      const todas = response.data.programacoes || [];
+      setAllProgramacoes(todas);
     } catch (error) {
-      setToast({ message: 'Erro ao carregar entregas', type: 'error' });
+      setToast({ message: 'Erro ao carregar entregas programadas', type: 'error' });
+      setAllProgramacoes([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Tem certeza que deseja deletar esta entrega?')) return;
+  const filterProgramacoes = () => {
+    let filtered = allProgramacoes;
 
-    try {
-      await deliveryService.deleteDelivery(id);
-      setToast({ message: 'Entrega deletada com sucesso', type: 'success' });
-      loadDeliveries();
-    } catch (error) {
-      setToast({
-        message: error.response?.data?.message || 'Erro ao deletar',
-        type: 'error'
-      });
+    // Filter by status
+    if (filter === 'pendentes') {
+      // Pendentes: não ENTREGUE e não CANCELADO
+      filtered = filtered.filter(
+        p => !['ENTREGUE', 'CANCELADO'].includes(String(p.status || '').toUpperCase())
+      );
+    } else if (filter === 'enviadas') {
+      // Enviadas: ENTREGUE ou CANCELADO
+      filtered = filtered.filter(
+        p => ['ENTREGUE', 'CANCELADO'].includes(String(p.status || '').toUpperCase())
+      );
     }
+
+    // Filter by search term (processo, container, recebedor, motorista)
+    if (debouncedSearch && debouncedSearch.trim() !== '') {
+      const term = debouncedSearch.trim().toUpperCase();
+      filtered = filtered.filter(p =>
+        String(p.processo || '').toUpperCase().includes(term) ||
+        String(p.container || '').toUpperCase().includes(term) ||
+        String(p.recebedor || '').toUpperCase().includes(term) ||
+        String(p.motorista || '').toUpperCase().includes(term)
+      );
+    }
+
+    setDisplayedProgramacoes(filtered);
+  };
+
+  const handleDelete = async (id) => {
+    // MinhasEntregas agora usa ProgramacaoEntrega, não Delivery
+    // Desabilitar delete para now (programações não devem ser deletadas pela driver)
+    setToast({ message: 'Ação não disponível para programações', type: 'info' });
   };
 
   return (
@@ -72,13 +96,6 @@ const MinhasEntregas = () => {
 
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-bold text-gray-800">Minhas Entregas</h2>
-          <button
-            onClick={() => navigate('/nova-entrega')}
-            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-2 px-4 rounded-lg transition shadow-md"
-          >
-            <FaPlus />
-            Nova Entrega
-          </button>
         </div>
 
         {/* Filters */}
@@ -87,8 +104,8 @@ const MinhasEntregas = () => {
             <div className="flex gap-2">
               {[
                 { label: 'Todas', value: 'all' },
-                { label: 'Pendente', value: 'pending' },
-                { label: 'Enviadas', value: 'submitted' }
+                { label: 'Pendentes', value: 'pendentes' },
+                { label: 'Enviadas', value: 'enviadas' }
               ].map((f) => (
                 <button
                   key={f.value}
@@ -107,7 +124,7 @@ const MinhasEntregas = () => {
             <div className="ml-auto w-full sm:w-64">
               <input
                 type="text"
-                placeholder="Pesquisar por número, motorista ou placa"
+                placeholder="Pesquisar por processo, container, recebedor ou motorista"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -116,53 +133,53 @@ const MinhasEntregas = () => {
           </div>
         </div>
 
-        {/* Deliveries List */}
+        {/* Entregas List */}
         {loading ? (
           <div className="text-center py-10">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto" />
           </div>
-        ) : deliveries.length === 0 ? (
+        ) : displayedProgramacoes.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <p className="text-gray-600 text-lg mb-4">Nenhuma entrega encontrada</p>
             <button
-              onClick={() => navigate('/nova-entrega')}
+              onClick={() => loadProgramacoes()}
               className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-2 px-6 rounded-lg transition shadow-md"
             >
-              Criar Nova Entrega
+              Recarregar
             </button>
           </div>
         ) : (
           <div className="space-y-4">
-            {deliveries.map((delivery) => (
+            {displayedProgramacoes.map((prog) => (
               <div
-                key={delivery._id}
+                key={prog._id}
                 className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-gray-800 mb-2">
-                      Container: {delivery.deliveryNumber}
+                      Processo: {prog.processo}
                     </h3>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-gray-600">
                       <div>
-                        <p className="text-gray-500">Data</p>
+                        <p className="text-gray-500">Data Agendamento</p>
                         <p className="font-medium">
-                          {new Date(delivery.createdAt).toLocaleDateString('pt-BR')}
+                          {new Date(prog.dataAgendamento).toLocaleString('pt-BR')}
                         </p>
                       </div>
 
-                      {delivery.driverName && (
+                      {prog.container && (
                         <div>
-                          <p className="text-gray-500">Motorista</p>
-                          <p className="font-medium">{delivery.driverName}</p>
+                          <p className="text-gray-500">Container</p>
+                          <p className="font-medium">{prog.container}</p>
                         </div>
                       )}
 
-                      {delivery.vehiclePlate && (
+                      {prog.motorista && prog.motorista !== '-' && (
                         <div>
-                          <p className="text-gray-500">Transportadora</p>
-                          <p className="font-medium">{delivery.vehiclePlate}</p>
+                          <p className="text-gray-500">Motorista</p>
+                          <p className="font-medium">{prog.motorista}</p>
                         </div>
                       )}
 
@@ -170,54 +187,41 @@ const MinhasEntregas = () => {
                         <p className="text-gray-500">Status</p>
                         <p
                           className={`font-medium ${
-                            delivery.status === 'submitted'
+                            prog.status === 'ENTREGUE'
                               ? 'text-green-600'
+                              : prog.status === 'CANCELADO'
+                              ? 'text-red-600'
                               : 'text-orange-600'
                           }`}
                         >
-                          {delivery.status === 'submitted' ? '✅ Enviada' : '⏳ Pendente'}
+                          {prog.status || 'AGENDADO'}
                         </p>
                       </div>
 
-                      {delivery.arrivedAt && (
+                      {prog.recebedor && (
                         <div>
-                          <p className="text-gray-500">Chegada</p>
-                          <p className="font-medium">
-                            {new Date(delivery.arrivedAt).toLocaleString('pt-BR')}
-                          </p>
+                          <p className="text-gray-500">Recebedor</p>
+                          <p className="font-medium text-xs">{prog.recebedor}</p>
                         </div>
                       )}
 
-                      <div>
-                        <p className="text-gray-500">Documentos</p>
-                        <p className="font-medium">
-                          {delivery.documents
-                            ? Object.values(delivery.documents).filter((d) => d).length
-                            : 0}
-                          /5
-                        </p>
-                      </div>
+                      {prog.contratado && (
+                        <div>
+                          <p className="text-gray-500">Contratado</p>
+                          <p className="font-medium">{prog.contratado}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   <div className="flex gap-2 ml-4">
                     <button
-                      onClick={() => navigate(`/nova-entrega/${delivery._id}`)}
+                      onClick={() => navigate(`/programacoes`)}
                       className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg transition"
-                      title="Visualizar/Editar"
+                      title="Ver Programações"
                     >
                       <FaEye />
                     </button>
-
-                    {delivery.status === 'pending' && (
-                      <button
-                        onClick={() => handleDelete(delivery._id)}
-                        className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition"
-                        title="Deletar"
-                      >
-                        <FaTrash />
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>

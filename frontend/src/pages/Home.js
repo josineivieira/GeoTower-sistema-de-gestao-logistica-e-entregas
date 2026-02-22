@@ -236,13 +236,24 @@ const Home = () => {
                   <div className="max-w-6xl mx-auto px-4">
                     {/* Main Footer Content */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-                      {/* Company Info */}
-                      <div className="flex items-start gap-4">
-                        <img src="https://www.geotransportes.com.br/lovable-uploads/1370f489-a7bc-4d3b-a916-4e11a73378f0.png" alt="GeoTransportes" className="w-24 h-auto object-contain" />
+                      {/* Company Info + Social */}
+                      <div>
+                        <div className="flex items-start gap-4 mb-5">
+                          <img src="https://www.geotransportes.com.br/lovable-uploads/1370f489-a7bc-4d3b-a916-4e11a73378f0.png" alt="GeoTransportes" className="w-24 h-auto object-contain" />
+                          <div>
+                            <h4 className="text-base font-bold text-gray-900">GeoTransportes</h4>
+                            <p className="text-sm text-gray-600 mt-1">Logística Rodoviária</p>
+                            <p className="text-xs text-gray-500">Atendimento e suporte</p>
+                          </div>
+                        </div>
+                        
+                        {/* Instagram - Moved here */}
                         <div>
-                          <h4 className="text-base font-bold text-gray-900">GeoTransportes</h4>
-                          <p className="text-sm text-gray-600 mt-1">Logística Rodoviária</p>
-                          <p className="text-xs text-gray-500">Atendimento e suporte</p>
+                          <p className="text-xs text-gray-500 mb-2">Redes Sociais</p>
+                          <a href="https://www.instagram.com/_grupogeo/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 hover:shadow-lg transition-all duration-300 hover:scale-105">
+                            <img src="https://img.icons8.com/?size=100&id=32292&format=png&color=FFFFFF" alt="Instagram" className="h-4 w-4" />
+                            <span className="text-xs font-semibold text-white">Instagram</span>
+                          </a>
                         </div>
                       </div>
 
@@ -277,7 +288,7 @@ const Home = () => {
                       {/* Contacts & Social */}
                       <div>
                         <h5 className="text-sm font-semibold text-gray-900 mb-3">Contatos</h5>
-                        <div className="space-y-2 mb-5">
+                        <div className="space-y-2">
                           <a href="https://wa.me/5592982760023" target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 text-gray-700 hover:text-green-600 transition-colors text-sm font-medium">
                             <FaWhatsapp className="text-green-500 text-lg flex-shrink-0 mt-0.5" />
                             <div>
@@ -298,16 +309,6 @@ const Home = () => {
                               <p className="text-xs text-gray-500">Operacional</p>
                               <p>Lia Lima</p>
                             </div>
-                          </a>
-                        </div>
-                        
-                        {/* Instagram */}
-                        <div>
-                          <p className="text-xs text-gray-500 mb-2">Redes Sociais</p>
-                          <a href="https://www.instagram.com/_grupogeo/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 hover:shadow-lg transition-all duration-300 hover:scale-105">
-                            <span className="text-lg">📷</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2C4.243 2 2 4.243 2 7v10c0 2.757 2.243 5 5 5h10c2.757 0 5-2.243 5-5V7c0-2.757-2.243-5-5-5H7zm8.5 4.25a1.25 1.25 0 110 2.5 1.25 1.25 0 010-2.5zM12 7.5a4.5 4.5 0 110 9 4.5 4.5 0 010-9z"/></svg>
-                            <span className="text-xs font-semibold text-white">Instagram</span>
                           </a>
                         </div>
                       </div>

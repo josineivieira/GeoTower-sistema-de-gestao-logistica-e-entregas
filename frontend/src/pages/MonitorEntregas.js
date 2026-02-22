@@ -187,6 +187,41 @@ const MonitorEntregas = () => {
         return d.status === filters.status;
       });
     }
+
+    // Filtro de texto (Busca)
+    if (filters.searchTerm && filters.searchTerm.trim() !== '') {
+      const searchLower = filters.searchTerm.toLowerCase();
+      filtered = filtered.filter(d => 
+        (d.deliveryNumber || '').toLowerCase().includes(searchLower) ||
+        (d.driverName || '').toLowerCase().includes(searchLower) ||
+        (d.userName || '').toLowerCase().includes(searchLower) ||
+        (d.recebedor || '').toLowerCase().includes(searchLower) ||
+        (d.vehiclePlate || '').toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Filtro de data - AGENDAMENTO
+    if (filters.startDate && filters.startDate.trim() !== '') {
+      const startDate = new Date(filters.startDate);
+      startDate.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(d => {
+        if (!d.dataAgendamento) return false;
+        const deliveryDate = new Date(d.dataAgendamento);
+        deliveryDate.setHours(0, 0, 0, 0);
+        return deliveryDate >= startDate;
+      });
+    }
+
+    if (filters.endDate && filters.endDate.trim() !== '') {
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(d => {
+        if (!d.dataAgendamento) return false;
+        const deliveryDate = new Date(d.dataAgendamento);
+        return deliveryDate <= endDate;
+      });
+    }
+
     setFilteredDeliveries(filtered);
   }, [deliveries, filters, sortBy, sortDir]);
 
@@ -560,7 +595,7 @@ const MonitorEntregas = () => {
             <p className="text-gray-500 text-lg">Nenhuma entrega encontrada</p>
           </div>
         ) : (
-          <div className="overflow-x-auto bg-white rounded-lg shadow-md">
+          <div className="overflow-x-auto bg-white rounded-lg shadow-md" style={{ position: 'relative' }}>
             <table className="w-full text-xs">
               <thead className="bg-gradient-to-r from-purple-100 to-purple-200 border-b-2 border-purple-400 sticky top-0">
                   <tr>
@@ -627,7 +662,7 @@ const MonitorEntregas = () => {
                       </span>
                     </td>
                     <td className="px-2 py-2 text-center">
-                      <div className="flex items-center justify-center">
+                      <div className="flex items-center justify-center relative z-10">
                         <div className="relative inline-block text-left" ref={openMenuId === delivery._id ? menuRef : null}>
                           <button
                             onClick={(e) => {
@@ -647,7 +682,7 @@ const MonitorEntregas = () => {
                           </button>
 
                           {openMenuId === delivery._id && (
-                            <div className={`${openMenuUp ? 'origin-bottom-right absolute right-0 mb-2 bottom-full' : 'origin-top-right absolute right-0 mt-2'} w-48 rounded-md shadow-2xl bg-white ring-1 ring-black ring-opacity-5 z-[9999] overflow-visible`}>
+                            <div className={`${openMenuUp ? 'origin-bottom-right absolute right-0 mb-2 bottom-full' : 'origin-top-right absolute right-0 mt-2'} w-48 rounded-md shadow-2xl bg-white ring-1 ring-black ring-opacity-5 z-[9999] overflow-visible will-change-[top,left,transform]`}>
                               <div className="py-1 text-xs">
                                 <button
                                   onClick={() => { setSelectedDelivery(delivery); setOpenMenuId(null); }}

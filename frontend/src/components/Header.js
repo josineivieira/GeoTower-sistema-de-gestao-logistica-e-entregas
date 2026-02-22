@@ -3,9 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../services/authContext';
 import { useCity } from '../contexts/CityContext';
 import { FaSignOutAlt, FaUser, FaBars, FaHome, FaTimes } from 'react-icons/fa';
-import NotificationBell from './NotificationBell';
-import NotificationToast from './NotificationToast';
-import { adminService } from '../services/authService';
 
 const Header = () => {
 
@@ -13,106 +10,6 @@ const Header = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = React.useState(false);
-  // Persistência por usuário logado
-  const userId = user?.id || user?._id || user?.email || user?.username || 'anon';
-  const NOTIF_KEY = `notifications_${userId}`;
-  // Histórico definitivo de notificações lidas/excluídas por usuário
-  function getUserNotifiedIds() {
-    try {
-      return JSON.parse(localStorage.getItem(NOTIF_KEY + '_ids')) || [];
-    } catch { return []; }
-  }
-  function addUserNotifiedId(id) {
-    const ids = getUserNotifiedIds();
-    if (!ids.includes(id)) {
-      const updated = [...ids, id];
-      localStorage.setItem(NOTIF_KEY + '_ids', JSON.stringify(updated));
-    }
-  }
-  const [notificationList, setNotificationList] = useState(() => {
-    try {
-      const saved = localStorage.getItem(NOTIF_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [toastNotification, setToastNotification] = useState(null);
-  const notificationCount = notificationList.filter(n => !n.read).length;
-  // Carrega notificações de devolução do vazio e observações
-  useEffect(() => {
-    // Não exibe notificações para perfil Motorista
-    if (user && (user.type === 'Motorista' || user.role === 'motorista')) {
-      setNotificationList([]);
-      localStorage.setItem(NOTIF_KEY, '[]');
-      localStorage.setItem(NOTIF_KEY + '_ids', '[]');
-      return;
-    }
-    async function fetchNotifications() {
-      try {
-        const response = await adminService.getDeliveries();
-        const deliveries = response.data.deliveries || [];
-        // Notificações: devolução do vazio e observações relevantes
-        const notifications = [];
-        deliveries.forEach((d) => {
-          // Solicitação de devolução do vazio
-          if (
-            d.observations &&
-            d.observations.toUpperCase().includes('SOLICITACAO_AGENDAMENTO')
-          ) {
-            notifications.push({
-              type: 'devolucao',
-              title: `Motorista ${d.driverName} solicitou agendamento`,
-              info: `Container: ${d.deliveryNumber} | Contratado: ${d.userName}`,
-              deliveryNumber: d.deliveryNumber,
-              driverName: d.driverName,
-              id: d._id,
-              read: false,
-              createdAt: Date.now()
-            });
-          }
-        });
-        // Persistência definitiva: mantém notificações lidas/excluídas por usuário
-        setNotificationList(prev => {
-          let persisted = [];
-          try {
-            persisted = JSON.parse(localStorage.getItem(NOTIF_KEY)) || [];
-          } catch {}
-          // Histórico definitivo de notificações lidas/excluídas
-          const notifiedIds = new Set(getUserNotifiedIds());
-          // IDs de notificações do backend (atuais)
-          const backendIds = new Set(notifications.map(n => n.id));
-          // Remove duplicadas: só mantém uma notificação por ID
-          const unique = {};
-          // Adiciona notificações novas do backend (se não lidas/excluídas)
-          notifications.forEach(n => {
-            if (!notifiedIds.has(n.id)) unique[n.id] = n;
-          });
-          // Mantém notificações antigas que ainda existem no backend ou já estavam lidas
-          persisted.forEach(n => {
-            if (backendIds.has(n.id) || n.read) unique[n.id] = n;
-          });
-          const merged = Object.values(unique);
-          // Toast e som só para notificações realmente novas
-          const trulyNew = notifications.filter(n => !notifiedIds.has(n.id) && !persisted.some(p => p.id === n.id));
-          if (trulyNew.length > 0) {
-            setToastNotification(trulyNew[0]);
-            const audio = new Audio('/assets/notification.mp3');
-            audio.play();
-          }
-          localStorage.setItem(NOTIF_KEY, JSON.stringify(merged));
-          return merged;
-        });
-      } catch (err) {
-        // Não altera notificações em caso de erro
-      }
-    }
-    fetchNotifications();
-    // Atualiza a cada 60s
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
-  }, [userId, user]);
 
   const handleLogout = () => {
     logout();
@@ -163,42 +60,6 @@ const Header = () => {
 
         {/* Ações */}
         <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
-          {/* Sino de notificações */}
-          <div className="relative">
-            <NotificationBell count={notificationCount} onClick={() => setShowNotifications((v) => !v)} />
-            {showNotifications && notificationList.length > 0 && (
-              <div className="absolute right-0 mt-2 w-[420px] max-w-xs bg-white text-gray-900 rounded-xl shadow-2xl border border-gray-200 z-50 animate-fade-in">
-                <div className="p-3 border-b font-bold text-purple-700 flex items-center justify-between">
-                  <span>Notificações</span>
-                  <button className="text-xs text-gray-500 hover:text-red-600" onClick={() => { setNotificationList([]); localStorage.setItem('notifications', '[]'); }}>Excluir todas</button>
-                </div>
-                <ul className="max-h-96 overflow-y-auto divide-y divide-gray-100">
-                  {notificationList.filter(n => !n.read).map((n, idx) => (
-                      <li key={n.id + idx} className="p-4 flex flex-col gap-1 bg-white hover:bg-purple-50 rounded cursor-pointer transition-all">
-                        <div className="flex items-center gap-2">
-                          <span className="text-blue-700 font-bold text-base"><i className="fa fa-truck" /> {n.title}</span>
-                          <button className="ml-auto text-xs text-gray-400 hover:text-red-600" onClick={e => { e.stopPropagation(); setNotificationList(list => { addUserNotifiedId(n.id); const updated = list.filter(x => x.id !== n.id); localStorage.setItem(NOTIF_KEY, JSON.stringify(updated)); return updated; }); }}>Excluir</button>
-                        </div>
-                        <div className="text-xs text-gray-700 font-medium">{n.info}</div>
-                        <div className="flex gap-2 mt-2">
-                          <button className="text-xs text-purple-600 hover:text-purple-800 font-semibold" onClick={e => { e.stopPropagation(); setNotificationList(list => { addUserNotifiedId(n.id); const updated = list.map(x => x.id === n.id ? { ...x, read: true } : x).filter(x => x.id !== n.id); localStorage.setItem(NOTIF_KEY, JSON.stringify(updated)); return updated; }); }}>Marcar como lida</button>
-                          <button className="text-xs text-blue-600 hover:text-blue-800 font-semibold" onClick={e => { e.stopPropagation(); setToastNotification(n); setNotificationList(list => { addUserNotifiedId(n.id); const updated = list.map(x => x.id === n.id ? { ...x, read: true } : x).filter(x => x.id !== n.id); localStorage.setItem(NOTIF_KEY, JSON.stringify(updated)); return updated; }); }}>Ver detalhes</button>
-                        </div>
-                      </li>
-                  ))}
-                  {notificationList.filter(n => !n.read).length === 0 && (
-                    <li className="p-4 text-center text-gray-400">Nenhuma notificação não lida</li>
-                  )}
-                </ul>
-                <button onClick={() => setShowNotifications(false)} className="w-full py-2 text-center text-xs text-gray-500 hover:text-purple-700">Fechar</button>
-              </div>
-            )}
-
-          {/* Toast/banner de notificação */}
-          {toastNotification && (
-            <NotificationToast notification={toastNotification} onClose={() => setToastNotification(null)} />
-          )}
-          </div>
           {/* Chip do usuário responsivo */}
           <div className="hidden md:flex items-center gap-2 sm:gap-3 text-xs sm:text-sm lg:text-base bg-white/15 border border-white/20 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-full hover:bg-white/20 transition-colors">
             <FaUser className="text-white/90" />

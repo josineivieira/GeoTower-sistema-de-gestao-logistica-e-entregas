@@ -547,7 +547,7 @@ function dataURLtoFile(dataurl, filename) {
     }
   };
             {/* STEP 11: Mensagem final de agradecimento e feedback */}
-            {showThankYou && currentStep === 'finalDocs' && (
+            {currentStep === 'agradecimento' && (
               <div className="space-y-6 text-center">
                 <div className="text-6xl animate-bounce">🎉</div>
                 <h3 className="text-3xl font-bold text-emerald-600">Excelente trabalho!</h3>

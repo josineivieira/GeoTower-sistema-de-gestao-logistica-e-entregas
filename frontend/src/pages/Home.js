@@ -94,7 +94,7 @@ const Home = () => {
         {/* Welcome Section */}
         <div className="mb-10">
           <p className="text-purple-600 font-semibold text-sm uppercase tracking-wide mb-2">
-            Bem-vindo ao sistema
+            Bem-vindo ao Sistema GeoLog
           </p>
 
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">
@@ -106,7 +106,7 @@ const Home = () => {
           </h1>
 
           <p className="text-gray-600 text-base sm:text-lg">
-            Gerencie suas entregas de forma simples e segura
+            Gerenciamento Logistico de Entregas da GeoLog
           </p>
         </div>
 

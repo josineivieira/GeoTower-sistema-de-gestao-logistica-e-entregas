@@ -232,17 +232,17 @@ const Home = () => {
                 </div>
 
                 {/* Footer / Company Info - Professional */}
-                <footer className="mt-12 border-t-2 border-gray-200 pt-8 pb-6">
-                  <div className="max-w-6xl mx-auto px-4">
+                <footer className="mt-8 md:mt-12 border-t-2 border-gray-200 pt-6 md:pt-8 pb-4 md:pb-6 bg-white">
+                  <div className="max-w-6xl mx-auto px-3 md:px-4">
                     {/* Main Footer Content */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 mb-6 md:mb-8">
                       {/* Company Info + Social */}
                       <div>
-                        <div className="flex items-start gap-4 mb-5">
-                          <img src="https://www.geotransportes.com.br/lovable-uploads/1370f489-a7bc-4d3b-a916-4e11a73378f0.png" alt="GeoTransportes" className="w-24 h-auto object-contain" />
+                        <div className="flex items-start gap-3 md:gap-4 mb-4 md:mb-5">
+                          <img src="https://www.geotransportes.com.br/lovable-uploads/1370f489-a7bc-4d3b-a916-4e11a73378f0.png" alt="GeoTransportes" className="w-20 md:w-24 h-auto object-contain flex-shrink-0" />
                           <div>
-                            <h4 className="text-base font-bold text-gray-900">GeoTransportes</h4>
-                            <p className="text-sm text-gray-600 mt-1">Logística Rodoviária</p>
+                            <h4 className="text-sm md:text-base font-bold text-gray-900">GeoTransportes</h4>
+                            <p className="text-xs md:text-sm text-gray-600 mt-1">Logística Rodoviária</p>
                             <p className="text-xs text-gray-500">Atendimento e suporte</p>
                           </div>
                         </div>
@@ -259,55 +259,55 @@ const Home = () => {
 
                       {/* Locations */}
                       <div>
-                        <h5 className="text-sm font-semibold text-gray-900 mb-3">Localidades</h5>
-                        <div className="space-y-2">
+                        <h5 className="text-xs md:text-sm font-semibold text-gray-900 mb-2 md:mb-3">Localidades</h5>
+                        <div className="space-y-1 md:space-y-2">
                           <div className="flex items-start gap-2">
-                            <FaMapMarkerAlt className="text-purple-600 mt-0.5 flex-shrink-0" />
-                            <div className="text-sm text-gray-700">
+                            <FaMapMarkerAlt className="text-purple-600 mt-0.5 flex-shrink-0 text-xs md:text-base" />
+                            <div className="text-xs md:text-sm text-gray-700">
                               <p className="font-medium">Itajaí - SC</p>
-                              <p className="text-gray-600">Av Itaipava, 898</p>
+                              <p className="text-gray-600 text-xs">Av Itaipava, 898</p>
                             </div>
                           </div>
                           <div className="flex items-start gap-2">
-                            <FaMapMarkerAlt className="text-purple-600 mt-0.5 flex-shrink-0" />
-                            <div className="text-sm text-gray-700">
+                            <FaMapMarkerAlt className="text-purple-600 mt-0.5 flex-shrink-0 text-xs md:text-base" />
+                            <div className="text-xs md:text-sm text-gray-700">
                               <p className="font-medium">Garuva - SC</p>
-                              <p className="text-gray-600">BR101 Km 10, 10081 sala 7</p>
+                              <p className="text-gray-600 text-xs">BR101 Km 10, 10081 sala 7</p>
                             </div>
                           </div>
                           <div className="flex items-start gap-2">
-                            <FaMapMarkerAlt className="text-purple-600 mt-0.5 flex-shrink-0" />
-                            <div className="text-sm text-gray-700">
+                            <FaMapMarkerAlt className="text-purple-600 mt-0.5 flex-shrink-0 text-xs md:text-base" />
+                            <div className="text-xs md:text-sm text-gray-700">
                               <p className="font-medium">Manaus - AM</p>
-                              <p className="text-gray-600">Rua Gisele, 830 sala 2</p>
+                              <p className="text-gray-600 text-xs">Rua Gisele, 830 sala 2</p>
                             </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* Contacts & Social */}
+                      {/* Contacts */}
                       <div>
-                        <h5 className="text-sm font-semibold text-gray-900 mb-3">Contatos</h5>
-                        <div className="space-y-2">
-                          <a href="https://wa.me/5592982760023" target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 text-gray-700 hover:text-green-600 transition-colors text-sm font-medium">
-                            <FaWhatsapp className="text-green-500 text-lg flex-shrink-0 mt-0.5" />
+                        <h5 className="text-xs md:text-sm font-semibold text-gray-900 mb-2 md:mb-3">Contatos</h5>
+                        <div className="space-y-1 md:space-y-2">
+                          <a href="https://wa.me/5592982760023" target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 text-gray-700 hover:text-green-600 transition-colors text-xs md:text-sm font-medium">
+                            <FaWhatsapp className="text-green-500 text-base md:text-lg flex-shrink-0 mt-0.5" />
                             <div>
                               <p className="text-xs text-gray-500">Gerência</p>
-                              <p>Igo Ferro</p>
+                              <p className="text-xs md:text-sm">Igo Ferro</p>
                             </div>
                           </a>
-                          <a href="https://wa.me/5592982410180" target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 text-gray-700 hover:text-green-600 transition-colors text-sm font-medium">
-                            <FaWhatsapp className="text-green-500 text-lg flex-shrink-0 mt-0.5" />
+                          <a href="https://wa.me/5592982410180" target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 text-gray-700 hover:text-green-600 transition-colors text-xs md:text-sm font-medium">
+                            <FaWhatsapp className="text-green-500 text-base md:text-lg flex-shrink-0 mt-0.5" />
                             <div>
                               <p className="text-xs text-gray-500">Operacional</p>
-                              <p>Daniela Pontes</p>
+                              <p className="text-xs md:text-sm">Daniela Pontes</p>
                             </div>
                           </a>
-                          <a href="https://wa.me/5592982410138" target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 text-gray-700 hover:text-green-600 transition-colors text-sm font-medium">
-                            <FaWhatsapp className="text-green-500 text-lg flex-shrink-0 mt-0.5" />
+                          <a href="https://wa.me/5592982410138" target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 text-gray-700 hover:text-green-600 transition-colors text-xs md:text-sm font-medium">
+                            <FaWhatsapp className="text-green-500 text-base md:text-lg flex-shrink-0 mt-0.5" />
                             <div>
                               <p className="text-xs text-gray-500">Operacional</p>
-                              <p>Lia Lima</p>
+                              <p className="text-xs md:text-sm">Lia Lima</p>
                             </div>
                           </a>
                         </div>
@@ -315,7 +315,7 @@ const Home = () => {
                     </div>
 
                     {/* Copyright Bar */}
-                    <div className="border-t border-gray-200 pt-6 text-center">
+                    <div className="border-t border-gray-200 pt-4 md:pt-6 text-center">
                       <p className="text-xs text-gray-500">© {new Date().getFullYear()} GeoTransportes • Todos os direitos reservados</p>
                     </div>
                   </div>

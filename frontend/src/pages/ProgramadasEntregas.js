@@ -136,8 +136,12 @@ const ProgramadasEntregas = () => {
       // Logar todos os contratados das programações
       console.log('[DEBUG] Contratados das programações:', todas.map(p => p.contratado));
       if (nomeFiltro) {
-        // Mostra todas as entregas do contratado, independente do status
-        setProgramacoes(todas.filter(p => String(p.contratado).trim().toUpperCase() === nomeFiltro));
+        // Mostra todas as entregas do contratado, exceto as já ENTREGUE
+        setProgramacoes(
+          todas
+            .filter(p => String(p.contratado).trim().toUpperCase() === nomeFiltro)
+            .filter(p => String(p.status || '').toUpperCase() !== 'ENTREGUE')
+        );
       } else {
         setProgramacoes([]);
       }

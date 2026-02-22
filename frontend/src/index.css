@@ -170,3 +170,10 @@ body {
 table tbody td:last-child {
   overflow: visible;
 }
+
+/* Menu de ações - último td da tabela */
+table tbody tr td:last-child {
+  position: relative;
+  overflow: visible !important;
+  z-index: 10;
+}

@@ -682,27 +682,27 @@ const MonitorEntregas = () => {
                           </button>
 
                           {openMenuId === delivery._id && (
-                            <div className={`${openMenuUp ? 'origin-bottom-right absolute right-0 mb-2 bottom-full' : 'origin-top-right absolute right-0 mt-2'} w-48 rounded-md shadow-2xl bg-white ring-1 ring-black ring-opacity-5 z-[9999] overflow-visible will-change-[top,left,transform]`}>
+                            <div className={`${openMenuUp ? 'origin-bottom-right absolute right-0 mb-2 bottom-full' : 'origin-top-right absolute right-0 mt-2'} w-56 min-w-56 rounded-md shadow-2xl bg-white ring-1 ring-black ring-opacity-5 z-[9999] overflow-visible will-change-[top,left,transform]`}>
                               <div className="py-1 text-xs">
                                 <button
                                   onClick={() => { setSelectedDelivery(delivery); setOpenMenuId(null); }}
-                                  className="w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                  className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-100 flex items-center gap-3 whitespace-nowrap"
                                 >
-                                  <FaEye className="text-xs" /> Visualizar
+                                  <FaEye className="text-xs flex-shrink-0" /> Visualizar
                                 </button>
                                 <button
                                   onClick={() => { handleEditStart(delivery); setOpenMenuId(null); }}
-                                  className="w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                  className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-100 flex items-center gap-3 whitespace-nowrap"
                                   title="Editar entrega"
                                 >
-                                  <FaEdit className="text-xs" /> Editar
+                                  <FaEdit className="text-xs flex-shrink-0" /> Editar
                                 </button>
                                 <button
                                   onClick={() => { handleDelete(delivery._id); setOpenMenuId(null); }}
-                                  className="w-full text-left px-3 py-2 text-red-600 hover:bg-gray-50 flex items-center gap-2"
+                                  className="w-full text-left px-4 py-3 text-red-600 hover:bg-gray-50 flex items-center gap-3 whitespace-nowrap"
                                   title="Deletar entrega"
                                 >
-                                  <FaTrash className="text-xs" /> Deletar
+                                  <FaTrash className="text-xs flex-shrink-0" /> Deletar
                                 </button>
                               </div>
                             </div>

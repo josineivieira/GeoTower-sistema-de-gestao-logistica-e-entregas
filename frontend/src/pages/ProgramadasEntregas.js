@@ -295,15 +295,16 @@ const ProgramadasEntregas = () => {
       const payload = {
         deliveryNumber: deliveryNumber.toUpperCase(),
         observations: `Montagem finalizada em ${new Date().toLocaleString('pt-BR')}`,
-        driverName: montagemProgramacao.motorista || user?.fullName || user?.name || ''
+        driverName: montagemProgramacao.motorista || user?.fullName || user?.name || '',
+        containerMontadoAt: new Date() // Registrar data/hora da montagem
       };
 
       const res = await deliveryService.createDelivery(payload);
       const delivery = res.data.delivery;
 
-      // Upload comprovante before updating status
+      // Upload comprovante como retiradaCheio
       try {
-        await deliveryService.uploadDocument(delivery._id, 'comprovanteMontagem', montagemComprovante);
+        await deliveryService.uploadDocument(delivery._id, 'retiradaCheio', montagemComprovante);
       } catch (uploadErr) {
         console.warn('Aviso: comprovante não foi salvo, mas prosseguindo:', uploadErr);
       }

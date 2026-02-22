@@ -650,6 +650,10 @@ const MonitorEntregas = () => {
                   <p className="text-base text-gray-700">{selectedDelivery.dataAgendamento ? new Date(selectedDelivery.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</p>
                 </div>
                 <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase">DT Montagem Container</p>
+                  <p className="text-base text-blue-600 font-semibold bg-blue-50 px-2 py-1 rounded">{selectedDelivery.containerMontadoAt ? new Date(selectedDelivery.containerMontadoAt).toLocaleString('pt-BR') : '-'}</p>
+                </div>
+                <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase">Chegada</p>
                   <p className="text-base text-gray-700">{selectedDelivery.horarioChegada ? new Date(selectedDelivery.horarioChegada).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}</p>
                 </div>

@@ -200,6 +200,7 @@ router.put("/:id", auth, async (req, res) => {
       }
     }
     if (req.body.arrivedAt !== undefined) updates.arrivedAt = req.body.arrivedAt;
+    if (req.body.containerMontadoAt !== undefined) updates.containerMontadoAt = req.body.containerMontadoAt ? new Date(req.body.containerMontadoAt) : null;
     if (req.body.currentStep !== undefined) updates.currentStep = req.body.currentStep;
     if (req.body.observations !== undefined) updates.observations = req.body.observations;
     if (req.body.desovaStartAt !== undefined) updates.desovaStartAt = req.body.desovaStartAt;

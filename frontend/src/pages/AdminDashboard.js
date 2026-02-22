@@ -404,6 +404,13 @@ const AdminDashboard = () => {
                       </div>
                     )}
 
+                    {selectedDelivery.containerMontadoAt && (
+                      <div>
+                        <p className="text-gray-600">DT Montagem do Container</p>
+                        <p className="font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">{new Date(selectedDelivery.containerMontadoAt).toLocaleString('pt-BR')}</p>
+                      </div>
+                    )}
+
                     {selectedDelivery.status === 'scheduled' && selectedDelivery.scheduledAt && (
                       <div>
                         <p className="text-gray-600">Agendada para</p>

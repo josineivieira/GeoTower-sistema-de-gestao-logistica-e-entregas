@@ -14,7 +14,7 @@ function getDocsForCity(city = 'manaus') {
 // Create a new delivery
 exports.createDelivery = async (req, res) => {
   try {
-    const { deliveryNumber, vehiclePlate, observations } = req.body;
+    const { deliveryNumber, vehiclePlate, observations, containerMontadoAt } = req.body;
     const driverId = req.user.id;
 
     // Check if delivery number already exists for this driver
@@ -39,6 +39,7 @@ exports.createDelivery = async (req, res) => {
       driverName: driver.name,
       vehiclePlate,
       observations,
+      containerMontadoAt: containerMontadoAt ? new Date(containerMontadoAt) : null,
       status: 'draft'
     });
 

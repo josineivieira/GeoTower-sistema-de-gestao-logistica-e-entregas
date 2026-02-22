@@ -232,31 +232,31 @@ const Home = () => {
                 </div>
 
                 {/* Footer / Company Info - Professional */}
-                <footer className="mt-8 md:mt-12 border-t-2 border-gray-200 pt-6 md:pt-8 pb-4 md:pb-6 bg-white">
+                <footer className="mt-8 md:mt-12 border-t-2 border-gray-200 pt-6 md:pt-8 pb-2 md:pb-6 bg-white">
                   <div className="max-w-6xl mx-auto px-3 md:px-4">
-                    {/* Main Footer Content */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 mb-6 md:mb-8">
-                      {/* Company Info + Social */}
-                      <div>
-                        <div className="flex items-start gap-3 md:gap-4 mb-4 md:mb-5">
-                          <img src="https://www.geotransportes.com.br/lovable-uploads/1370f489-a7bc-4d3b-a916-4e11a73378f0.png" alt="GeoTransportes" className="w-20 md:w-24 h-auto object-contain flex-shrink-0" />
-                          <div>
-                            <h4 className="text-sm md:text-base font-bold text-gray-900">GeoTransportes</h4>
-                            <p className="text-xs md:text-sm text-gray-600 mt-1">Logística Rodoviária</p>
-                            <p className="text-xs text-gray-500">Atendimento e suporte</p>
-                          </div>
-                        </div>
-                        
-                        {/* Instagram - Moved here */}
+                    {/* Company Info + Social */}
+                    <div className="mb-4 md:mb-6 pb-4 md:pb-6 border-b border-gray-100">
+                      <div className="flex items-start gap-3 md:gap-4 mb-4">
+                        <img src="https://www.geotransportes.com.br/lovable-uploads/1370f489-a7bc-4d3b-a916-4e11a73378f0.png" alt="GeoTransportes" className="w-20 md:w-24 h-auto object-contain flex-shrink-0" />
                         <div>
-                          <p className="text-xs text-gray-500 mb-2">Redes Sociais</p>
-                          <a href="https://www.instagram.com/_grupogeo/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 hover:shadow-lg transition-all duration-300 hover:scale-105">
-                            <img src="https://img.icons8.com/?size=100&id=32292&format=png&color=FFFFFF" alt="Instagram" className="h-4 w-4" />
-                            <span className="text-xs font-semibold text-white">Instagram</span>
-                          </a>
+                          <h4 className="text-sm md:text-base font-bold text-gray-900">GeoTransportes</h4>
+                          <p className="text-xs md:text-sm text-gray-600 mt-1">Logística Rodoviária</p>
+                          <p className="text-xs text-gray-500">Atendimento e suporte</p>
                         </div>
                       </div>
+                      
+                      {/* Instagram - Moved here */}
+                      <div>
+                        <p className="text-xs text-gray-500 mb-2">Redes Sociais</p>
+                        <a href="https://www.instagram.com/_grupogeo/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 hover:shadow-lg transition-all duration-300 hover:scale-105">
+                          <img src="https://img.icons8.com/?size=100&id=32292&format=png&color=FFFFFF" alt="Instagram" className="h-4 w-4" />
+                          <span className="text-xs font-semibold text-white">Instagram</span>
+                        </a>
+                      </div>
+                    </div>
 
+                    {/* Locations + Contacts - Side by side on mobile */}
+                    <div className="grid grid-cols-2 gap-3 md:gap-8 mb-4 md:mb-6">
                       {/* Locations */}
                       <div>
                         <h5 className="text-xs md:text-sm font-semibold text-gray-900 mb-2 md:mb-3">Localidades</h5>
@@ -265,21 +265,21 @@ const Home = () => {
                             <FaMapMarkerAlt className="text-purple-600 mt-0.5 flex-shrink-0 text-xs md:text-base" />
                             <div className="text-xs md:text-sm text-gray-700">
                               <p className="font-medium">Itajaí - SC</p>
-                              <p className="text-gray-600 text-xs">Av Itaipava, 898</p>
+                              <p className="text-gray-600 text-xs">Av Itaipava</p>
                             </div>
                           </div>
                           <div className="flex items-start gap-2">
                             <FaMapMarkerAlt className="text-purple-600 mt-0.5 flex-shrink-0 text-xs md:text-base" />
                             <div className="text-xs md:text-sm text-gray-700">
                               <p className="font-medium">Garuva - SC</p>
-                              <p className="text-gray-600 text-xs">BR101 Km 10, 10081 sala 7</p>
+                              <p className="text-gray-600 text-xs">BR101 Km 10</p>
                             </div>
                           </div>
                           <div className="flex items-start gap-2">
                             <FaMapMarkerAlt className="text-purple-600 mt-0.5 flex-shrink-0 text-xs md:text-base" />
                             <div className="text-xs md:text-sm text-gray-700">
                               <p className="font-medium">Manaus - AM</p>
-                              <p className="text-gray-600 text-xs">Rua Gisele, 830 sala 2</p>
+                              <p className="text-gray-600 text-xs">Rua Gisele</p>
                             </div>
                           </div>
                         </div>
@@ -315,7 +315,7 @@ const Home = () => {
                     </div>
 
                     {/* Copyright Bar */}
-                    <div className="border-t border-gray-200 pt-4 md:pt-6 text-center">
+                    <div className="border-t border-gray-200 pt-3 md:pt-4 text-center">
                       <p className="text-xs text-gray-500">© {new Date().getFullYear()} GeoTransportes • Todos os direitos reservados</p>
                     </div>
                   </div>

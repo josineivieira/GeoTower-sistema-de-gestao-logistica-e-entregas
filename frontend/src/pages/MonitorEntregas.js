@@ -10,6 +10,7 @@ import itajaiConfig from '../config/cities/itajai.json';
 const MonitorEntregas = () => {
   const { user } = useAuth();
   // Modal para visualizar fotos do fluxo
+  const [viewingDocument, setViewingDocument] = useState(null); // Para visualizar documento
   const [modalFotos, setModalFotos] = useState(null);
   const navigate = useNavigate();
   const [deliveries, setDeliveries] = useState([]);
@@ -663,24 +664,31 @@ const MonitorEntregas = () => {
               </div>
 
               {selectedDelivery.observations && (
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded shadow-sm">
-                  <p className="text-xs font-bold text-yellow-800 uppercase mb-1">Observação</p>
-                  <p className="text-gray-800 text-base">{selectedDelivery.observations}</p>
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded shadow-sm">
+                  <p className="text-xs font-bold text-blue-800 uppercase mb-1">📝 Observações do Fluxo</p>
+                  <p className="text-gray-800 text-sm whitespace-pre-wrap">{selectedDelivery.observations}</p>
+                </div>
+              )}
+
+              {selectedDelivery.documentsJustification && (
+                <div className="bg-orange-50 border-l-4 border-orange-400 p-4 rounded shadow-sm">
+                  <p className="text-xs font-bold text-orange-800 uppercase mb-1">⚠️ Justificativa de Documentos Pendentes</p>
+                  <p className="text-gray-800 text-sm whitespace-pre-wrap">{selectedDelivery.documentsJustification}</p>
                 </div>
               )}
 
               {/* Documentos e Fotos do Fluxo */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold text-gray-500 uppercase">Documentos e Fotos do Fluxo</p>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm font-bold text-gray-700 uppercase tracking-wide">📦 Documentos e Fotos do Fluxo</p>
                   <button
                     onClick={() => handleDownloadAll(selectedDelivery._id)}
-                    className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition"
+                    className="px-3 py-2 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition font-semibold flex items-center gap-2"
                   >
-                    <FaDownload /> Baixar pasta (ZIP)
+                    <FaDownload /> Baixar Pasta
                   </button>
                 </div>
-                <div className="grid grid-cols-1 gap-2">
+                <div className="grid grid-cols-1 gap-3">
                   {(() => {
                     const labels = getLabelsForDelivery(selectedDelivery);
                     // Documentos normais (sem duplicar campos de fotos)
@@ -689,17 +697,27 @@ const MonitorEntregas = () => {
                       .map(docKey => (
                         <div key={docKey}>
                           {selectedDelivery.documents[docKey] ? (
-                            <div className="bg-gray-50 p-3 rounded flex items-center justify-between">
-                              <span className="font-semibold text-gray-800">{labels[docKey] || docKey}</span>
-                              <button
-                                onClick={() => handleDownload(selectedDelivery._id, docKey)}
-                                className="flex items-center gap-2 px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition"
-                              >
-                                <FaDownload /> Baixar
-                              </button>
+                            <div className="bg-white border border-gray-300 p-4 rounded-lg flex items-center justify-between hover:shadow-md transition">
+                              <span className="font-semibold text-gray-700 text-sm">{labels[docKey] || docKey}</span>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setViewingDocument({ label: labels[docKey] || docKey, url: selectedDelivery.documents[docKey], type: 'document' })}
+                                  className="p-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition title='Visualizar'"
+                                  title="Visualizar"
+                                >
+                                  <FaEye size={16} />
+                                </button>
+                                <button
+                                  onClick={() => handleDownload(selectedDelivery._id, docKey)}
+                                  className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+                                  title="Baixar"
+                                >
+                                  <FaDownload size={16} />
+                                </button>
+                              </div>
                             </div>
                           ) : (
-                            <div className="bg-gray-100 p-3 rounded text-gray-500 text-sm">{labels[docKey] || docKey} - Não anexado</div>
+                            <div className="bg-gray-100 p-4 rounded-lg text-gray-500 text-sm border border-gray-200">{labels[docKey] || docKey} <span className="text-gray-400">- Não anexado</span></div>
                           )}
                         </div>
                       ));
@@ -712,14 +730,15 @@ const MonitorEntregas = () => {
                     const fotosRows = fotosCampos.map((f, idx) => {
                       const files = Array.isArray(selectedDelivery.documents?.[f.key]) ? selectedDelivery.documents[f.key] : [];
                       return files.length > 0 ? (
-                        <div key={f.label + idx} className="bg-gray-50 p-3 rounded flex items-center justify-between">
-                          <span className="font-semibold text-gray-800">{f.label}</span>
+                        <div key={f.label + idx} className="bg-white border border-gray-300 p-4 rounded-lg flex items-center justify-between hover:shadow-md transition">
+                          <span className="font-semibold text-gray-700 text-sm">{f.label}</span>
                           <div className="flex gap-2">
                             <button
                               onClick={() => setModalFotos({ label: f.label, files })}
-                              className="flex items-center gap-2 px-3 py-1 bg-purple-500 text-white text-sm rounded hover:bg-purple-600 transition"
+                              className="p-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition"
+                              title="Visualizar"
                             >
-                              Visualizar Fotos
+                              <FaEye size={16} />
                             </button>
                             <button
                               onClick={() => {
@@ -732,14 +751,15 @@ const MonitorEntregas = () => {
                                   document.body.removeChild(link);
                                 });
                               }}
-                              className="flex items-center gap-2 px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition"
+                              className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+                              title="Baixar"
                             >
-                              <FaDownload /> Baixar
+                              <FaDownload size={16} />
                             </button>
                           </div>
                         </div>
                       ) : (
-                        <div key={f.label + idx} className="bg-gray-100 p-3 rounded text-gray-500 text-sm">{f.label} - Não anexado</div>
+                        <div key={f.label + idx} className="bg-gray-100 p-4 rounded-lg text-gray-500 text-sm border border-gray-200">{f.label} <span className="text-gray-400">- Não anexado</span></div>
                       );
                     });
                     return [
@@ -761,6 +781,37 @@ const MonitorEntregas = () => {
               {modalFotos.files.map((url, idx) => (
                 <img key={idx} src={url} alt={`Foto ${idx + 1}`} className="w-full h-40 object-cover rounded shadow" />
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para visualizar documento */}
+      {viewingDocument && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-800">{viewingDocument.label}</h2>
+              <button onClick={() => setViewingDocument(null)} className="text-3xl hover:text-gray-400 transition font-light">
+                <FaTimes />
+              </button>
+            </div>
+            <div className="bg-gray-50 rounded-lg overflow-auto max-h-[70vh]">
+              {viewingDocument.url && viewingDocument.url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                <img src={viewingDocument.url} alt={viewingDocument.label} className="w-full h-auto rounded" />
+              ) : (
+                <div className="p-6 text-center text-gray-600">
+                  <p className="mb-4">Documento: {viewingDocument.label}</p>
+                  <a
+                    href={viewingDocument.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  >
+                    <FaDownload /> Abrir em nova aba
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </div>

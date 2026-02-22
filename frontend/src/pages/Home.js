@@ -9,7 +9,9 @@ import {
   FaDatabase,
   FaCalendarAlt,
   FaCheckCircle,
-  FaBoxes
+  FaBoxes,
+  FaWhatsapp,
+  FaMapMarkerAlt
 } from 'react-icons/fa';
 
 const Home = () => {
@@ -229,11 +231,40 @@ const Home = () => {
 
                 </div>
 
-                {/* Dica / Info Box */}
-                <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-indigo-600 rounded-lg">
-                  <p className="text-indigo-900 font-semibold flex items-center gap-2">
-                    💡 <span>Todas as informações baseadas em Entregas Programadas</span>
-                  </p>
+                {/* Footer / Company Info */}
+                <div className="mt-8 bg-white rounded-lg shadow border border-gray-100 p-6">
+                  <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white text-xl font-bold">
+                        GT
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-800">GeoTransportes</h4>
+                        <p className="text-sm text-gray-600">Logística Rodoviária — Atendimento e suporte</p>
+                        <p className="text-sm text-gray-500 mt-1 flex items-center gap-2"><FaMapMarkerAlt className="text-purple-600" /> <span>Endereço: (adicionar endereço enviado)</span></p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      <div className="text-sm">
+                        <div className="text-xs text-gray-500">Gerência</div>
+                        <a href="https://wa.me/5592982760023" target="_blank" rel="noopener noreferrer" className="text-purple-700 font-semibold hover:underline flex items-center gap-2">
+                          <FaWhatsapp className="text-green-500" /> Igo Ferro — (92) 98276-0023
+                        </a>
+                      </div>
+
+                      <div className="text-sm">
+                        <div className="text-xs text-gray-500">Operacional</div>
+                        <a href="https://wa.me/5592982410180" target="_blank" rel="noopener noreferrer" className="text-purple-700 font-semibold hover:underline flex items-center gap-2">
+                          <FaWhatsapp className="text-green-500" /> Daniela Pontes — (92) 98241-0180
+                        </a>
+                        <a href="https://wa.me/5592982410138" target="_blank" rel="noopener noreferrer" className="text-purple-700 font-semibold hover:underline flex items-center gap-2 mt-1">
+                          <FaWhatsapp className="text-green-500" /> Lia Lima — (92) 98241-0138
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 text-xs text-gray-400 text-center">© {new Date().getFullYear()} GeoTransportes • Todos os direitos reservados</div>
                 </div>
               </div>
             )}

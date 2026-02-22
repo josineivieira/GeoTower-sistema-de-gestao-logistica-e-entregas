@@ -58,6 +58,7 @@ const MonitorEntregas = () => {
     DESOVA_FINALIZADA: ['DESOVA_FINALIZADA'],
     ANEXANDO_DOCUMENTOS_FINAIS: ['ANEXANDO_DOCUMENTOS_FINAIS'],
     CANCELADO: ['CANCELADO']
+  };
   const [showFilters, setShowFilters] = useState(false);
 
   // Period filter for stats

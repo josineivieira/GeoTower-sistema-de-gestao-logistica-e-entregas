@@ -105,6 +105,7 @@ const ProgramadasEntregas = () => {
   const [justification, setJustification] = useState('');
   const [documentsUpload, setDocumentsUpload] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [showThankYou, setShowThankYou] = useState(false);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
@@ -533,9 +534,10 @@ function dataURLtoFile(dataurl, filename) {
         await deliveryService.uploadDocument(currentDelivery._id, docType, files);
       }
       await deliveryService.updateDelivery(currentDelivery._id, { status: 'ENTREGUE' });
-      // Garantir que não haja toasts visíveis — mostrar apenas o modal de agradecimento
+      // Garantir que não haja toasts visíveis — mostrar agradecimento dentro de 'finalDocs'
       try { setToast(null); } catch (e) { /* silent */ }
-      setCurrentStep('agradecimento');
+      setShowThankYou(true);
+      setCurrentStep('finalDocs');
       loadProgramacoes();
     } catch (err) {
       console.error(err);

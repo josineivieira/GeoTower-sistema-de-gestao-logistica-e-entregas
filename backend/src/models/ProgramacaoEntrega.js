@@ -38,14 +38,17 @@ const programacaoEntregaSchema = new mongoose.Schema({
       values: [
         'AGENDADO',
         'CONTAINER_MONTADO',
+        'A_CAMINHO_DO_CLIENTE',
         'AGUARDANDO_DESOVA',
         'EM_DESOVA',
         'AGUARDANDO_ANEXO',
+        'ANEXANDO_DOCUMENTOS_FINAIS',
         'EM_ROTA',
         'ENTREGUE',
+        'ENTREGUE_COM_PENDENCIA_CANHOTO',
         'CANCELADO'
       ],
-      message: 'Status deve ser: AGENDADO, CONTAINER_MONTADO, AGUARDANDO_DESOVA, EM_DESOVA, AGUARDANDO_ANEXO, EM_ROTA, ENTREGUE ou CANCELADO'
+      message: 'Status deve ser um dos valores válidos'
     },
     default: 'AGENDADO'
   },

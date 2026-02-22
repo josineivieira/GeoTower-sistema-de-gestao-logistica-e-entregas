@@ -182,8 +182,11 @@ const ProgramadasEntregas = () => {
         
         // Se status é CONTAINER_MONTADO, mudar para A_CAMINHO_DO_CLIENTE
         if (existing.status === 'CONTAINER_MONTADO') {
+          console.log('[DEBUG] Updating delivery status from CONTAINER_MONTADO to A_CAMINHO_DO_CLIENTE');
           await deliveryService.updateDelivery(existing._id, { status: 'A_CAMINHO_DO_CLIENTE' });
           existing.status = 'A_CAMINHO_DO_CLIENTE';
+          // Update local programação to reflect new status immediately
+          p.status = 'A_CAMINHO_DO_CLIENTE';
         }
         
         // Determina o step inicial conforme o status
@@ -538,7 +541,12 @@ function dataURLtoFile(dataurl, filename) {
       }
     }
     // Ao entrar nos documentos finais, salva status ANEXANDO_DOCUMENTOS_FINAIS
+    console.log('[DEBUG] Updating delivery status to ANEXANDO_DOCUMENTOS_FINAIS');
     await deliveryService.updateDelivery(currentDelivery._id, { status: 'ANEXANDO_DOCUMENTOS_FINAIS', currentStep: 'finalDocs' });
+    // Update local programação status immediately
+    if (currentProgramacao) {
+      currentProgramacao.status = 'ANEXANDO_DOCUMENTOS_FINAIS';
+    }
     // Refresh programações list to show updated status
     await loadProgramacoes();
     goToStep('finalDocs');

@@ -183,19 +183,38 @@ router.put("/:id", auth, async (req, res) => {
     const updates = {};
     if (req.body.status) {
       updates.status = req.body.status;
-      // mirror to programacao if exists
+      // mirror to programacao if exists - try multiple approaches
       try {
         const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
-        const prog = await ProgramacaoEntrega.findOne({
-          $or: [
-            { processo: new RegExp(`^${delivery.deliveryNumber}$`, 'i') },
-            { container: new RegExp(`^${delivery.deliveryNumber}$`, 'i') }
-          ]
-        });
+        let prog = null;
+        const deliveryNum = String(delivery.deliveryNumber || '').trim().toUpperCase();
+        
+        // Approach 1: Exact match (case-insensitive)
+        if (deliveryNum) {
+          prog = await ProgramacaoEntrega.findOne({
+            $or: [
+              { processo: new RegExp(`^${deliveryNum}$`, 'i') },
+              { container: new RegExp(`^${deliveryNum}$`, 'i') }
+            ]
+          });
+        }
+        
+        // Approach 2: If not found, try substring match
+        if (!prog && deliveryNum) {
+          prog = await ProgramacaoEntrega.findOne({
+            $or: [
+              { processo: new RegExp(deliveryNum, 'i') },
+              { container: new RegExp(deliveryNum, 'i') }
+            ]
+          });
+        }
+        
         if (prog) {
           prog.status = req.body.status;
           await prog.save();
-          console.log('[DELIVERY] sincronizado status da programacao', prog._id, req.body.status);
+          console.log('[DELIVERY] sincronizado status da programacao', prog._id, 'para', req.body.status);
+        } else {
+          console.log('[DELIVERY] programacao nao encontrada para deliveryNumber', deliveryNum);
         }
       } catch (syncErr) {
         console.warn('[DELIVERY] erro sync programacao:', syncErr.message || syncErr);
@@ -205,6 +224,7 @@ router.put("/:id", auth, async (req, res) => {
     if (req.body.containerMontadoAt !== undefined) updates.containerMontadoAt = req.body.containerMontadoAt ? new Date(req.body.containerMontadoAt) : null;
     if (req.body.currentStep !== undefined) updates.currentStep = req.body.currentStep;
     if (req.body.observations !== undefined) updates.observations = req.body.observations;
+    if (req.body.documentsJustification !== undefined) updates.documentsJustification = req.body.documentsJustification;
     if (req.body.desovaStartAt !== undefined) updates.desovaStartAt = req.body.desovaStartAt;
     if (req.body.desovaEndAt !== undefined) updates.desovaEndAt = req.body.desovaEndAt;
     if (req.body.recebedor !== undefined) updates.recebedor = req.body.recebedor;

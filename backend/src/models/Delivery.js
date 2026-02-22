@@ -37,6 +37,7 @@ const DeliverySchema = new mongoose.Schema(
     submissionObservation: { type: String, default: "" },
     submissionForce: { type: Boolean, default: false },
     missingDocumentsAtSubmit: { type: [String], default: [] },
+    documentsJustification: { type: String, default: "" },
 
     // usuário que criou (motorista/admin)
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

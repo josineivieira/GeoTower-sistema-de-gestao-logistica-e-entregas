@@ -112,6 +112,8 @@ const ProgramadasEntregas = () => {
   const [showMontagemModal, setShowMontagemModal] = useState(false);
   const [montagemProgramacao, setMontagemProgramacao] = useState(null);
   const [montagemSubmitting, setMontagemSubmitting] = useState(false);
+  const [montagemComprovante, setMontagemComprovante] = useState(null);
+  const montagemComprovanteRef = useRef(null);
 
   useEffect(() => {
     loadProgramacoes();
@@ -259,6 +261,12 @@ const ProgramadasEntregas = () => {
       return;
     }
 
+    // User said "Sim" - require comprovante and update programacao status to CONTAINER_MONTADO
+    if (!montagemComprovante) {
+      setToast({ message: 'Anexe o comprovante da montagem antes de continuar', type: 'error' });
+      return;
+    }
+
     // User said "Sim" - update programacao status to CONTAINER_MONTADO
     try {
       setMontagemSubmitting(true);
@@ -286,12 +294,20 @@ const ProgramadasEntregas = () => {
       const res = await deliveryService.createDelivery(payload);
       const delivery = res.data.delivery;
 
+      // Upload comprovante before updating status
+      try {
+        await deliveryService.uploadDocument(delivery._id, 'comprovanteMontagem', montagemComprovante);
+      } catch (uploadErr) {
+        console.warn('Aviso: comprovante não foi salvo, mas prosseguindo:', uploadErr);
+      }
+
       // Update the delivery/programacao status to CONTAINER_MONTADO
       await deliveryService.updateDelivery(delivery._id, { status: 'CONTAINER_MONTADO' });
 
       setToast({ message: 'Container marcado como montado com sucesso!', type: 'success' });
       setShowMontagemModal(false);
       setMontagemProgramacao(null);
+      setMontagemComprovante(null);
       loadProgramacoes();
     } catch (err) {
       console.error('Erro ao finalizar montagem:', err);
@@ -500,7 +516,7 @@ function dataURLtoFile(dataurl, filename) {
   };
 
   const handleFinalUploadAndSubmit = async () => {
-    const requiredDocs = ['canhotNF','canhotCTE','diarioBordo','devolucaoVazio','retiradaCheio'];
+    const requiredDocs = ['canhotCTE','diarioBordo','canhotNF','devolucaoVazio'];
     const allOk = requiredDocs.every(k => documentsUpload[k] && documentsUpload[k].length > 0);
     if (!allOk) {
       setToast({ message: 'Anexe todos os documentos obrigatórios!', type: 'error' });
@@ -525,53 +541,23 @@ function dataURLtoFile(dataurl, filename) {
             {/* STEP 11: Mensagem final de agradecimento e feedback */}
             {currentStep === 'agradecimento' && (
               <div className="space-y-6 text-center">
-                <h3 className="text-2xl font-bold text-green-700">Entrega finalizada com sucesso!</h3>
-                <p className="text-lg text-gray-700">Obrigado por utilizar o sistema. Deseja relatar algo sobre esta entrega?</p>
+                <div className="text-5xl animate-bounce">🎉</div>
+                <h3 className="text-2xl font-bold text-green-600">Muito Obrigado!</h3>
+                <p className="text-lg text-gray-700">Sua entrega foi concluída com sucesso.</p>
+                <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600">Você será redirecionado automaticamente em alguns segundos...</p>
+                </div>
                 <div className="flex gap-2 justify-center">
                   <button
-                    onClick={() => goToStep('feedbackObs')}
-                    className="px-4 py-2 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600"
-                  >
-                    Sim, quero relatar
-                  </button>
-                  <button
                     onClick={() => { closeModal(); setTimeout(() => setToast({ message: 'Entrega concluída! Obrigado.', type: 'success' }), 500); }}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300"
+                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700"
                   >
-                    Não, finalizar
+                    ✓ Voltar à lista
                   </button>
                 </div>
               </div>
             )}
 
-            {/* STEP 12: Observação de feedback final */}
-            {currentStep === 'feedbackObs' && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Relate sua experiência ou observação final</h3>
-                <textarea
-                  value={justification}
-                  onChange={(e) => setJustification(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={5}
-                  placeholder="Digite sua observação..."
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={async () => { await handleJustificationSubmit(); closeModal(); setTimeout(() => setToast({ message: 'Obrigado pelo feedback!', type: 'success' }), 500); }}
-                    disabled={submitting || !justification.trim()}
-                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    Enviar e finalizar
-                  </button>
-                  <button
-                    onClick={() => goToStep('agradecimento')}
-                    className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300"
-                  >
-                    Voltar
-                  </button>
-                </div>
-              </div>
-            )}
 
   const dataURLtoBlob = (dataUrl) => {
     const arr = dataUrl.split(',');
@@ -708,7 +694,7 @@ function dataURLtoFile(dataurl, filename) {
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
 
-      {/* Modal de pergunta - Finalizou a montagem? */}
+      {/* Modal de pergunta - Informe a conclusão da montagem */}
       {showMontagemModal && montagemProgramacao && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-10 border-4 border-blue-400">
@@ -734,8 +720,46 @@ function dataURLtoFile(dataurl, filename) {
 
               <div className="bg-yellow-50 border border-yellow-300 p-6 rounded-lg">
                 <p className="text-2xl font-bold text-yellow-800 text-center">
-                  Você já finalizou a montagem do container?
+                  Informe a conclusão da montagem
                 </p>
+              </div>
+
+              {/* Campo para anexar comprovante */}
+              <div className="bg-gray-50 border border-gray-300 p-6 rounded-lg">
+                <label className="block text-lg font-semibold text-gray-700 mb-3">
+                  📸 Anexar Comprovante de Montagem
+                </label>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => montagemComprovanteRef.current?.click()}
+                    className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition"
+                  >
+                    {montagemComprovante ? '✅ Foto selecionada' : '📷 Selecionar Foto'}
+                  </button>
+                  {montagemComprovante && (
+                    <button
+                      onClick={() => setMontagemComprovante(null)}
+                      className="px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition"
+                    >
+                      Remover
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={montagemComprovanteRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setMontagemComprovante(file);
+                  }}
+                  className="hidden"
+                />
+                {montagemComprovante && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    Arquivo: <strong>{montagemComprovante.name}</strong>
+                  </p>
+                )}
               </div>
 
               {montagemSubmitting && (
@@ -747,18 +771,11 @@ function dataURLtoFile(dataurl, filename) {
 
               <div className="flex gap-4 justify-center">
                 <button
-                  onClick={() => handleMontagemFinished(false)}
-                  disabled={montagemSubmitting}
-                  className="px-8 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-bold text-xl transition disabled:opacity-50"
-                >
-                  ❌ Não, ainda estou montando
-                </button>
-                <button
                   onClick={() => handleMontagemFinished(true)}
-                  disabled={montagemSubmitting}
-                  className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-xl transition disabled:opacity-50"
+                  disabled={montagemSubmitting || !montagemComprovante}
+                  className="flex-1 px-8 py-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  ✅ Sim, já finalizei!
+                  ✅ Container Montado
                 </button>
               </div>
             </div>
@@ -804,6 +821,7 @@ function dataURLtoFile(dataurl, filename) {
                     </div>
                   )}
                   <p className="text-gray-600 mt-3">Confirme sua chegada no cliente</p>
+                  <StepTimer start={currentDelivery?.createdAt || currentProgramacao?.dataAgendamento} label="Tempo até confirmação" />
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -1203,67 +1221,80 @@ function dataURLtoFile(dataurl, filename) {
                   </div>
                 )}
 
-                {['canhotNF', 'canhotCTE', 'diarioBordo', 'devolucaoVazio', 'retiradaCheio'].map((docType) => {
-                  const labels = {
-                    canhotNF: 'Canhoto NF',
-                    canhotCTE: 'Canhoto CTE',
-                    diarioBordo: 'Diário de Bordo',
-                    devolucaoVazio: 'Devolução Vazio',
-                    retiradaCheio: 'Retirada Cheio'
-                  };
-                  return (
-                    <div key={docType} className="border border-gray-300 p-3 rounded-lg mb-2">
-                      <p className="font-semibold text-sm mb-2">{labels[docType]}</p>
-                      <div className="flex gap-2 mb-2">
-                        <input
-                          type="file"
-                          multiple
-                          accept="image/*,application/pdf"
-                          onChange={(e) => {
-                            if (e.target.files) {
-                              setDocumentsUpload({
-                                ...documentsUpload,
-                                [docType]: Array.from(e.target.files)
-                              });
-                            }
-                          }}
-                          className="w-full text-sm"
-                          disabled={submitting}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (submitting) return;
-                            const input = document.createElement('input');
-                            input.type = 'file';
-                            input.accept = 'image/*';
-                            input.capture = 'environment';
-                            input.onchange = (e) => {
-                              if (e.target.files && e.target.files.length > 0) {
-                                setDocumentsUpload(prev => ({
-                                  ...prev,
-                                  [docType]: [...(prev[docType] || []), ...Array.from(e.target.files)]
-                                }));
-                              }
-                            };
-                            input.click();
-                          }}
-                          className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs"
-                          disabled={submitting}
-                        >
-                          Tirar foto
-                        </button>
+                <div className="grid grid-cols-2 gap-3">
+                  {['canhotCTE', 'diarioBordo', 'canhotNF', 'devolucaoVazio'].map((docType) => {
+                    const labels = {
+                      canhotCTE: '🚛 Canhoto CTE',
+                      canhotNF: '📦 Canhoto NF',
+                      diarioBordo: '📋 Diário Bordo',
+                      devolucaoVazio: '📁 Devolução Vazio'
+                    };
+                    const emojis = {
+                      canhotCTE: '🚛',
+                      canhotNF: '📦',
+                      diarioBordo: '📋',
+                      devolucaoVazio: '📁'
+                    };
+                    return (
+                      <div key={docType} className="border-2 border-gray-200 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition">
+                        <p className="font-semibold text-xs mb-2 text-gray-700">{labels[docType]}</p>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (submitting) return;
+                              const input = document.createElement('input');
+                              input.type = 'file';
+                              input.accept = 'image/*,application/pdf';
+                              input.multiple = true;
+                              input.onchange = (e) => {
+                                if (e.target.files) {
+                                  setDocumentsUpload({
+                                    ...documentsUpload,
+                                    [docType]: Array.from(e.target.files)
+                                  });
+                                }
+                              };
+                              input.click();
+                            }}
+                            className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs w-full"
+                            disabled={submitting}
+                          >
+                            📤 Escolher
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (submitting) return;
+                              const input = document.createElement('input');
+                              input.type = 'file';
+                              input.accept = 'image/*';
+                              input.capture = 'environment';
+                              input.onchange = (e) => {
+                                if (e.target.files && e.target.files.length > 0) {
+                                  setDocumentsUpload(prev => ({
+                                    ...prev,
+                                    [docType]: [...(prev[docType] || []), ...Array.from(e.target.files)]
+                                  }));
+                                }
+                              };
+                              input.click();
+                            }}
+                            className="px-2 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs w-full"
+                            disabled={submitting}
+                          >
+                            📷 Tirar foto
+                          </button>
+                        </div>
+                        {documentsUpload[docType] && documentsUpload[docType].length > 0 && (
+                          <div className="mt-2 text-xs text-green-600 bg-green-50 p-2 rounded">
+                            ✓ {documentsUpload[docType].length} arquivo(s)
+                          </div>
+                        )}
                       </div>
-                      {documentsUpload[docType] && documentsUpload[docType].length > 0 && (
-                        <ul className="text-xs text-green-600 mt-2 list-disc pl-4">
-                          {documentsUpload[docType].map((file, idx) => (
-                            <li key={idx}>{file.name || `Foto ${idx + 1}`}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
 
                 <div className="flex gap-2">
                   <button
@@ -1271,7 +1302,7 @@ function dataURLtoFile(dataurl, filename) {
                     disabled={submitting}
                     className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50"
                   >
-                    {submitting ? 'Enviando...' : 'Finalizar entrega'}
+                    {submitting ? 'Enviando...' : '✓ Finalizar entrega'}
                   </button>
                   <button
                     onClick={() => goToStep('askSchedule')}

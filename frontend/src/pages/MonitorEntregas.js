@@ -58,8 +58,10 @@ const MonitorEntregas = () => {
     DESOVA_FINALIZADA: ['DESOVA_FINALIZADA'],
     ANEXANDO_DOCUMENTOS_FINAIS: ['ANEXANDO_DOCUMENTOS_FINAIS'],
     CANCELADO: ['CANCELADO']
-  };
   const [showFilters, setShowFilters] = useState(false);
+
+  // Period filter for stats
+  const [statsPeriod, setStatsPeriod] = useState('today'); // 'today', 'yesterday', 'tomorrow'
 
   // Stats rápidas
   const [stats, setStats] = useState({
@@ -90,13 +92,42 @@ const MonitorEntregas = () => {
       console.log('📥 Resposta do backend:', data.length, 'entregas');
       setDeliveries(data);
       
+      // Calcula a data alvo baseada no período selecionado
+      const getPeriodDate = () => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (statsPeriod === 'yesterday') {
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          return yesterday;
+        } else if (statsPeriod === 'tomorrow') {
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          return tomorrow;
+        }
+        return today; // today (padrão)
+      };
+
+      const targetDate = getPeriodDate();
+      const nextDay = new Date(targetDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+
+      // Filtra entregas pelo período
+      const entrugasPeriodo = data.filter(d => {
+        if (!d.dataAgendamento) return false;
+        const deliveryDate = new Date(d.dataAgendamento);
+        deliveryDate.setHours(0, 0, 0, 0);
+        return deliveryDate.getTime() === targetDate.getTime();
+      });
+
       // Calcula stats
-      const submitted = data.filter(d => d.status === 'ENTREGUE' || d.status === 'submitted').length;
-      const pending = data.filter(d => d.status !== 'ENTREGUE' && d.status !== 'submitted' && d.status !== 'CANCELADO').length;
+      const submitted = entrugasPeriodo.filter(d => d.status === 'ENTREGUE' || d.status === 'submitted').length;
+      const pending = entrugasPeriodo.filter(d => d.status !== 'ENTREGUE' && d.status !== 'submitted' && d.status !== 'CANCELADO').length;
       // Corrige indicador de motoristas: conta motoristas distintos
-      const motoristaSet = new Set(data.map(d => d.driverName).filter(Boolean));
+      const motoristaSet = new Set(entrugasPeriodo.map(d => d.driverName).filter(Boolean));
       setStats({
-        total: data.length,
+        total: entrugasPeriodo.length,
         submitted,
         pending,
         byDriver: motoristaSet.size
@@ -109,7 +140,7 @@ const MonitorEntregas = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, statsPeriod]);
 
   // Auto refresh
   useEffect(() => {
@@ -347,6 +378,40 @@ const MonitorEntregas = () => {
           >
             <FaSync className={loading ? 'animate-spin' : ''} />
             {loading ? 'ATUALIZANDO...' : 'ATUALIZAR'}
+          </button>
+        </div>
+
+        {/* Period Selector for Stats */}
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setStatsPeriod('yesterday')}
+            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+              statsPeriod === 'yesterday'
+                ? 'bg-gray-700 text-white shadow-lg'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            📅 Ontem
+          </button>
+          <button
+            onClick={() => setStatsPeriod('today')}
+            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+              statsPeriod === 'today'
+                ? 'bg-purple-600 text-white shadow-lg'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            🕐 Hoje
+          </button>
+          <button
+            onClick={() => setStatsPeriod('tomorrow')}
+            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+              statsPeriod === 'tomorrow'
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            📆 Amanhã
           </button>
         </div>
 

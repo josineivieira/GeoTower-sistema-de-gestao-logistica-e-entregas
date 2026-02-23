@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../services/authContext';
 
-const PrivateRoute = ({ children, adminOnly = false }) => {
+const PrivateRoute = ({ children, adminOnly = false, allowedRoles = null }) => {
   const { isAuthenticated, user, loading } = useAuth();
 
   if (loading) {
@@ -21,6 +21,11 @@ const PrivateRoute = ({ children, adminOnly = false }) => {
   }
 
   if (adminOnly && user?.role !== 'admin') {
+    return <Navigate to="/home" replace />;
+  }
+
+  // If allowedRoles is provided, require the user role to be inside it
+  if (allowedRoles && !allowedRoles.includes(user?.role)) {
     return <Navigate to="/home" replace />;
   }
 

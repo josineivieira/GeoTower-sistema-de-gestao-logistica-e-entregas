@@ -124,7 +124,7 @@ function AppContent() {
       <Route
         path="/admin"
         element={
-          <PrivateRoute adminOnly>
+          <PrivateRoute allowedRoles={[ 'admin', 'manager', 'geomar' ]}>
             <AppLayout>
               <AdminDashboard />
             </AppLayout>
@@ -135,7 +135,7 @@ function AppContent() {
       <Route
         path="/monitor-entregas"
         element={
-          <PrivateRoute adminOnly>
+          <PrivateRoute allowedRoles={[ 'admin', 'manager', 'geomar' ]}>
             <AppLayout>
               <MonitorEntregas />
             </AppLayout>
@@ -146,7 +146,7 @@ function AppContent() {
       <Route
         path="/usuarios"
         element={
-          <PrivateRoute adminOnly>
+          <PrivateRoute allowedRoles={[ 'admin', 'manager', 'geomar' ]}>
             <AppLayout>
               <UserManagement />
             </AppLayout>
@@ -157,7 +157,7 @@ function AppContent() {
       <Route
         path="/motoristas"
         element={
-          <PrivateRoute adminOnly>
+          <PrivateRoute allowedRoles={[ 'admin', 'manager', 'geomar' ]}>
             <AppLayout>
               <MotoristaManagement />
             </AppLayout>
@@ -168,7 +168,7 @@ function AppContent() {
       <Route
         path="/programacoes"
         element={
-          <PrivateRoute adminOnly>
+          <PrivateRoute allowedRoles={[ 'admin', 'manager', 'geomar' ]}>
             <AppLayout>
               <ProgramacaoManagement />
             </AppLayout>

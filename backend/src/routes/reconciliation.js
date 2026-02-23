@@ -30,7 +30,8 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Middleware para verificar admin
 function onlyAdmin(req, res, next) {
   const role = req.user?.role || 'operacao';
-  if (role !== 'admin' && role !== 'gestor') {
+  // Aceita tanto 'gestor' quanto 'manager' como sinônimos de Gerente
+  if (role !== 'admin' && role !== 'gestor' && role !== 'manager') {
     return res.status(403).json({ message: 'Sem permissão' });
   }
   next();

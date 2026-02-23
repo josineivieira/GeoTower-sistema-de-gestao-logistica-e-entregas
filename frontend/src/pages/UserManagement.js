@@ -22,8 +22,8 @@ const UserManagement = () => {
   });
 
   useEffect(() => {
-    // Proteger rota - só gerentes e admins podem acessar (GeoMar não tem acesso)
-    if (!user || (user.role !== 'manager' && user.role !== 'admin')) {
+    // Proteger rota - gerentes, admins e GeoMar podem acessar (GeoMar apenas visualização)
+    if (!user || (user.role !== 'manager' && user.role !== 'admin' && user.role !== 'geomar')) {
       navigate('/');
       return;
     }
@@ -123,12 +123,14 @@ const UserManagement = () => {
                 <FaUser /> Gerenciamento de Usuários
               </h1>
             </div>
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition duration-200 font-semibold shadow-md hover:shadow-lg"
-            >
-              <FaPlus /> Novo Usuário
-            </button>
+            {(user.role === 'manager' || user.role === 'admin') && (
+              <button
+                onClick={() => setShowForm(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition duration-200 font-semibold shadow-md hover:shadow-lg"
+              >
+                <FaPlus /> Novo Usuário
+              </button>
+            )}
           </div>
         </div>
 
@@ -193,6 +195,7 @@ const UserManagement = () => {
                         <option value="driver">🚗 Motorista</option>
                         <option value="manager">📋 Gerente</option>
                         <option value="admin">👑 Admin</option>
+                        <option value="geomar">🌎 GeoMar</option>
                       </select>
                     </div>
 
@@ -281,25 +284,31 @@ const UserManagement = () => {
                               ? 'bg-red-100 text-red-700'
                               : user.role === 'manager'
                               ? 'bg-purple-100 text-purple-700'
+                              : user.role === 'geomar'
+                              ? 'bg-green-100 text-green-700'
                               : 'bg-blue-100 text-blue-700'
                           }`}>
-                            {user.role === 'admin' ? '👑' : user.role === 'manager' ? '📋' : '🚗'}
-                            {user.role === 'admin' ? 'Admin' : user.role === 'manager' ? 'Gerente' : 'Motorista'}
+                            {user.role === 'admin' ? '👑' : user.role === 'manager' ? '📋' : user.role === 'geomar' ? '🌎' : '🚗'}
+                            {user.role === 'admin' ? 'Admin' : user.role === 'manager' ? 'Gerente' : user.role === 'geomar' ? 'GeoMar' : 'Motorista'}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <button
-                            onClick={() => handleEdit(user)}
-                            className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition duration-200 font-semibold mr-2 shadow-sm hover:shadow-md"
-                          >
-                            <FaEdit size={14} /> Editar
-                          </button>
-                          <button
-                            onClick={() => handleDelete(user._id)}
-                            className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-200 font-semibold shadow-sm hover:shadow-md"
-                          >
-                            <FaTrash size={14} /> Deletar
-                          </button>
+                          {(user.role === 'manager' || user.role === 'admin') && (
+                            <>
+                              <button
+                                onClick={() => handleEdit(user)}
+                                className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition duration-200 font-semibold mr-2 shadow-sm hover:shadow-md"
+                              >
+                                <FaEdit size={14} /> Editar
+                              </button>
+                              <button
+                                onClick={() => handleDelete(user._id)}
+                                className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-200 font-semibold shadow-sm hover:shadow-md"
+                              >
+                                <FaTrash size={14} /> Deletar
+                              </button>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))}

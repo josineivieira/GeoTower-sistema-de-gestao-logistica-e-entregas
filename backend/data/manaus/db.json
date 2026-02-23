@@ -3,7 +3,7 @@
     {
       "_id": "admin_bdbf9ff3-d877-4851-85f7-2ff680129e90",
       "username": "admin",
-      "password": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+      "password": "$2a$10$uWTYeIKfEqb9.XDd980.O.Gfgb2/hFim2EMYXu5te1hQs8Uw0Agre",
       "email": "admin@test.com",
       "name": "Administrador",
       "fullName": "Administrador",
@@ -12,7 +12,8 @@
       "cnh": "12345678901",
       "isActive": true,
       "createdAt": "2026-01-27T19:54:36.128Z",
-      "updatedAt": "2026-01-28T16:11:37.807Z"
+      "updatedAt": "2026-02-23T02:32:55.097Z",
+      "legacyPasswordSha256": null
     },
     {
       "_id": "523a275f-32bd-4454-8744-95350f6ea935",

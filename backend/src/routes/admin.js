@@ -31,7 +31,8 @@ async function getDb(req) {
 
 function onlyAdmin(req, res, next) {
   const role = req.user?.role || "operacao";
-  if (role !== "admin" && role !== "gestor") {
+  // Aceita ambos 'gestor' e 'manager' como sinônimos de Gerente
+  if (role !== "admin" && role !== "gestor" && role !== "manager") {
     return res.status(403).json({ message: "Sem permissão" });
   }
   next();
@@ -737,8 +738,13 @@ router.delete("/deliveries/:id", auth, onlyAdmin, async (req, res) => {
  * GET /api/admin/users
  * Lista todos os usuários
  */
-router.get("/users", auth, managerOnly, async (req, res) => {
+router.get("/users", auth, async (req, res) => {
   try {
+    // Permitir que gerentes, admins e GeoMar visualizem a lista de usuários.
+    const role = req.user?.role;
+    if (!role || (role !== 'manager' && role !== 'admin' && role !== 'geomar')) {
+      return res.status(403).json({ message: "Sem permissão" });
+    }
     const db = await getDb(req);
     const users = await db.find("drivers", {}) || [];
     const usersWithoutPasswords = users.map(u => ({

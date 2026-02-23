@@ -1,13 +1,9 @@
-const Driver = require('../models/Driver');
-
-const adminOnly = async (req, res, next) => {
+const adminOnly = (req, res, next) => {
   try {
-    const driver = await Driver.findById(req.user.id);
-
-    if (!driver || driver.role !== 'admin') {
+    const role = req.user?.role;
+    if (!role || role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Acesso restrito a administradores' });
     }
-
     next();
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erro no servidor', error: error.message });

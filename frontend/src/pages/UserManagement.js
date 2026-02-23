@@ -313,8 +313,8 @@ const UserManagement = () => {
                                 </>
                               );
                             }
-                            // Manager: pode editar motoristas/drivers/geomars (NÃO pode editar managers)
-                            if (user.role !== 'admin' && user.role !== 'manager') {
+                            // Manager: pode editar qualquer um EXCETO admin
+                            if (user.role !== 'admin') {
                               return (
                                 <>
                                   <button
@@ -332,7 +332,7 @@ const UserManagement = () => {
                                 </>
                               );
                             }
-                            // GeoMar e outros: sem botões
+                            // GeoMar: sem botões
                             return null;
                           })()}
                         </td>

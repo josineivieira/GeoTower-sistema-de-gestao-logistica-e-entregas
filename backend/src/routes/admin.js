@@ -821,8 +821,9 @@ router.post("/users", auth, managerOnly, async (req, res) => {
       }
     });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "Erro ao criar usuário" });
+    console.error('❌ Erro ao criar usuário:', err.message || err);
+    console.error('Stack:', err.stack);
+    return res.status(500).json({ message: "Erro ao criar usuário", error: err.message });
   }
 });
 

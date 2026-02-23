@@ -293,22 +293,48 @@ const UserManagement = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {(user.role === 'manager' || user.role === 'admin') && (
-                            <>
-                              <button
-                                onClick={() => handleEdit(user)}
-                                className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition duration-200 font-semibold mr-2 shadow-sm hover:shadow-md"
-                              >
-                                <FaEdit size={14} /> Editar
-                              </button>
-                              <button
-                                onClick={() => handleDelete(user._id)}
-                                className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-200 font-semibold shadow-sm hover:shadow-md"
-                              >
-                                <FaTrash size={14} /> Deletar
-                              </button>
-                            </>
-                          )}
+                          {(() => {
+                            // Admin: pode editar qualquer um
+                            if (user.role === 'admin') {
+                              return (
+                                <>
+                                  <button
+                                    onClick={() => handleEdit(user)}
+                                    className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition duration-200 font-semibold mr-2 shadow-sm hover:shadow-md"
+                                  >
+                                    <FaEdit size={14} /> Editar
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(user._id)}
+                                    className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-200 font-semibold shadow-sm hover:shadow-md"
+                                  >
+                                    <FaTrash size={14} /> Deletar
+                                  </button>
+                                </>
+                              );
+                            }
+                            // Manager: pode editar motoristas/drivers/geomars (NÃO pode editar managers)
+                            if (user.role !== 'admin' && user.role !== 'manager') {
+                              return (
+                                <>
+                                  <button
+                                    onClick={() => handleEdit(user)}
+                                    className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition duration-200 font-semibold mr-2 shadow-sm hover:shadow-md"
+                                  >
+                                    <FaEdit size={14} /> Editar
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(user._id)}
+                                    className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-200 font-semibold shadow-sm hover:shadow-md"
+                                  >
+                                    <FaTrash size={14} /> Deletar
+                                  </button>
+                                </>
+                              );
+                            }
+                            // GeoMar e outros: sem botões
+                            return null;
+                          })()}
                         </td>
                       </tr>
                     ))}

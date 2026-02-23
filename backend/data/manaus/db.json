@@ -190,6 +190,20 @@
       "isActive": true,
       "createdAt": "2026-02-23T03:56:43.510Z",
       "updatedAt": "2026-02-23T03:56:43.510Z"
+    },
+    {
+      "_id": "user_f9ec01a5-9ae6-403d-892e-58e0b473bfdf",
+      "username": "user_1771819643101",
+      "email": "user_1771819643101@test.com",
+      "name": "Novo Usuário",
+      "fullName": "Novo Usuário",
+      "password": "55a5e9e78207b4df8699d60886fa070079463547b095d1a05bc719bb4e6cd251",
+      "role": "driver",
+      "phoneNumber": "",
+      "cnh": "",
+      "isActive": true,
+      "createdAt": "2026-02-23T04:07:23.107Z",
+      "updatedAt": "2026-02-23T04:07:23.107Z"
     }
   ],
   "deliveries": [

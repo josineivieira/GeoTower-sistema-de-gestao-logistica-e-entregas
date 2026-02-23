@@ -1298,7 +1298,7 @@ router.delete("/motoristas/:id", auth, managerOnly, async (req, res) => {
  * GET /api/admin/programacoes
  * Listar todas as programações de entrega
  */
-router.get("/programacoes", auth, onlyAdminMiddleware, async (req, res) => {
+router.get("/programacoes", auth, managerOnly, async (req, res) => {
   try {
     console.log('[PROGRAMACAO] Listando programações de entrega');
 
@@ -1321,7 +1321,7 @@ router.get("/programacoes", auth, onlyAdminMiddleware, async (req, res) => {
  * POST /api/admin/programacoes
  * Criar nova programação de entrega
  */
-router.post("/programacoes", auth, onlyAdminMiddleware, async (req, res) => {
+router.post("/programacoes", auth, managerOnly, async (req, res) => {
   try {
     const { processo, recebedor, container, dataAgendamento, contratado, motorista, status, observacoes } = req.body;
 
@@ -1363,7 +1363,7 @@ router.post("/programacoes", auth, onlyAdminMiddleware, async (req, res) => {
  * PUT /api/admin/programacoes/:id
  * Atualizar programação de entrega
  */
-router.put("/programacoes/:id", auth, onlyAdminMiddleware, async (req, res) => {
+router.put("/programacoes/:id", auth, managerOnly, async (req, res) => {
   try {
     const { id } = req.params;
     const { processo, recebedor, container, dataAgendamento, contratado, motorista, status, observacoes } = req.body;
@@ -1422,7 +1422,7 @@ router.put("/programacoes/:id", auth, onlyAdminMiddleware, async (req, res) => {
  * DELETE /api/admin/programacoes/:id
  * Deletar programação de entrega
  */
-router.delete("/programacoes/:id", auth, onlyAdminMiddleware, async (req, res) => {
+router.delete("/programacoes/:id", auth, managerOnly, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -1451,7 +1451,7 @@ router.delete("/programacoes/:id", auth, onlyAdminMiddleware, async (req, res) =
  * POST /api/admin/programacoes/import
  * Importar múltiplas programações em batch
  */
-router.post("/programacoes/import", auth, onlyAdminMiddleware, async (req, res) => {
+router.post("/programacoes/import", auth, managerOnly, async (req, res) => {
   try {
     const programacoes = req.body;
 

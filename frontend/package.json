@@ -4,6 +4,7 @@
   "private": true,
   "proxy": "http://localhost:5000",
   "dependencies": {
+    "@capacitor/android": "^8.1.0",
     "axios": "^1.5.0",
     "browser-image-compression": "^2.0.2",
     "jspdf": "^4.0.0",

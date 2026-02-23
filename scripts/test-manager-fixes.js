@@ -69,11 +69,13 @@ async function test() {
     managerToken = res.body.token;
     console.log('✅ Login bem-sucedido:', res.body.user?.username);
 
-    // 2. Tentar criar novo usuário
+    // 2. Tentar criar novo usuário com ID único
+    const uniqueUsername = 'testuser_' + Date.now();
     console.log('\n2️⃣  Criando novo usuário como gerente...');
+    console.log(`   Username: ${uniqueUsername}`);
     res = await request('POST', '/api/admin/users', {
-      username: 'testuser123',
-      email: 'testuser@example.com',
+      username: uniqueUsername,
+      email: `${uniqueUsername}@example.com`,
       name: 'Test User',
       password: 'testpass123',
       role: 'driver'

@@ -19,6 +19,27 @@ const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [statsTodayTab, setStatsTodayTab] = useState('today');
+
+  // Funções para controlar permissões por perfil
+  const hasAccess = (requiredRoles) => {
+    if (!user?.role) return false;
+    return requiredRoles.includes(user.role);
+  };
+
+  const canEdit = () => {
+    // Gerente e Admin podem editar
+    return hasAccess(['manager', 'admin']);
+  };
+
+  const isViewOnly = () => {
+    // GeoMar tem acesso visual apenas
+    return user?.role === 'geomar';
+  };
+
+  const canAccessAdminPanel = () => {
+    // Gerente, Admin e GeoMar
+    return hasAccess(['manager', 'admin', 'geomar']);
+  };
   const [statsToday, setStatsToday] = useState({
     total: 0,
     completed: 0,
@@ -320,7 +341,7 @@ const Home = () => {
         )}
 
         {/* Admin Dashboard Section - Conditional */}
-        {user?.role === 'admin' && (
+        {canAccessAdminPanel() && (
           <>
             {/* MONITORAMENTO Section */}
             <div className="mb-6 mt-6">
@@ -330,7 +351,9 @@ const Home = () => {
             <div className="mb-12 grid grid-cols-1 md:grid-cols-3 gap-6">
               <button
                 onClick={() => navigate('/admin')}
-                className="group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-orange-200 overflow-hidden text-left"
+                disabled={isViewOnly()}
+                className={`group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-orange-200 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : ''}`}
+                title={isViewOnly() ? 'Apenas visualização (sem edição)' : ''}
               >
                 <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-orange-100 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
 
@@ -345,6 +368,7 @@ const Home = () => {
                   <p className="text-gray-600 mb-4">
                     Relatórios, estatísticas e gráficos detalhados de operações
                   </p>
+                  {isViewOnly() && <p className="text-xs text-amber-600 font-semibold mb-2">👁️ Apenas Visualização</p>}
 
                   <div className="flex items-center gap-2 text-orange-600 font-semibold">
                     <span>Acessar</span>
@@ -357,7 +381,9 @@ const Home = () => {
 
               <button
                 onClick={() => navigate('/monitor-entregas')}
-                className="group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-red-200 overflow-hidden text-left"
+                disabled={isViewOnly()}
+                className={`group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-red-200 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : ''}`}
+                title={isViewOnly() ? 'Apenas visualização (sem edição)' : ''}
               >
                 <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-red-100 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
 
@@ -372,6 +398,7 @@ const Home = () => {
                   <p className="text-gray-600 mb-4">
                     Acompanhe todas as entregas em tempo real com filtros e busca avançada
                   </p>
+                  {isViewOnly() && <p className="text-xs text-amber-600 font-semibold mb-2">👁️ Apenas Visualização</p>}
 
                   <div className="flex items-center gap-2 text-red-600 font-semibold">
                     <span>Acessar</span>
@@ -389,7 +416,8 @@ const Home = () => {
             </div>
 
             <div className="mb-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-              {(user?.role === 'manager' || user?.role === 'admin') && (
+              {/* Gerenciar Usuários - Apenas Gerente */}
+              {hasAccess(['manager']) && (
                 <button
                   onClick={() => navigate('/usuarios')}
                   className="group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-purple-200 overflow-hidden text-left"
@@ -405,7 +433,7 @@ const Home = () => {
                       Gerenciar Usuários
                     </h2>
                     <p className="text-gray-600 mb-4">
-                      Criar, editar e controlar perfis de usuários (motorista, gerente, admin)
+                      Criar, editar e controlar perfis de usuários (motorista, gerente, admin, geomar)
                     </p>
 
                     <div className="flex items-center gap-2 text-purple-600 font-semibold">
@@ -420,7 +448,9 @@ const Home = () => {
 
               <button
                 onClick={() => navigate('/motoristas')}
-                className="group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-cyan-200 overflow-hidden text-left"
+                disabled={isViewOnly()}
+                className={`group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-cyan-200 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : ''}`}
+                title={isViewOnly() ? 'Apenas visualização (sem edição)' : ''}
               >
                 <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-cyan-100 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
 
@@ -435,6 +465,7 @@ const Home = () => {
                   <p className="text-gray-600 mb-4">
                     Gerenciar motoristas, CPF, vínculo, rastreador, cavalo, carreta e contatos
                   </p>
+                  {isViewOnly() && <p className="text-xs text-amber-600 font-semibold mb-2">👁️ Apenas Visualização</p>}
 
                   <div className="flex items-center gap-2 text-cyan-600 font-semibold">
                     <span>Acessar</span>
@@ -447,7 +478,9 @@ const Home = () => {
 
               <button
                 onClick={() => navigate('/programacoes')}
-                className="group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-teal-200 overflow-hidden text-left"
+                disabled={isViewOnly()}
+                className={`group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-teal-200 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : ''}`}
+                title={isViewOnly() ? 'Apenas visualização (sem edição)' : ''}
               >
                 <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-teal-100 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
 
@@ -462,6 +495,7 @@ const Home = () => {
                   <p className="text-gray-600 mb-4">
                     Gerenciar processo, recebedor, data, contratado, motorista das entregas
                   </p>
+                  {isViewOnly() && <p className="text-xs text-amber-600 font-semibold mb-2">👁️ Apenas Visualização</p>}
 
                   <div className="flex items-center gap-2 text-teal-600 font-semibold">
                     <span>Acessar</span>

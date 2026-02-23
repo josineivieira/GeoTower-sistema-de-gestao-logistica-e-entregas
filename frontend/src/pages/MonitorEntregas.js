@@ -9,6 +9,14 @@ import itajaiConfig from '../config/cities/itajai.json';
 
 const MonitorEntregas = () => {
   const { user } = useAuth();
+  
+  // Funções para verificar permissões
+  const isGeoMar = () => user?.role === 'geomar';
+  
+  const canEdit = () => {
+    return !isGeoMar();
+  };
+  
   // Modal para visualizar fotos do fluxo
   const [viewingDocument, setViewingDocument] = useState(null); // Para visualizar documento
   const [modalFotos, setModalFotos] = useState(null);
@@ -288,6 +296,10 @@ const MonitorEntregas = () => {
   };
 
   const handleEditStart = (delivery) => {
+    if (isGeoMar()) {
+      setToast({ type: 'error', message: '👁️ Modo Visualização: você não pode editar entregas' });
+      return;
+    }
     setEditingDelivery(delivery._id);
     setEditForm({
       deliveryNumber: delivery.deliveryNumber || '',
@@ -690,20 +702,35 @@ const MonitorEntregas = () => {
                                 >
                                   <FaEye className="text-xs flex-shrink-0" /> Visualizar
                                 </button>
-                                <button
-                                  onClick={() => { handleEditStart(delivery); setOpenMenuId(null); }}
-                                  className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-100 flex items-center gap-3 whitespace-nowrap"
-                                  title="Editar entrega"
-                                >
-                                  <FaEdit className="text-xs flex-shrink-0" /> Editar
-                                </button>
-                                <button
-                                  onClick={() => { handleDelete(delivery._id); setOpenMenuId(null); }}
-                                  className="w-full text-left px-4 py-3 text-red-600 hover:bg-gray-50 flex items-center gap-3 whitespace-nowrap"
-                                  title="Deletar entrega"
-                                >
-                                  <FaTrash className="text-xs flex-shrink-0" /> Deletar
-                                </button>
+                                
+                                {/* Editar - Apenas se não for GeoMar */}
+                                {canEdit() && (
+                                  <button
+                                    onClick={() => { handleEditStart(delivery); setOpenMenuId(null); }}
+                                    className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-100 flex items-center gap-3 whitespace-nowrap"
+                                    title="Editar entrega"
+                                  >
+                                    <FaEdit className="text-xs flex-shrink-0" /> Editar
+                                  </button>
+                                )}
+                                
+                                {/* Deletar - Apenas se não for GeoMar */}
+                                {canEdit() && (
+                                  <button
+                                    onClick={() => { handleDelete(delivery._id); setOpenMenuId(null); }}
+                                    className="w-full text-left px-4 py-3 text-red-600 hover:bg-gray-50 flex items-center gap-3 whitespace-nowrap"
+                                    title="Deletar entrega"
+                                  >
+                                    <FaTrash className="text-xs flex-shrink-0" /> Deletar
+                                  </button>
+                                )}
+                                
+                                {/* Aviso visível - Apenas Visualização para GeoMar */}
+                                {isGeoMar() && (
+                                  <div className="px-4 py-3 text-center border-t border-gray-200">
+                                    <p className="text-xs text-amber-600 font-semibold">👁️ Apenas Visualização</p>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}
@@ -983,30 +1010,37 @@ const MonitorEntregas = () => {
               </button>
             </div>
 
+            {isGeoMar() && (
+              <div className="mb-4 p-3 bg-amber-50 border-l-4 border-amber-400 rounded">
+                <p className="text-sm text-amber-800 font-semibold">👁️ Modo Visualização</p>
+                <p className="text-xs text-amber-700">Este formulário está bloqueado para visualização apenas</p>
+              </div>
+            )}
+
             <div className="space-y-4 max-h-[70vh] overflow-y-auto">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Número do Container</label>
-                <input type="text" value={editForm.deliveryNumber} onChange={e => setEditForm({ ...editForm, deliveryNumber: e.target.value.toUpperCase() })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Ex: CGMU5575947" />
+                <input type="text" disabled={isGeoMar()} value={editForm.deliveryNumber} onChange={e => setEditForm({ ...editForm, deliveryNumber: e.target.value.toUpperCase() })} className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${isGeoMar() ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`} placeholder="Ex: CGMU5575947" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Contratado</label>
-                <input type="text" value={editForm.userName} onChange={e => setEditForm({ ...editForm, userName: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Ex: Josinei vieira" />
+                <input type="text" disabled={isGeoMar()} value={editForm.userName} onChange={e => setEditForm({ ...editForm, userName: e.target.value })} className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${isGeoMar() ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`} placeholder="Ex: Josinei vieira" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Nome do Motorista</label>
-                <input type="text" value={editForm.driverName} onChange={e => setEditForm({ ...editForm, driverName: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Ex: ALAN" />
+                <input type="text" disabled={isGeoMar()} value={editForm.driverName} onChange={e => setEditForm({ ...editForm, driverName: e.target.value })} className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${isGeoMar() ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`} placeholder="Ex: ALAN" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Placa do Veículo</label>
-                <input type="text" value={editForm.vehiclePlate} onChange={e => setEditForm({ ...editForm, vehiclePlate: e.target.value.toUpperCase() })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Ex: ABC1D23" />
+                <input type="text" disabled={isGeoMar()} value={editForm.vehiclePlate} onChange={e => setEditForm({ ...editForm, vehiclePlate: e.target.value.toUpperCase() })} className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${isGeoMar() ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`} placeholder="Ex: ABC1D23" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Recebedor</label>
-                <input type="text" value={editForm.recebedor} onChange={e => setEditForm({ ...editForm, recebedor: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Nome do recebedor" />
+                <input type="text" disabled={isGeoMar()} value={editForm.recebedor} onChange={e => setEditForm({ ...editForm, recebedor: e.target.value })} className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${isGeoMar() ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`} placeholder="Nome do recebedor" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
-                <select value={editForm.status} onChange={e => setEditForm({ ...editForm, status: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <select disabled={isGeoMar()} value={editForm.status} onChange={e => setEditForm({ ...editForm, status: e.target.value })} className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${isGeoMar() ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`}>
                   <option value="">Selecione...</option>
                   <option value="ENTREGUE">Operação Finalizada</option>
                   <option value="pending">A Caminho do Cliente</option>
@@ -1019,26 +1053,26 @@ const MonitorEntregas = () => {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Data Agendamento</label>
-                <input type="datetime-local" value={editForm.dataAgendamento} onChange={e => setEditForm({ ...editForm, dataAgendamento: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                <input type="datetime-local" disabled={isGeoMar()} value={editForm.dataAgendamento} onChange={e => setEditForm({ ...editForm, dataAgendamento: e.target.value })} className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${isGeoMar() ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`} />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Horário Chegada</label>
-                <input type="datetime-local" value={editForm.horarioChegada} onChange={e => setEditForm({ ...editForm, horarioChegada: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                <input type="datetime-local" disabled={isGeoMar()} value={editForm.horarioChegada} onChange={e => setEditForm({ ...editForm, horarioChegada: e.target.value })} className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${isGeoMar() ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`} />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Início Desova</label>
-                <input type="datetime-local" value={editForm.horarioInicioDesova} onChange={e => setEditForm({ ...editForm, horarioInicioDesova: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                <input type="datetime-local" disabled={isGeoMar()} value={editForm.horarioInicioDesova} onChange={e => setEditForm({ ...editForm, horarioInicioDesova: e.target.value })} className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${isGeoMar() ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`} />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Fim Desova</label>
-                <input type="datetime-local" value={editForm.horarioFimDesova} onChange={e => setEditForm({ ...editForm, horarioFimDesova: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                <input type="datetime-local" disabled={isGeoMar()} value={editForm.horarioFimDesova} onChange={e => setEditForm({ ...editForm, horarioFimDesova: e.target.value })} className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${isGeoMar() ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`} />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Motivo da Edição *</label>
-                <textarea value={editForm.observations} onChange={e => setEditForm({ ...editForm, observations: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Explique por que está editando (obrigatório)" rows="2" required />
+                <textarea disabled={isGeoMar()} value={editForm.observations} onChange={e => setEditForm({ ...editForm, observations: e.target.value })} className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${isGeoMar() ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`} placeholder="Explique por que está editando (obrigatório)" rows="2" required />
               </div>
               <div className="flex gap-2">
-                <button onClick={handleEditSave} className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold">Salvar</button>
+                <button disabled={isGeoMar()} onClick={handleEditSave} className={`flex-1 px-4 py-2 rounded-lg transition font-semibold ${isGeoMar() ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60' : 'bg-purple-600 text-white hover:bg-purple-700'}`}>Salvar</button>
                 <button onClick={() => setEditingDelivery(null)} className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition font-semibold">Cancelar</button>
               </div>
             </div>

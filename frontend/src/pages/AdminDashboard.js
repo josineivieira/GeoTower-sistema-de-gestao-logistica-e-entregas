@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
+import Footer from '../components/Footer';
 import { adminService } from '../services/authService';
 import { FaArrowLeft, FaDownload, FaEye, FaTrash } from 'react-icons/fa';
 import {
@@ -599,6 +600,9 @@ const AdminDashboard = () => {
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
+
+      {/* Footer */}
+      <Footer />
     </div>
   </div>
   );

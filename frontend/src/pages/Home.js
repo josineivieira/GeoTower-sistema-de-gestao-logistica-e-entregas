@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/authContext';
 import { deliveryService } from '../services/authService';
+import Footer from '../components/Footer';
 import {
   FaChartBar,
   FaFileAlt,
@@ -578,6 +579,9 @@ const Home = () => {
         {/* Se você realmente usa Toast aqui, pode manter; se não usa, pode remover o import */}
         {/* {toast && <Toast ... />} */}
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };

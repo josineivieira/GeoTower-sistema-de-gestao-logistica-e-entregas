@@ -279,14 +279,6 @@ const Home = () => {
               </div>
             )}
 
-            <div className="mb-6">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">Operações</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-              {/* Apenas Entregas Programadas mantida */}
-            </div>
-
-            {/* Entregas Programadas e Em Andamento - Apenas para motorista */}
             {user?.role === 'driver' && (
               <div className="mb-12">
                 <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-6">🎯 Ações Rápidas</h2>
@@ -343,36 +335,37 @@ const Home = () => {
         {/* Admin Dashboard Section - Conditional */}
         {canAccessAdminPanel() && (
           <>
-            {/* MONITORAMENTO Section */}
-            <div className="mb-6 mt-6">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">Monitoramento & Analytics</h2>
+            {/* MONITORAMENTO & ANALYTICS - Titulo unificado com melhor espaço */}
+            <div className="mb-8 mt-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-1">📊 Monitoramento & Relatórios</h2>
+              <p className="text-gray-500 text-sm">Acompanhe em tempo real todas as operações e entregas</p>
             </div>
             
-            <div className="mb-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="mb-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
               <button
                 onClick={() => navigate('/admin')}
                 disabled={isViewOnly()}
-                className={`group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-orange-200 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : ''}`}
+                className={`group relative bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-10 border-2 border-orange-200 hover:border-orange-400 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : 'hover:scale-102'}`}
                 title={isViewOnly() ? 'Apenas visualização (sem edição)' : ''}
               >
-                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-orange-100 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
+                <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-orange-300 to-transparent opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-full -mr-24 -mt-24" />
 
                 <div className="relative z-10">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300">
-                    <FaChartBar className="text-2xl text-white" />
+                  <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl mb-5 group-hover:scale-125 transition-transform duration-300 shadow-lg">
+                    <FaChartBar className="text-3xl text-white" />
                   </div>
 
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Dashboard Analytics
+                  <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                    📈 Dashboard Analytics
                   </h2>
-                  <p className="text-gray-600 mb-4">
-                    Relatórios, estatísticas e gráficos detalhados de operações
+                  <p className="text-gray-700 mb-5 text-base leading-relaxed">
+                    Análise completa com estatísticas, gráficos e relatórios detalhados sobre todas as operações
                   </p>
-                  {isViewOnly() && <p className="text-xs text-amber-600 font-semibold mb-2">👁️ Apenas Visualização</p>}
+                  {isViewOnly() && <p className="text-xs text-amber-600 font-semibold mb-3">👁️ Apenas Visualização</p>}
 
-                  <div className="flex items-center gap-2 text-orange-600 font-semibold">
+                  <div className="flex items-center gap-2 text-orange-600 font-bold text-lg">
                     <span>Acessar</span>
-                    <span className="text-lg group-hover:translate-x-1 transition-transform duration-300">
+                    <span className="text-xl group-hover:translate-x-2 transition-transform duration-300">
                       →
                     </span>
                   </div>
@@ -382,27 +375,27 @@ const Home = () => {
               <button
                 onClick={() => navigate('/monitor-entregas')}
                 disabled={isViewOnly()}
-                className={`group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-red-200 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : ''}`}
+                className={`group relative bg-gradient-to-br from-red-50 to-red-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-10 border-2 border-red-200 hover:border-red-400 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : 'hover:scale-102'}`}
                 title={isViewOnly() ? 'Apenas visualização (sem edição)' : ''}
               >
-                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-red-100 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
+                <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-red-300 to-transparent opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-full -mr-24 -mt-24" />
 
                 <div className="relative z-10">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300">
-                    <FaFileAlt className="text-2xl text-white" />
+                  <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl mb-5 group-hover:scale-125 transition-transform duration-300 shadow-lg">
+                    <FaFileAlt className="text-3xl text-white" />
                   </div>
 
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Torre de Controle
+                  <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                    🎯 Torre de Controle
                   </h2>
-                  <p className="text-gray-600 mb-4">
-                    Acompanhe todas as entregas em tempo real com filtros e busca avançada
+                  <p className="text-gray-700 mb-5 text-base leading-relaxed">
+                    Monitore todas as entregas em tempo real com filtros avançados, busca e rastreamento completo
                   </p>
-                  {isViewOnly() && <p className="text-xs text-amber-600 font-semibold mb-2">👁️ Apenas Visualização</p>}
+                  {isViewOnly() && <p className="text-xs text-amber-600 font-semibold mb-3">👁️ Apenas Visualização</p>}
 
-                  <div className="flex items-center gap-2 text-red-600 font-semibold">
+                  <div className="flex items-center gap-2 text-red-600 font-bold text-lg">
                     <span>Acessar</span>
-                    <span className="text-lg group-hover:translate-x-1 transition-transform duration-300">
+                    <span className="text-xl group-hover:translate-x-2 transition-transform duration-300">
                       →
                     </span>
                   </div>
@@ -410,33 +403,34 @@ const Home = () => {
               </button>
             </div>
 
-            {/* GERENCIAMENTO Section */}
-            <div className="mb-6">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">Gerenciamento & Configurações</h2>
+            {/* GERENCIAMENTO & CONFIGURAÇÕES - Novo layout com 4 cards */}
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-1">⚙️ Gerenciamento & Configurações</h2>
+              <p className="text-gray-500 text-sm">Controle total sobre usuários, motoristas e programações</p>
             </div>
 
-            <div className="mb-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="mb-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Gerenciar Usuários - Apenas Gerente */}
               {hasAccess(['manager']) && (
                 <button
                   onClick={() => navigate('/usuarios')}
-                  className="group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-purple-200 overflow-hidden text-left"
+                  className="group relative bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 border-2 border-purple-200 hover:border-purple-400 overflow-hidden text-left hover:scale-105"
                 >
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-purple-100 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-purple-300 to-transparent opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
 
                   <div className="relative z-10">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl mb-4 group-hover:scale-120 transition-transform duration-300 shadow-lg">
                       <FaUsers className="text-2xl text-white" />
                     </div>
 
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                      Gerenciar Usuários
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">
+                      👥 Gerenciar Usuários
                     </h2>
-                    <p className="text-gray-600 mb-4">
-                      Criar, editar e controlar perfis de usuários (motorista, gerente, admin, geomar)
+                    <p className="text-gray-700 mb-4 text-sm leading-relaxed">
+                      Criar, editar e controlar perfis de todos os usuários do sistema
                     </p>
 
-                    <div className="flex items-center gap-2 text-purple-600 font-semibold">
+                    <div className="flex items-center gap-2 text-purple-600 font-bold">
                       <span>Acessar</span>
                       <span className="text-lg group-hover:translate-x-1 transition-transform duration-300">
                         →
@@ -449,25 +443,25 @@ const Home = () => {
               <button
                 onClick={() => navigate('/motoristas')}
                 disabled={isViewOnly()}
-                className={`group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-cyan-200 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : ''}`}
+                className={`group relative bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 border-2 border-cyan-200 hover:border-cyan-400 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : 'hover:scale-105'}`}
                 title={isViewOnly() ? 'Apenas visualização (sem edição)' : ''}
               >
-                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-cyan-100 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
+                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-cyan-300 to-transparent opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
 
                 <div className="relative z-10">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl mb-4 group-hover:scale-120 transition-transform duration-300 shadow-lg">
                     <span className="text-2xl">👤</span>
                   </div>
 
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Cadastro de Motoristas
+                  <h2 className="text-xl font-bold text-gray-900 mb-2">
+                    👨‍🚗 Motoristas
                   </h2>
-                  <p className="text-gray-600 mb-4">
-                    Gerenciar motoristas, CPF, vínculo, rastreador, cavalo, carreta e contatos
+                  <p className="text-gray-700 mb-4 text-sm leading-relaxed">
+                    Gerenciar motoristas, dados, rastreadores e contatos
                   </p>
                   {isViewOnly() && <p className="text-xs text-amber-600 font-semibold mb-2">👁️ Apenas Visualização</p>}
 
-                  <div className="flex items-center gap-2 text-cyan-600 font-semibold">
+                  <div className="flex items-center gap-2 text-cyan-600 font-bold">
                     <span>Acessar</span>
                     <span className="text-lg group-hover:translate-x-1 transition-transform duration-300">
                       →
@@ -479,25 +473,25 @@ const Home = () => {
               <button
                 onClick={() => navigate('/programacoes')}
                 disabled={isViewOnly()}
-                className={`group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-teal-200 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : ''}`}
+                className={`group relative bg-gradient-to-br from-teal-50 to-teal-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 border-2 border-teal-200 hover:border-teal-400 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : 'hover:scale-105'}`}
                 title={isViewOnly() ? 'Apenas visualização (sem edição)' : ''}
               >
-                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-teal-100 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
+                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-teal-300 to-transparent opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
 
                 <div className="relative z-10">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl mb-4 group-hover:scale-120 transition-transform duration-300 shadow-lg">
                     <FaDatabase className="text-2xl text-white" />
                   </div>
 
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Programação de Entregas
+                  <h2 className="text-xl font-bold text-gray-900 mb-2">
+                    📦 Programações
                   </h2>
-                  <p className="text-gray-600 mb-4">
-                    Gerenciar processo, recebedor, data, contratado, motorista das entregas
+                  <p className="text-gray-700 mb-4 text-sm leading-relaxed">
+                    Gerenciar programações de entregas com todos os detalhes
                   </p>
                   {isViewOnly() && <p className="text-xs text-amber-600 font-semibold mb-2">👁️ Apenas Visualização</p>}
 
-                  <div className="flex items-center gap-2 text-teal-600 font-semibold">
+                  <div className="flex items-center gap-2 text-teal-600 font-bold">
                     <span>Acessar</span>
                     <span className="text-lg group-hover:translate-x-1 transition-transform duration-300">
                       →

@@ -31,7 +31,7 @@ const MonitorEntregas = () => {
   const [refreshInterval, setRefreshInterval] = useState(30);
   const [editingDelivery, setEditingDelivery] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
-  const [openMenuUp, setOpenMenuUp] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const menuRef = useRef(null);
   const [sortBy, setSortBy] = useState(null); // e.g. 'deliveryNumber' or 'createdAt'
   const [sortDir, setSortDir] = useState('asc');
@@ -639,6 +639,9 @@ const MonitorEntregas = () => {
                       <span className={`px-2 py-1 rounded-full font-bold uppercase tracking-tight text-xs whitespace-nowrap inline-flex items-center justify-center ${getStatusBadge(delivery.status)}`}>
                         {formatStatus(delivery.status)}
                       </span>
+                      {delivery.status === 'CANCELADO' && (
+                        <span className="ml-2 px-2 py-1 rounded bg-gray-200 text-gray-700 border border-gray-400 font-bold text-xs">CANCELADO</span>
+                      )}
                     </td>
                     <td className="px-2 py-2 text-gray-600 whitespace-nowrap text-center">
                       {delivery.dataAgendamento ? new Date(delivery.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}
@@ -675,14 +678,15 @@ const MonitorEntregas = () => {
                     </td>
                     <td className="px-2 py-2 text-center">
                       <div className="flex items-center justify-center relative z-10">
-                        <div className="relative inline-block text-left" ref={openMenuId === delivery._id ? menuRef : null}>
+                        <div className="relative inline-block text-left">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               const btnRect = e.currentTarget.getBoundingClientRect();
-                              const spaceBelow = window.innerHeight - btnRect.bottom;
-                              const openUp = spaceBelow < 180; // arbitrary threshold
-                              setOpenMenuUp(openUp);
+                              setMenuPosition({
+                                top: Math.min(btnRect.bottom + 4, window.innerHeight - 10),
+                                left: Math.min(btnRect.left, window.innerWidth - 250)
+                              });
                               setOpenMenuId(openMenuId === delivery._id ? null : delivery._id);
                             }}
                             className="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-200 text-gray-600 transition text-sm"
@@ -694,7 +698,22 @@ const MonitorEntregas = () => {
                           </button>
 
                           {openMenuId === delivery._id && (
-                            <div className={`${openMenuUp ? 'origin-bottom-right absolute right-0 mb-2 bottom-full' : 'origin-top-right absolute right-0 mt-2'} w-56 min-w-56 rounded-md shadow-2xl bg-white ring-1 ring-black ring-opacity-5 z-[9999] overflow-visible will-change-[top,left,transform]`}>
+                            <div
+                              ref={menuRef}
+                              style={{
+                                position: 'fixed',
+                                top: menuPosition.top,
+                                left: menuPosition.left,
+                                zIndex: 9999,
+                                minWidth: '14rem',
+                                maxWidth: '90vw',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                                borderRadius: '0.5rem',
+                                background: 'white',
+                                border: '1px solid #0001',
+                              }}
+                              className="shadow-2xl ring-1 ring-black ring-opacity-5 will-change-[top,left,transform]"
+                            >
                               <div className="py-1 text-xs">
                                 <button
                                   onClick={() => { setSelectedDelivery(delivery); setOpenMenuId(null); }}
@@ -807,17 +826,17 @@ const MonitorEntregas = () => {
                 </div>
               </div>
 
-              {(
-                selectedDelivery.observations ||
-                selectedDelivery.documentsJustification ||
-                selectedDelivery.submissionObservation
-              ) && (
+              {(selectedDelivery.observations || selectedDelivery.observacoes || selectedDelivery.documentsJustification || selectedDelivery.submissionObservation) && (
                 <div className="space-y-2">
                   <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded shadow-sm">
                     <p className="text-xs font-bold text-blue-800 uppercase mb-1">📝 Observações do Fluxo</p>
-                    {selectedDelivery.observations ? (
+                    {selectedDelivery.observations && (
                       <p className="text-gray-800 text-sm whitespace-pre-wrap">{selectedDelivery.observations}</p>
-                    ) : (
+                    )}
+                    {selectedDelivery.observacoes && (
+                      <p className="text-gray-800 text-sm whitespace-pre-wrap">{selectedDelivery.observacoes}</p>
+                    )}
+                    {!selectedDelivery.observations && !selectedDelivery.observacoes && (
                       <p className="text-gray-600 text-sm">-</p>
                     )}
                   </div>

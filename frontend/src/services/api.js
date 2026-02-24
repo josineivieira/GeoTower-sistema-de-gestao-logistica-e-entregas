@@ -1,9 +1,27 @@
 import axios from 'axios';
 
+// URL remota de produção (Render) – também será usada pelo APK se nenhuma outra
+// variable de ambiente for definida.
 const DEFAULT_BACKEND = process.env.REACT_APP_API_URL || 'https://grupogeobackend.onrender.com/api';
-const API_URL = process.env.REACT_APP_API_URL || (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com') ? DEFAULT_BACKEND : '/api');
 
-if (!process.env.REACT_APP_API_URL && typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
+// Em builds de produção (incluindo o APK) queremos sempre apontar para o
+// backend remoto. Em desenvolvimento local via `npm start`, o CRA injeta um
+// proxy para `/api`, por isso usamos '/api' quando NODE_ENV não é 'production'.
+// A variável REACT_APP_API_URL permite sobrescrever isso (por exemplo, testes).
+// At runtime we'll pick the correct backend; also log values to help debugging.
+const rawEnvUrl = process.env.REACT_APP_API_URL;
+const API_URL =
+  rawEnvUrl ||
+  (process.env.NODE_ENV === 'production' ? DEFAULT_BACKEND : '/api');
+
+console.debug('🌐 api.js init:', {
+  NODE_ENV: process.env.NODE_ENV,
+  REACT_APP_API_URL: rawEnvUrl,
+  computedUrl: API_URL,
+  DEFAULT_BACKEND,
+});
+
+if (!rawEnvUrl && typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
   console.debug('🔧 Fallback: using backend', DEFAULT_BACKEND);
 }
 

@@ -312,7 +312,7 @@ const MonitorEntregas = () => {
       horarioChegada: delivery.horarioChegada ? delivery.horarioChegada.slice(0, 16) : '',
       horarioInicioDesova: delivery.horarioInicioDesova ? delivery.horarioInicioDesova.slice(0, 16) : '',
       horarioFimDesova: delivery.horarioFimDesova ? delivery.horarioFimDesova.slice(0, 16) : '',
-      observations: delivery.observations || ''
+      observations: removeProgramacaoInfo(delivery.observations)
     });
   };
 
@@ -322,25 +322,34 @@ const MonitorEntregas = () => {
       return;
     }
 
-    // Adiciona info do editor
+    // Remove info 'Criada a partir da Programação ...' do campo motivo, adiciona ao campo observações
+    let motivo = editForm.observations.replace(/Criada a partir da Programação [A-Z0-9]+/g, '').trim();
+    let programacaoInfo = (editForm.observations.match(/Criada a partir da Programação [A-Z0-9]+/) || []).join(' ');
+    let observacoes = motivo;
+    if (programacaoInfo) {
+      observacoes = motivo + '\n' + programacaoInfo;
+    }
+
     const editPayload = {
       ...editForm,
+      observations: observacoes,
       editedBy: user?.name || user?.username || user?.email || 'Desconhecido',
       editedAt: new Date().toISOString()
     };
 
-    console.log('📝 Salvando edição:', { id: editingDelivery, data: editPayload });
-
     try {
       const response = await adminService.updateDelivery(editingDelivery, editPayload);
-      console.log('✅ Resposta do servidor:', response);
       setToast({ message: 'Entrega atualizada com sucesso', type: 'success' });
       setEditingDelivery(null);
       loadDeliveries();
     } catch (error) {
-      console.error('❌ Erro ao salvar:', error);
-      setToast({ message: 'Erro ao atualizar entrega: ' + (error.response?.data?.message || error.message), type: 'error' });
+      setToast({ message: 'Erro ao atualizar entrega', type: 'error' });
     }
+  };
+
+  const removeProgramacaoInfo = (obs) => {
+    if (!obs) return '';
+    return obs.replace(/Criada a partir da Programação [A-Z0-9]+/g, '').trim();
   };
 
   const getStatusBadge = (status) => {

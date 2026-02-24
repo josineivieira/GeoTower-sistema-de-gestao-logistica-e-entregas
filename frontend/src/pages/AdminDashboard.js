@@ -281,10 +281,10 @@ const AdminDashboard = () => {
               <h4 className="text-sm text-gray-600 mb-2">Últimas programações</h4>
               <div className="grid grid-cols-1 gap-2">
                 {programs.slice(0,5).map((p) => (
-                  <div key={p._id} className="p-3 bg-gray-50 rounded-lg text-sm">
-                    <strong>{p.processo || '-'}:</strong> {p.cliente || '-'} — <span className="text-gray-500">{p.numeroContainer || p.nf || ''}</span>
-                    <div className="text-xs text-gray-400">{p.dataAgendamento ? new Date(p.dataAgendamento).toLocaleString('pt-BR') : ''}</div>
-                  </div>
+                    <div key={p._id} className="p-3 bg-gray-50 rounded-lg text-sm">
+                      <strong>{p.processo || '-'}:</strong> {p.cliente || '-'} — <span className="text-gray-500">{p.numeroContainer || p.nf || ''}</span>
+                      <div className="text-xs text-gray-400">{p.dataAgendamento ? p.dataAgendamento.replace('T', ' ').slice(0, 16) : ''}</div>
+                    </div>
                 ))}
               </div>
             </div>
@@ -578,7 +578,11 @@ const AdminDashboard = () => {
                 <button
                   onClick={async () => {
                     try {
-                      const res = await adminService.createProgram(programForm);
+                      // Salva o valor exatamente como digitado, sem conversão de fuso
+                      let dataAgendamento = programForm.dataAgendamento;
+                      if (dataAgendamento && dataAgendamento.length > 16) dataAgendamento = dataAgendamento.slice(0, 16);
+                      const payload = { ...programForm, dataAgendamento };
+                      const res = await adminService.createProgram(payload);
                       setToast({ message: res.data?.message || 'Programação salva', type: 'success' });
                       setProgramModalOpen(false);
                       setProgramForm({ processo: '', cliente: '', fornecedor: '', destinatario: '', navio: '', nrVi: '', numeroContainer: '', nf: '', cntr: '', dataAgendamento: '', observacaoDestino: '', contratado: '', processo2: '', performance: '', ocorrencia: '' });

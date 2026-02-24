@@ -100,11 +100,20 @@ const ProgramacaoManagement = () => {
         return;
       }
       setEditingId(programacao._id);
+      // Corrige para exibir o valor exato salvo, sem conversão de fuso
+      let dataAgendamento = programacao.dataAgendamento || '';
+      // Se vier no formato ISO, exibe como datetime-local
+      if (dataAgendamento && dataAgendamento.includes('T')) {
+        // Remove segundos e fuso se existir
+        dataAgendamento = dataAgendamento.split('.')[0];
+        // Se vier com fuso, remove
+        if (dataAgendamento.length > 16) dataAgendamento = dataAgendamento.slice(0, 16);
+      }
       setFormData({
         processo: programacao.processo,
         recebedor: programacao.recebedor,
         container: programacao.container || '',
-        dataAgendamento: programacao.dataAgendamento ? programacao.dataAgendamento.split('T')[0] : '',
+        dataAgendamento,
         contratado: programacao.contratado,
         motorista: programacao.motorista || '',
         status: programacao.status,
@@ -127,11 +136,17 @@ const ProgramacaoManagement = () => {
         return;
       }
 
+      // Salva o valor exatamente como digitado, sem conversão de fuso
+      let dataAgendamento = formData.dataAgendamento;
+      // Remove segundos e fuso se existir
+      if (dataAgendamento && dataAgendamento.length > 16) dataAgendamento = dataAgendamento.slice(0, 16);
+      const payload = { ...formData, dataAgendamento };
+
       if (editingId) {
-        await adminService.updateProgramacao(editingId, formData);
+        await adminService.updateProgramacao(editingId, payload);
         showToast('Programação atualizada com sucesso');
       } else {
-        await adminService.createProgramacao(formData);
+        await adminService.createProgramacao(payload);
         showToast('Programação criada com sucesso');
       }
 

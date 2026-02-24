@@ -19,8 +19,9 @@ const programacaoEntregaSchema = new mongoose.Schema({
     default: '-'
   },
   dataAgendamento: {
-    type: Date,
-    required: [true, 'Data de agendamento é obrigatória']
+    type: String,
+    required: [true, 'Data de agendamento é obrigatória'],
+    trim: true
   },
   contratado: {
     type: String,

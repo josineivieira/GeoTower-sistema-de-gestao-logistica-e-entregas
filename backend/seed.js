@@ -38,14 +38,10 @@ const seedDatabase = async () => {
     await Delivery.deleteMany({});
     console.log('✓ Banco limpo');
 
-    // Cria usuários de teste
-    const adminPassword = await bcrypt.hash('admin123', 10);
-    const managerPassword = await bcrypt.hash('gerente123', 10);
-    const driverPassword = await bcrypt.hash('driver123', 10);
-
+    // Cria usuários de teste (não fazer hash aqui - deixar Mongoose fazer no pre-save)
     const admin = await Driver.create({
       username: 'admin',
-      password: adminPassword,
+      password: 'admin123',
       email: 'admin@test.com',
       name: 'Administrador',
       role: 'admin',
@@ -54,7 +50,7 @@ const seedDatabase = async () => {
 
     const manager = await Driver.create({
       username: 'gerente',
-      password: managerPassword,
+      password: 'gerente123',
       email: 'gerente@test.com',
       name: 'Gerente da Entrega',
       role: 'manager',
@@ -63,7 +59,7 @@ const seedDatabase = async () => {
 
     const driver1 = await Driver.create({
       username: 'motorista1',
-      password: driverPassword,
+      password: 'driver123',
       email: 'motorista1@test.com',
       name: 'João Silva',
       role: 'driver',
@@ -72,7 +68,7 @@ const seedDatabase = async () => {
 
     const driver2 = await Driver.create({
       username: 'motorista2',
-      password: driverPassword,
+      password: 'driver123',
       email: 'motorista2@test.com',
       name: 'Maria Santos',
       role: 'driver',

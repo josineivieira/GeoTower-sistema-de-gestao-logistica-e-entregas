@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { adminService } from '../services/authService';
-import axios from 'axios';
 
 const colunas = [
   'Processo',
@@ -27,24 +26,41 @@ const BaseDadosGeral = () => {
     const fetchProgramacoes = async () => {
       setLoading(true);
       try {
-        const res = await adminService.getProgramacoes();
-        setDados(res.data.programacoes || []);
-
-        // Buscar todas as deliveries para alimentar colunas de dados do fluxo
-        try {
-          const deliveriesRes = await axios.get('/api/admin/deliveries');
-          const deliveries = deliveriesRes.data.deliveries || [];
-          // Mapeia por deliveryNumber
-          const map = {};
-          deliveries.forEach(d => {
-            map[(d.deliveryNumber || '').toUpperCase()] = d;
-          });
-          setDeliveriesMap(map);
-        } catch (err) {
-          console.warn('Erro ao buscar deliveries:', err);
-          setDeliveriesMap({});
-        }
+        // Buscar programações
+        const progRes = await adminService.getProgramacoes();
+        const programacoes = progRes.data.programacoes || [];
+        
+        // Buscar TODAS as entregas (via admin)
+        const entrRes = await adminService.getDeliveries({});
+        const entregas = entrRes.data.deliveries || [];
+        
+        // Mapear entregas por deliveryNumber (case-insensitive)
+        const mapEntregas = {};
+        entregas.forEach(e => {
+          const key = (e.deliveryNumber || '').toUpperCase().trim();
+          if (key) {
+            mapEntregas[key] = e;
+          }
+        });
+        
+        // Enriquecer programações com dados de entregas
+        const dadosEnriquecidos = programacoes.map(prog => {
+          // Tenta encontrar a entrega por container ou processo
+          const chaveContainer = (prog.container || '').toUpperCase().trim();
+          const chaveProcesso = (prog.processo || '').toUpperCase().trim();
+          
+          const entrega = mapEntregas[chaveContainer] || mapEntregas[chaveProcesso];
+          
+          return {
+            ...prog,
+            _entrega: entrega || null
+          };
+        });
+        
+        setDados(dadosEnriquecidos);
+        setDeliveriesMap(mapEntregas);
       } catch (err) {
+        console.error('Erro ao buscar dados:', err);
         setDados([]);
       } finally {
         setLoading(false);
@@ -74,15 +90,15 @@ const BaseDadosGeral = () => {
                   <td className="border px-2 py-1">{item.processo}</td>
                   <td className="border px-2 py-1">{item.recebedor}</td>
                   <td className="border px-2 py-1">{item.container}</td>
-                  <td className="border px-2 py-1">{item.dataAgendamento}</td>
+                  <td className="border px-2 py-1">{item.dataAgendamento ? new Date(item.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td>
                   <td className="border px-2 py-1">{item.contratado}</td>
-                  <td className="border px-2 py-1">{item.motorista}</td>
+                  <td className="border px-2 py-1">{item.motorista || (item._entrega?.driverName) || '-'}</td>
                   <td className="border px-2 py-1">{item.status}</td>
-                  <td className="border px-2 py-1 text-xs">{deliveriesMap[(item.container || item.processo || '').toUpperCase()]?.containerMontadoAt ? new Date(deliveriesMap[(item.container || item.processo || '').toUpperCase()].containerMontadoAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td>
-                  <td className="border px-2 py-1 text-xs">{deliveriesMap[(item.container || item.processo || '').toUpperCase()]?.arrivedAt ? new Date(deliveriesMap[(item.container || item.processo || '').toUpperCase()].arrivedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td>
-                  <td className="border px-2 py-1 text-xs">{deliveriesMap[(item.container || item.processo || '').toUpperCase()]?.desovaStartAt ? new Date(deliveriesMap[(item.container || item.processo || '').toUpperCase()].desovaStartAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td>
-                  <td className="border px-2 py-1 text-xs">{deliveriesMap[(item.container || item.processo || '').toUpperCase()]?.desovaEndAt ? new Date(deliveriesMap[(item.container || item.processo || '').toUpperCase()].desovaEndAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td>
-                  <td className="border px-2 py-1 text-xs">{deliveriesMap[(item.container || item.processo || '').toUpperCase()]?.documentsJustification || '-'}</td>
+                  <td className="border px-2 py-1 text-xs">{item._entrega?.containerMontadoAt ? new Date(item._entrega.containerMontadoAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td>
+                  <td className="border px-2 py-1 text-xs">{item._entrega?.horarioChegada ? new Date(item._entrega.horarioChegada).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : (item._entrega?.arrivedAt ? new Date(item._entrega.arrivedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-')}</td>
+                  <td className="border px-2 py-1 text-xs">{item._entrega?.horarioInicioDesova ? new Date(item._entrega.horarioInicioDesova).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : (item._entrega?.desovaStartAt ? new Date(item._entrega.desovaStartAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-')}</td>
+                  <td className="border px-2 py-1 text-xs">{item._entrega?.horarioFimDesova ? new Date(item._entrega.horarioFimDesova).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : (item._entrega?.desovaEndAt ? new Date(item._entrega.desovaEndAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-')}</td>
+                  <td className="border px-2 py-1 text-xs">{item._entrega?.documentsJustification || '-'}</td>
                   <td className="border px-2 py-1">{/* Ações */}</td>
                 </tr>
               ))

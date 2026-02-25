@@ -1298,7 +1298,7 @@ router.delete("/motoristas/:id", auth, managerOnly, async (req, res) => {
  * GET /api/admin/programacoes
  * Listar todas as programações de entrega
  */
-router.get("/programacoes", auth, managerOnly, async (req, res) => {
+router.get("/programacoes", auth, async (req, res) => {
   try {
     console.log('[PROGRAMACAO] Listando programações de entrega');
 

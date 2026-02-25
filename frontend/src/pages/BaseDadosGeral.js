@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { adminService } from '../services/authService';
-import { FaEdit, FaTrash, FaTimes, FaArrowLeft, FaFilter, FaSync } from 'react-icons/fa';
+import { FaArrowLeft, FaFilter, FaSync, FaEdit, FaTrash, FaTimes } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 
@@ -10,8 +10,27 @@ const BaseDadosGeral = () => {
   const [filteredData, setFilteredData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
-  const [editingCell, setEditingCell] = useState(null); // { id, field }
+  const [editingId, setEditingId] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Estados para o modal
+  const [editForm, setEditForm] = useState({
+    processo: '',
+    recebedor: '',
+    container: '',
+    dataAgendamento: '',
+    contratado: '',
+    motorista: '',
+    status: 'A CAMINHO DO CLIENTE',
+    // Campos da entrega
+    containerMontadoAt: '',
+    horarioChegada: '',
+    horarioInicioDesova: '',
+    horarioFimDesova: '',
+    observations: '',
+    submissionObservation: '',
+    documentsJustification: ''
+  });
   
   // Filtros
   const [filters, setFilters] = useState({
@@ -20,6 +39,17 @@ const BaseDadosGeral = () => {
     contratado: '',
     searchTerm: ''
   });
+
+  // Status disponíveis (mesmo da Torre de Controle)
+  const statusOptions = [
+    'OPERACAO_FINALIZADA',
+    'A CAMINHO DO CLIENTE',
+    'AGUARDANDO_DESOVA',
+    'EM_DESOVA',
+    'DESOVA_FINALIZADA',
+    'ANEXANDO_DOCUMENTOS_FINAIS',
+    'CANCELADO'
+  ];
 
   // Função para retornar o status dos documentos
   const getDocumentsStatus = (delivery) => {
@@ -106,24 +136,64 @@ const BaseDadosGeral = () => {
     aplicarFiltros();
   }, [filters]);
 
-  const handleCellChange = async (itemId, field, value) => {
-    try {
-      const item = dados.find(d => d._id === itemId);
-      if (!item) return;
+  const handleEdit = (item) => {
+    setEditingId(item._id);
+    setEditForm({
+      processo: item.processo,
+      recebedor: item.recebedor,
+      container: item.container,
+      dataAgendamento: item.dataAgendamento || '',
+      contratado: item.contratado,
+      motorista: item.motorista || '',
+      status: item.status,
+      containerMontadoAt: item._entrega?.containerMontadoAt || '',
+      horarioChegada: item._entrega?.horarioChegada || '',
+      horarioInicioDesova: item._entrega?.horarioInicioDesova || '',
+      horarioFimDesova: item._entrega?.horarioFimDesova || '',
+      observations: item._entrega?.observations || '',
+      submissionObservation: item._entrega?.submissionObservation || '',
+      documentsJustification: item._entrega?.documentsJustification || ''
+    });
+  };
 
-      // Se for campo da programação
-      if (['processo', 'recebedor', 'container', 'dataAgendamento', 'contratado', 'motorista', 'status'].includes(field)) {
-        await adminService.updateProgramacao(itemId, { [field]: value });
-      } 
-      // Se for campo da entrega
-      else if (item._entrega && ['observations', 'submissionObservation'].includes(field)) {
-        await adminService.updateDelivery(item._entrega._id, { [field]: value });
+  const handleSave = async () => {
+    if (!editForm.processo || !editForm.recebedor || !editForm.dataAgendamento || !editForm.contratado) {
+      setToast({ message: 'Preencha os campos obrigatórios (Processo, Recebedor, Data, Contratado)', type: 'error' });
+      return;
+    }
+
+    try {
+      const item = dados.find(d => d._id === editingId);
+      
+      // Atualizar programação
+      await adminService.updateProgramacao(editingId, {
+        processo: editForm.processo,
+        recebedor: editForm.recebedor,
+        container: editForm.container,
+        dataAgendamento: editForm.dataAgendamento,
+        contratado: editForm.contratado,
+        motorista: editForm.motorista,
+        status: editForm.status
+      });
+
+      // Atualizar entrega se existir
+      if (item?._entrega?._id) {
+        await adminService.updateDelivery(item._entrega._id, {
+          containerMontadoAt: editForm.containerMontadoAt,
+          horarioChegada: editForm.horarioChegada,
+          horarioInicioDesova: editForm.horarioInicioDesova,
+          horarioFimDesova: editForm.horarioFimDesova,
+          observations: editForm.observations,
+          submissionObservation: editForm.submissionObservation,
+          documentsJustification: editForm.documentsJustification
+        });
       }
 
       setToast({ message: 'Atualizado com sucesso', type: 'success' });
-      setEditingCell(null);
+      setEditingId(null);
       carregarDados();
     } catch (err) {
+      console.error('Erro:', err);
       setToast({ message: 'Erro ao atualizar', type: 'error' });
     }
   };
@@ -143,39 +213,15 @@ const BaseDadosGeral = () => {
     }
   };
 
-  const renderEditableCell = (item, field, value) => {
-    const isEditing = editingCell?.id === item._id && editingCell?.field === field;
-    
-    if (isEditing) {
-      return (
-        <input
-          autoFocus
-          type={field.includes('data') || field.includes('horario') ? 'datetime-local' : 'text'}
-          value={value || ''}
-          onChange={(e) => handleCellChange(item._id, field, e.target.value)}
-          onBlur={() => setEditingCell(null)}
-          onKeyDown={(e) => e.key === 'Enter' && setEditingCell(null)}
-          className="w-full px-2 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-      );
-    }
-
-    return (
-      <div
-        onClick={() => setEditingCell({ id: item._id, field })}
-        className="cursor-pointer hover:bg-blue-50 px-2 py-1 rounded transition min-h-6 flex items-center"
-        title="Clique para editar"
-      >
-        {value || '-'}
-      </div>
-    );
+  const handleCancel = () => {
+    setEditingId(null);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
       {/* Header */}
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-7xl mx-auto mb-6">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate(-1)}
@@ -186,7 +232,7 @@ const BaseDadosGeral = () => {
             </button>
             <div>
               <h1 className="text-3xl font-bold text-gray-800">Base de Dados Geral</h1>
-              <p className="text-sm text-gray-600">Edite clicando nas células (estilo Excel)</p>
+              <p className="text-sm text-gray-600">Gerenciamento completo de programações e entregas</p>
             </div>
           </div>
           <button
@@ -199,7 +245,7 @@ const BaseDadosGeral = () => {
         </div>
 
         {/* Filtros */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div className="bg-white rounded-lg shadow-md p-4 mt-6">
           <div className="flex items-center gap-4 mb-4">
             <button 
               onClick={() => setShowFilters(!showFilters)}
@@ -234,10 +280,9 @@ const BaseDadosGeral = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="all">Todos</option>
-                  <option value="AGENDADO">AGENDADO</option>
-                  <option value="EM_ROTA">EM_ROTA</option>
-                  <option value="ENTREGUE">ENTREGUE</option>
-                  <option value="CANCELADO">CANCELADO</option>
+                  {statusOptions.map(status => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
                 </select>
               </div>
 
@@ -274,76 +319,77 @@ const BaseDadosGeral = () => {
             </div>
           )}
         </div>
+      </div>
 
-        {/* Tabela */}
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+      {/* Tabela com Scroll Horizontal */}
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
           {loading ? (
             <div className="p-8 text-center text-gray-500">Carregando...</div>
           ) : filteredData.length === 0 ? (
             <div className="p-8 text-center text-gray-500">Nenhum registro encontrado</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gradient-to-r from-purple-600 to-purple-700 text-white sticky top-0">
+            <div className="overflow-x-auto flex-1 scrollbar-thin scrollbar-thumb-purple-400 scrollbar-track-gray-200">
+              <table className="min-w-full text-sm border-collapse">
+                <thead className="bg-gradient-to-r from-purple-600 to-purple-700 text-white sticky top-0 z-10">
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold">Processo</th>
-                    <th className="px-4 py-3 text-left font-semibold">Recebedor</th>
-                    <th className="px-4 py-3 text-left font-semibold">Container</th>
-                    <th className="px-4 py-3 text-left font-semibold">Data Agendamento</th>
-                    <th className="px-4 py-3 text-left font-semibold">Contratado</th>
-                    <th className="px-4 py-3 text-left font-semibold">Motorista</th>
-                    <th className="px-4 py-3 text-left font-semibold">Status</th>
-                    <th className="px-4 py-3 text-left font-semibold">Data Retirada</th>
-                    <th className="px-4 py-3 text-left font-semibold">Chegada</th>
-                    <th className="px-4 py-3 text-left font-semibold">Início</th>
-                    <th className="px-4 py-3 text-left font-semibold">Fim</th>
-                    <th className="px-4 py-3 text-left font-semibold">Docs</th>
-                    <th className="px-4 py-3 text-left font-semibold">Observações</th>
-                    <th className="px-4 py-3 text-left font-semibold">Obs Submissão</th>
-                    <th className="px-4 py-3 text-center font-semibold">Ações</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-purple-700 whitespace-nowrap">Processo</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-purple-700 whitespace-nowrap">Recebedor</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-purple-700 whitespace-nowrap">Container</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-purple-700 whitespace-nowrap">Data Agendamento</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-purple-700 whitespace-nowrap">Contratado</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-purple-700 whitespace-nowrap">Motorista</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-purple-700 whitespace-nowrap">Status</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-purple-700 whitespace-nowrap">Data Retirada</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-purple-700 whitespace-nowrap">Chegada</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-purple-700 whitespace-nowrap">Início Desova</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-purple-700 whitespace-nowrap">Fim Desova</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-purple-700 whitespace-nowrap">Docs</th>
+                    <th className="px-4 py-3 text-left font-semibold border border-purple-700 whitespace-nowrap">Obs</th>
+                    <th className="px-4 py-3 text-center font-semibold border border-purple-700 whitespace-nowrap">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredData.map((item, idx) => (
                     <tr key={item._id} className={`border-b transition ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
-                      <td className="px-4 py-3">{renderEditableCell(item, 'processo', item.processo)}</td>
-                      <td className="px-4 py-3">{renderEditableCell(item, 'recebedor', item.recebedor)}</td>
-                      <td className="px-4 py-3">{renderEditableCell(item, 'container', item.container)}</td>
-                      <td className="px-4 py-3">{renderEditableCell(item, 'dataAgendamento', item.dataAgendamento)}</td>
-                      <td className="px-4 py-3">{renderEditableCell(item, 'contratado', item.contratado)}</td>
-                      <td className="px-4 py-3">{renderEditableCell(item, 'motorista', item.motorista || item._entrega?.driverName)}</td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={item.status}
-                          onChange={(e) => handleCellChange(item._id, 'status', e.target.value)}
-                          className="px-2 py-1 border border-gray-300 rounded cursor-pointer hover:bg-blue-50 text-xs"
-                        >
-                          <option value="AGENDADO">AGENDADO</option>
-                          <option value="EM_ROTA">EM_ROTA</option>
-                          <option value="ENTREGUE">ENTREGUE</option>
-                          <option value="CANCELADO">CANCELADO</option>
-                        </select>
+                      <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item.processo}</td>
+                      <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item.recebedor}</td>
+                      <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item.container || '-'}</td>
+                      <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item.dataAgendamento ? new Date(item.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td>
+                      <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item.contratado}</td>
+                      <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item.motorista || item._entrega?.driverName || '-'}</td>
+                      <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">
+                        <span className="px-2 py-1 rounded text-xs font-semibold bg-purple-100 text-purple-800">
+                          {item.status}
+                        </span>
                       </td>
-                      <td className="px-4 py-3 text-xs">{item._entrega?.containerMontadoAt ? new Date(item._entrega.containerMontadoAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td>
-                      <td className="px-4 py-3 text-xs">{item._entrega?.horarioChegada ? new Date(item._entrega.horarioChegada).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : (item._entrega?.arrivedAt ? new Date(item._entrega.arrivedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-')}</td>
-                      <td className="px-4 py-3 text-xs">{item._entrega?.horarioInicioDesova ? new Date(item._entrega.horarioInicioDesova).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : (item._entrega?.desovaStartAt ? new Date(item._entrega.desovaStartAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-')}</td>
-                      <td className="px-4 py-3 text-xs">{item._entrega?.horarioFimDesova ? new Date(item._entrega.horarioFimDesova).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : (item._entrega?.desovaEndAt ? new Date(item._entrega.desovaEndAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-')}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${
+                      <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item._entrega?.containerMontadoAt ? new Date(item._entrega.containerMontadoAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td>
+                      <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item._entrega?.horarioChegada ? new Date(item._entrega.horarioChegada).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : (item._entrega?.arrivedAt ? new Date(item._entrega.arrivedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-')}</td>
+                      <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item._entrega?.horarioInicioDesova ? new Date(item._entrega.horarioInicioDesova).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : (item._entrega?.desovaStartAt ? new Date(item._entrega.desovaStartAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-')}</td>
+                      <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item._entrega?.horarioFimDesova ? new Date(item._entrega.horarioFimDesova).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : (item._entrega?.desovaEndAt ? new Date(item._entrega.desovaEndAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-')}</td>
+                      <td className="px-4 py-3 border border-gray-200 text-center whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
                           getDocumentsStatus(item._entrega).includes('COMPLETO') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                         }`}>
                           {getDocumentsStatus(item._entrega)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-xs max-w-xs">{renderEditableCell(item, 'observations', item._entrega?.observations)}</td>
-                      <td className="px-4 py-3 text-xs max-w-xs">{renderEditableCell(item, 'submissionObservation', item._entrega?.submissionObservation)}</td>
-                      <td className="px-4 py-3 text-center">
-                        <button 
-                          onClick={() => handleDelete(item._id, item)}
-                          className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition text-xs font-semibold"
-                        >
-                          Deletar
-                        </button>
+                      <td className="px-4 py-3 border border-gray-200 text-xs max-w-xs truncate" title={item._entrega?.observations}>{item._entrega?.observations || '-'}</td>
+                      <td className="px-4 py-3 border border-gray-200 text-center whitespace-nowrap">
+                        <div className="flex gap-2 justify-center">
+                          <button 
+                            onClick={() => handleEdit(item)}
+                            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-xs font-semibold"
+                          >
+                            Editar
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(item._id, item)}
+                            className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition text-xs font-semibold"
+                          >
+                            Deletar
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -353,6 +399,119 @@ const BaseDadosGeral = () => {
           )}
         </div>
       </div>
+
+      {/* Modal de Edição */}
+      {editingId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Editar Programação e Entrega</h2>
+              <button onClick={handleCancel} className="text-white hover:text-gray-200 transition">
+                <FaTimes size={24} />
+              </button>
+            </div>
+
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Programação */}
+              <div className="border-r border-gray-200 pr-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Programação</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Processo *</label>
+                    <input type="text" value={editForm.processo} onChange={(e) => setEditForm({...editForm, processo: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Recebedor *</label>
+                    <input type="text" value={editForm.recebedor} onChange={(e) => setEditForm({...editForm, recebedor: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Container</label>
+                    <input type="text" value={editForm.container} onChange={(e) => setEditForm({...editForm, container: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Data Agendamento *</label>
+                    <input type="datetime-local" value={editForm.dataAgendamento} onChange={(e) => setEditForm({...editForm, dataAgendamento: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Contratado *</label>
+                    <input type="text" value={editForm.contratado} onChange={(e) => setEditForm({...editForm, contratado: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Motorista</label>
+                    <input type="text" value={editForm.motorista} onChange={(e) => setEditForm({...editForm, motorista: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+                    <select value={editForm.status} onChange={(e) => setEditForm({...editForm, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                      {statusOptions.map(status => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Entrega */}
+              <div className="pl-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Entrega</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Data Retirada Cheio</label>
+                    <input type="datetime-local" value={editForm.containerMontadoAt} onChange={(e) => setEditForm({...editForm, containerMontadoAt: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Horário Chegada</label>
+                    <input type="datetime-local" value={editForm.horarioChegada} onChange={(e) => setEditForm({...editForm, horarioChegada: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Horário Início Desova</label>
+                    <input type="datetime-local" value={editForm.horarioInicioDesova} onChange={(e) => setEditForm({...editForm, horarioInicioDesova: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Horário Fim Desova</label>
+                    <input type="datetime-local" value={editForm.horarioFimDesova} onChange={(e) => setEditForm({...editForm, horarioFimDesova: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Observações</label>
+                    <textarea value={editForm.observations} onChange={(e) => setEditForm({...editForm, observations: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 h-16" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Obs. Submissão</label>
+                    <textarea value={editForm.submissionObservation} onChange={(e) => setEditForm({...editForm, submissionObservation: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 h-16" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Justificativa Docs</label>
+                    <textarea value={editForm.documentsJustification} onChange={(e) => setEditForm({...editForm, documentsJustification: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 h-16" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-100 px-6 py-4 flex gap-4 border-t border-gray-200">
+              <button onClick={handleSave} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold">
+                Salvar Alterações
+              </button>
+              <button onClick={handleCancel} className="flex-1 px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition font-semibold">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />

@@ -332,8 +332,8 @@ const ProgramacaoManagement = () => {
             let days = Math.floor(excelNum);
             const fraction = excelNum - days;
             // Corrigir bug do Excel: baseDate correta e ajuste do dia 60
-            // baseDate = 1899-12-30 (Excel serial 1 = 1899-12-31, mas Excel começa em 0)
-            const baseDate = new Date(1899, 11, 30);
+            // baseDate = 1899-12-31 (Excel serial 1 = 1900-01-01)
+            const baseDate = new Date(1899, 11, 31);
             // Excel bug: 1900 é considerado bissexto, então a partir do dia 60 (29/2/1900) soma +1
             if (days >= 60) days -= 1;
             const date = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);

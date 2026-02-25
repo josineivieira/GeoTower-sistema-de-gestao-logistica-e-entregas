@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { adminService } from '../services/authService';
+import { adminService, deliveryService } from '../services/authService';
 import { FaArrowLeft, FaFilter, FaSync, FaEdit, FaTrash, FaTimes } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
@@ -170,6 +170,15 @@ const BaseDadosGeral = () => {
     });
   };
 
+  const toISOIfDate = (val) => {
+    if (!val) return undefined;
+    // If already ISO-like, return as-is
+    if (typeof val === 'string' && val.endsWith('Z')) return val;
+    const d = new Date(val);
+    if (!isNaN(d)) return d.toISOString();
+    return val;
+  };
+
   const handleSave = async () => {
     if (!editForm.processo || !editForm.recebedor || !editForm.dataAgendamento || !editForm.contratado) {
       setToast({ message: 'Preencha os campos obrigatórios (Processo, Recebedor, Data, Contratado)', type: 'error' });
@@ -178,29 +187,37 @@ const BaseDadosGeral = () => {
 
     try {
       const item = dados.find(d => d._id === editingId);
-      
-      // Atualizar programação (sem status, que agora é da entrega)
+
+      // Atualizar programação (sem status — status é da entrega)
       await adminService.updateProgramacao(editingId, {
         processo: editForm.processo,
         recebedor: editForm.recebedor,
         container: editForm.container,
-        dataAgendamento: editForm.dataAgendamento,
+        dataAgendamento: toISOIfDate(editForm.dataAgendamento),
         contratado: editForm.contratado,
         motorista: editForm.motorista
       });
 
-      // Atualizar entrega se existir
+      // Payload de entrega (normaliza datas)
+      const deliveryPayload = {
+        status: editForm.status || undefined,
+        containerMontadoAt: toISOIfDate(editForm.containerMontadoAt),
+        horarioChegada: toISOIfDate(editForm.horarioChegada),
+        horarioInicioDesova: toISOIfDate(editForm.horarioInicioDesova),
+        horarioFimDesova: toISOIfDate(editForm.horarioFimDesova),
+        observations: editForm.observations,
+        submissionObservation: editForm.submissionObservation,
+        documentsJustification: editForm.documentsJustification
+      };
+
       if (item?._entrega?._id) {
-        await adminService.updateDelivery(item._entrega._id, {
-          status: editForm.status,
-          containerMontadoAt: editForm.containerMontadoAt,
-          horarioChegada: editForm.horarioChegada,
-          horarioInicioDesova: editForm.horarioInicioDesova,
-          horarioFimDesova: editForm.horarioFimDesova,
-          observations: editForm.observations,
-          submissionObservation: editForm.submissionObservation,
-          documentsJustification: editForm.documentsJustification
-        });
+        await adminService.updateDelivery(item._entrega._id, deliveryPayload);
+      } else {
+        // Se não existir entrega, cria uma vinculada ao deliveryNumber (container ou processo)
+        const deliveryNumber = (editForm.container || editForm.processo || '').toString().trim();
+        if (deliveryNumber) {
+          await deliveryService.createDelivery({ deliveryNumber, ...deliveryPayload });
+        }
       }
 
       setToast({ message: 'Atualizado com sucesso', type: 'success' });
@@ -234,7 +251,7 @@ const BaseDadosGeral = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
       {/* Header */}
-      <div className="max-w-7xl mx-auto mb-6">
+      <div className="w-full mb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button 
@@ -259,7 +276,7 @@ const BaseDadosGeral = () => {
         </div>
 
         {/* Filtros */}
-        <div className="bg-white rounded-lg shadow-md p-4 mt-6">
+        <div className="bg-white rounded-lg shadow-md p-4 mt-6 w-full">
           <div className="flex items-center gap-4 mb-4">
             <button 
               onClick={() => setShowFilters(!showFilters)}
@@ -336,14 +353,14 @@ const BaseDadosGeral = () => {
       </div>
 
       {/* Tabela com Scroll Horizontal */}
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
+      <div className="w-full">
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col w-full h-[88vh]">
           {loading ? (
             <div className="p-8 text-center text-gray-500">Carregando...</div>
           ) : filteredData.length === 0 ? (
             <div className="p-8 text-center text-gray-500">Nenhum registro encontrado</div>
           ) : (
-            <div className="overflow-x-auto flex-1 scrollbar-thin scrollbar-thumb-purple-400 scrollbar-track-gray-200">
+            <div className="overflow-x-auto overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-purple-400 scrollbar-track-gray-200">
               <table className="min-w-full text-sm border-collapse">
                 <thead className="bg-gradient-to-r from-purple-600 to-purple-700 text-white sticky top-0 z-10">
                   <tr>

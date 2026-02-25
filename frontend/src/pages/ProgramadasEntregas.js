@@ -88,6 +88,7 @@ const ProgramadasEntregas = () => {
   const navigate = useNavigate();
   const [programacoes, setProgramacoes] = useState([]);
   const [allProgramacoes, setAllProgramacoes] = useState([]);
+  const [deliveriesMap, setDeliveriesMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const { user } = useAuth();
@@ -125,28 +126,30 @@ const ProgramadasEntregas = () => {
   const loadProgramacoes = async () => {
     setLoading(true);
     try {
-      const res = await deliveryService.getProgramacoesAssigned();
+      // Busca programações da base geral
+      const res = await adminService.getProgramacoes();
       const todas = res.data.programacoes || [];
       setAllProgramacoes(todas);
-      // Preferir username se existir, senão name
       let nomeFiltro = '';
       if (user) {
         nomeFiltro = (user.username || user.name || '').trim().toUpperCase();
-        // Log para debug
-        console.log('[DEBUG] user.username:', user.username, '| user.name:', user.name, '| usado para filtro:', nomeFiltro);
       }
-      // Logar todos os contratados das programações
-      console.log('[DEBUG] Contratados das programações:', todas.map(p => p.contratado));
+      // Busca todas as entregas do contratado
+      let filtradas = [];
       if (nomeFiltro) {
-        // Mostra todas as entregas do contratado, exceto as já ENTREGUE
-        setProgramacoes(
-          todas
-            .filter(p => String(p.contratado).trim().toUpperCase() === nomeFiltro)
-            .filter(p => String(p.status || '').toUpperCase() !== 'ENTREGUE')
-        );
-      } else {
-        setProgramacoes([]);
+        filtradas = todas.filter(p => String(p.contratado).trim().toUpperCase() === nomeFiltro);
       }
+      setProgramacoes(filtradas);
+
+      // Busca todas as deliveries para alimentar colunas
+      const deliveriesRes = await deliveryService.getMyDeliveries({});
+      const deliveries = deliveriesRes.data.deliveries || [];
+      // Mapeia por deliveryNumber
+      const map = {};
+      deliveries.forEach(d => {
+        map[(d.deliveryNumber || '').toUpperCase()] = d;
+      });
+      setDeliveriesMap(map);
     } catch (err) {
       console.error('Erro ao buscar programações:', err);
       setToast({ message: 'Erro ao carregar entregas programadas', type: 'error' });
@@ -705,6 +708,27 @@ function dataURLtoFile(dataurl, filename) {
                       <div>
                         <p className="text-gray-500">Motorista</p>
                         <p className="font-bold text-lg text-emerald-700 bg-emerald-100 rounded px-2 py-1 shadow-sm">{p.motorista || '-'}</p>
+                      </div>
+                      {/* Novas colunas alimentadas pelo fluxo de entregas programadas */}
+                      <div>
+                        <p className="text-gray-500">Data Retirada Cheio</p>
+                        <p className="font-medium">{deliveriesMap[(p.container || p.processo || '').toUpperCase()]?.containerMontadoAt ? new Date(deliveriesMap[(p.container || p.processo || '').toUpperCase()].containerMontadoAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Chegada no Cliente</p>
+                        <p className="font-medium">{deliveriesMap[(p.container || p.processo || '').toUpperCase()]?.arrivedAt ? new Date(deliveriesMap[(p.container || p.processo || '').toUpperCase()].arrivedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Inicio</p>
+                        <p className="font-medium">{deliveriesMap[(p.container || p.processo || '').toUpperCase()]?.desovaStartAt ? new Date(deliveriesMap[(p.container || p.processo || '').toUpperCase()].desovaStartAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Fim</p>
+                        <p className="font-medium">{deliveriesMap[(p.container || p.processo || '').toUpperCase()]?.desovaEndAt ? new Date(deliveriesMap[(p.container || p.processo || '').toUpperCase()].desovaEndAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Docs</p>
+                        <p className="font-medium">{deliveriesMap[(p.container || p.processo || '').toUpperCase()]?.documentsJustification || '-'}</p>
                       </div>
                     </div>
                   </div>

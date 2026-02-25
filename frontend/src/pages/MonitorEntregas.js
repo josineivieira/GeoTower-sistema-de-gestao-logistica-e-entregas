@@ -687,84 +687,13 @@ const MonitorEntregas = () => {
                       </span>
                     </td>
                     <td className="px-2 py-2 text-center">
-                      <div className="flex items-center justify-center relative z-10">
-                        <div className="relative inline-block text-left">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const btnRect = e.currentTarget.getBoundingClientRect();
-                              setMenuPosition({
-                                top: Math.min(btnRect.bottom + 4, window.innerHeight - 10),
-                                left: Math.min(btnRect.left, window.innerWidth - 250)
-                              });
-                              setOpenMenuId(openMenuId === delivery._id ? null : delivery._id);
-                            }}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-200 text-gray-600 transition text-sm"
-                            aria-haspopup="true"
-                            aria-expanded={openMenuId === delivery._id}
-                            title="Ações"
-                          >
-                            <FaEllipsisV />
-                          </button>
-
-                          {openMenuId === delivery._id && (
-                            <div
-                              ref={menuRef}
-                              style={{
-                                position: 'fixed',
-                                top: menuPosition.top,
-                                left: menuPosition.left,
-                                zIndex: 9999,
-                                minWidth: '14rem',
-                                maxWidth: '90vw',
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-                                borderRadius: '0.5rem',
-                                background: 'white',
-                                border: '1px solid #0001',
-                              }}
-                              className="shadow-2xl ring-1 ring-black ring-opacity-5 will-change-[top,left,transform]"
-                            >
-                              <div className="py-1 text-xs">
-                                <button
-                                  onClick={() => { setSelectedDelivery(delivery); setOpenMenuId(null); }}
-                                  className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-100 flex items-center gap-3 whitespace-nowrap"
-                                >
-                                  <FaEye className="text-xs flex-shrink-0" /> Visualizar
-                                </button>
-                                
-                                {/* Editar - Apenas se não for GeoMar */}
-                                {canEdit() && (
-                                  <button
-                                    onClick={() => { handleEditStart(delivery); setOpenMenuId(null); }}
-                                    className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-100 flex items-center gap-3 whitespace-nowrap"
-                                    title="Editar entrega"
-                                  >
-                                    <FaEdit className="text-xs flex-shrink-0" /> Editar
-                                  </button>
-                                )}
-                                
-                                {/* Deletar - Apenas se não for GeoMar */}
-                                {canEdit() && (
-                                  <button
-                                    onClick={() => { handleDelete(delivery._id); setOpenMenuId(null); }}
-                                    className="w-full text-left px-4 py-3 text-red-600 hover:bg-gray-50 flex items-center gap-3 whitespace-nowrap"
-                                    title="Deletar entrega"
-                                  >
-                                    <FaTrash className="text-xs flex-shrink-0" /> Deletar
-                                  </button>
-                                )}
-                                
-                                {/* Aviso visível - Apenas Visualização para GeoMar */}
-                                {isGeoMar() && (
-                                  <div className="px-4 py-3 text-center border-t border-gray-200">
-                                    <p className="text-xs text-amber-600 font-semibold">👁️ Apenas Visualização</p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      <button
+                        onClick={() => setSelectedDelivery(delivery)}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-200 text-gray-600 transition text-sm"
+                        title="Visualizar"
+                      >
+                        <FaEye />
+                      </button>
                     </td>
                   </tr>
                 ))}

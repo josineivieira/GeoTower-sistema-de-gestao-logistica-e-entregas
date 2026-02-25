@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { adminService } from '../services/authService';
-import { FaEdit, FaTrash, FaTimes } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaTimes, FaPlus } from 'react-icons/fa';
 import Toast from '../components/Toast';
 
 const colunas = [
@@ -39,15 +39,12 @@ const BaseDadosGeral = () => {
   const carregarDados = async () => {
     setLoading(true);
     try {
-      // Buscar programações
       const progRes = await adminService.getProgramacoes();
       const programacoes = progRes.data.programacoes || [];
       
-      // Buscar TODAS as entregas (via admin)
       const entrRes = await adminService.getDeliveries({});
       const entregas = entrRes.data.deliveries || [];
       
-      // Mapear entregas por deliveryNumber (case-insensitive)
       const mapEntregas = {};
       entregas.forEach(e => {
         const key = (e.deliveryNumber || '').toUpperCase().trim();
@@ -56,18 +53,12 @@ const BaseDadosGeral = () => {
         }
       });
       
-      // Enriquecer programações com dados de entregas
       const dadosEnriquecidos = programacoes.map(prog => {
-        // Tenta encontrar a entrega por container ou processo
         const chaveContainer = (prog.container || '').toUpperCase().trim();
         const chaveProcesso = (prog.processo || '').toUpperCase().trim();
-        
         const entrega = mapEntregas[chaveContainer] || mapEntregas[chaveProcesso];
         
-        return {
-          ...prog,
-          _entrega: entrega || null
-        };
+        return { ...prog, _entrega: entrega || null };
       });
       
       setDados(dadosEnriquecidos);

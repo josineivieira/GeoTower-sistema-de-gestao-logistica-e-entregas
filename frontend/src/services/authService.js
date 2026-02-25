@@ -52,6 +52,9 @@ export const adminService = {
   deleteMotorista: (id) => api.delete(`/admin/motoristas/${id}`),
   // Programações de Entrega
   getProgramacoes: () => api.get('/admin/programacoes'),
+  updateProgramacao: (id, data) => api.put(`/admin/programacoes/${id}`, data),
+  deleteProgramacao: (id) => api.delete(`/admin/programacoes/${id}`),
+  createProgramacao: (data) => api.post('/admin/programacoes', data),
   createProgramacao: (data) => api.post('/admin/programacoes', data),
   updateProgramacao: (id, data) => api.put(`/admin/programacoes/${id}`, data),
   deleteProgramacao: (id) => api.delete(`/admin/programacoes/${id}`),

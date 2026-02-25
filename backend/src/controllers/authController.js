@@ -114,6 +114,7 @@ exports.login = async (req, res) => {
     if (!driver) driver = await db.findOne('drivers', { email: loginKey });
 
     console.log('👤 Driver found:', driver ? driver.username : 'NOT FOUND');
+    console.log('🔐 Driver password type:', driver?.password ? (driver.password.startsWith('$2') ? 'bcrypt' : 'sha256/other') : 'no password');
 
     if (!driver) {
       console.log('❌ Driver not found for:', loginKey);
@@ -152,6 +153,7 @@ exports.login = async (req, res) => {
         // 3) assume bcrypt
         try {
           passwordMatch = await bcrypt.compare(password, driver.password || '');
+          console.log('🔐 bcrypt.compare result:', passwordMatch, 'with password:', (driver.password || '').substring(0, 20) + '...');
         } catch (e) {
           console.error('Error comparing bcrypt password:', e);
         }

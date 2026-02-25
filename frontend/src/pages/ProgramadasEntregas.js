@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import imageCompression from 'browser-image-compression';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
-import { deliveryService } from '../services/authService';
 import { FaArrowLeft, FaCalendarAlt, FaSearch, FaCamera, FaTimes } from 'react-icons/fa';
 import { useAuth } from '../services/authContext';
 

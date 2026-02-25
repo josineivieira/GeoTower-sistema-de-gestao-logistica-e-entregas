@@ -709,27 +709,7 @@ function dataURLtoFile(dataurl, filename) {
                         <p className="text-gray-500">Motorista</p>
                         <p className="font-bold text-lg text-emerald-700 bg-emerald-100 rounded px-2 py-1 shadow-sm">{p.motorista || '-'}</p>
                       </div>
-                      {/* Novas colunas alimentadas pelo fluxo de entregas programadas */}
-                      <div>
-                        <p className="text-gray-500">Data Retirada Cheio</p>
-                        <p className="font-medium">{deliveriesMap[(p.container || p.processo || '').toUpperCase()]?.containerMontadoAt ? new Date(deliveriesMap[(p.container || p.processo || '').toUpperCase()].containerMontadoAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Chegada no Cliente</p>
-                        <p className="font-medium">{deliveriesMap[(p.container || p.processo || '').toUpperCase()]?.arrivedAt ? new Date(deliveriesMap[(p.container || p.processo || '').toUpperCase()].arrivedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Inicio</p>
-                        <p className="font-medium">{deliveriesMap[(p.container || p.processo || '').toUpperCase()]?.desovaStartAt ? new Date(deliveriesMap[(p.container || p.processo || '').toUpperCase()].desovaStartAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Fim</p>
-                        <p className="font-medium">{deliveriesMap[(p.container || p.processo || '').toUpperCase()]?.desovaEndAt ? new Date(deliveriesMap[(p.container || p.processo || '').toUpperCase()].desovaEndAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Docs</p>
-                        <p className="font-medium">{deliveriesMap[(p.container || p.processo || '').toUpperCase()]?.documentsJustification || '-'}</p>
-                      </div>
+
                     </div>
                   </div>
 

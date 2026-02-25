@@ -14,6 +14,15 @@ async function connectIfNeeded() {
     useUnifiedTopology: true,
   });
 
+  // DEBUG: imprimir informações reais de conexão para diagnóstico
+  try {
+    console.log('[MONGO] uri:', (process.env.MONGODB_URI || '').replace(/\/\/.*@/, '//***@'));
+    console.log('[MONGO] db name:', mongoose.connection.name);
+    console.log('[MONGO] host:', mongoose.connection.host);
+  } catch (e) {
+    console.warn('[MONGO] debug log failed', e && e.message);
+  }
+
   connected = true;
   console.log('✓ Connected to MongoDB');
   return mongoose;

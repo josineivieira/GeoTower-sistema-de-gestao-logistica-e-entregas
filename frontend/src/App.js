@@ -9,6 +9,7 @@ import CitySelector from './components/CitySelector';
 import PoliticaPrivacidade from './pages/PoliticaPrivacidade';
 import TermosUso from './pages/TermosUso';
 import Suporte from './pages/Suporte';
+import BaseDadosGeral from './pages/BaseDadosGeral';
 
 // Pages
 import Login from './pages/Login';
@@ -201,6 +202,10 @@ function AppContent() {
       <Route
         path="/suporte"
         element={<AppLayout><Suporte /></AppLayout>}
+      />
+      <Route
+        path="/base-dados-geral"
+        element={<AppLayout><BaseDadosGeral /></AppLayout>}
       />
 
       <Route path="/" element={<Navigate to="/home" />} />

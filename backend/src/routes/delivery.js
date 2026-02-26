@@ -95,6 +95,8 @@ router.post("/", auth, async (req, res) => {
       if (prog) {
         // Se status foi definido (ex: CONTAINER_MONTADO), usa esse, senão usa EM_ROTA
         prog.status = status === 'CONTAINER_MONTADO' ? 'CONTAINER_MONTADO' : 'EM_ROTA';
+        // gravar referência para futuras consultas
+        prog.linkedDeliveryId = delivery._id;
         await prog.save();
         console.log('[DELIVERY] Programacao', prog._id, 'status atualizado para', prog.status);
       }

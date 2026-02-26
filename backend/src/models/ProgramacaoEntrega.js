@@ -33,6 +33,11 @@ const programacaoEntregaSchema = new mongoose.Schema({
     trim: true,
     default: '-'
   },
+  linkedDeliveryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Delivery',
+    default: null
+  },
   status: {
     type: String,
     enum: {
@@ -46,6 +51,7 @@ const programacaoEntregaSchema = new mongoose.Schema({
         'ANEXANDO_DOCUMENTOS_FINAIS',
         'EM_ROTA',
         'ENTREGUE',
+        'FINALIZADO',
         'ENTREGUE_COM_PENDENCIA_CANHOTO',
         'CANCELADO'
       ],

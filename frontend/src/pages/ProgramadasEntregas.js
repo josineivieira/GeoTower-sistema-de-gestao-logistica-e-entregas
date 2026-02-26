@@ -118,6 +118,11 @@ const ProgramadasEntregas = () => {
   const [montagemComprovante, setMontagemComprovante] = useState(null);
   const montagemComprovanteRef = useRef(null);
 
+  // states for devolução vazia modal
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnProof, setReturnProof] = useState(null);
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+
   useEffect(() => {
     loadProgramacoes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -276,36 +281,58 @@ const ProgramadasEntregas = () => {
     setShowMontagemModal(true);
   };
 
-  // marcar devolução vazia como finalizada
-  const handleReturn = async (p) => {
+  // Show return modal for a programação
+  const openReturnModal = (p) => {
+    setCurrentProgramacao(p);
+    setReturnProof(null);
+    setShowReturnModal(true);
+  };
+
+  const closeReturnModal = () => {
+    setShowReturnModal(false);
+    setReturnProof(null);
+    setCurrentProgramacao(null);
+  };
+
+  // marcar devolução vazia como finalizada (invocado pelo modal)
+  const handleReturn = async () => {
+    if (!currentProgramacao) return;
+    setReturnSubmitting(true);
     try {
-      // Se o backend já retornou o id da delivery vinculada, use-o diretamente
-      if (p.linkedDeliveryId) {
-        await deliveryService.updateDelivery(p.linkedDeliveryId, { status: 'FINALIZADO' });
+      // if there's a linked delivery, update it
+      if (currentProgramacao.linkedDeliveryId) {
+        await deliveryService.updateDelivery(currentProgramacao.linkedDeliveryId, { status: 'FINALIZADO' });
+        if (returnProof) {
+          await deliveryService.uploadDocument(currentProgramacao.linkedDeliveryId, 'devolucaoVazio', returnProof);
+        }
       } else {
-        // buscar entrega existente correspondente para atualizar status
-        const searchVal = (p.container || p.processo || '').trim();
+        // search by number and update
+        const searchVal = (currentProgramacao.container || currentProgramacao.processo || '').trim();
         if (searchVal) {
           const resp = await deliveryService.getMyDeliveries({ searchTerm: searchVal });
           const found = resp.data.deliveries && resp.data.deliveries[0];
           if (found) {
             await deliveryService.updateDelivery(found._id, { status: 'FINALIZADO' });
+            if (returnProof) {
+              await deliveryService.uploadDocument(found._id, 'devolucaoVazio', returnProof);
+            }
           }
         }
       }
 
-      // também atualiza a programacao diretamente (caso não tenha sido sincronizada via delivery)
+      // update programacao as well
       try {
-        await adminService.updateProgramacao(p._id, { status: 'FINALIZADO' });
-      } catch (_) {
-        // silent fail is fine
-      }
+        await adminService.updateProgramacao(currentProgramacao._id, { status: 'FINALIZADO' });
+      } catch (_) {}
 
       setToast({ message: 'Devolução vazia registrada', type: 'success' });
       await loadProgramacoes();
+      closeReturnModal();
     } catch (err) {
       console.error('Erro ao registrar devolução:', err);
       setToast({ message: 'Erro ao fazer devolução', type: 'error' });
+    } finally {
+      setReturnSubmitting(false);
     }
   };
 
@@ -774,7 +801,7 @@ function dataURLtoFile(dataurl, filename) {
                     {/* Para status ENTREGUE mostramos retorno vazio */}
                     {p.status === 'ENTREGUE' && (
                       <button
-                        onClick={() => handleReturn(p)}
+                        onClick={() => openReturnModal(p)}
                         className="px-6 py-2 bg-gradient-to-r from-pink-400 to-pink-600 text-white rounded-xl shadow-lg hover:scale-105 hover:shadow-xl transition font-bold text-lg border-2 border-pink-500"
                         title="Fazer Devolução"
                       >
@@ -801,6 +828,85 @@ function dataURLtoFile(dataurl, filename) {
 
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      )}
+
+      {/* Modal de devolução vazia */}
+      {showReturnModal && currentProgramacao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-8 border-4 border-pink-400">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-3xl font-extrabold text-pink-700">Devolução de Vazio</h2>
+              <button onClick={closeReturnModal} className="text-gray-500 hover:text-gray-800">
+                <FaTimes size={28} />
+              </button>
+            </div>
+            <div className="space-y-6">
+              <p className="text-lg">
+                Anexe o comprovante da devolução para concluir o processo.
+              </p>
+
+              <div className="bg-gray-50 border border-gray-300 p-6 rounded-lg">
+                <label className="block text-lg font-semibold text-gray-700 mb-3">
+                  📸 Comprovante de Devolução
+                </label>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 px-4 py-3 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded-lg transition"
+                  >
+                    {returnProof ? '✅ Foto selecionada' : '📷 Selecionar Foto'}
+                  </button>
+                  {returnProof && (
+                    <button
+                      onClick={() => setReturnProof(null)}
+                      className="px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition"
+                    >
+                      Remover
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setReturnProof(file);
+                  }}
+                  className="hidden"
+                />
+                {returnProof && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    Arquivo: <strong>{returnProof.name}</strong>
+                  </p>
+                )}
+              </div>
+
+              {returnSubmitting && (
+                <div className="flex items-center gap-3 p-3 bg-pink-50 border border-pink-300 rounded-lg animate-pulse">
+                  <svg className="animate-spin h-6 w-6 text-pink-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                  <span className="text-pink-700 font-semibold">Processando...</span>
+                </div>
+              )}
+
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={handleReturn}
+                  disabled={returnSubmitting || !returnProof}
+                  className="flex-1 px-8 py-4 bg-pink-600 hover:bg-pink-700 text-white rounded-lg font-bold text-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ✅ Enviar Devolução
+                </button>
+                <button
+                  onClick={closeReturnModal}
+                  className="flex-1 px-8 py-4 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-bold text-xl transition"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal de pergunta - Informe a conclusão da montagem */}

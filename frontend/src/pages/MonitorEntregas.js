@@ -387,7 +387,10 @@ const MonitorEntregas = () => {
 
   const normalizeStatusForProgress = (s) => {
     if (!s) return null;
-    if (s === 'ENTREGUE' || s === 'submitted') return 'ENTREGUE';
+    // map various completed/alias statuses to the canonical final state
+    if (s === 'ENTREGUE' || s === 'submitted' || s === 'FINALIZADO' || s === 'ENTREGUE_COM_PENDENCIA_CANHOTO') {
+      return 'ENTREGUE';
+    }
     if (s === 'pending' || s === 'PENDING') return 'A CAMINHO DO CLIENTE';
     return s;
   };

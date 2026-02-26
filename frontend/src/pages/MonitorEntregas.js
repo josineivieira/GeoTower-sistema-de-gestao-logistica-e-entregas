@@ -71,11 +71,13 @@ const MonitorEntregas = () => {
   const [statsPeriod, setStatsPeriod] = useState('today'); // 'today', 'yesterday', 'tomorrow'
 
   // Stats rápidas
+  // total = número de programações retornadas (agendadas)
+  // statusCounts = mapa de cada status para sua contagem
+  // byDriver = quantidade de motoristas distintos
   const [stats, setStats] = useState({
     total: 0,
-    submitted: 0,
-    pending: 0,
-    byDriver: []
+    statusCounts: {},
+    byDriver: 0
   });
 
   // Carrega entregas
@@ -112,13 +114,16 @@ const MonitorEntregas = () => {
       setDeliveries(data);
       
       // Calcula stats com base nos dados retornados
-      const submitted = data.filter(d => d.status === 'ENTREGUE' || d.status === 'submitted').length;
-      const pending = data.filter(d => d.status !== 'ENTREGUE' && d.status !== 'submitted' && d.status !== 'CANCELADO').length;
+      // construímos um mapa de status
+      const statusCounts = {};
+      data.forEach(d => {
+        const s = d.status || 'UNKNOWN';
+        statusCounts[s] = (statusCounts[s] || 0) + 1;
+      });
       const motoristaSet = new Set(data.map(d => d.driverName).filter(Boolean));
       setStats({
         total: data.length,
-        submitted,
-        pending,
+        statusCounts,
         byDriver: motoristaSet.size
       });
 
@@ -498,19 +503,43 @@ const MonitorEntregas = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6 lg:mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 lg:gap-6 mb-6 lg:mb-8">
+          {/* programadas (anteriormente TOTAL) */}
           <div className="bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl shadow-lg p-4 lg:p-6 border-l-8 border-blue-600 flex flex-col items-center">
-            <p className="text-blue-900 text-xs lg:text-base font-extrabold uppercase tracking-widest mb-1">TOTAL</p>
+            <p className="text-blue-900 text-xs lg:text-base font-extrabold uppercase tracking-widest mb-1">PROGRAMADAS</p>
             <p className="text-2xl lg:text-4xl font-extrabold text-blue-700 drop-shadow">{stats.total}</p>
           </div>
-          <div className="bg-gradient-to-r from-green-100 to-green-200 rounded-xl shadow-lg p-4 lg:p-6 border-l-8 border-green-600 flex flex-col items-center">
-            <p className="text-green-900 text-xs lg:text-base font-extrabold uppercase tracking-widest mb-1">ENTREGUES</p>
-            <p className="text-2xl lg:text-4xl font-extrabold text-green-700 drop-shadow">{stats.submitted}</p>
+
+          {/* indicadores por status */}
+          {Object.entries(stats.statusCounts).map(([status, count]) => {
+            // normalize label
+            const label = status.replace(/_/g, ' ');
+            return (
+              <div
+                key={status}
+                className="bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl shadow-lg p-4 lg:p-6 border-l-8 border-gray-600 flex flex-col items-center"
+              >
+                <p className="text-gray-900 text-xs lg:text-base font-extrabold uppercase tracking-widest mb-1">
+                  {label}
+                </p>
+                <p className="text-2xl lg:text-4xl font-extrabold text-gray-700 drop-shadow">
+                  {count}
+                </p>
+              </div>
+            );
+          })}
+
+          {/* container montado como card adicional (se existir) */}
+          <div className="bg-gradient-to-r from-pink-100 to-pink-200 rounded-xl shadow-lg p-4 lg:p-6 border-l-8 border-pink-600 flex flex-col items-center">
+            <p className="text-pink-900 text-xs lg:text-base font-extrabold uppercase tracking-widest mb-1">
+              CONTAINER MONTADO
+            </p>
+            <p className="text-2xl lg:text-4xl font-extrabold text-pink-700 drop-shadow">
+              {stats.statusCounts['CONTAINER MONTADO'] || 0}
+            </p>
           </div>
-          <div className="bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-xl shadow-lg p-4 lg:p-6 border-l-8 border-yellow-500 flex flex-col items-center">
-            <p className="text-yellow-900 text-xs lg:text-base font-extrabold uppercase tracking-widest mb-1">PENDENTE</p>
-            <p className="text-2xl lg:text-4xl font-extrabold text-yellow-600 drop-shadow">{stats.pending}</p>
-          </div>
+
+          {/* motoristas permanece por último */}
           <div className="bg-gradient-to-r from-purple-100 to-purple-200 rounded-xl shadow-lg p-4 lg:p-6 border-l-8 border-purple-600 flex flex-col items-center">
             <p className="text-purple-900 text-xs lg:text-base font-extrabold uppercase tracking-widest mb-1">MOTORISTAS</p>
             <p className="text-2xl lg:text-4xl font-extrabold text-purple-700 drop-shadow">{stats.byDriver}</p>

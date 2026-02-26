@@ -238,6 +238,7 @@ const MonitorEntregas = () => {
     }
 
     // Filtro de data - AGENDAMENTO
+    // apply explicit date bounds if user set filters
     if (filters.startDate && filters.startDate.trim() !== '') {
       const startDate = new Date(filters.startDate);
       startDate.setHours(0, 0, 0, 0);
@@ -257,6 +258,39 @@ const MonitorEntregas = () => {
         const deliveryDate = new Date(d.dataAgendamento);
         return deliveryDate <= endDate;
       });
+    }
+
+    // additional period-based filtering according to statsPeriod buttons
+    if (statsPeriod && statsPeriod !== 'general') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (statsPeriod === 'today') {
+        // show deliveries scheduled today or earlier (future deliveries already handled by tomorrow)
+        filtered = filtered.filter(d => {
+          if (!d.dataAgendamento) return false;
+          const dt = new Date(d.dataAgendamento);
+          dt.setHours(0, 0, 0, 0);
+          return dt.getTime() <= today.getTime();
+        });
+      } else if (statsPeriod === 'tomorrow') {
+        const tom = new Date(today);
+        tom.setDate(tom.getDate() + 1);
+        filtered = filtered.filter(d => {
+          if (!d.dataAgendamento) return false;
+          const dt = new Date(d.dataAgendamento);
+          dt.setHours(0, 0, 0, 0);
+          return dt.getTime() === tom.getTime();
+        });
+      } else if (statsPeriod === 'yesterday') {
+        const yest = new Date(today);
+        yest.setDate(yest.getDate() - 1);
+        filtered = filtered.filter(d => {
+          if (!d.dataAgendamento) return false;
+          const dt = new Date(d.dataAgendamento);
+          dt.setHours(0, 0, 0, 0);
+          return dt.getTime() === yest.getTime();
+        });
+      }
     }
 
     setFilteredDeliveries(filtered);
@@ -684,7 +718,7 @@ const MonitorEntregas = () => {
             <p className="text-gray-500 text-lg">Nenhuma entrega encontrada</p>
           </div>
         ) : (
-          <div className="overflow-x-auto bg-white rounded-lg shadow-md" style={{ position: 'relative' }}>
+          <div className="overflow-x-auto overflow-visible bg-white rounded-lg shadow-md" style={{ position: 'relative' }}>
             <table className="w-full text-xs">
               <thead className="bg-gradient-to-r from-purple-100 to-purple-200 border-b-2 border-purple-400 sticky top-0">
                   <tr>
@@ -768,7 +802,7 @@ const MonitorEntregas = () => {
                       </button>
                       {openMenuId === delivery._id && (
                         <div
-                          className="absolute bg-white border border-gray-200 rounded-lg shadow-lg z-40 mt-0 min-w-max"
+                          className="absolute bg-white border border-gray-200 rounded-lg shadow-lg z-40 mt-0 min-w-[120px] whitespace-nowrap"
                           style={{ top: `calc(100% + 5px)`, right: 0 }}
                         >
                           <button

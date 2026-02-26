@@ -760,16 +760,22 @@ const MonitorEntregas = () => {
                     <td className="px-2 py-2 text-gray-600 whitespace-nowrap text-center">
                       {delivery.dataAgendamento ? new Date(delivery.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}
                     </td>
-                    <td className="px-2 py-2 text-gray-600 whitespace-nowrap text-center font-semibold text-blue-600 bg-blue-50">
-                      {delivery.containerMontadoAt ? new Date(delivery.containerMontadoAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}
-                    </td>
+                    {/* progress cell moved up to align with header */}
                     <td className="px-2 py-2 text-center">
-                      <div className="w-20 h-3 bg-gray-200 rounded-full overflow-hidden" title={`${getProgress(delivery)}%`}> 
+                      <div
+                        className="w-20 h-3 bg-gray-200 rounded-full overflow-hidden relative"
+                        title={`${getProgress(delivery)}%`}
+                      >
                         <div
-                          className={`h-full ${getProgress(delivery) === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
+                          className={`h-full ${
+                            getProgress(delivery) === 100 ? 'bg-green-500' : 'bg-blue-500'
+                          } animate-pulse`}
                           style={{ width: `${getProgress(delivery)}%` }}
                         />
                       </div>
+                    </td>
+                    <td className="px-2 py-2 text-gray-600 whitespace-nowrap text-center font-semibold text-blue-600 bg-blue-50">
+                      {delivery.containerMontadoAt ? new Date(delivery.containerMontadoAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}
                     </td>
                     <td className="px-2 py-2 text-gray-700 whitespace-nowrap text-center">
                       {delivery.horarioChegada ? new Date(delivery.horarioChegada).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}

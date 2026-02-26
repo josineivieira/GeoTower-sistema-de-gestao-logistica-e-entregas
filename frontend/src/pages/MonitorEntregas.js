@@ -80,19 +80,43 @@ const MonitorEntregas = () => {
     byDriver: 0
   });
 
-  // helper para cores de cartão
+  // Semantic color map for dashboard visibility
   const cardColors = {
-    PROGRAMADAS: 'from-blue-400 to-blue-600 text-white border-blue-700',
-    AGENDADO: 'from-gray-200 to-gray-400 text-gray-800 border-gray-500',
-    'CONTAINER MONTADO': 'from-pink-400 to-pink-600 text-white border-pink-700',
-    'A CAMINHO DO CLIENTE': 'from-green-400 to-green-600 text-white border-green-700',
-    'AGUARDANDO DESOVA': 'from-yellow-300 to-yellow-500 text-gray-800 border-yellow-600',
-    'EM DESOVA': 'from-orange-300 to-orange-500 text-gray-800 border-orange-600',
-    'ANEXANDO DOCUMENTOS FINAIS': 'from-indigo-300 to-indigo-500 text-white border-indigo-700',
-    ENTREGUE: 'from-teal-400 to-teal-600 text-white border-teal-700',
-    CANCELADO: 'from-red-400 to-red-600 text-white border-red-700',
-    MOTORISTAS: 'from-purple-300 to-purple-500 text-white border-purple-700',
-    default: 'from-gray-100 to-gray-200 text-gray-800 border-gray-400'
+    // Programadas = Azul
+    PROGRAMADAS: 'from-blue-500 to-blue-700 text-white border-blue-800',
+    // Em andamento = Amarelo
+    AGENDADO: 'from-yellow-400 to-yellow-600 text-gray-900 border-yellow-700',
+    'A CAMINHO DO CLIENTE': 'from-yellow-400 to-yellow-600 text-gray-900 border-yellow-700',
+    'CONTAINER MONTADO': 'from-yellow-400 to-yellow-600 text-gray-900 border-yellow-700',
+    // Em desova = Roxo
+    'EM DESOVA': 'from-purple-500 to-purple-700 text-white border-purple-800',
+    // Pendência = Laranja
+    'AGUARDANDO DESOVA': 'from-orange-500 to-orange-700 text-white border-orange-800',
+    'ENTREGUE COM PENDENCIA CANHOTO': 'from-orange-500 to-orange-700 text-white border-orange-800',
+    // Documentos = Indigo (pendências)
+    'ANEXANDO DOCUMENTOS FINAIS': 'from-indigo-500 to-indigo-700 text-white border-indigo-800',
+    // Finalizado = Verde
+    ENTREGUE: 'from-green-500 to-green-700 text-white border-green-800',
+    // Problema = Vermelho
+    CANCELADO: 'from-red-500 to-red-700 text-white border-red-800',
+    MOTORISTAS: 'from-purple-600 to-purple-800 text-white border-purple-900',
+    default: 'from-gray-400 to-gray-600 text-white border-gray-700'
+  };
+
+  // Icon map for semantic understanding
+  const statusIcons = {
+    PROGRAMADAS: '🔵',
+    AGENDADO: '🟡',
+    'A CAMINHO DO CLIENTE': '🟡',
+    'CONTAINER MONTADO': '🟡',
+    'EM DESOVA': '🟣',
+    'AGUARDANDO DESOVA': '🟠',
+    'ENTREGUE COM PENDENCIA CANHOTO': '🟠',
+    'ANEXANDO DOCUMENTOS FINAIS': '🟣',
+    ENTREGUE: '🟢',
+    CANCELADO: '🔴',
+    MOTORISTAS: '👥',
+    default: '⚪'
   };
 
   const getCardClasses = (status) => {
@@ -555,15 +579,16 @@ const MonitorEntregas = () => {
           </button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2 mb-6 lg:mb-8">
-          {/* programadas (anteriormente TOTAL) */}
-          <div className={`bg-gradient-to-r rounded-xl shadow-lg p-2 lg:p-4 border-l-4 flex flex-col items-center ${getCardClasses('PROGRAMADAS')} hover:scale-105 transition-transform`}> 
-            <p className="text-xs lg:text-base font-extrabold uppercase tracking-widest mb-1">PROGRAMADAS</p>
-            <p className="text-xl lg:text-3xl font-extrabold drop-shadow">{stats.total}</p>
+        {/* Stats Cards - Semantic Color Palette */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-6 lg:mb-8">
+          {/* programadas */}
+          <div className={`bg-gradient-to-r rounded-xl shadow-xl p-3 lg:p-5 border-l-4 flex flex-col items-center justify-center hover:scale-110 transition-transform cursor-pointer ${getCardClasses('PROGRAMADAS')}`}> 
+            <p className="text-2xl lg:text-4xl mb-2">{statusIcons.PROGRAMADAS}</p>
+            <p className="text-xs lg:text-sm font-extrabold uppercase tracking-widest text-center mb-2">PROGRAMADAS</p>
+            <p className="text-2xl lg:text-4xl font-extrabold drop-shadow">{stats.total}</p>
           </div>
 
-          {/* indicadores por status em ordem definida */}
+          {/* status cards */}
           {(() => {
             const order = [
               'AGENDADO',
@@ -586,15 +611,17 @@ const MonitorEntregas = () => {
             });
             return entries.map(([status, count]) => {
               const label = status.replace(/_/g, ' ');
+              const icon = statusIcons[label] || statusIcons[status] || statusIcons.default;
               return (
                 <div
                   key={status}
-                  className={`bg-gradient-to-r rounded-xl shadow-lg p-2 lg:p-4 border-l-4 flex flex-col items-center ${getCardClasses(status)} hover:scale-105 transition-transform`}
+                  className={`bg-gradient-to-r rounded-xl shadow-xl p-3 lg:p-5 border-l-4 flex flex-col items-center justify-center hover:scale-110 transition-transform cursor-pointer ${getCardClasses(label || status)}`}
                 >
-                  <p className="text-xs lg:text-base font-extrabold uppercase tracking-widest mb-1">
-                    {label}
+                  <p className="text-2xl lg:text-4xl mb-2">{icon}</p>
+                  <p className="text-xs lg:text-sm font-extrabold uppercase tracking-widest text-center mb-2 line-clamp-2">
+                    {label.length > 18 ? label.substring(0, 15) + '...' : label}
                   </p>
-                  <p className="text-xl lg:text-3xl font-extrabold drop-shadow">
+                  <p className="text-2xl lg:text-4xl font-extrabold drop-shadow">
                     {count}
                   </p>
                 </div>
@@ -602,10 +629,11 @@ const MonitorEntregas = () => {
             });
           })()}
 
-          {/* motoristas permanece por último */}
-          <div className="bg-gradient-to-r from-purple-100 to-purple-200 rounded-xl shadow-lg p-2 lg:p-4 border-l-4 border-purple-600 flex flex-col items-center">
-            <p className="text-purple-900 text-xs lg:text-base font-extrabold uppercase tracking-widest mb-1">MOTORISTAS</p>
-            <p className="text-xl lg:text-3xl font-extrabold text-purple-700 drop-shadow">{stats.byDriver}</p>
+          {/* motoristas */}
+          <div className="bg-gradient-to-r from-purple-600 to-purple-800 rounded-xl shadow-xl p-3 lg:p-5 border-l-4 border-purple-900 flex flex-col items-center justify-center hover:scale-110 transition-transform cursor-pointer">
+            <p className="text-2xl lg:text-4xl mb-2">{statusIcons.MOTORISTAS}</p>
+            <p className="text-xs lg:text-sm font-extrabold text-white uppercase tracking-widest text-center mb-2">MOTORISTAS</p>
+            <p className="text-2xl lg:text-4xl font-extrabold text-white drop-shadow">{stats.byDriver}</p>
           </div>
         </div>
 

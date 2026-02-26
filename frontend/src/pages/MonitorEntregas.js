@@ -709,9 +709,9 @@ const MonitorEntregas = () => {
                     className={`border-b border-gray-200 hover:bg-purple-50 transition ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                   >
                     <td className="px-2 py-2 font-semibold text-gray-800 whitespace-nowrap">{delivery.deliveryNumber}</td>
-                    <td className="px-2 py-2 text-gray-700 truncate">{delivery.userName}</td>
-                    <td className="px-2 py-2 text-gray-700 truncate">{delivery.driverName || '-'}</td>
-                    <td className="px-2 py-2 text-gray-700 truncate">{delivery.recebedor || '-'}</td>
+                    <td className="px-2 py-2 text-gray-700">{delivery.userName}</td>
+                    <td className="px-2 py-2 text-gray-700">{delivery.driverName || '-'}</td>
+                    <td className="px-2 py-2 text-gray-700">{delivery.recebedor || '-'}</td>
                     <td className="px-2 py-2">
                       <span className={`px-2 py-1 rounded-full font-bold uppercase tracking-tight text-xs whitespace-nowrap inline-flex items-center justify-center ${getStatusBadge(delivery.status)}`}>
                         {formatStatus(delivery.status)}
@@ -780,28 +780,7 @@ const MonitorEntregas = () => {
                           >
                             <FaEye className="inline mr-2" /> Visualizar
                           </button>
-                          {canEdit() && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  handleEditStart(delivery);
-                                  setOpenMenuId(null);
-                                }}
-                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 border-b border-gray-100"
-                              >
-                                <FaEdit className="inline mr-2" /> Editar
-                              </button>
-                              <button
-                                onClick={() => {
-                                  handleDelete(delivery._id);
-                                  setOpenMenuId(null);
-                                }}
-                                className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                              >
-                                <FaTrash className="inline mr-2" /> Deletar
-                              </button>
-                            </>
-                          )}
+                          {/* only view and download zip in actions, editing/deleting moved elsewhere */}
                           <button
                             onClick={() => {
                               handleDownloadAll(delivery._id);

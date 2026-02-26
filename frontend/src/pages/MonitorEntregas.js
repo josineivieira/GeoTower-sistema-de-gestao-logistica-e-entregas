@@ -387,12 +387,14 @@ const MonitorEntregas = () => {
 
   const normalizeStatusForProgress = (s) => {
     if (!s) return null;
-    // map various completed/alias statuses to the canonical final state
-    if (s === 'ENTREGUE' || s === 'submitted' || s === 'FINALIZADO' || s === 'ENTREGUE_COM_PENDENCIA_CANHOTO') {
+    // unify format: replace underscores, make uppercase, trim
+    const ux = String(s).replace(/_/g, ' ').toUpperCase().trim();
+    // map aliases to canonical
+    if (ux === 'ENTREGUE' || ux === 'SUBMITTED' || ux === 'FINALIZADO' || ux === 'ENTREGUE COM PENDENCIA CANHOTO') {
       return 'ENTREGUE';
     }
-    if (s === 'pending' || s === 'PENDING') return 'A CAMINHO DO CLIENTE';
-    return s;
+    if (ux === 'PENDING' || ux === 'A CAMINHO DO CLIENTE') return 'A CAMINHO DO CLIENTE';
+    return ux;
   };
 
   const getProgress = (delivery) => {
@@ -757,27 +759,22 @@ const MonitorEntregas = () => {
                         <span className="ml-2 px-2 py-1 rounded bg-gray-200 text-gray-700 border border-gray-400 font-bold text-xs">CANCELADO</span>
                       )}
                     </td>
+                    {/* progress cell */}
+                    <td className="px-2 py-2 text-center">
+                      {(() => {
+                        const p = getProgress(delivery);
+                        const colorClass = p === 100 ? 'bg-green-500' : (p >= 66 ? 'bg-yellow-400' : (p >= 33 ? 'bg-indigo-500' : 'bg-gray-300'));
+                        return (
+                          <div className="w-28 h-4 bg-gray-200 rounded-full overflow-hidden relative" title={`${p}%`} aria-label={`Progresso ${p}%`}>
+                            <div className={`${colorClass} h-full`} style={{ width: `${p}%`, transition: 'width 600ms ease' }} />
+                            {p > 0 && p < 100 && <div className="absolute inset-0 pointer-events-none progress-stripes" />}
+                            {p > 0 && p < 100 && <div className="progress-dot-move" />}
+                          </div>
+                        );
+                      })()}
+                    </td>
                     <td className="px-2 py-2 text-gray-600 whitespace-nowrap text-center">
                       {delivery.dataAgendamento ? new Date(delivery.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}
-                    </td>
-                    {/* progress cell moved up to align with header */}
-                    <td className="px-2 py-2 text-center">
-                      <div
-                        className="w-28 h-4 bg-gray-200 rounded-full overflow-hidden relative"
-                        title={`${getProgress(delivery)}%`}
-                        aria-label={`Progresso ${getProgress(delivery)}%`}
-                      >
-                        <div
-                          className={`h-full ${getProgress(delivery) === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
-                          style={{ width: `${getProgress(delivery)}%`, transition: 'width 600ms ease' }}
-                        />
-                        {getProgress(delivery) > 0 && getProgress(delivery) < 100 && (
-                          <div className="absolute inset-0 pointer-events-none progress-stripes" />
-                        )}
-                        {getProgress(delivery) > 0 && getProgress(delivery) < 100 && (
-                          <div className="progress-dot-move" />
-                        )}
-                      </div>
                     </td>
                     <td className="px-2 py-2 text-gray-600 whitespace-nowrap text-center font-semibold text-blue-600 bg-blue-50">
                       {delivery.containerMontadoAt ? new Date(delivery.containerMontadoAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}

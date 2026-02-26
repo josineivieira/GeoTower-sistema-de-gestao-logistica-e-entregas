@@ -197,21 +197,15 @@ table tbody tr td:last-child {
   opacity: 0.9;
 }
 
-.progress-dot-move {
-  position: absolute;
-  top: -6px;
-  right: -10px;
-  width: 10px;
-  height: 10px;
-  background: rgba(255,255,255,0.6);
-  border-radius: 999px;
-  box-shadow: 0 0 6px rgba(0,0,0,0.12);
-  transform: translateX(0);
-  animation: dot-slide 1s ease-in-out infinite;
+/* wave animation for in-progress bar */
+@keyframes wave {
+  0% { background-position: 0 0; }
+  100% { background-position: 100% 0; }
 }
 
-@keyframes dot-slide {
-  0% { transform: translateX(0); opacity: 0.6 }
-  50% { transform: translateX(-6px); opacity: 1 }
-  100% { transform: translateX(0); opacity: 0.6 }
+.progress-wave {
+  background: linear-gradient(90deg, rgba(255,255,255,0.25) 25%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.25) 75%) repeat-x;
+  background-size: 200% 100%;
+  animation: wave 1.2s linear infinite;
+  opacity: 0.9;
 }

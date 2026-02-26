@@ -731,8 +731,8 @@ const MonitorEntregas = () => {
                     <th className="px-2 py-2 text-left font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">MOTORISTA</th>
                     <th className="px-2 py-2 text-left font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">RECEBEDOR</th>
                     <th className="px-2 py-2 text-left font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">STATUS</th>
-                    <th title="andamento da entrega" className="px-2 py-2 text-center font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">ANDAMENTO 🔋</th>
-                    <th className="px-2 py-2 text-left font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">AGENDAMENTO</th>
+                    <th title="progresso da entrega" className="px-2 py-2 text-center font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">PROGRESSO</th>
+                    <th className="px-2 py-2 text-center font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">AGENDAMENTO</th>
                     <th className="px-2 py-2 text-center font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">DT RETIRADA</th>
                     <th className="px-2 py-2 text-center font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">CHEGADA</th>
                     <th className="px-2 py-2 text-center font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">INÍCIO</th>
@@ -768,7 +768,7 @@ const MonitorEntregas = () => {
                           <div className="w-28 h-4 bg-gray-200 rounded-full overflow-hidden relative" title={`${p}%`} aria-label={`Progresso ${p}%`}>
                             <div className={`${colorClass} h-full`} style={{ width: `${p}%`, transition: 'width 600ms ease' }} />
                             {p > 0 && p < 100 && <div className="absolute inset-0 pointer-events-none progress-stripes" />}
-                            {p > 0 && p < 100 && <div className="progress-dot-move" />}
+                            {p > 0 && p < 100 && <div className="absolute inset-0 pointer-events-none progress-wave" />}
                           </div>
                         );
                       })()}

@@ -93,8 +93,20 @@ const MonitorEntregas = () => {
         }
       }
       // Log para debug: mostrar quais filtros estão sendo enviados
-      console.log('🔍 Enviando filtros ao backend:', backendFilters, 'período:', statsPeriod);
-      const response = await adminService.getDeliveries(backendFilters, statsPeriod);
+      // compute periodDate string if needed (DD/MM/YYYY)
+      let periodDate = '';
+      if (statsPeriod && statsPeriod !== 'general') {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        if (statsPeriod === 'yesterday') {
+          today.setDate(today.getDate() - 1);
+        } else if (statsPeriod === 'tomorrow') {
+          today.setDate(today.getDate() + 1);
+        }
+        periodDate = today.toLocaleDateString('pt-BR');
+      }
+      console.log('🔍 Enviando filtros ao backend:', backendFilters, 'período:', statsPeriod, 'data:', periodDate);
+      const response = await adminService.getDeliveries(backendFilters, statsPeriod, periodDate);
       const data = response.data.deliveries || [];
       console.log('📥 Resposta do backend:', data.length, 'entregas');
       setDeliveries(data);

@@ -106,8 +106,8 @@ router.get("/statistics", auth, onlyAdmin, async (req, res) => {
  */
 router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
   try {
-    const { status, q, startDate, endDate, period } = req.query;
-    console.log('📋 GET /admin/deliveries recebido com filtros:', { status, q, startDate, endDate, period });
+    const { status, q, startDate, endDate, period, periodDate } = req.query;
+    console.log('📋 GET /admin/deliveries recebido com filtros:', { status, q, startDate, endDate, period, periodDate });
     
     // SEMPRE busca todas as entregas da base deliveries
     const db = await getDb(req);
@@ -148,40 +148,35 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     console.log(`  ✓ Cruzadas ${deliveriesWithProgramacao.length} entregas com programações`);
 
     // FILTRA por período se fornecido
-    if (period && period !== 'general') {
+    // periodDate tem precedência (vinda do frontend) para respeitar data local
+    let effectiveDate = '';
+    if (periodDate && String(periodDate).trim()) {
+      effectiveDate = String(periodDate).trim();
+      console.log('🗓️  Usando periodDate do cliente:', effectiveDate);
+    } else if (period && period !== 'general') {
       console.log('🗓️  Aplicando filtro de período:', period);
-      
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
-      let targetDate = today;
       if (period === 'yesterday') {
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        targetDate = yesterday;
+        today.setDate(today.getDate() - 1);
       } else if (period === 'tomorrow') {
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        targetDate = tomorrow;
+        today.setDate(today.getDate() + 1);
       }
-      
-      const targetDay = String(targetDate.getDate()).padStart(2, '0');
-      const targetMonth = String(targetDate.getMonth() + 1).padStart(2, '0');
-      const targetYear = targetDate.getFullYear();
-      const datePattern = `${targetDay}/${targetMonth}/${targetYear}`;
-      
-      console.log('📅 Filtrando para data:', datePattern);
-      
+      effectiveDate = today.toLocaleDateString('pt-BR');
+      console.log('   convertido para data efetiva:', effectiveDate);
+    }
+
+    if (effectiveDate) {
+      console.log('📅 Filtrando para data efetiva:', effectiveDate);
       deliveriesWithProgramacao = deliveriesWithProgramacao.filter(d => {
         if (!d.dataAgendamento) return false;
         const progDate = String(d.dataAgendamento).trim();
         const dateOnly = progDate.split(' ')[0]; // Remove horário se houver
-        const match = dateOnly === datePattern;
-        if (match) console.log(`   ✓ "${progDate}" corresponde a ${datePattern}`);
+        const match = dateOnly === effectiveDate;
+        if (match) console.log(`   ✓ "${progDate}" corresponde a ${effectiveDate}`);
         return match;
       });
-      
-      console.log(`  ✓ ${deliveriesWithProgramacao.length} entregas após filtro de período`);
+      console.log(`  ✓ ${deliveriesWithProgramacao.length} entregas após filtro de data`);
     }
 
     // Aplica outros filtros (status, busca)

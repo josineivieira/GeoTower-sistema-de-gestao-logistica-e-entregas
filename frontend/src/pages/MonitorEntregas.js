@@ -3,7 +3,7 @@ import { useAuth } from '../services/authContext';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import { adminService } from '../services/authService';
-import { FaArrowLeft, FaEye, FaDownload, FaSync, FaFilter, FaTimes, FaTrash, FaEdit, FaExclamationTriangle } from 'react-icons/fa';
+import { FaArrowLeft, FaEye, FaDownload, FaSync, FaFilter, FaTimes, FaTrash, FaEdit, FaExclamationTriangle, FaExpand, FaCompress } from 'react-icons/fa';
 import manaConfig from '../config/cities/manaus.json';
 import itajaiConfig from '../config/cities/itajai.json';
 
@@ -69,6 +69,8 @@ const MonitorEntregas = () => {
 
   // Period filter for stats
   const [statsPeriod, setStatsPeriod] = useState('today'); // 'today', 'yesterday', 'tomorrow'
+  // fullscreen state to control display mode
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Stats rápidas
   // total = número de programações retornadas (agendadas)
@@ -109,6 +111,36 @@ const MonitorEntregas = () => {
   const getCardClasses = (status) => {
     return cardColors[status] || cardColors.default;
   };
+
+  // fullscreen helpers
+  const toggleFullscreen = async () => {
+    if (!document.fullscreenElement) {
+      try {
+        await document.documentElement.requestFullscreen();
+      } catch (e) {
+        console.error('Failed to enter fullscreen', e);
+      }
+    } else {
+      await document.exitFullscreen();
+    }
+  };
+
+  useEffect(() => {
+    const onFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    const escHandler = (e) => {
+      if (e.key === 'Escape' && document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+    };
+    window.addEventListener('keydown', escHandler);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      window.removeEventListener('keydown', escHandler);
+    };
+  }, []);
 
   // Carrega entregas
   const loadDeliveries = useCallback(async () => {
@@ -569,7 +601,7 @@ const MonitorEntregas = () => {
         {/* Stats Cards - Semantic Color Palette */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-6 lg:mb-8">
           {/* programadas */}
-          <div className={`bg-gradient-to-r rounded-xl shadow-xl p-3 lg:p-5 border-l-4 flex flex-col items-center justify-center hover:scale-110 transition-transform cursor-pointer ${getCardClasses('PROGRAMADAS')}`}> 
+          <div className={`bg-gradient-to-r rounded-2xl shadow-2xl p-6 lg:p-8 border-l-8 flex flex-col items-center justify-center hover:scale-105 transition-transform duration-300 ease-in-out cursor-pointer ring-4 ring-white ring-opacity-20 ${getCardClasses('PROGRAMADAS')}`}> 
             <p className="text-xs lg:text-sm font-extrabold uppercase tracking-widest text-center mb-2">PROGRAMADAS</p>
             <p className="text-2xl lg:text-4xl font-extrabold drop-shadow">{stats.total}</p>
           </div>
@@ -614,7 +646,7 @@ const MonitorEntregas = () => {
           })()}
 
           {/* motoristas */}
-          <div className="bg-gradient-to-r from-purple-600 to-purple-800 rounded-xl shadow-xl p-3 lg:p-5 border-l-4 border-purple-900 flex flex-col items-center justify-center hover:scale-110 transition-transform cursor-pointer">
+          <div className="bg-gradient-to-r from-purple-600 to-purple-800 rounded-2xl shadow-2xl p-6 lg:p-8 border-l-8 border-purple-900 flex flex-col items-center justify-center hover:scale-105 transition-transform duration-300 ease-in-out cursor-pointer ring-4 ring-white ring-opacity-20">
             <p className="text-xs lg:text-sm font-extrabold text-white uppercase tracking-widest text-center mb-2">MOTORISTAS</p>
             <p className="text-2xl lg:text-4xl font-extrabold text-white drop-shadow">{stats.byDriver}</p>
           </div>
@@ -632,6 +664,15 @@ const MonitorEntregas = () => {
               />
               <span className="text-gray-700 font-semibold">Auto Atualizar</span>
             </label>
+            <div>
+              <button
+                onClick={toggleFullscreen}
+                className="px-4 py-2 rounded-lg bg-indigo-600 text-white shadow hover:bg-indigo-700 flex items-center gap-2 transition-colors"
+              >
+                {isFullscreen ? <FaCompress /> : <FaExpand />}
+                {isFullscreen ? 'Sair Tela Cheia' : 'Tela Cheia'}
+              </button>
+            </div>
             
             {autoRefresh && (
               <div className="flex items-center gap-2">

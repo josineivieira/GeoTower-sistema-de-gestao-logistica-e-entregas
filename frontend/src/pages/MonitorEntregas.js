@@ -93,50 +93,18 @@ const MonitorEntregas = () => {
         }
       }
       // Log para debug: mostrar quais filtros estão sendo enviados
-      console.log('🔍 Enviando filtros ao backend:', backendFilters);
-      const response = await adminService.getDeliveries(backendFilters);
+      console.log('🔍 Enviando filtros ao backend:', backendFilters, 'período:', statsPeriod);
+      const response = await adminService.getDeliveries(backendFilters, statsPeriod);
       const data = response.data.deliveries || [];
       console.log('📥 Resposta do backend:', data.length, 'entregas');
       setDeliveries(data);
       
-      // Calcula a data alvo baseada no período selecionado
-      let entrugasPeriodo = data;
-      
-      if (statsPeriod !== 'general') {
-        const getPeriodDate = () => {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          
-          if (statsPeriod === 'yesterday') {
-            const yesterday = new Date(today);
-            yesterday.setDate(yesterday.getDate() - 1);
-            return yesterday;
-          } else if (statsPeriod === 'tomorrow') {
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            return tomorrow;
-          }
-          return today; // today (padrão)
-        };
-
-        const targetDate = getPeriodDate();
-
-        // Filtra entregas pelo período usando dataAgendamento
-        entrugasPeriodo = data.filter(d => {
-          if (!d.dataAgendamento) return false;
-          const deliveryDate = new Date(d.dataAgendamento);
-          deliveryDate.setHours(0, 0, 0, 0);
-          return deliveryDate.getTime() === targetDate.getTime();
-        });
-      }
-
-      // Calcula stats
-      const submitted = entrugasPeriodo.filter(d => d.status === 'ENTREGUE' || d.status === 'submitted').length;
-      const pending = entrugasPeriodo.filter(d => d.status !== 'ENTREGUE' && d.status !== 'submitted' && d.status !== 'CANCELADO').length;
-      // Corrige indicador de motoristas: conta motoristas distintos
-      const motoristaSet = new Set(entrugasPeriodo.map(d => d.driverName).filter(Boolean));
+      // Calcula stats com base nos dados retornados
+      const submitted = data.filter(d => d.status === 'ENTREGUE' || d.status === 'submitted').length;
+      const pending = data.filter(d => d.status !== 'ENTREGUE' && d.status !== 'submitted' && d.status !== 'CANCELADO').length;
+      const motoristaSet = new Set(data.map(d => d.driverName).filter(Boolean));
       setStats({
-        total: entrugasPeriodo.length,
+        total: data.length,
         submitted,
         pending,
         byDriver: motoristaSet.size
@@ -233,38 +201,8 @@ const MonitorEntregas = () => {
       });
     }
 
-    // additional period-based filtering according to statsPeriod buttons
-    if (statsPeriod && statsPeriod !== 'general') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (statsPeriod === 'today') {
-        // show deliveries scheduled exactly for today
-        filtered = filtered.filter(d => {
-          if (!d.dataAgendamento) return false;
-          const dt = new Date(d.dataAgendamento);
-          dt.setHours(0, 0, 0, 0);
-          return dt.getTime() === today.getTime();
-        });
-      } else if (statsPeriod === 'tomorrow') {
-        const tom = new Date(today);
-        tom.setDate(tom.getDate() + 1);
-        filtered = filtered.filter(d => {
-          if (!d.dataAgendamento) return false;
-          const dt = new Date(d.dataAgendamento);
-          dt.setHours(0, 0, 0, 0);
-          return dt.getTime() === tom.getTime();
-        });
-      } else if (statsPeriod === 'yesterday') {
-        const yest = new Date(today);
-        yest.setDate(yest.getDate() - 1);
-        filtered = filtered.filter(d => {
-          if (!d.dataAgendamento) return false;
-          const dt = new Date(d.dataAgendamento);
-          dt.setHours(0, 0, 0, 0);
-          return dt.getTime() === yest.getTime();
-        });
-      }
-    }
+    // additional period-based filtering já é feito no backend
+    // (quando statsPeriod é enviado, o backend filtra por ProgramacaoEntrega)
 
     setFilteredDeliveries(filtered);
   }, [deliveries, filters, sortBy, sortDir, statsPeriod]);

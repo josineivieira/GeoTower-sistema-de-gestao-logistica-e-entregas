@@ -100,15 +100,75 @@ router.get("/statistics", auth, onlyAdmin, async (req, res) => {
  * filtros:
  *  - status=draft|submitted|all
  *  - q=texto
+ *  - period=today|yesterday|tomorrow (filtra ProgramacaoEntrega por data)
  * 
  * Consolida automaticamente arquivos das duas pastas de uploads
  */
 router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
   try {
-    const { status, q, startDate, endDate } = req.query;
-    console.log('📋 GET /admin/deliveries recebido com filtros:', { status, q, startDate, endDate });
+    const { status, q, startDate, endDate, period } = req.query;
+    console.log('📋 GET /admin/deliveries recebido com filtros:', { status, q, startDate, endDate, period });
     
-    // Debug: mostra total de entregas disponíveis (deve usar db com await, não mockdb direto)
+    // Se period é selecionado, filtra APENAS por ProgramacaoEntrega
+    if (period && period !== 'general') {
+      console.log('🗓️  Filtrando por período:', period);
+      
+      const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
+      
+      // Calcula a data alvo
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      let targetDate = today;
+      if (period === 'yesterday') {
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        targetDate = yesterday;
+      } else if (period === 'tomorrow') {
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        targetDate = tomorrow;
+      }
+      
+      // Formata a data como string (DD/MM/YYYY) para comparar com dataAgendamento
+      const dayStr = String(targetDate.getDate()).padStart(2, '0');
+      const monthStr = String(targetDate.getMonth() + 1).padStart(2, '0');
+      const yearStr = targetDate.getFullYear();
+      const datePattern = `${dayStr}/${monthStr}/${yearStr}`;
+      
+      console.log('📅 Buscando ProgramacaoEntrega para data:', datePattern);
+      
+      // Busca programações que correspondem à data
+      let programacoes = await ProgramacaoEntrega.find({});
+      
+      // Filtra por data usando regex para flexibilidade
+      programacoes = programacoes.filter(p => {
+        const progDate = String(p.dataAgendamento || '').trim();
+        return progDate.includes(dayStr) && progDate.includes(monthStr) && progDate.includes(yearStr);
+      });
+      
+      console.log(`  ✓ Encontradas ${programacoes.length} programações para ${datePattern}`);
+      
+      // Converte ProgramacaoEntrega para formato delivery para compatibilidade com frontend
+      const deliveries = programacoes.map(prog => ({
+        _id: prog._id,
+        deliveryNumber: prog.container || prog.processo,
+        userName: prog.contratado || '',
+        driverName: prog.motorista || '',
+        recebedor: prog.recebedor || '',
+        dataAgendamento: prog.dataAgendamento || '',
+        status: prog.status || 'AGENDADO',
+        documents: {},
+        uploadedFiles: [],
+        hasFiles: false,
+        createdAt: prog.createdAt,
+        observations: prog.observacoes || ''
+      }));
+      
+      return res.json({ deliveries });
+    }
+    
+    // Lógica padrão (quando não há período selecionado)
     const db = await getDb(req);
     const allDeliveries = await db.find("deliveries", {});
     console.log('  ℹ️  Total de entregas na DB:', allDeliveries ? allDeliveries.length : 0);

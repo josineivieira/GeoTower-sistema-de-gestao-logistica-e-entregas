@@ -170,6 +170,44 @@ const MotoristaManagement = () => {
     return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
   };
 
+  // Convert Excel serial date to YYYY-MM-DD string
+  const excelDateToString = (val) => {
+    if (!val) return null;
+    // If already a string in date format, return normalized
+    if (typeof val === 'string') {
+      const match = val.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})|\d{4}-\d{2}-\d{2}/);
+      if (match) {
+        if (val.includes('/')) {
+          // DD/MM/YYYY or MM/DD/YYYY - assume DD/MM/YYYY (Brazil)
+          const parts = val.split('/');
+          return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        } else {
+          return val; // already YYYY-MM-DD
+        }
+      }
+      return null;
+    }
+    // If it's a number (Excel serial)
+    if (typeof val === 'number') {
+      // Excel epoch: Jan 1, 1900 = 1
+      // JavaScript epoch: Jan 1, 1970 = 0
+      const excelEpoch = new Date(1900, 0, 1);
+      const date = new Date(excelEpoch.getTime() + (val - 1) * 86400000);
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    // If it's a Date object
+    if (val instanceof Date) {
+      const yyyy = val.getFullYear();
+      const mm = String(val.getMonth() + 1).padStart(2, '0');
+      const dd = String(val.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    return null;
+  };
+
   // Format Telefone
   const formatPhoneData = (value) => {
     const digits = String(value || '').replace(/\D/g, '');
@@ -256,7 +294,12 @@ const MotoristaManagement = () => {
         rowArr.forEach((cell, col) => {
           const field = colToField[col];
           if (field) {
-            out[field] = cell;
+            // Convert dates for specific fields
+            if (['expCadastroMotorista', 'expCadastroCavalo', 'expCadastroCarreta'].includes(field)) {
+              out[field] = excelDateToString(cell);
+            } else {
+              out[field] = cell;
+            }
           }
         });
         return out;
@@ -313,13 +356,13 @@ const MotoristaManagement = () => {
             cpf: cpfFormatted,
             vinculo: vinculo,
             rastreador: m.rastreador ? m.rastreador.toString().trim() : '-',
-            expCadastroMotorista: m.expCadastroMotorista ? m.expCadastroMotorista : null,
+            expCadastroMotorista: m.expCadastroMotorista || null,
             cavalo: m.cavalo ? m.cavalo.toString().trim() : '',
             rastreadorCavalo: m.rastreadorCavalo ? m.rastreadorCavalo.toString().trim() : '',
-            expCadastroCavalo: m.expCadastroCavalo ? m.expCadastroCavalo : null,
+            expCadastroCavalo: m.expCadastroCavalo || null,
             carreta: m.carreta ? m.carreta.toString().trim() : '',
             rastreadorCarreta: m.rastreadorCarreta ? m.rastreadorCarreta.toString().trim() : '',
-            expCadastroCarreta: m.expCadastroCarreta ? m.expCadastroCarreta : null,
+            expCadastroCarreta: m.expCadastroCarreta || null,
             telefone: telefoneFormatted,
             observacoes: m.observacoes ? m.observacoes.toString().trim() : ''
           };

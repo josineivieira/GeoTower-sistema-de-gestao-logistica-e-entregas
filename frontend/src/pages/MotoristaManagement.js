@@ -203,10 +203,17 @@ const MotoristaManagement = () => {
         return out;
       });
 
-      // send each to backend
+      // send each to backend. update if CPF already exists
+      const existing = (await adminService.getMotoristas()).data.motoristas || [];
+      const normalizeCpf = s => String(s || '').replace(/\D/g, '');
       for (const m of mapped) {
         try {
-          await adminService.createMotorista(m);
+          const match = existing.find(e => normalizeCpf(e.cpf) === normalizeCpf(m.cpf));
+          if (match) {
+            await adminService.updateMotorista(match._id, m);
+          } else {
+            await adminService.createMotorista(m);
+          }
         } catch (err) {
           console.warn('Erro importar linha', m, err);
         }

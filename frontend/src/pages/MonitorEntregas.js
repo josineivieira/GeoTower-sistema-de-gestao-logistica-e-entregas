@@ -146,26 +146,19 @@ const MonitorEntregas = () => {
 
   // Semantic color map for dashboard visibility - Elegant & Subtle Professional Palette
   const cardColors = {
-    // Programadas = Slate/Gray subtle
-    PROGRAMADAS: 'from-slate-400 to-slate-500 text-white border-slate-600',
-    // Em andamento/agendamento = Sky Blue subtle
-    AGENDADO: 'from-sky-400 to-blue-400 text-white border-sky-500',
-    'A CAMINHO DO CLIENTE': 'from-sky-400 to-blue-400 text-white border-sky-500',
-    'CONTAINER MONTADO': 'from-sky-400 to-blue-400 text-white border-sky-500',
-    // Em desova = Lilac/Purple subtle
-    'EM DESOVA': 'from-purple-300 to-purple-400 text-gray-800 border-purple-500',
-    // Pendência = Amber/Orange subtle
-    'AGUARDANDO DESOVA': 'from-amber-300 to-orange-400 text-gray-800 border-amber-500',
-    'ENTREGUE COM PENDENCIA CANHOTO': 'from-amber-300 to-orange-400 text-gray-800 border-amber-500',
-    // Documentos = Rose subtle
-    'ANEXANDO DOCUMENTOS FINAIS': 'from-rose-300 to-pink-400 text-gray-800 border-rose-500',
-    // Finalizado = Mint/Emerald subtle
-    ENTREGUE: 'from-emerald-300 to-teal-400 text-gray-800 border-emerald-500',
-    // Problema = Warm gray
-    CANCELADO: 'from-stone-400 to-gray-500 text-white border-stone-600',
-    // Motoristas = Indigo/Blue subtle
-    MOTORISTAS: 'from-indigo-300 to-blue-400 text-gray-800 border-indigo-500',
-    default: 'from-gray-400 to-gray-500 text-white border-gray-600'
+    // All cards using uniform gray gradient
+    PROGRAMADAS: 'from-slate-300 to-slate-500 text-white border-slate-600',
+    AGENDADO: 'from-slate-300 to-slate-500 text-white border-slate-600',
+    'A CAMINHO DO CLIENTE': 'from-slate-300 to-slate-500 text-white border-slate-600',
+    'CONTAINER MONTADO': 'from-slate-300 to-slate-500 text-white border-slate-600',
+    'EM DESOVA': 'from-slate-300 to-slate-500 text-white border-slate-600',
+    'AGUARDANDO DESOVA': 'from-slate-300 to-slate-500 text-white border-slate-600',
+    'ENTREGUE COM PENDENCIA CANHOTO': 'from-slate-300 to-slate-500 text-white border-slate-600',
+    'ANEXANDO DOCUMENTOS FINAIS': 'from-slate-300 to-slate-500 text-white border-slate-600',
+    ENTREGUE: 'from-slate-300 to-slate-500 text-white border-slate-600',
+    CANCELADO: 'from-slate-300 to-slate-500 text-white border-slate-600',
+    MOTORISTAS: 'from-slate-300 to-slate-500 text-white border-slate-600',
+    default: 'from-slate-300 to-slate-500 text-white border-slate-600'
   };
 
   // Icon map for each status

@@ -214,22 +214,32 @@ const MotoristaManagement = () => {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
 
-      const normalize = s => String(s || '').toLowerCase().trim();
+      // normalizes header text: lowercase, trim, remove dots/spaces, singularize plurals
+      const normalize = s => {
+        let t = String(s || '').toLowerCase().trim();
+        // remove punctuation and extra spaces
+        t = t.replace(/[\.\-_]/g, '').replace(/\s+/g, ' ');
+        // singularize (naive): drop trailing s if not part of plural word like 'gps'
+        if (t.endsWith('s') && !t.endsWith('rs') && !t.endsWith('is')) {
+          t = t.slice(0, -1);
+        }
+        return t;
+      };
       const headersMap = {
-        transportadora: ['transportadora','empresa','contratado'],
+        transportadora: ['transportadora','transportadoras','empresa','contratado','contratada'],
         nome: ['nome','motorista'],
-        cpf: ['cpf'],
+        cpf: ['cpf','c.p.f'],
         vinculo: ['vínculo','vinculo'],
         rastreador: ['rastreador'],
-        expCadastroMotorista: ['exp cadastro motorista','expcadastromotorista','exp cadastro','exp motoristas'],
-        cavalo: ['cavalo','cavalo'],
+        expCadastroMotorista: ['exp cadastro motorista','expcadastromotorista','exp cadastro','exp motoristas','exp cadastramento motorista'],
+        cavalo: ['cavalo'],
         rastreadorCavalo: ['rastreadorcavalo','rastreador cavalo'],
         expCadastroCavalo: ['exp cadastro cavalo','expcadastrcavalo'],
         carreta: ['carreta'],
         rastreadorCarreta: ['rastreadorcarreta','rastreador carreta'],
         expCadastroCarreta: ['exp cadastro carreta','expcadastrcarreta'],
         telefone: ['telefone','tel'],
-        observacoes: ['observacoes','observações','obs']
+        observacoes: ['observacoes','observações','obs','observ']
       };
 
       // map row keys to form keys

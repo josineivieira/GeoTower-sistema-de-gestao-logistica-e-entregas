@@ -3,7 +3,7 @@ import { useAuth } from '../services/authContext';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import { adminService } from '../services/authService';
-import { FaArrowLeft, FaEye, FaDownload, FaSync, FaFilter, FaTimes, FaTrash, FaEdit, FaExclamationTriangle, FaExpand, FaCompress } from 'react-icons/fa';
+import { FaArrowLeft, FaEye, FaDownload, FaSync, FaFilter, FaTimes, FaTrash, FaEdit, FaExclamationTriangle } from 'react-icons/fa';
 import manaConfig from '../config/cities/manaus.json';
 import itajaiConfig from '../config/cities/itajai.json';
 
@@ -69,8 +69,6 @@ const MonitorEntregas = () => {
 
   // Period filter for stats
   const [statsPeriod, setStatsPeriod] = useState('today'); // 'today', 'yesterday', 'tomorrow'
-  // fullscreen state to control display mode
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Stats rápidas
   // total = número de programações retornadas (agendadas)
@@ -84,25 +82,25 @@ const MonitorEntregas = () => {
 
   // Semantic color map for dashboard visibility
   const cardColors = {
-    // Programadas = Azul
-    PROGRAMADAS: 'from-blue-500 to-blue-700 text-white border-blue-800',
-    // Em andamento = Amarelo
-    AGENDADO: 'from-yellow-400 to-yellow-600 text-gray-900 border-yellow-700',
-    'A CAMINHO DO CLIENTE': 'from-yellow-400 to-yellow-600 text-gray-900 border-yellow-700',
-    'CONTAINER MONTADO': 'from-yellow-400 to-yellow-600 text-gray-900 border-yellow-700',
-    // Em desova = Roxo
-    'EM DESOVA': 'from-purple-500 to-purple-700 text-white border-purple-800',
-    // Pendência = Laranja
-    'AGUARDANDO DESOVA': 'from-orange-500 to-orange-700 text-white border-orange-800',
-    'ENTREGUE COM PENDENCIA CANHOTO': 'from-orange-500 to-orange-700 text-white border-orange-800',
-    // Documentos = Indigo (pendências)
-    'ANEXANDO DOCUMENTOS FINAIS': 'from-indigo-500 to-indigo-700 text-white border-indigo-800',
-    // Finalizado = Verde
-    ENTREGUE: 'from-green-500 to-green-700 text-white border-green-800',
-    // Problema = Vermelho
-    CANCELADO: 'from-red-500 to-red-700 text-white border-red-800',
-    MOTORISTAS: 'from-purple-600 to-purple-800 text-white border-purple-900',
-    default: 'from-gray-400 to-gray-600 text-white border-gray-700'
+    // Programadas = Azul escuro profissional
+    PROGRAMADAS: 'from-blue-600 to-blue-800 text-white border-blue-900',
+    // Em andamento = Âmbar/Dourado
+    AGENDADO: 'from-amber-500 to-amber-700 text-white border-amber-800',
+    'A CAMINHO DO CLIENTE': 'from-amber-500 to-amber-700 text-white border-amber-800',
+    'CONTAINER MONTADO': 'from-amber-500 to-amber-700 text-white border-amber-800',
+    // Em desova = Índigo profundo
+    'EM DESOVA': 'from-indigo-600 to-indigo-800 text-white border-indigo-900',
+    // Pendência = Laranja escuro
+    'AGUARDANDO DESOVA': 'from-orange-600 to-orange-800 text-white border-orange-900',
+    'ENTREGUE COM PENDENCIA CANHOTO': 'from-orange-600 to-orange-800 text-white border-orange-900',
+    // Documentos = Violeta
+    'ANEXANDO DOCUMENTOS FINAIS': 'from-violet-600 to-violet-800 text-white border-violet-900',
+    // Finalizado = Verde escuro
+    ENTREGUE: 'from-green-600 to-green-800 text-white border-green-900',
+    // Problema = Vermelho escuro
+    CANCELADO: 'from-red-600 to-red-800 text-white border-red-900',
+    MOTORISTAS: 'from-slate-600 to-slate-800 text-white border-slate-900',
+    default: 'from-gray-600 to-gray-800 text-white border-gray-900'
   };
 
   // (icons removed - only colors used now)
@@ -112,7 +110,7 @@ const MonitorEntregas = () => {
     return cardColors[status] || cardColors.default;
   };
 
-  // fullscreen helpers
+  // fullscreen helpers - keyboard shortcut Ctrl+Shift+F
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement) {
       try {
@@ -126,18 +124,18 @@ const MonitorEntregas = () => {
   };
 
   useEffect(() => {
-    const onFsChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', onFsChange);
     const escHandler = (e) => {
       if (e.key === 'Escape' && document.fullscreenElement) {
         document.exitFullscreen();
       }
+      // Ctrl+Shift+F para fullscreen
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+      }
     };
     window.addEventListener('keydown', escHandler);
     return () => {
-      document.removeEventListener('fullscreenchange', onFsChange);
       window.removeEventListener('keydown', escHandler);
     };
   }, []);
@@ -664,15 +662,6 @@ const MonitorEntregas = () => {
               />
               <span className="text-gray-700 font-semibold">Auto Atualizar</span>
             </label>
-            <div>
-              <button
-                onClick={toggleFullscreen}
-                className="px-4 py-2 rounded-lg bg-indigo-600 text-white shadow hover:bg-indigo-700 flex items-center gap-2 transition-colors"
-              >
-                {isFullscreen ? <FaCompress /> : <FaExpand />}
-                {isFullscreen ? 'Sair Tela Cheia' : 'Tela Cheia'}
-              </button>
-            </div>
             
             {autoRefresh && (
               <div className="flex items-center gap-2">

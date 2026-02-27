@@ -1,7 +1,20 @@
 .motorista-management {
-  max-width: 1200px;
+  width: 100%;
+  max-width: none;
   margin: 0 auto;
   padding: 20px;
+  min-height: 100vh;
+}
+
+/* make table container expand to full viewport height if needed */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* ensure filters and buttons wrap gracefully */
+.motorista-header {
+  flex-wrap: wrap;
 }
 
 .motorista-header {
@@ -131,6 +144,22 @@
 .motorista-table tbody td {
   padding: 16px;
   color: #374151;
+}
+
+/* responsive adjustments */
+@media (max-width: 768px) {
+  .motorista-table thead th {
+    padding: 8px;
+    font-size: 12px;
+  }
+  .motorista-table tbody td {
+    padding: 8px;
+    font-size: 12px;
+  }
+  .create-button, .back-button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
 }
 
 .motorista-table td.processo {

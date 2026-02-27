@@ -80,27 +80,27 @@ const MonitorEntregas = () => {
     byDriver: 0
   });
 
-  // Semantic color map for dashboard visibility
+  // Semantic color map for dashboard visibility - Cores profissionais alinhadas com identidade da empresa
   const cardColors = {
-    // Programadas = Azul escuro profissional
-    PROGRAMADAS: 'from-blue-600 to-blue-800 text-white border-blue-900',
-    // Em andamento = Âmbar/Dourado
-    AGENDADO: 'from-amber-500 to-amber-700 text-white border-amber-800',
-    'A CAMINHO DO CLIENTE': 'from-amber-500 to-amber-700 text-white border-amber-800',
-    'CONTAINER MONTADO': 'from-amber-500 to-amber-700 text-white border-amber-800',
-    // Em desova = Índigo profundo
-    'EM DESOVA': 'from-indigo-600 to-indigo-800 text-white border-indigo-900',
-    // Pendência = Laranja escuro
-    'AGUARDANDO DESOVA': 'from-orange-600 to-orange-800 text-white border-orange-900',
-    'ENTREGUE COM PENDENCIA CANHOTO': 'from-orange-600 to-orange-800 text-white border-orange-900',
-    // Documentos = Violeta
-    'ANEXANDO DOCUMENTOS FINAIS': 'from-violet-600 to-violet-800 text-white border-violet-900',
-    // Finalizado = Verde escuro
-    ENTREGUE: 'from-green-600 to-green-800 text-white border-green-900',
+    // Programadas = Azul corporativo
+    PROGRAMADAS: 'from-blue-700 to-blue-900 text-white border-blue-950 shadow-lg',
+    // Em andamento = Âmbar/Ouro profissional
+    AGENDADO: 'from-yellow-600 to-amber-700 text-white border-amber-900 shadow-lg',
+    'A CAMINHO DO CLIENTE': 'from-yellow-600 to-amber-700 text-white border-amber-900 shadow-lg',
+    'CONTAINER MONTADO': 'from-yellow-600 to-amber-700 text-white border-amber-900 shadow-lg',
+    // Em desova = Púrpura corporativo
+    'EM DESOVA': 'from-purple-600 to-purple-800 text-white border-purple-900 shadow-lg',
+    // Pendência = Laranja queimado
+    'AGUARDANDO DESOVA': 'from-orange-600 to-red-700 text-white border-red-900 shadow-lg',
+    'ENTREGUE COM PENDENCIA CANHOTO': 'from-orange-600 to-red-700 text-white border-red-900 shadow-lg',
+    // Documentos = Teal/Turquesa profissional
+    'ANEXANDO DOCUMENTOS FINAIS': 'from-cyan-600 to-teal-700 text-white border-teal-900 shadow-lg',
+    // Finalizado = Verde escuro forte
+    ENTREGUE: 'from-green-700 to-green-900 text-white border-green-950 shadow-lg',
     // Problema = Vermelho escuro
-    CANCELADO: 'from-red-600 to-red-800 text-white border-red-900',
-    MOTORISTAS: 'from-slate-600 to-slate-800 text-white border-slate-900',
-    default: 'from-gray-600 to-gray-800 text-white border-gray-900'
+    CANCELADO: 'from-red-700 to-red-900 text-white border-red-950 shadow-lg',
+    MOTORISTAS: 'from-slate-700 to-slate-900 text-white border-slate-950 shadow-lg',
+    default: 'from-gray-700 to-gray-900 text-white border-gray-950 shadow-lg'
   };
 
   // (icons removed - only colors used now)
@@ -545,10 +545,10 @@ const MonitorEntregas = () => {
           <button
             onClick={loadDeliveries}
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-2 lg:py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-xl shadow-lg hover:from-purple-600 hover:to-purple-800 disabled:opacity-50 font-bold text-lg transition"
+            title="Atualizar dados"
+            className="flex items-center gap-2 px-3 py-1 lg:px-4 lg:py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg shadow-sm hover:shadow-md disabled:opacity-50 font-semibold text-sm transition"
           >
-            <FaSync className={loading ? 'animate-spin' : ''} />
-            {loading ? 'ATUALIZANDO...' : 'ATUALIZAR'}
+            <FaSync className={loading ? 'animate-spin' : ''} size={16} />
           </button>
         </div>
 
@@ -778,7 +778,7 @@ const MonitorEntregas = () => {
                     <th className="px-2 py-2 text-center font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">CHEGADA</th>
                     <th className="px-2 py-2 text-center font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">INÍCIO</th>
                     <th className="px-2 py-2 text-center font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">FIM</th>
-                    <th title="🟢 completo / 🔴 pendente" className="px-2 py-2 text-center font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">DOCS 🟢🔴</th>
+                    <th title="Status dos documentos: completo ou pendente" className="px-2 py-2 text-center font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">DOCS</th>
                     <th className="px-2 py-2 text-center font-extrabold text-gray-900 uppercase tracking-tight whitespace-nowrap">AÇÕES</th>
                   </tr>
                 </thead>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminService } from '../services/authService';
 import { useAuth } from '../services/authContext';
-import { FaArrowLeft, FaPlus, FaEdit, FaTrash, FaFileDownload, FaFileExcel } from 'react-icons/fa';
+import { FaArrowLeft, FaPlus, FaEdit, FaTrash, FaFileDownload, FaFileExcel, FaSort, FaSortUp, FaSortDown, FaFilter } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import '../styles/MotoristaManagement.css';
 
@@ -14,12 +14,19 @@ const ProgramacaoManagement = () => {
   const isGeoMar = () => user?.role === 'geomar';
   const canEdit = () => !isGeoMar();
   const [programacoes, setProgramacoes] = useState([]);
+  const [filteredProgramacoes, setFilteredProgramacoes] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
+
+  // filtro e ordenação
+  const [filters, setFilters] = useState({ search: '', status: 'all', startDate: '', endDate: '' });
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
 
   const [formData, setFormData] = useState({
     processo: '',
@@ -65,12 +72,61 @@ const ProgramacaoManagement = () => {
     try {
       setLoading(true);
       const response = await adminService.getProgramacoes();
-      setProgramacoes(response.data.programacoes || []);
+      const data = response.data.programacoes || [];
+      setProgramacoes(data);
     } catch (err) {
       showToast('Erro ao carregar programações', 'error');
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // recalcula filtrado sempre que dados, filtros ou ordenação mudam
+  useEffect(() => {
+    let data = [...programacoes];
+    // filtro de busca livre (processo, recebedor, container, motorista)
+    if (filters.search) {
+      const term = filters.search.toLowerCase();
+      data = data.filter(p =>
+        (p.processo || '').toLowerCase().includes(term) ||
+        (p.recebedor || '').toLowerCase().includes(term) ||
+        (p.container || '').toLowerCase().includes(term) ||
+        (p.motorista || '').toLowerCase().includes(term)
+      );
+    }
+    if (filters.status && filters.status !== 'all') {
+      data = data.filter(p => p.status === filters.status);
+    }
+    if (filters.startDate) {
+      const sd = new Date(filters.startDate);
+      data = data.filter(p => p.dataAgendamento && new Date(p.dataAgendamento) >= sd);
+    }
+    if (filters.endDate) {
+      const ed = new Date(filters.endDate);
+      data = data.filter(p => p.dataAgendamento && new Date(p.dataAgendamento) <= ed);
+    }
+    // ordenação
+    if (sortBy) {
+      data.sort((a, b) => {
+        let va = a[sortBy] || '';
+        let vb = b[sortBy] || '';
+        if (typeof va === 'string') va = va.toLowerCase();
+        if (typeof vb === 'string') vb = vb.toLowerCase();
+        if (va < vb) return sortDir === 'asc' ? -1 : 1;
+        if (va > vb) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    setFilteredProgramacoes(data);
+  }, [programacoes, filters, sortBy, sortDir]);
+
+  const handleSort = (col) => {
+    if (sortBy === col) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(col);
+      setSortDir('asc');
     }
   };
 
@@ -472,7 +528,14 @@ const ProgramacaoManagement = () => {
           <FaArrowLeft /> Voltar
         </button>
         <h1>📅 Programação de Entregas {isGeoMar() && <span style={{ fontSize: '0.7em', backgroundColor: '#fef3c7', color: '#92400e', padding: '4px 8px', borderRadius: '4px', marginLeft: '10px' }}>👁️ Visualização</span>}</h1>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="create-button"
+            style={{ backgroundColor: '#9ca3af' }}
+          >
+            <FaFilter /> Filtros
+          </button>
           <button 
             onClick={() => {
               if (isGeoMar()) {
@@ -503,7 +566,56 @@ const ProgramacaoManagement = () => {
           </button>
         </div>
       </div>
-
+      {showFilters && (
+        <div className="bg-white rounded-xl shadow-lg p-4 mb-6 border border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Busca livre</label>
+              <input
+                type="text"
+                value={filters.search}
+                onChange={e => setFilters({...filters, search: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded"
+                placeholder="Processo, recebedor, motorista..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+              <select
+                value={filters.status}
+                onChange={e => setFilters({...filters, status: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded"
+              >
+                <option value="all">Todos</option>
+                <option value="AGENDADO">AGENDADO</option>
+                <option value="EM_ROTA">EM_ROTA</option>
+                <option value="ENTREGUE">ENTREGUE</option>
+                <option value="CANCELADO">CANCELADO</option>
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">De</label>
+                <input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={e => setFilters({...filters, startDate: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Até</label>
+                <input
+                  type="date"
+                  value={filters.endDate}
+                  onChange={e => setFilters({...filters, endDate: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {toast && (
         <div className={`toast ${toast.type}`}>
           {toast.message}
@@ -514,21 +626,35 @@ const ProgramacaoManagement = () => {
         <div className="loading">Carregando programações...</div>
       ) : (
         <div className="table-container">
-          <table className="motorista-table">
+          <table className="motorista-table w-full">
             <thead>
               <tr>
-                <th>Processo</th>
-                <th>Recebedor</th>
-                <th>Container</th>
-                <th>Data</th>
-                <th>Contratado</th>
-                <th>Motorista</th>
-                <th>Status</th>
-                <th>Ações</th>
+                <th onClick={() => handleSort('processo')} className="cursor-pointer select-none">
+                  Processo {sortBy==='processo' ? (sortDir==='asc'?<FaSortUp/>:<FaSortDown/>) : <FaSort />}
+                </th>
+                <th onClick={() => handleSort('recebedor')} className="cursor-pointer select-none">
+                  Recebedor {sortBy==='recebedor' ? (sortDir==='asc'?<FaSortUp/>:<FaSortDown/>) : <FaSort />}
+                </th>
+                <th onClick={() => handleSort('container')} className="cursor-pointer select-none">
+                  Container {sortBy==='container' ? (sortDir==='asc'?<FaSortUp/>:<FaSortDown/>) : <FaSort />}
+                </th>
+                <th onClick={() => handleSort('dataAgendamento')} className="cursor-pointer select-none">
+                  Data {sortBy==='dataAgendamento' ? (sortDir==='asc'?<FaSortUp/>:<FaSortDown/>) : <FaSort />}
+                </th>
+                <th onClick={() => handleSort('contratado')} className="cursor-pointer select-none">
+                  Contratado {sortBy==='contratado' ? (sortDir==='asc'?<FaSortUp/>:<FaSortDown/>) : <FaSort />}
+                </th>
+                <th onClick={() => handleSort('motorista')} className="cursor-pointer select-none">
+                  Motorista {sortBy==='motorista' ? (sortDir==='asc'?<FaSortUp/>:<FaSortDown/>) : <FaSort />}
+                </th>
+                <th onClick={() => handleSort('status')} className="cursor-pointer select-none">
+                  Status {sortBy==='status' ? (sortDir==='asc'?<FaSortUp/>:<FaSortDown/>) : <FaSort />}
+                </th>
+                <th className="text-center">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {programacoes.map((prog) => (
+              {filteredProgramacoes.map((prog) => (
                 <tr key={prog._id}>
                   <td className="processo">{prog.processo}</td>
                   <td>{prog.recebedor}</td>
@@ -536,7 +662,6 @@ const ProgramacaoManagement = () => {
                   <td>
                     {prog.dataAgendamento
                       ? (() => {
-                          // Exibe a data exatamente como salva, sem ajuste de fuso
                           const [date, time] = prog.dataAgendamento.split('T');
                           const [year, month, day] = date.split('-');
                           return `${day}/${month}/${year}${time ? ', ' + time : ''}`;

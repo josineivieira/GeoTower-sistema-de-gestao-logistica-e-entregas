@@ -203,7 +203,7 @@ const MotoristaManagement = () => {
     XLSX.writeFile(wb, 'template_motoristas.xlsx');
   };
 
-  // Import Excel
+  // Import Excel with explicit column mapping by index
   const handleImportFile = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -212,56 +212,59 @@ const MotoristaManagement = () => {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      if (raw.length < 2) {
+        throw new Error('Planilha vazia ou sem cabeçalho');
+      }
+      const headerRow = raw[0];
+      const dataRows = raw.slice(1);
 
-      // normalizes header text: lowercase, trim, remove dots/spaces, singularize plurals
       const normalize = s => {
         let t = String(s || '').toLowerCase().trim();
-        // remove punctuation and extra spaces
         t = t.replace(/[\.\-_]/g, '').replace(/\s+/g, ' ');
-        // singularize (naive): drop trailing s if not part of plural word like 'gps'
         if (t.endsWith('s') && !t.endsWith('rs') && !t.endsWith('is')) {
           t = t.slice(0, -1);
         }
         return t;
       };
-      const headersMap = {
-        transportadora: ['transportadora','transportadoras','empresa','contratado','contratada'],
-        nome: ['nome','motorista'],
-        cpf: ['cpf','c.p.f'],
-        vinculo: ['vínculo','vinculo'],
-        rastreador: ['rastreador'],
-        expCadastroMotorista: ['exp cadastro motorista','expcadastromotorista','exp cadastro','exp motoristas','exp cadastramento motorista'],
-        cavalo: ['cavalo'],
-        rastreadorCavalo: ['rastreadorcavalo','rastreador cavalo'],
-        expCadastroCavalo: ['exp cadastro cavalo','expcadastrcavalo','exp cavalo'],
-        carreta: ['carreta'],
-        rastreadorCarreta: ['rastreadorcarreta','rastreador carreta','rast carreta'],
-        expCadastroCarreta: ['exp cadastro carreta','expcadastrcarreta','exp carreta'],
-        telefone: ['telefone','tel'],
-        observacoes: ['observacoes','observações','obs','observ']
-      };
 
-      // map row keys to form keys
-      const mapped = rows.map((r, idx) => {
-        const out = { rowIndex: idx + 2 }; // Excel row number
-        Object.keys(headersMap).forEach(key => {
-          const vals = headersMap[key];
-          const found = Object.keys(r).find(h => vals.includes(normalize(h)));
-          out[key] = found ? r[found] : '';
+      const normalizedHeaders = headerRow.map(normalize);
+      const colToField = normalizedHeaders.map((h, i) => {
+        if (h.includes('transportadora')) return 'transportadora';
+        if (h.includes('nome') || h.includes('motorista')) return 'nome';
+        if (h === 'cpf') return 'cpf';
+        if (h.includes('vinculo')) return 'vinculo';
+        if (h.includes('carreta') && h.includes('rastreador')) return 'rastreadorCarreta';
+        if (h.includes('carreta') && h.includes('exp')) return 'expCadastroCarreta';
+        if (h.includes('carreta')) return 'carreta';
+        if (h.includes('cavalo') && h.includes('rastreador')) return 'rastreadorCavalo';
+        if (h.includes('cavalo') && h.includes('exp')) return 'expCadastroCavalo';
+        if (h.includes('cavalo')) return 'cavalo';
+        if (h.includes('rastreador') && !h.includes('carreta') && !h.includes('cavalo')) return 'rastreador';
+        if (h.includes('exp') && h.includes('cadastro')) return 'expCadastroMotorista';
+        if (h.includes('telefone')) return 'telefone';
+        if (h.includes('observ')) return 'observacoes';
+        return null;
+      });
+
+      const mapped = dataRows.map((rowArr, idx) => {
+        const out = { rowIndex: idx + 2 };
+        rowArr.forEach((cell, col) => {
+          const field = colToField[col];
+          if (field) {
+            out[field] = cell;
+          }
         });
         return out;
       });
 
       // validate and format before sending
-      // map of accepted vínculos (allow 'FROTA' as alias for PRÓPRIO)
       const vinculoMap = {
         proprio: 'PRÓPRIO',
         agregado: 'AGREGADO',
         terceiro: 'TERCEIRO',
         frota: 'PRÓPRIO'
       };
-
       const errors = [];
       const success = [];
 
@@ -271,7 +274,6 @@ const MotoristaManagement = () => {
       
       for (const m of mapped) {
         try {
-          // Validate required fields
           if (!m.transportadora || !m.transportadora.toString().trim()) {
             throw new Error('Transportadora obrigatória');
           }
@@ -285,19 +287,16 @@ const MotoristaManagement = () => {
             throw new Error('Telefone obrigatório');
           }
 
-          // Format CPF
           const cpfFormatted = formatCPFData(m.cpf);
           if (!cpfFormatted) {
             throw new Error(`CPF deve ter 11 dígitos: ${m.cpf}`);
           }
 
-          // Format Telefone
           const telefoneFormatted = formatPhoneData(m.telefone);
           if (!telefoneFormatted) {
             throw new Error(`Telefone deve ter 11 dígitos: ${m.telefone}`);
           }
 
-          // Validate Vinculo
           const rawVinc = (m.vinculo || 'AGREGADO').toString().toLowerCase().trim();
           const vinculo = vinculoMap[rawVinc];
           if (!vinculo) {
@@ -334,7 +333,6 @@ const MotoristaManagement = () => {
         }
       }
 
-      // Show results
       if (errors.length === 0) {
         setToast({ message: `✅ Importação completa! ${success.length} motorista(s) importado(s).`, type: 'success' });
       } else {
@@ -637,6 +635,15 @@ const MotoristaManagement = () => {
                     className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
                   >
                     {editingMotorista ? 'Atualizar' : 'Criar'} Motorista
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({
+                      transportadora: '', nome: '', cpf: '', vinculo: 'AGREGADO', rastreador: '', expCadastroMotorista: '', cavalo: '', rastreadorCavalo: '', expCadastroCavalo: '', carreta: '', rastreadorCarreta: '', expCadastroCarreta: '', telefone: '', observacoes: ''
+                    })}
+                    className="flex-1 px-6 py-2 bg-yellow-300 text-gray-800 rounded-lg hover:bg-yellow-400 transition font-semibold"
+                  >
+                    Limpar campos
                   </button>
                   <button
                     type="button"

@@ -146,25 +146,26 @@ const MonitorEntregas = () => {
 
   // Semantic color map for dashboard visibility
   const cardColors = {
-    // Programadas = Azul escuro profissional
-    PROGRAMADAS: 'from-blue-600 to-blue-800 text-white border-blue-900',
-    // Em andamento = Âmbar/Dourado
-    AGENDADO: 'from-amber-500 to-amber-700 text-white border-amber-800',
-    'A CAMINHO DO CLIENTE': 'from-amber-500 to-amber-700 text-white border-amber-800',
-    'CONTAINER MONTADO': 'from-amber-500 to-amber-700 text-white border-amber-800',
-    // Em desova = Índigo profundo
-    'EM DESOVA': 'from-indigo-600 to-indigo-800 text-white border-indigo-900',
-    // Pendência = Laranja escuro
-    'AGUARDANDO DESOVA': 'from-orange-600 to-orange-800 text-white border-orange-900',
-    'ENTREGUE COM PENDENCIA CANHOTO': 'from-orange-600 to-orange-800 text-white border-orange-900',
-    // Documentos = Violeta
-    'ANEXANDO DOCUMENTOS FINAIS': 'from-violet-600 to-violet-800 text-white border-violet-900',
-    // Finalizado = Verde escuro
-    ENTREGUE: 'from-green-600 to-green-800 text-white border-green-900',
-    // Problema = Vermelho escuro
-    CANCELADO: 'from-red-600 to-red-800 text-white border-red-900',
-    MOTORISTAS: 'from-slate-600 to-slate-800 text-white border-slate-900',
-    default: 'from-gray-600 to-gray-800 text-white border-gray-900'
+    // Programadas = cyan/teal
+    PROGRAMADAS: 'from-cyan-600 to-cyan-800 text-white border-cyan-900',
+    // Em andamento/agendamento = blue-teal gradient
+    AGENDADO: 'from-blue-500 to-teal-600 text-white border-teal-700',
+    'A CAMINHO DO CLIENTE': 'from-blue-500 to-teal-600 text-white border-teal-700',
+    'CONTAINER MONTADO': 'from-blue-500 to-teal-600 text-white border-teal-700',
+    // Em desova = purple
+    'EM DESOVA': 'from-purple-600 to-purple-800 text-white border-purple-900',
+    // Pendência = yellow
+    'AGUARDANDO DESOVA': 'from-yellow-500 to-yellow-700 text-white border-yellow-800',
+    'ENTREGUE COM PENDENCIA CANHOTO': 'from-yellow-500 to-yellow-700 text-white border-yellow-800',
+    // Documentos = pink
+    'ANEXANDO DOCUMENTOS FINAIS': 'from-pink-600 to-pink-800 text-white border-pink-900',
+    // Finalizado = emerald
+    ENTREGUE: 'from-emerald-600 to-emerald-800 text-white border-emerald-900',
+    // Problema = rose
+    CANCELADO: 'from-rose-600 to-rose-800 text-white border-rose-900',
+    // Motoristas = indigo
+    MOTORISTAS: 'from-indigo-600 to-indigo-800 text-white border-indigo-900',
+    default: 'from-gray-500 to-gray-700 text-white border-gray-800'
   };
 
   // (icons removed - only colors used now)

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import { adminService } from '../services/authService';
-import { FaArrowLeft, FaEdit, FaTrash, FaPlus, FaTruck } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaTrash, FaPlus, FaTruck, FaFileExcel } from 'react-icons/fa';
+import * as XLSX from 'xlsx';
 
 const MotoristaManagement = () => {
   const navigate = useNavigate();
@@ -11,6 +12,8 @@ const MotoristaManagement = () => {
   const [toast, setToast] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingMotorista, setEditingMotorista] = useState(null);
+  const [importLoading, setImportLoading] = useState(false);
+
   // Filtros
   const [filters, setFilters] = useState({
     transportadora: '',
@@ -160,6 +163,66 @@ const MotoristaManagement = () => {
     });
   };
 
+  // Import Excel
+  const handleImportFile = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    setImportLoading(true);
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+      const normalize = s => String(s || '').toLowerCase().trim();
+      const headersMap = {
+        transportadora: ['transportadora','empresa','contratado'],
+        nome: ['nome','motorista'],
+        cpf: ['cpf'],
+        vinculo: ['vínculo','vinculo'],
+        rastreador: ['rastreador'],
+        expCadastroMotorista: ['exp cadastro motorista','expcadastromotorista','exp cadastro','exp motoristas'],
+        cavalo: ['cavalo','cavalo'],
+        rastreadorCavalo: ['rastreadorcavalo','rastreador cavalo'],
+        expCadastroCavalo: ['exp cadastro cavalo','expcadastrcavalo'],
+        carreta: ['carreta'],
+        rastreadorCarreta: ['rastreadorcarreta','rastreador carreta'],
+        expCadastroCarreta: ['exp cadastro carreta','expcadastrcarreta'],
+        telefone: ['telefone','tel'],
+        observacoes: ['observacoes','observações','obs']
+      };
+
+      // map row keys to form keys
+      const mapped = rows.map(r => {
+        const out = {};
+        Object.keys(headersMap).forEach(key => {
+          const vals = headersMap[key];
+          const found = Object.keys(r).find(h => vals.includes(normalize(h)));
+          out[key] = found ? r[found] : '';
+        });
+        return out;
+      });
+
+      // send each to backend
+      for (const m of mapped) {
+        try {
+          await adminService.createMotorista(m);
+        } catch (err) {
+          console.warn('Erro importar linha', m, err);
+        }
+      }
+
+      setToast({ message: 'Importação concluída', type: 'success' });
+      loadMotoristas();
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'Erro ao importar arquivo', type: 'error' });
+    } finally {
+      setImportLoading(false);
+      event.target.value = '';
+    }
+  };
+
   const formatCPF = (value) => {
     const digits = value.replace(/\D/g, '');
     if (digits.length <= 3) return digits;
@@ -244,12 +307,24 @@ const MotoristaManagement = () => {
               <p className="text-gray-600 mt-1">Gerencie os motoristas da sua frota</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
-          >
-            <FaPlus /> Novo Motorista
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
+            >
+              <FaPlus /> Novo Motorista
+            </button>
+            <label className="relative inline-flex items-center gap-2 px-5 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold cursor-pointer">
+              <FaFileExcel /> {importLoading ? 'Importando...' : 'Importar Excel'}
+              <input
+                type="file"
+                accept=".xls,.xlsx"
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                onChange={handleImportFile}
+                disabled={importLoading}
+              />
+            </label>
+          </div>
         </div>
 
         {/* Fullscreen Form */}

@@ -11,55 +11,313 @@ import {
   FaCalendarAlt,
   FaCheckCircle,
   FaBoxes,
-  FaWhatsapp,
-  FaMapMarkerAlt
+  FaTruck,
+  FaTachometerAlt,
+  FaLayerGroup,
+  FaIdCard,
+  FaTable,
+  FaArrowRight,
+  FaShieldAlt,
 } from 'react-icons/fa';
 
+/* ─────────────────────────────────────────────────────────────
+   BRAND TOKENS
+   Primary: #7C5CBF (violet)  |  Secondary: #6BBF8A (mint)
+───────────────────────────────────────────────────────────── */
+const brand = {
+  violet:      '#7C5CBF',
+  violetLight: '#9B7FD4',
+  violetDark:  '#5B3FA0',
+  violetBg:    '#EDE9FA',
+  violetBg2:   '#F5F2FD',
+  mint:        '#6BBF8A',
+  mintLight:   '#A8D8B5',
+  mintDark:    '#4A9A6F',
+  mintBg:      '#E8F5EE',
+  mintBg2:     '#F0FAF4',
+  pageBg:      '#F4F3FA',
+  cardBg:      '#FFFFFF',
+  textPrimary: '#1A1535',
+  textSecond:  '#6B7280',
+  textMuted:   '#9CA3AF',
+  border:      '#E9E4F5',
+};
+
+/* ─────────────────────────────────────────────────────────────
+   ROLE BADGE CONFIG
+───────────────────────────────────────────────────────────── */
+const roleMeta = {
+  driver:  { label: 'Motorista',  color: brand.mint,   bg: brand.mintBg  },
+  manager: { label: 'Gerente',    color: brand.violet, bg: brand.violetBg },
+  admin:   { label: 'Administrador', color: '#4F46E5', bg: '#EEF2FF'     },
+  geomar:  { label: 'GeoMar',     color: '#0891B2',   bg: '#E0F7FA'      },
+};
+
+/* ─────────────────────────────────────────────────────────────
+   SMALL COMPONENTS
+───────────────────────────────────────────────────────────── */
+
+/** Seção com título + subtítulo padronizados */
+const SectionHeader = ({ icon, title, subtitle }) => (
+  <div className="mb-7">
+    <div className="flex items-center gap-2 mb-1">
+      <span className="text-xl">{icon}</span>
+      <h2
+        className="text-xl font-bold tracking-tight"
+        style={{ color: brand.textPrimary }}
+      >
+        {title}
+      </h2>
+    </div>
+    {subtitle && (
+      <p className="text-sm ml-7" style={{ color: brand.textSecond }}>
+        {subtitle}
+      </p>
+    )}
+    <div
+      className="mt-3 ml-7 h-0.5 w-16 rounded-full"
+      style={{ background: `linear-gradient(90deg, ${brand.violet}, ${brand.mint})` }}
+    />
+  </div>
+);
+
+/** Card de estatística */
+const StatCard = ({ icon, label, value, sub, accent, progressValue }) => (
+  <div
+    className="bg-white rounded-2xl p-5 flex flex-col gap-3 relative overflow-hidden"
+    style={{
+      boxShadow: '0 2px 16px rgba(124,92,191,0.08)',
+      border: `1px solid ${brand.border}`,
+    }}
+  >
+    {/* Top accent bar */}
+    <div
+      className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
+      style={{ background: `linear-gradient(90deg, ${accent}, ${accent}88)` }}
+    />
+
+    <div className="flex items-start justify-between mt-1">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>
+          {label}
+        </p>
+        <p className="text-3xl font-extrabold" style={{ color: accent }}>
+          {value}
+        </p>
+        {sub && (
+          <p className="text-xs mt-1" style={{ color: brand.textMuted }}>
+            {sub}
+          </p>
+        )}
+      </div>
+      <div
+        className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ background: `${accent}18` }}
+      >
+        <span style={{ color: accent, fontSize: '1.1rem' }}>{icon}</span>
+      </div>
+    </div>
+
+    {/* Optional progress bar */}
+    {progressValue !== undefined && (
+      <div>
+        <div className="w-full h-1.5 rounded-full" style={{ background: '#EEE' }}>
+          <div
+            className="h-1.5 rounded-full transition-all duration-700"
+            style={{
+              width: `${progressValue}%`,
+              background:
+                progressValue >= 90
+                  ? '#22C55E'
+                  : progressValue >= 70
+                  ? '#F59E0B'
+                  : '#EF4444',
+            }}
+          />
+        </div>
+        <p className="text-xs mt-1 text-right font-medium" style={{ color: brand.textMuted }}>
+          {progressValue}% no prazo
+        </p>
+      </div>
+    )}
+  </div>
+);
+
+/** Card de ação para motoristas */
+const DriverActionCard = ({ onClick, gradient, accentColor, icon, title, description }) => (
+  <button
+    onClick={onClick}
+    className="group relative rounded-2xl text-left overflow-hidden transition-all duration-300 hover:-translate-y-1"
+    style={{
+      background: gradient,
+      boxShadow: '0 4px 20px rgba(124,92,191,0.10)',
+      border: `1px solid ${accentColor}30`,
+    }}
+    onMouseEnter={e => {
+      e.currentTarget.style.boxShadow = `0 8px 32px ${accentColor}30`;
+    }}
+    onMouseLeave={e => {
+      e.currentTarget.style.boxShadow = '0 4px 20px rgba(124,92,191,0.10)';
+    }}
+  >
+    {/* Decorative circle */}
+    <div
+      className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-10 group-hover:opacity-20 transition-opacity duration-300"
+      style={{ background: accentColor }}
+    />
+    <div
+      className="absolute -bottom-10 -left-10 w-28 h-28 rounded-full opacity-5 group-hover:opacity-10 transition-opacity duration-300"
+      style={{ background: accentColor }}
+    />
+
+    <div className="relative z-10 p-7">
+      {/* Icon */}
+      <div
+        className="w-14 h-14 rounded-xl flex items-center justify-center mb-5 shadow-md transition-transform duration-300 group-hover:scale-110"
+        style={{ background: accentColor }}
+      >
+        <span className="text-white text-2xl">{icon}</span>
+      </div>
+
+      <h3
+        className="text-lg font-bold mb-2"
+        style={{ color: brand.textPrimary }}
+      >
+        {title}
+      </h3>
+      <p className="text-sm leading-relaxed mb-5" style={{ color: '#6B7280' }}>
+        {description}
+      </p>
+
+      <div
+        className="inline-flex items-center gap-2 text-sm font-bold"
+        style={{ color: accentColor }}
+      >
+        <span>Acessar</span>
+        <FaArrowRight className="text-xs transition-transform duration-300 group-hover:translate-x-1.5" />
+      </div>
+    </div>
+  </button>
+);
+
+/** Card de ação para admin/gerente (maior) */
+const AdminActionCard = ({
+  onClick,
+  disabled,
+  accentColor,
+  accentDark,
+  icon,
+  emoji,
+  title,
+  description,
+  viewOnly,
+  size = 'normal',
+}) => {
+  const isLarge = size === 'large';
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`group relative rounded-2xl text-left overflow-hidden transition-all duration-300 w-full
+        ${disabled ? 'opacity-60 cursor-not-allowed' : 'hover:-translate-y-1'}`}
+      style={{
+        background: '#FFFFFF',
+        boxShadow: '0 2px 16px rgba(124,92,191,0.08)',
+        border: `1px solid ${accentColor}25`,
+      }}
+      onMouseEnter={e => {
+        if (!disabled) {
+          e.currentTarget.style.boxShadow = `0 8px 32px ${accentColor}28`;
+          e.currentTarget.style.border = `1px solid ${accentColor}60`;
+        }
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.boxShadow = '0 2px 16px rgba(124,92,191,0.08)';
+        e.currentTarget.style.border = `1px solid ${accentColor}25`;
+      }}
+    >
+      {/* Left accent bar */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
+        style={{ background: `linear-gradient(180deg, ${accentColor}, ${accentDark || accentColor})` }}
+      />
+
+      {/* Decorative bg shape */}
+      <div
+        className="absolute -top-12 -right-12 w-40 h-40 rounded-full opacity-0 group-hover:opacity-5 transition-opacity duration-500"
+        style={{ background: accentColor }}
+      />
+
+      <div className={`pl-6 ${isLarge ? 'p-8' : 'p-6'}`}>
+        {/* Icon */}
+        <div
+          className={`${isLarge ? 'w-16 h-16' : 'w-12 h-12'} rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 shadow-sm`}
+          style={{ background: `${accentColor}18` }}
+        >
+          <span style={{ color: accentColor, fontSize: isLarge ? '1.5rem' : '1.1rem' }}>
+            {icon}
+          </span>
+        </div>
+
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1">
+            <h3
+              className={`${isLarge ? 'text-xl' : 'text-base'} font-bold mb-2 flex items-center gap-2`}
+              style={{ color: brand.textPrimary }}
+            >
+              <span>{emoji}</span> {title}
+            </h3>
+            <p
+              className={`${isLarge ? 'text-sm' : 'text-xs'} leading-relaxed mb-4`}
+              style={{ color: brand.textSecond }}
+            >
+              {description}
+            </p>
+
+            {viewOnly && (
+              <span
+                className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full mb-3"
+                style={{ background: '#FEF3C7', color: '#D97706' }}
+              >
+                <FaShieldAlt className="text-[10px]" /> Apenas Visualização
+              </span>
+            )}
+
+            <div
+              className="inline-flex items-center gap-2 text-sm font-bold"
+              style={{ color: accentColor }}
+            >
+              <span>Acessar</span>
+              <FaArrowRight className="text-xs transition-transform duration-300 group-hover:translate-x-1.5" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────
+   MAIN COMPONENT
+───────────────────────────────────────────────────────────── */
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [statsTodayTab, setStatsTodayTab] = useState('today');
 
-  // Funções para controlar permissões por perfil
   const hasAccess = (requiredRoles) => {
     if (!user?.role) return false;
     return requiredRoles.includes(user.role);
   };
+  const isViewOnly = () => user?.role === 'geomar';
+  const canAccessAdminPanel = () => hasAccess(['manager', 'admin', 'geomar']);
 
-  const canEdit = () => {
-    // Gerente e Admin podem editar
-    return hasAccess(['manager', 'admin']);
-  };
-
-  const isViewOnly = () => {
-    // GeoMar tem acesso visual apenas
-    return user?.role === 'geomar';
-  };
-
-  const canAccessAdminPanel = () => {
-    // Gerente, Admin e GeoMar
-    return hasAccess(['manager', 'admin', 'geomar']);
-  };
-  const [statsToday, setStatsToday] = useState({
-    total: 0,
-    completed: 0,
-    inProgress: 0,
-    pending: 0,
-    onTimePercentage: 100
-  });
-  const [statsGeneral, setStatsGeneral] = useState({
-    total: 0,
-    completed: 0,
-    inProgress: 0,
-    pending: 0,
-    onTimePercentage: 100
-  });
+  const [statsToday, setStatsToday] = useState({ total: 0, completed: 0, inProgress: 0, pending: 0, onTimePercentage: 100 });
+  const [statsGeneral, setStatsGeneral] = useState({ total: 0, completed: 0, inProgress: 0, pending: 0, onTimePercentage: 100 });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user?.role === 'driver') {
-      loadDeliveryStats();
-    }
+    if (user?.role === 'driver') loadDeliveryStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -68,498 +326,331 @@ const Home = () => {
     try {
       const res = await deliveryService.getProgramacoesAssigned();
       const programacoes = res.data.programacoes || [];
-      
-      // Filtrar entregas do motorista logado
       const nomeFiltro = (user?.username || user?.name || '').trim().toUpperCase();
       const minhasEntregas = programacoes.filter(
         p => String(p.contratado).trim().toUpperCase() === nomeFiltro
       );
 
-      // Calcular estatísticas GERAL (todas as entregas)
       const calcularStats = (entregas) => {
         const total = entregas.length;
-        const completed = entregas.filter(e => 
-          String(e.status).toUpperCase() === 'ENTREGUE'
+        const completed = entregas.filter(e => String(e.status).toUpperCase() === 'ENTREGUE').length;
+        const inProgress = entregas.filter(e => String(e.status).toUpperCase() === 'EM_ROTA').length;
+        const pending = entregas.filter(
+          e => !['ENTREGUE', 'EM_ROTA'].includes(String(e.status).toUpperCase())
         ).length;
-        const inProgress = entregas.filter(e => 
-          String(e.status).toUpperCase() === 'EM_ROTA'
-        ).length;
-        const pending = entregas.filter(e => 
-          !['ENTREGUE', 'EM_ROTA'].includes(String(e.status).toUpperCase())
-        ).length;
-
-        let onTimeCount = 0;
-        entregas.forEach(entrega => {
-          if (String(entrega.status).toUpperCase() === 'ENTREGUE') {
-            onTimeCount++;
-          }
-        });
-        const onTimePercentage = completed > 0 ? Math.round((onTimeCount / completed) * 100) : 100;
-
-        return {
-          total,
-          completed,
-          inProgress,
-          pending,
-          onTimePercentage
-        };
+        const onTimePercentage = completed > 0 ? Math.round((completed / completed) * 100) : 100;
+        return { total, completed, inProgress, pending, onTimePercentage };
       };
 
-      // Filtrar apenas entregas de HOJE
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
       const entregasHoje = minhasEntregas.filter(entrega => {
-        const dataEntrega = new Date(entrega.data);
-        dataEntrega.setHours(0, 0, 0, 0);
-        return dataEntrega.getTime() === today.getTime();
+        const d = new Date(entrega.data); d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
       });
 
-      const statsHoje = calcularStats(entregasHoje);
-      const statsGeral = calcularStats(minhasEntregas);
-
-      setStatsToday(statsHoje);
-      setStatsGeneral(statsGeral);
-    } catch (error) {
-      console.error('Erro ao carregar estatísticas:', error);
-      setStatsToday({
-        total: 0,
-        completed: 0,
-        inProgress: 0,
-        pending: 0,
-        onTimePercentage: 100
-      });
-      setStatsGeneral({
-        total: 0,
-        completed: 0,
-        inProgress: 0,
-        pending: 0,
-        onTimePercentage: 100
-      });
+      setStatsToday(calcularStats(entregasHoje));
+      setStatsGeneral(calcularStats(minhasEntregas));
+    } catch (err) {
+      console.error('Erro ao carregar estatísticas:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    // ✅ Não use min-h-screen aqui (quem controla altura/scroll agora é o AppLayout)
-    <div className="bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-6xl mx-auto px-4 py-10 pb-20">
-        {/* Welcome Section */}
-        <div className="mb-10">
-          <p className="text-purple-600 font-semibold text-sm uppercase tracking-wide mb-2">
-            Bem-vindo ao Sistema GeoLog
-          </p>
+  const activeStats = statsTodayTab === 'today' ? statsToday : statsGeneral;
+  const role = user?.role;
+  const rm = roleMeta[role] || roleMeta.driver;
 
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">
-            Olá,{' '}
-            <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+  return (
+    <div style={{ background: brand.pageBg, minHeight: '100%' }}>
+      {/* ── HERO BANNER ─────────────────────────────────────── */}
+      <div
+        className="relative overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, ${brand.violetBg} 0%, #FFFFFF 50%, ${brand.mintBg} 100%)`,
+          borderBottom: `1px solid ${brand.border}`,
+        }}
+      >
+        {/* Decorative blobs */}
+        <div
+          className="absolute -top-20 -left-20 w-80 h-80 rounded-full opacity-30 pointer-events-none"
+          style={{ background: `radial-gradient(circle, ${brand.violetLight}40, transparent 70%)` }}
+        />
+        <div
+          className="absolute -bottom-16 -right-16 w-72 h-72 rounded-full opacity-25 pointer-events-none"
+          style={{ background: `radial-gradient(circle, ${brand.mint}50, transparent 70%)` }}
+        />
+
+        {/* Dot grid pattern overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          style={{
+            backgroundImage: `radial-gradient(${brand.violet} 1px, transparent 1px)`,
+            backgroundSize: '28px 28px',
+          }}
+        />
+
+        <div className="relative z-10 max-w-6xl mx-auto px-6 py-12">
+          {/* Role badge */}
+          <div className="mb-5 inline-flex items-center gap-2">
+            <div
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
+              style={{ background: rm.bg, color: rm.color, border: `1px solid ${rm.color}30` }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: rm.color }} />
+              {rm.label}
+            </div>
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+              style={{ background: brand.violetBg, color: brand.violet, border: `1px solid ${brand.violet}20` }}
+            >
+              🚛 Sistema GeoLog
+            </div>
+          </div>
+
+          {/* Greeting */}
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-3">
+            <span style={{ color: brand.textPrimary }}>Olá, </span>
+            <span
+              style={{
+                background: `linear-gradient(135deg, ${brand.violet}, ${brand.mint})`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
               {user?.fullName || user?.name || 'Usuário'}
             </span>
-            ! 👋
+            <span style={{ color: brand.textPrimary }}> 👋</span>
           </h1>
 
-          <p className="text-gray-600 text-base sm:text-lg">
-            Gerenciamento Logistico de Entregas da GeoLog
+          <p className="text-base sm:text-lg max-w-xl" style={{ color: brand.textSecond }}>
+            Bem-vindo ao painel de{' '}
+            <span className="font-semibold" style={{ color: brand.violet }}>
+              Gerenciamento Logístico
+            </span>{' '}
+            da GeoLog. Tudo que você precisa em um só lugar.
           </p>
+
+          {/* Accent line */}
+          <div
+            className="mt-6 h-1 w-24 rounded-full"
+            style={{ background: `linear-gradient(90deg, ${brand.violet}, ${brand.mint})` }}
+          />
         </div>
-
-        {/* Driver Operations Cards - Hidden for Admins */}
-        {user?.role !== 'admin' && (
-          <>
-            {/* DASHBOARD STATS - Para Drivers */}
-            {user?.role === 'driver' && (
-              <div className="mb-10">
-                {/* Tabs para alternar entre Hoje e Geral */}
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">📊 Seu Desempenho</h2>
-                  <div className="flex gap-2 bg-gray-200 rounded-lg p-1">
-                    <button
-                      onClick={() => setStatsTodayTab('today')}
-                      className={`px-4 py-2 rounded-md font-semibold text-sm transition-all ${
-                        statsTodayTab === 'today'
-                          ? 'bg-white text-purple-600 shadow-md'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      📅 Hoje
-                    </button>
-                    <button
-                      onClick={() => setStatsTodayTab('general')}
-                      className={`px-4 py-2 rounded-md font-semibold text-sm transition-all ${
-                        statsTodayTab === 'general'
-                          ? 'bg-white text-purple-600 shadow-md'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      📈 Geral
-                    </button>
-                  </div>
-                </div>
-
-                {/* Cards Com Dados Dinâmicos */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Card Entregas Programadas */}
-                  <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 hover:shadow-lg transition-shadow">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500 mb-1">📅 Programadas</p>
-                        <p className="text-3xl font-bold text-indigo-600">
-                          {statsTodayTab === 'today' ? statsToday.total : statsGeneral.total}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">Entregas agendadas</p>
-                      </div>
-                      <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                        <FaCalendarAlt className="text-indigo-600 text-lg" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card Concluídas */}
-                  <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 hover:shadow-lg transition-shadow">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500 mb-1">✅ Concluídas</p>
-                        <p className="text-3xl font-bold text-emerald-600">
-                          {statsTodayTab === 'today' ? statsToday.completed : statsGeneral.completed}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">Expedidas com sucesso</p>
-                      </div>
-                      <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
-                        <FaCheckCircle className="text-emerald-600 text-lg" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card Performance de Pontualidade */}
-                  <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 hover:shadow-lg transition-shadow">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500 mb-1">⏱️ Pontualidade</p>
-                        <p className="text-3xl font-bold text-green-600">
-                          {statsTodayTab === 'today' ? statsToday.onTimePercentage : statsGeneral.onTimePercentage}%
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">Taxa de entregas no prazo</p>
-                      </div>
-                      <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <span className="text-lg">📈</span>
-                      </div>
-                    </div>
-                    {/* Mini progress bar */}
-                    <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all ${
-                          (statsTodayTab === 'today' ? statsToday.onTimePercentage : statsGeneral.onTimePercentage) >= 90 ? 'bg-green-500' :
-                          (statsTodayTab === 'today' ? statsToday.onTimePercentage : statsGeneral.onTimePercentage) >= 80 ? 'bg-yellow-500' :
-                          'bg-red-500'
-                        }`}
-                        style={{ width: `${statsTodayTab === 'today' ? statsToday.onTimePercentage : statsGeneral.onTimePercentage}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Card Em Rota */}
-                  <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 hover:shadow-lg transition-shadow">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500 mb-1">🚚 Em Rota</p>
-                        <p className="text-3xl font-bold text-blue-600">
-                          {statsTodayTab === 'today' ? statsToday.inProgress : statsGeneral.inProgress}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">Entregas em andamento</p>
-                      </div>
-                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <span className="text-xl">🚛</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {user?.role === 'driver' && (
-              <div className="mb-12">
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-6">🎯 Ações Rápidas</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {/* Card Entregas Programadas */}
-                  <button
-                    onClick={() => navigate('/entregas-programadas')}
-                    className="group relative bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-indigo-200 hover:border-indigo-400 overflow-hidden text-left hover:scale-105"
-                  >
-                    <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-indigo-300 to-transparent opacity-20 group-hover:opacity-40 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
-                    <div className="relative z-10">
-                      <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                        <FaCalendarAlt className="text-2xl text-white" />
-                      </div>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">Entregas Programadas</h3>
-                      <p className="text-gray-700 mb-4 text-sm leading-relaxed">
-                        Veja todas as entregas agendadas vinculadas à sua transportadora
-                      </p>
-                      <div className="flex items-center gap-2 text-indigo-600 font-bold">
-                        <span>Acessar</span>
-                        <span className="text-lg group-hover:translate-x-2 transition-transform duration-300">→</span>
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Card Minhas Entregas */}
-                  <button
-                    onClick={() => navigate('/minhas-entregas')}
-                    className="group relative bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-emerald-200 hover:border-emerald-400 overflow-hidden text-left hover:scale-105"
-                  >
-                    <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-emerald-300 to-transparent opacity-20 group-hover:opacity-40 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
-                    <div className="relative z-10">
-                      <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                        <FaBoxes className="text-2xl text-white" />
-                      </div>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">Minhas Entregas</h3>
-                      <p className="text-gray-700 mb-4 text-sm leading-relaxed">
-                        Acompanhe todas as suas entregas em tempo real e histórico completo
-                      </p>
-                      <div className="flex items-center gap-2 text-emerald-600 font-bold">
-                        <span>Acessar</span>
-                        <span className="text-lg group-hover:translate-x-2 transition-transform duration-300">→</span>
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Card Entregas com Canhotos Pendentes */}
-                  <button
-                    onClick={() => navigate('/entregas-canhotos-pendentes')}
-                    className="group relative bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-8 border border-pink-200 hover:border-pink-400 overflow-hidden text-left hover:scale-105"
-                  >
-                    <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-pink-300 to-transparent opacity-20 group-hover:opacity-40 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
-                    <div className="relative z-10">
-                      <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                        <FaFileAlt className="text-2xl text-white" />
-                      </div>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">Entregas com Canhotos Pendentes</h3>
-                      <p className="text-gray-700 mb-4 text-sm leading-relaxed">Anexe os canhotos pendentes das entregas que ficaram abertas.</p>
-                      <div className="flex items-center gap-2 text-pink-600 font-bold">
-                        <span>Acessar</span>
-                        <span className="text-lg group-hover:translate-x-2 transition-transform duration-300">→</span>
-                      </div>
-                    </div>
-                  </button>
-
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Admin Dashboard Section - Conditional */}
-        {canAccessAdminPanel() && (
-          <>
-            {/* MONITORAMENTO & ANALYTICS - Titulo unificado com melhor espaço */}
-            <div className="mb-8 mt-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-1">📊 Monitoramento & Relatórios</h2>
-              <p className="text-gray-500 text-sm">Acompanhe em tempo real todas as operações e entregas</p>
-            </div>
-            
-            <div className="mb-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-              <button
-                onClick={() => navigate('/admin')}
-                disabled={isViewOnly()}
-                className={`group relative bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-10 border-2 border-orange-200 hover:border-orange-400 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : 'hover:scale-102'}`}
-                title={isViewOnly() ? 'Apenas visualização (sem edição)' : ''}
-              >
-                <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-orange-300 to-transparent opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-full -mr-24 -mt-24" />
-
-                <div className="relative z-10">
-                  <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl mb-5 group-hover:scale-125 transition-transform duration-300 shadow-lg">
-                    <FaChartBar className="text-3xl text-white" />
-                  </div>
-
-                  <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                    📈 Dashboard Analytics
-                  </h2>
-                  <p className="text-gray-700 mb-5 text-base leading-relaxed">
-                    Análise completa com estatísticas, gráficos e relatórios detalhados sobre todas as operações
-                  </p>
-                  {isViewOnly() && <p className="text-xs text-amber-600 font-semibold mb-3">👁️ Apenas Visualização</p>}
-
-                  <div className="flex items-center gap-2 text-orange-600 font-bold text-lg">
-                    <span>Acessar</span>
-                    <span className="text-xl group-hover:translate-x-2 transition-transform duration-300">
-                      →
-                    </span>
-                  </div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => navigate('/monitor-entregas')}
-                disabled={isViewOnly()}
-                className={`group relative bg-gradient-to-br from-red-50 to-red-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-10 border-2 border-red-200 hover:border-red-400 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : 'hover:scale-102'}`}
-                title={isViewOnly() ? 'Apenas visualização (sem edição)' : ''}
-              >
-                <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-red-300 to-transparent opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-full -mr-24 -mt-24" />
-
-                <div className="relative z-10">
-                  <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl mb-5 group-hover:scale-125 transition-transform duration-300 shadow-lg">
-                    <FaFileAlt className="text-3xl text-white" />
-                  </div>
-
-                  <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                    🎯 Torre de Controle
-                  </h2>
-                  <p className="text-gray-700 mb-5 text-base leading-relaxed">
-                    Monitore todas as entregas em tempo real com filtros avançados, busca e rastreamento completo
-                  </p>
-                  {isViewOnly() && <p className="text-xs text-amber-600 font-semibold mb-3">👁️ Apenas Visualização</p>}
-
-                  <div className="flex items-center gap-2 text-red-600 font-bold text-lg">
-                    <span>Acessar</span>
-                    <span className="text-xl group-hover:translate-x-2 transition-transform duration-300">
-                      →
-                    </span>
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            {/* GERENCIAMENTO & CONFIGURAÇÕES - Novo layout com 4 cards */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-1">⚙️ Gerenciamento & Configurações</h2>
-              <p className="text-gray-500 text-sm">Controle total sobre usuários, motoristas e programações</p>
-            </div>
-
-            <div className="mb-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Gerenciar Usuários - Apenas Gerente */}
-              {hasAccess(['manager']) && (
-                <button
-                  onClick={() => navigate('/usuarios')}
-                  className="group relative bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 border-2 border-purple-200 hover:border-purple-400 overflow-hidden text-left hover:scale-105"
-                >
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-purple-300 to-transparent opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
-
-                  <div className="relative z-10">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl mb-4 group-hover:scale-120 transition-transform duration-300 shadow-lg">
-                      <FaUsers className="text-2xl text-white" />
-                    </div>
-
-                    <h2 className="text-xl font-bold text-gray-900 mb-2">
-                      👥 Gerenciar Usuários
-                    </h2>
-                    <p className="text-gray-700 mb-4 text-sm leading-relaxed">
-                      Criar, editar e controlar perfis de todos os usuários do sistema
-                    </p>
-
-                    <div className="flex items-center gap-2 text-purple-600 font-bold">
-                      <span>Acessar</span>
-                      <span className="text-lg group-hover:translate-x-1 transition-transform duration-300">
-                        →
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              )}
-
-              <button
-                onClick={() => navigate('/motoristas')}
-                disabled={isViewOnly()}
-                className={`group relative bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 border-2 border-cyan-200 hover:border-cyan-400 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : 'hover:scale-105'}`}
-                title={isViewOnly() ? 'Apenas visualização (sem edição)' : ''}
-              >
-                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-cyan-300 to-transparent opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
-
-                <div className="relative z-10">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl mb-4 group-hover:scale-120 transition-transform duration-300 shadow-lg">
-                    <span className="text-2xl">👤</span>
-                  </div>
-
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">
-                    👨‍🚗 Motoristas
-                  </h2>
-                  <p className="text-gray-700 mb-4 text-sm leading-relaxed">
-                    Gerenciar motoristas, dados, rastreadores e contatos
-                  </p>
-                  {isViewOnly() && <p className="text-xs text-amber-600 font-semibold mb-2">👁️ Apenas Visualização</p>}
-
-                  <div className="flex items-center gap-2 text-cyan-600 font-bold">
-                    <span>Acessar</span>
-                    <span className="text-lg group-hover:translate-x-1 transition-transform duration-300">
-                      →
-                    </span>
-                  </div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => navigate('/programacoes')}
-                disabled={isViewOnly()}
-                className={`group relative bg-gradient-to-br from-teal-50 to-teal-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 border-2 border-teal-200 hover:border-teal-400 overflow-hidden text-left ${isViewOnly() ? 'opacity-60 cursor-not-allowed' : 'hover:scale-105'}`}
-                title={isViewOnly() ? 'Apenas visualização (sem edição)' : ''}
-              >
-                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-teal-300 to-transparent opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
-
-                <div className="relative z-10">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl mb-4 group-hover:scale-120 transition-transform duration-300 shadow-lg">
-                    <FaDatabase className="text-2xl text-white" />
-                  </div>
-
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">
-                    📦 Programações
-                  </h2>
-                  <p className="text-gray-700 mb-4 text-sm leading-relaxed">
-                    Gerenciar programações de entregas com todos os detalhes
-                  </p>
-                  {isViewOnly() && <p className="text-xs text-amber-600 font-semibold mb-2">👁️ Apenas Visualização</p>}
-
-                  <div className="flex items-center gap-2 text-teal-600 font-bold">
-                    <span>Acessar</span>
-                    <span className="text-lg group-hover:translate-x-1 transition-transform duration-300">
-                      →
-                    </span>
-                  </div>
-                </div>
-              </button>
-
-              {/* Card Base de Dados Geral - Apenas Gerente */}
-              {hasAccess(['manager']) && (
-                <button
-                  onClick={() => navigate('/base-dados-geral')}
-                  className="group relative bg-gradient-to-br from-green-50 to-green-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 border-2 border-green-200 hover:border-green-400 overflow-hidden text-left hover:scale-105"
-                >
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-green-300 to-transparent opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-full -mr-20 -mt-20" />
-
-                  <div className="relative z-10">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-xl mb-4 group-hover:scale-120 transition-transform duration-300 shadow-lg">
-                      <FaDatabase className="text-2xl text-white" />
-                    </div>
-
-                    <h2 className="text-xl font-bold text-gray-900 mb-2">
-                      🗄️ Base de Dados Geral
-                    </h2>
-                    <p className="text-gray-700 mb-4 text-sm leading-relaxed">
-                      Visualizar todos os dados das programações em formato de tabela
-                    </p>
-                    <div className="flex items-center gap-2 text-green-600 font-bold">
-                      <span>Acessar</span>
-                      <span className="text-lg group-hover:translate-x-1 transition-transform duration-300">
-                        →
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* Info Cards */}
-
-
-
-
-        {/* Se você realmente usa Toast aqui, pode manter; se não usa, pode remover o import */}
-        {/* {toast && <Toast ... />} */}
       </div>
 
-      {/* Footer */}
+      {/* ── PAGE CONTENT ────────────────────────────────────── */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 pb-20">
+
+        {/* ── DRIVER: STATS + ACTIONS ─────────────────────── */}
+        {role === 'driver' && (
+          <>
+            {/* Stats Tabs */}
+            <div className="mb-3 flex items-center justify-between">
+              <SectionHeader icon="📊" title="Seu Desempenho" subtitle="Acompanhe seus indicadores em tempo real" />
+
+              {/* Tab switcher */}
+              <div
+                className="flex gap-1 p-1 rounded-xl"
+                style={{ background: brand.violetBg, border: `1px solid ${brand.border}` }}
+              >
+                {['today', 'general'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setStatsTodayTab(tab)}
+                    className="px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200"
+                    style={
+                      statsTodayTab === tab
+                        ? { background: brand.violet, color: '#FFF', boxShadow: `0 2px 8px ${brand.violet}40` }
+                        : { color: brand.textSecond }
+                    }
+                  >
+                    {tab === 'today' ? '📅 Hoje' : '📈 Geral'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Stat Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+              <StatCard
+                icon={<FaCalendarAlt />}
+                label="Programadas"
+                value={loading ? '…' : activeStats.total}
+                sub="Entregas agendadas"
+                accent={brand.violet}
+              />
+              <StatCard
+                icon={<FaCheckCircle />}
+                label="Concluídas"
+                value={loading ? '…' : activeStats.completed}
+                sub="Expedidas com sucesso"
+                accent={brand.mint}
+              />
+              <StatCard
+                icon="📈"
+                label="Pontualidade"
+                value={loading ? '…' : `${activeStats.onTimePercentage}%`}
+                sub="Taxa no prazo"
+                accent="#F59E0B"
+                progressValue={activeStats.onTimePercentage}
+              />
+              <StatCard
+                icon={<FaTruck />}
+                label="Em Rota"
+                value={loading ? '…' : activeStats.inProgress}
+                sub="Entregas em andamento"
+                accent="#3B82F6"
+              />
+            </div>
+
+            {/* Quick Actions */}
+            <div className="mb-12">
+              <SectionHeader
+                icon="🎯"
+                title="Ações Rápidas"
+                subtitle="Gerencie suas atividades do dia"
+              />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <DriverActionCard
+                  onClick={() => navigate('/entregas-programadas')}
+                  gradient={`linear-gradient(135deg, ${brand.violetBg2}, ${brand.violetBg})`}
+                  accentColor={brand.violet}
+                  icon={<FaCalendarAlt />}
+                  title="Entregas Programadas"
+                  description="Veja todas as entregas agendadas vinculadas à sua transportadora."
+                />
+                <DriverActionCard
+                  onClick={() => navigate('/minhas-entregas')}
+                  gradient={`linear-gradient(135deg, ${brand.mintBg2}, ${brand.mintBg})`}
+                  accentColor={brand.mint}
+                  icon={<FaBoxes />}
+                  title="Minhas Entregas"
+                  description="Acompanhe todas as suas entregas em tempo real e histórico completo."
+                />
+                <DriverActionCard
+                  onClick={() => navigate('/entregas-canhotos-pendentes')}
+                  gradient="linear-gradient(135deg, #FFF5F7, #FFE4EB)"
+                  accentColor="#E5607A"
+                  icon={<FaFileAlt />}
+                  title="Canhotos Pendentes"
+                  description="Anexe os canhotos pendentes das entregas que ficaram abertas."
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── ADMIN / MANAGER / GEOMAR PANEL ──────────────── */}
+        {canAccessAdminPanel() && (
+          <>
+            {/* ── MONITORING ── */}
+            <div className="mb-3">
+              <SectionHeader
+                icon="📡"
+                title="Monitoramento & Relatórios"
+                subtitle="Acompanhe em tempo real todas as operações e entregas"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-12">
+              {/* Dashboard Analytics */}
+              <AdminActionCard
+                onClick={() => navigate('/admin')}
+                disabled={isViewOnly()}
+                accentColor={brand.violet}
+                accentDark={brand.violetDark}
+                icon={<FaChartBar />}
+                emoji="📈"
+                title="Dashboard Analytics"
+                description="Análise completa com estatísticas, gráficos e relatórios detalhados sobre todas as operações logísticas."
+                viewOnly={isViewOnly()}
+                size="large"
+              />
+
+              {/* Torre de Controle */}
+              <AdminActionCard
+                onClick={() => navigate('/monitor-entregas')}
+                disabled={isViewOnly()}
+                accentColor="#4F46E5"
+                accentDark="#3730A3"
+                icon={<FaTachometerAlt />}
+                emoji="🎯"
+                title="Torre de Controle"
+                description="Monitore todas as entregas em tempo real com filtros avançados, busca e rastreamento completo."
+                viewOnly={isViewOnly()}
+                size="large"
+              />
+            </div>
+
+            {/* ── MANAGEMENT ── */}
+            <div className="mb-3">
+              <SectionHeader
+                icon="⚙️"
+                title="Gerenciamento & Configurações"
+                subtitle="Controle total sobre usuários, motoristas e programações"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
+              {/* Gerenciar Usuários — apenas manager */}
+              {hasAccess(['manager']) && (
+                <AdminActionCard
+                  onClick={() => navigate('/usuarios')}
+                  accentColor="#8B5CF6"
+                  accentDark="#6D28D9"
+                  icon={<FaUsers />}
+                  emoji="👥"
+                  title="Usuários"
+                  description="Criar, editar e controlar perfis de todos os usuários do sistema."
+                />
+              )}
+
+              {/* Motoristas */}
+              <AdminActionCard
+                onClick={() => navigate('/motoristas')}
+                disabled={isViewOnly()}
+                accentColor={brand.mint}
+                accentDark={brand.mintDark}
+                icon={<FaIdCard />}
+                emoji="👨‍🚗"
+                title="Motoristas"
+                description="Gerenciar motoristas, dados, rastreadores e contatos."
+                viewOnly={isViewOnly()}
+              />
+
+              {/* Programações */}
+              <AdminActionCard
+                onClick={() => navigate('/programacoes')}
+                disabled={isViewOnly()}
+                accentColor="#0891B2"
+                accentDark="#0E7490"
+                icon={<FaLayerGroup />}
+                emoji="📦"
+                title="Programações"
+                description="Gerenciar programações de entregas com todos os detalhes."
+                viewOnly={isViewOnly()}
+              />
+
+              {/* Base de Dados Geral — apenas manager */}
+              {hasAccess(['manager']) && (
+                <AdminActionCard
+                  onClick={() => navigate('/base-dados-geral')}
+                  accentColor="#059669"
+                  accentDark="#047857"
+                  icon={<FaTable />}
+                  emoji="🗄️"
+                  title="Base de Dados"
+                  description="Visualizar todos os dados das programações em formato de tabela."
+                />
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
       <Footer />
     </div>
   );

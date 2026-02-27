@@ -79,19 +79,22 @@ const MonitorEntregas = () => {
 
   // Calcular tempo decorrido no cliente (chegada até agora ou até fim desova)
   const calculateCliTime = (delivery, now = new Date()) => {
-    if (!delivery.horarioChegada) return null;
+    if (!delivery.horarioChegada) return { tempo: null, isActive: false };
     const chegada = new Date(delivery.horarioChegada);
     
-    // Se já finalizou (tem data de fim desova), usa aquela
-    // Senão, usa tempo atual (contador live)
-    const referencia = delivery.horarioFimDesova ? new Date(delivery.horarioFimDesova) : now;
+    // Se já finalizou (tem data de fim desova), usa aquela e marca como inativo
+    // Senão, usa tempo atual (contador live) e marca como ativo
+    const isActive = !delivery.horarioFimDesova;
+    const referencia = isActive ? now : new Date(delivery.horarioFimDesova);
     const diffMs = referencia - chegada;
-    if (diffMs < 0) return null;
+    if (diffMs < 0) return { tempo: null, isActive };
     const totalMinutos = Math.floor(diffMs / 60000);
     const horas = Math.floor(totalMinutos / 60);
     const minutos = totalMinutos % 60;
-    if (horas > 0) return `${horas}h ${minutos}m`;
-    return `${minutos}m`;
+    let tempo;
+    if (horas > 0) tempo = `${horas}h ${minutos}m`;
+    else tempo = `${minutos}m`;
+    return { tempo, isActive };
   };
 
   // Stats rápidas
@@ -862,8 +865,14 @@ const MonitorEntregas = () => {
                     <td className="px-2 py-2 text-gray-700 whitespace-nowrap text-center">{delivery.horarioFimDesova ? new Date(delivery.horarioFimDesova).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                     <td className="px-2 py-2 text-center font-semibold bg-amber-50">
                       {(() => {
-                        const tempo = calculateCliTime(delivery, currentTime);
-                        return tempo ? <span className="text-amber-700 font-bold">{tempo}</span> : <span className="text-gray-500">-</span>;
+                        const result = calculateCliTime(delivery, currentTime);
+                        if (!result || !result.tempo) return <span className="text-gray-500">-</span>;
+                        return (
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="text-amber-700 font-bold">{result.tempo}</span>
+                            {result.isActive && <span className="text-lg animate-pulse">⏱️</span>}
+                          </div>
+                        );
                       })()}
                     </td>
                     <td className="px-2 py-2 text-center">

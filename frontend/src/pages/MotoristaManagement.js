@@ -179,22 +179,26 @@ const MotoristaManagement = () => {
 
   // Download Template
   const downloadTemplate = () => {
+    // headers mimic table display, including accent marks and status columns
     const template = [
       {
-        transportadora: 'GEO TRANSPORTES',
-        nome: 'João da Silva',
-        cpf: '123.456.789-10',
-        vinculo: 'AGREGADO',
-        rastreador: 'SASCAR',
-        'exp cadastro motorista': '2025-12-31',
-        cavalo: 'GES-0001',
-        'rastreador cavalo': 'SASCAR',
-        'exp cadastro cavalo': '2025-12-31',
-        carreta: 'GES-00001',
-        'rastreador carreta': 'SASCAR',
-        'exp cadastro carreta': '2025-12-31',
-        telefone: '92985284321',
-        observacoes: 'Observações do motorista'
+        'TRANSPORTADORA': 'GEO TRANSPORTES',
+        'MOTORISTA': 'João da Silva',
+        'CPF': '123.456.789-10',
+        'VÍNCULO': 'AGREGADO',
+        'RASTREADOR': 'SASCAR',
+        'EXP. CADASTRO': '2025-12-31',
+        'STATUS': '',
+        'CAVALO': 'GES-0001',
+        'RAST. CAVALO': 'SASCAR',
+        'EXP. CAVALO': '2025-12-31',
+        'ST.': '',
+        'CARRETA': 'GES-00001',
+        'RAST. CARRETA': 'SASCAR',
+        'EXP. CARRETA': '2025-12-31',
+        'ST.2': '',
+        'TELEFONE': '92985284321',
+        'OBSERVAÇÕES': 'Observações do motorista'
       }
     ];
     const ws = XLSX.utils.json_to_sheet(template);

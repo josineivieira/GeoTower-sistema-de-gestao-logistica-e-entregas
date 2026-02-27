@@ -44,14 +44,14 @@ const THEMES = {
   },
   light: {
     name: '☀️ Claro',
-    bg: '#f8f9fa',
+    bg: '#eef2f6',            // slight gray so white text still visible if not overridden
     bgSecondary: '#ffffff',
     text: '#1a1a1a',
     textSecondary: '#404040',
-    border: 'border-gray-200',
+    border: 'border-gray-300',
     header: 'bg-white/95',
-    card: 'bg-gray-50',
-    cardHover: 'hover:bg-gray-100',
+    card: 'bg-white/60',
+    cardHover: 'hover:bg-white/70',
   },
   company: {
     name: '🎨 Cores Empresa',
@@ -462,6 +462,7 @@ const MonitorEntregas = () => {
       const drivers = new Set(data.map(d => d.driverName).filter(Boolean));
       setStats({ total: data.length, statusCounts: sc, byDriver: drivers.size });
       setToast({ message: `${data.length} entregas carregadas`, type: 'success' });
+      setTimeout(() => setToast(null), 3000);
     } catch {
       setToast({ message: 'Erro ao carregar entregas', type: 'error' });
     } finally { setLoading(false); }
@@ -631,8 +632,27 @@ const MonitorEntregas = () => {
   /* ────────────────────────────────────────
      RENDER
      ──────────────────────────────────────── */
+  // inject light-theme overrides once
+  React.useEffect(() => {
+    const styleEl = document.createElement('style');
+    styleEl.id = 'theme-overrides';
+    styleEl.textContent = `
+      .theme-light .text-white { color: #1a1a1a !important; }
+      .theme-light .text-white\\/20 { color: rgba(26,26,26,0.2) !important; }
+      .theme-light .bg-white\\/5 { background-color: rgba(255,255,255,0.05) !important; }
+      .theme-light .bg-white\\/10 { background-color: rgba(255,255,255,0.10) !important; }
+      .theme-light .bg-white\\/60 { background-color: rgba(255,255,255,0.60) !important; }
+      .theme-light .bg-purple-600\/80 { background-color: rgba(109,40,217,0.8) !important; }
+    `;
+    document.head.appendChild(styleEl);
+    return () => document.head.removeChild(styleEl);
+  }, []);
+
   return (
-    <div style={{ backgroundColor: themeConfig.bg, color: themeConfig.text }} className="min-h-screen font-sans transition-colors duration-300">
+    <div
+      style={{ backgroundColor: themeConfig.bg, color: themeConfig.text }}
+      className={`min-h-screen font-sans transition-colors duration-300 ${theme === 'light' ? 'theme-light' : ''}`}
+    >
       {/* Header com Seletor de Tema */}
       <header className={`sticky top-0 z-40 ${themeConfig.header} backdrop-blur-md border-b ${themeConfig.border}`}>
         <div className="w-full px-4 lg:px-8 h-16 flex items-center justify-between gap-4">
@@ -986,24 +1006,6 @@ const MonitorEntregas = () => {
                               >
                                 <FaEye size={12} />
                               </button>
-                              {canEdit() && (
-                                <>
-                                  <button
-                                    onClick={() => handleEditStart(d)}
-                                    title="Editar"
-                                    className="w-7 h-7 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-blue-200 flex items-center justify-center transition"
-                                  >
-                                    <FaEdit size={12} />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDelete(d._id)}
-                                    title="Deletar"
-                                    className="w-7 h-7 rounded-lg bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-200 flex items-center justify-center transition"
-                                  >
-                                    <FaTrash size={12} />
-                                  </button>
-                                </>
-                              )}
                             </div>
                           </td>
                         </tr>

@@ -234,10 +234,10 @@ const MotoristaManagement = () => {
         expCadastroMotorista: ['exp cadastro motorista','expcadastromotorista','exp cadastro','exp motoristas','exp cadastramento motorista'],
         cavalo: ['cavalo'],
         rastreadorCavalo: ['rastreadorcavalo','rastreador cavalo'],
-        expCadastroCavalo: ['exp cadastro cavalo','expcadastrcavalo'],
+        expCadastroCavalo: ['exp cadastro cavalo','expcadastrcavalo','exp cavalo'],
         carreta: ['carreta'],
-        rastreadorCarreta: ['rastreadorcarreta','rastreador carreta'],
-        expCadastroCarreta: ['exp cadastro carreta','expcadastrcarreta'],
+        rastreadorCarreta: ['rastreadorcarreta','rastreador carreta','rast carreta'],
+        expCadastroCarreta: ['exp cadastro carreta','expcadastrcarreta','exp carreta'],
         telefone: ['telefone','tel'],
         observacoes: ['observacoes','observações','obs','observ']
       };
@@ -254,7 +254,14 @@ const MotoristaManagement = () => {
       });
 
       // validate and format before sending
-      const validVinculos = ['PRÓPRIO', 'AGREGADO', 'TERCEIRO'];
+      // map of accepted vínculos (allow 'FROTA' as alias for PRÓPRIO)
+      const vinculoMap = {
+        proprio: 'PRÓPRIO',
+        agregado: 'AGREGADO',
+        terceiro: 'TERCEIRO',
+        frota: 'PRÓPRIO'
+      };
+
       const errors = [];
       const success = [];
 
@@ -291,9 +298,10 @@ const MotoristaManagement = () => {
           }
 
           // Validate Vinculo
-          const vinculo = (m.vinculo || 'AGREGADO').toUpperCase().trim();
-          if (!validVinculos.includes(vinculo)) {
-            throw new Error(`Vínculo inválido: ${m.vinculo}. Aceitos: ${validVinculos.join(', ')}`);
+          const rawVinc = (m.vinculo || 'AGREGADO').toString().toLowerCase().trim();
+          const vinculo = vinculoMap[rawVinc];
+          if (!vinculo) {
+            throw new Error(`Vínculo inválido: ${m.vinculo}. Aceitos: ${Object.values(vinculoMap).join(', ')}`);
           }
 
           const prepared = {

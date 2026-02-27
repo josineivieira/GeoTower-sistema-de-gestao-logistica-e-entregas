@@ -45,18 +45,6 @@ const AdminDashboard = () => {
       .slice(0, 5);
   }, [deliveries]);
 
-  // arrays for charts
-  const recebedorCountData = React.useMemo(() => {
-    return topRecebedores.map(r => ({ name: r.recebedor, count: r.count }));
-  }, [topRecebedores]);
-
-  const recebedorAvgData = React.useMemo(() => {
-    return Object.entries(avgCliByRecebedor)
-      .map(([recebedor, avg]) => ({ name: recebedor, avg }))
-      .sort((a, b) => b.avg - a.avg)
-      .slice(0, 5);
-  }, [avgCliByRecebedor]);
-
   const avgCliByRecebedor = React.useMemo(() => {
     const sums = {};
     const counts = {};
@@ -74,6 +62,18 @@ const AdminDashboard = () => {
     });
     return res;
   }, [deliveries]);
+
+  // arrays for charts
+  const recebedorCountData = React.useMemo(() => {
+    return topRecebedores.map(r => ({ name: r.recebedor, count: r.count }));
+  }, [topRecebedores]);
+
+  const recebedorAvgData = React.useMemo(() => {
+    return Object.entries(avgCliByRecebedor)
+      .map(([recebedor, avg]) => ({ name: recebedor, avg }))
+      .sort((a, b) => b.avg - a.avg)
+      .slice(0, 5);
+  }, [avgCliByRecebedor]);
 
   const formatMinutes = (m) => {
     if (m == null) return '-';
@@ -303,9 +303,7 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* Filters */}
-
-        {/* Filters */}
+        {/* Filtros */}
         <div className="bg-white rounded-lg shadow p-4 mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div>

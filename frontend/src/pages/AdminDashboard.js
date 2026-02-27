@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import { adminService } from '../services/authService';
-import { FaArrowLeft } from 'react-icons/fa';
+import { FaArrowLeft, FaBox, FaCar, FaCrown, FaCheckCircle } from 'react-icons/fa';
 import {
   LineChart,
   Line,
@@ -123,10 +123,10 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="w-screen h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-700 to-purple-900 text-white shadow-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="bg-gradient-to-r from-purple-700 to-purple-900 text-white shadow-xl sticky top-0 z-50 flex-shrink-0">
+        <div className="w-full px-6 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
@@ -144,9 +144,9 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8 pb-20">
+      <div className="flex-1 overflow-y-auto px-6 py-6">
         {/* Filtros Gerais */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-l-4 border-purple-600">
+        <div className="bg-white rounded-xl shadow-lg p-5 mb-6 border-l-4 border-purple-600">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-gray-800">Filtros Gerais</h3>
             <button
@@ -208,47 +208,47 @@ const AdminDashboard = () => {
 
         {/* KPI Cards */}
         {statistics && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-blue-500 hover:shadow-xl transition transform hover:-translate-y-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-xl shadow-lg p-5 border-t-4 border-blue-500 hover:shadow-xl transition transform hover:-translate-y-1">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 text-sm font-semibold uppercase">Total de Entregas</p>
-                  <p className="text-4xl font-bold text-blue-600 mt-2">{statistics.totalDeliveries}</p>
+                  <p className="text-gray-600 text-xs font-semibold uppercase">Total de Entregas</p>
+                  <p className="text-3xl font-bold text-blue-600 mt-1">{statistics.totalDeliveries}</p>
                 </div>
-                <div className="text-5xl text-blue-200">📦</div>
+                <FaBox className="text-5xl text-blue-200" />
               </div>
               <p className="text-xs text-gray-500 mt-3">
                 {period === 'day' ? 'Hoje' : period === 'week' ? 'Esta semana' : 'Este mês'}
               </p>
             </div>
 
-            <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-green-500 hover:shadow-xl transition transform hover:-translate-y-1">
+            <div className="bg-white rounded-xl shadow-lg p-5 border-t-4 border-green-500 hover:shadow-xl transition transform hover:-translate-y-1">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 text-sm font-semibold uppercase">Motoristas Ativos</p>
-                  <p className="text-4xl font-bold text-green-600 mt-2">{statistics.deliveriesByDriver.length}</p>
+                  <p className="text-gray-600 text-xs font-semibold uppercase">Motoristas Ativos</p>
+                  <p className="text-3xl font-bold text-green-600 mt-1">{statistics.deliveriesByDriver.length}</p>
                 </div>
-                <div className="text-5xl text-green-200">🚗</div>
+                <FaCar className="text-5xl text-green-200" />
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-orange-500 hover:shadow-xl transition transform hover:-translate-y-1">
+            <div className="bg-white rounded-xl shadow-lg p-5 border-t-4 border-orange-500 hover:shadow-xl transition transform hover:-translate-y-1">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 text-sm font-semibold uppercase">Top Recebedor</p>
-                  <p className="text-2xl font-bold text-orange-600 mt-2">{topRecebedores.length > 0 ? topRecebedores[0].count : '0'}</p>
+                  <p className="text-gray-600 text-xs font-semibold uppercase">Top Recebedor</p>
+                  <p className="text-3xl font-bold text-orange-600 mt-1">{topRecebedores.length > 0 ? topRecebedores[0].count : '0'}</p>
                 </div>
-                <div className="text-5xl text-orange-200">👑</div>
+                <FaCrown className="text-5xl text-orange-200" />
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-purple-500 hover:shadow-xl transition transform hover:-translate-y-1">
+            <div className="bg-white rounded-xl shadow-lg p-5 border-t-4 border-purple-500 hover:shadow-xl transition transform hover:-translate-y-1">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 text-sm font-semibold uppercase">Taxa Finalização</p>
-                  <p className="text-4xl font-bold text-purple-600 mt-2">100%</p>
+                  <p className="text-gray-600 text-xs font-semibold uppercase">Taxa Finalização</p>
+                  <p className="text-3xl font-bold text-purple-600 mt-1">100%</p>
                 </div>
-                <div className="text-5xl text-purple-200">✅</div>
+                <FaCheckCircle className="text-5xl text-purple-200" />
               </div>
             </div>
           </div>
@@ -256,11 +256,11 @@ const AdminDashboard = () => {
 
         {/* Gráficos principais */}
         {statistics && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
             {/* Entregas por dia */}
             {statistics.dailyDeliveries.length > 0 && (
-              <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
-                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition">
+                <h3 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-blue-500"></span>
                   Entregas por Dia
                 </h3>
@@ -305,8 +305,8 @@ const AdminDashboard = () => {
 
             {/* Entregas por contratado */}
             {statistics.deliveriesByDriver.length > 0 && (
-              <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
-                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition">
+                <h3 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-green-500"></span>
                   Entregas por Contratado
                 </h3>
@@ -336,9 +336,9 @@ const AdminDashboard = () => {
 
         {/* Gráficos de recebedores */}
         {deliveries.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
-              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition">
+              <h3 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-cyan-500"></span>
                 Entregas por Recebedor
               </h3>
@@ -357,8 +357,8 @@ const AdminDashboard = () => {
               </ResponsiveContainer>
             </div>
 
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
-              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition">
+              <h3 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
                 Tempo Médio no Cliente
               </h3>

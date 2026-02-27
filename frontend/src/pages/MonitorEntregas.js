@@ -675,8 +675,9 @@ const MonitorEntregas = () => {
 
 
   return (
-    <div className="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen pb-20">
-      <div className="max-w-full mx-auto p-4 lg:p-6">
+    <div className="bg-gradient-to-br from-gray-50 to-gray-100 h-screen flex flex-col">
+      {/* outer padding removed; content will stretch */}
+      <div className="w-full flex-grow overflow-auto p-4 lg:p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6 lg:mb-8">
           <button

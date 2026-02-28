@@ -293,17 +293,25 @@ const ProgramadasEntregas = () => {
       if (user) nomeFiltro = (user.username || user.name || '').trim().toUpperCase();
       let filtradas = [];
       if (nomeFiltro) filtradas = todas.filter(p => String(p.contratado).trim().toUpperCase() === nomeFiltro);
-      // Mostrar todas MENOS as finalizadas e canceladas
-      const visibleProgramacoes = filtradas.filter(p => {
-        const status = String(p.status || '').toUpperCase();
-        return !['FINALIZADO', 'CANCELADO'].includes(status);
-      });
-      setProgramacoes(visibleProgramacoes);
       const deliveriesRes = await deliveryService.getMyDeliveries({});
       const deliveries = deliveriesRes.data.deliveries || [];
       const map = {};
       deliveries.forEach(d => { map[(d.deliveryNumber || '').toUpperCase()] = d; });
       setDeliveriesMap(map);
+      // Mostrar todas MENOS as finalizadas, canceladas ou pendentes com devolução já feita
+      const visibleProgramacoes = filtradas.filter(p => {
+        const status = String(p.status || '').toUpperCase();
+        if (['FINALIZADO', 'CANCELADO'].includes(status)) return false;
+        if (status === 'ENTREGUE_COM_PENDENCIA_CANHOTO') {
+          const key = ((p.container || p.processo || '').toUpperCase());
+          const del = map[key];
+          if (del && del.documents && del.documents.devolucaoContainerVazio && del.documents.devolucaoContainerVazio.length > 0) {
+            return false;
+          }
+        }
+        return true;
+      });
+      setProgramacoes(visibleProgramacoes);
     } catch (err) {
       setToast({ message: 'Erro ao carregar entregas programadas', type: 'error' });
     } finally {
@@ -596,11 +604,18 @@ const ProgramadasEntregas = () => {
       try {
         await adminService.updateProgramacao(currentProgramacaoForReturn._id, { status: finalStatus });
       } catch (_) {}
-      setToast({ message: finalStatus === 'FINALIZADO' ? 'Entrega finalizada com sucesso!' : 'Container devolvido. Canhoto pendente!', type: 'success' });
+      const msg = finalStatus === 'FINALIZADO' ? 'Entrega finalizada com sucesso!' : 'Container devolvido. Canhoto pendente!';
+      setToast({ message: msg, type: 'success' });
       await loadProgramacoes();
       setShowContainerReturnModal(false);
       setCurrentProgramacaoForReturn(null);
       setContainerVazioProof(null);
+      // Redirect user to appropriate screen
+      if (finalStatus === 'ENTREGUE_COM_PENDENCIA_CANHOTO') {
+        navigate('/entregas-canhotos-pendentes', { state: { toast: { message: msg, type: 'success' } } });
+      } else {
+        navigate('/minhas-entregas', { state: { toast: { message: msg, type: 'success' } } });
+      }
     } catch (err) {
       setToast({ message: 'Erro ao registrar devolução do container vazio', type: 'error' });
     } finally {

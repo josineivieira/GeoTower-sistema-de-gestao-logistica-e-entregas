@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Toast from '../components/Toast';
 import { FaTimes, FaFileAlt } from 'react-icons/fa';
 import { adminService, deliveryService } from '../services/authService';
@@ -7,6 +7,7 @@ import { useAuth } from '../services/authContext';
 
 const EntregasCanhotosPendentes = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
@@ -20,9 +21,14 @@ const EntregasCanhotosPendentes = () => {
 
   useEffect(() => {
     loadPendentes();
+    // show toast if passed via navigation
+    if (location.state && location.state.toast) {
+      setToast(location.state.toast);
+      // clear state so it doesn't persist on back/refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
+  }, [user, location.state]);
   const loadPendentes = async () => {
     setLoading(true);
     try {

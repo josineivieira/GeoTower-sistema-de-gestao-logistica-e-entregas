@@ -294,21 +294,33 @@ const ProgramadasEntregas = () => {
       if (user) nomeFiltro = (user.username || user.name || '').trim().toUpperCase();
       let filtradas = [];
       if (nomeFiltro) filtradas = todas.filter(p => String(p.contratado).trim().toUpperCase() === nomeFiltro);
+      
       const deliveriesRes = await deliveryService.getMyDeliveries({});
       const deliveries = deliveriesRes.data.deliveries || [];
       const map = {};
       deliveries.forEach(d => { map[(d.deliveryNumber || '').toUpperCase()] = d; });
       setDeliveriesMap(map);
-      // Remover TODAS que foram devolvidas (qualquer status) ou finalizadas/canceladas
+      
+      // Remover TODAS que foram devolvidas (independente do status) ou finalizadas/canceladas
       const visibleProgramacoes = filtradas.filter(p => {
         const status = String(p.status || '').toUpperCase();
         if (['FINALIZADO', 'CANCELADO'].includes(status)) return false;
-        // Verificar se tem comprovante de devolução - se tiver, não mostra
+        
+        // Tentar buscar o delivery por linkedDeliveryId primeiro
+        if (p.linkedDeliveryId) {
+          const del = deliveries.find(d => d._id === p.linkedDeliveryId);
+          if (del && del.documents && del.documents.devolucaoContainerVazio && del.documents.devolucaoContainerVazio.length > 0) {
+            return false;
+          }
+        }
+        
+        // Fallback: buscar por container/processo
         const key = ((p.container || p.processo || '').toUpperCase());
         const del = map[key];
         if (del && del.documents && del.documents.devolucaoContainerVazio && del.documents.devolucaoContainerVazio.length > 0) {
           return false;
         }
+        
         return true;
       });
       setProgramacoes(visibleProgramacoes);
@@ -317,7 +329,7 @@ const ProgramadasEntregas = () => {
     } finally {
       setLoading(false);
     }
-  };
+  };;
 
   const handleStartDelivery = async (p) => {
     const deliveryNumber = (p.container && p.container.trim()) || (p.processo && p.processo.trim());
@@ -602,7 +614,7 @@ const ProgramadasEntregas = () => {
       const newObs = `${existingObs ? existingObs + '\n' : ''}${containerObs}`;
       await deliveryService.updateDelivery(deliveryId, { status: finalStatus, observations: newObs });
       try {
-        await adminService.updateProgramacao(currentProgramacaoForReturn._id, { status: finalStatus });
+        await adminService.updateProgramacao(currentProgramacaoForReturn._id, { status: finalStatus, linkedDeliveryId: deliveryId });
       } catch (_) {}
       const msg = finalStatus === 'FINALIZADO' ? 'Entrega finalizada com sucesso!' : 'Container devolvido. Canhoto pendente!';
       setToast({ message: msg, type: 'success' });

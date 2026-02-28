@@ -96,7 +96,8 @@ const STATUS_CONFIG = {
   AGUARDANDO_ANEXO: { label: 'AGUARD. DOCUMENTOS', color: 'bg-violet-100 text-violet-700 border-violet-300', dot: 'bg-violet-500', icon: FaFileAlt },
   AGUARDANDO_AGENDAMENTO_DEVOLUCAO: { label: 'AGUARD. AGEND. DEVOLUÇÃO', color: 'bg-pink-100 text-pink-700 border-pink-300', dot: 'bg-pink-500', icon: FaCalendarAlt },
   ANEXANDO_DOCUMENTOS_FINAIS: { label: 'ANEXANDO DOCUMENTOS', color: 'bg-teal-100 text-teal-700 border-teal-300', dot: 'bg-teal-500', icon: FaFileAlt },
-  ENTREGUE: { label: 'PENDENTE DEVOLUÇÃO', color: 'bg-yellow-100 text-yellow-700 border-yellow-300', dot: 'bg-yellow-500', icon: FaCheckCircle },
+  ENTREGUE: { label: 'DEVOLVENDO CONTAINER', color: 'bg-yellow-100 text-yellow-700 border-yellow-300', dot: 'bg-yellow-500', icon: FaTruck },
+  DEVOLVENDO_CONTAINER: { label: 'DEVOLVENDO CONTAINER', color: 'bg-yellow-100 text-yellow-700 border-yellow-300', dot: 'bg-yellow-500', icon: FaTruck },
   FINALIZADO: { label: 'FINALIZADO', color: 'bg-emerald-100 text-emerald-700 border-emerald-300', dot: 'bg-emerald-500', icon: FaCheckCircle },
   CANCELADO: { label: 'CANCELADO', color: 'bg-gray-200 text-gray-600 border-gray-300', dot: 'bg-gray-400', icon: FaTimes },
 };
@@ -120,6 +121,7 @@ const FLOW_STEPS = [
   { key: 'desovaProgress',  label: 'Progresso' },
   { key: 'askSchedule',     label: 'Devolução' },
   { key: 'finalDocs',       label: 'Docs' },
+  { key: 'containerReturn', label: 'Container' },
 ];
 const STEP_INDEX = Object.fromEntries(FLOW_STEPS.map((s, i) => [s.key, i]));
 
@@ -250,6 +252,11 @@ const ProgramadasEntregas = () => {
   const [returnProof, setReturnProof] = useState(null);
   const [returnSubmitting, setReturnSubmitting] = useState(false);
 
+  const [containerReturnProof, setContainerReturnProof] = useState(null);
+  const [containerReturnSubmitting, setContainerReturnSubmitting] = useState(false);
+  const [pendingContainerReturnStatus, setPendingContainerReturnStatus] = useState(null);
+  const containerReturnProofRef = useRef(null);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('data');
@@ -326,7 +333,8 @@ const ProgramadasEntregas = () => {
           case 'EM_DESOVA': restoredStep = 'desovaProgress'; break;
           case 'AGUARDANDO_ANEXO': case 'ANEXANDO_DOCUMENTOS_FINAIS': restoredStep = 'finalDocs'; break;
           case 'AGUARDANDO_AGENDAMENTO_DEVOLUCAO': restoredStep = 'askSchedule'; break;
-          case 'ENTREGUE': restoredStep = 'finalDocs'; break;
+          case 'ENTREGUE': case 'DEVOLVENDO_CONTAINER': setPendingContainerReturnStatus('ENTREGUE'); restoredStep = 'containerReturn'; break;
+          case 'ENTREGUE_COM_PENDENCIA_CANHOTO': setPendingContainerReturnStatus('ENTREGUE_COM_PENDENCIA_CANHOTO'); restoredStep = 'containerReturn'; break;
           default: restoredStep = 'welcome';
         }
         setCurrentStep(existing.currentStep || restoredStep);
@@ -360,6 +368,7 @@ const ProgramadasEntregas = () => {
   const closeModal = () => {
     setShowModal(false); setCurrentStep('welcome'); setCurrentDelivery(null); setCurrentProgramacao(null);
     setPhotos([]); setObservations(''); setJustification(''); setDocumentsUpload({}); setDocumentsJustification('');
+    setContainerReturnProof(null); setPendingContainerReturnStatus(null);
     loadProgramacoes();
   };
 
@@ -530,20 +539,53 @@ const ProgramadasEntregas = () => {
           await deliveryService.uploadDocument(currentDelivery._id, docType, documentsUpload[docType]);
         }
       }
-      const finalStatus = allOk ? 'ENTREGUE' : 'ENTREGUE_COM_PENDENCIA_CANHOTO';
+      const docStatus = allOk ? 'ENTREGUE' : 'ENTREGUE_COM_PENDENCIA_CANHOTO';
       const fresh = await deliveryService.getDelivery(currentDelivery._id);
       const existingObs = fresh.data.delivery.observations || '';
       const timestamp = new Date().toLocaleString('pt-BR');
       const docsObs = documentsJustification ? `(JUSTIFICATIVA_DOCS) ${documentsJustification}` : '';
       const newObs = `${existingObs ? existingObs + '\n' : ''}${docsObs ? `[${timestamp}] ${docsObs}` : ''}`;
-      await deliveryService.updateDelivery(currentDelivery._id, { status: finalStatus, documentsJustification, observations: newObs });
-      await loadProgramacoes();
-      closeModal();
-      if (finalStatus === 'ENTREGUE' && fromPendingNav) navigate('/minhas-entregas');
+      await deliveryService.updateDelivery(currentDelivery._id, { status: docStatus, documentsJustification, observations: newObs });
+      setPendingContainerReturnStatus(docStatus);
+      setContainerReturnProof(null);
+      goToStep('containerReturn');
     } catch (err) {
       setToast({ message: 'Erro ao enviar documentos', type: 'error' });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleContainerReturn = async () => {
+    if (!currentProgramacao) return;
+    setContainerReturnSubmitting(true);
+    try {
+      if (!containerReturnProof) {
+        setToast({ message: 'Anexe o comprovante de devolução do container', type: 'error' });
+        setContainerReturnSubmitting(false);
+        return;
+      }
+      if (containerReturnProof) {
+        await deliveryService.uploadDocument(currentDelivery._id, 'devolucaoContainer', containerReturnProof);
+      }
+      const finalStatus = pendingContainerReturnStatus === 'ENTREGUE_COM_PENDENCIA_CANHOTO' ? 'ENTREGUE_COM_PENDENCIA_CANHOTO' : 'FINALIZADO';
+      const fresh = await deliveryService.getDelivery(currentDelivery._id);
+      const existingObs = fresh.data.delivery.observations || '';
+      const timestamp = new Date().toLocaleString('pt-BR');
+      const containerObs = `[${timestamp}] (CONTAINER_DEVOLVIDO) Container devolvido com comprovante.`;
+      const newObs = `${existingObs ? existingObs + '\n' : ''}${containerObs}`;
+      await deliveryService.updateDelivery(currentDelivery._id, { status: finalStatus, observations: newObs });
+      try {
+        await adminService.updateProgramacao(currentProgramacao._id, { status: finalStatus });
+      } catch (_) {}
+      setToast({ message: finalStatus === 'FINALIZADO' ? 'Entrega finalizada com sucesso!' : 'Container devolvido. Canhoto pendente!', type: 'success' });
+      await loadProgramacoes();
+      closeModal();
+      if (finalStatus === 'FINALIZADO') navigate('/minhas-entregas');
+    } catch (err) {
+      setToast({ message: 'Erro ao registrar devolução do container', type: 'error' });
+    } finally {
+      setContainerReturnSubmitting(false);
     }
   };
 
@@ -585,16 +627,16 @@ const ProgramadasEntregas = () => {
         </button>
       );
     }
-    if (['ENTREGUE', 'ENTREGUE_COM_PENDENCIA_CANHOTO'].includes(s)) {
+    if (['ENTREGUE', 'ENTREGUE_COM_PENDENCIA_CANHOTO', 'DEVOLVENDO_CONTAINER'].includes(s)) {
       return (
-        <button onClick={() => openReturnModal(p)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-xl shadow-md hover:shadow-lg active:scale-95 transition font-bold text-sm"
+        <button onClick={() => handleStartDelivery(p)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-yellow-500 to-amber-600 text-white rounded-xl shadow-md hover:shadow-lg active:scale-95 transition font-bold text-sm"
         >
-          <FaRoute size={14} /> Fazer Devolução
+          <FaTruck size={14} /> Continuar Devolução
         </button>
       );
     }
-    if (p.status && !['AGENDADO', 'CONTAINER_MONTADO', 'ENTREGUE', 'CANCELADO', 'FINALIZADO', 'pending'].includes(s)) {
+    if (p.status && !['AGENDADO', 'CONTAINER_MONTADO', 'ENTREGUE', 'ENTREGUE_COM_PENDENCIA_CANHOTO', 'DEVOLVENDO_CONTAINER', 'CANCELADO', 'FINALIZADO', 'pending'].includes(s)) {
       return (
         <button onClick={() => handleStartDelivery(p)}
           className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl shadow-md hover:shadow-lg active:scale-95 transition font-bold text-sm"
@@ -707,6 +749,7 @@ const ProgramadasEntregas = () => {
               <option value="CONTAINER_MONTADO" className="bg-gray-900">Container Montado</option>
               <option value="A_CAMINHO_DO_CLIENTE" className="bg-gray-900">A Caminho</option>
               <option value="ENTREGUE" className="bg-gray-900">Entregue</option>
+              <option value="DEVOLVENDO_CONTAINER" className="bg-gray-900">Devolvendo Container</option>
             </select>
             <div className="flex gap-1.5">
               <select
@@ -758,6 +801,7 @@ const ProgramadasEntregas = () => {
                   p.status === 'AGUARDANDO_DESOVA' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
                   p.status === 'EM_DESOVA' ? 'bg-gradient-to-r from-orange-400 to-red-500' :
                   p.status === 'ENTREGUE' ? 'bg-gradient-to-r from-yellow-400 to-amber-500' :
+                  p.status === 'DEVOLVENDO_CONTAINER' ? 'bg-gradient-to-r from-yellow-400 to-amber-500' :
                   p.status === 'FINALIZADO' ? 'bg-gradient-to-r from-emerald-400 to-teal-500' :
                   'bg-gradient-to-r from-gray-300 to-gray-400'
                 }`} />
@@ -1460,9 +1504,78 @@ const ProgramadasEntregas = () => {
                           </svg>
                           Enviando...
                         </span>
-                      ) : '✓ Finalizar entrega'}
+                      ) : '✓ Próxima etapa'}
                     </button>
                     <button onClick={() => goToStep('askSchedule')} disabled={submitting}
+                      className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl font-bold text-base active:scale-95 transition disabled:opacity-50">
+                      Voltar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP: containerReturn ── */}
+              {currentStep === 'containerReturn' && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-yellow-100 flex items-center justify-center">
+                      <FaTruck className="text-yellow-600" size={14} />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900">Devolução do Container</h3>
+                  </div>
+                  <StepTimer start={currentDelivery?.arrivedAt || currentDelivery?.createdAt} label="Tempo total" />
+
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
+                    <p className="text-yellow-800 font-semibold text-sm mb-1">📦 Container deve ser devolvido</p>
+                    <p className="text-gray-600 text-sm">Anexe o comprovante de devolução para concluir esta etapa</p>
+                  </div>
+
+                  <div className={`rounded-2xl border-2 p-4 transition-all ${containerReturnProof ? 'border-yellow-400 bg-yellow-50' : 'border-dashed border-gray-300 bg-gray-50'}`}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <FaImage className="text-yellow-500" size={18} />
+                      <p className="font-bold text-gray-800 text-sm">Comprovante de Devolução do Container</p>
+                    </div>
+                    {containerReturnProof ? (
+                      <div className="flex items-center justify-between bg-yellow-100 rounded-xl px-3 py-2 mb-3">
+                        <div className="flex items-center gap-2">
+                          <FaCheckCircle className="text-yellow-500" size={14} />
+                          <span className="text-xs font-bold text-yellow-700 truncate max-w-[180px]">{containerReturnProof.name}</span>
+                        </div>
+                        <button onClick={() => setContainerReturnProof(null)} className="text-red-500 hover:text-red-700">
+                          <FaTimes size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic mb-3 text-center">Nenhuma foto selecionada</p>
+                    )}
+                    <button
+                      onClick={() => containerReturnProofRef.current?.click()}
+                      className="w-full py-3 rounded-xl bg-yellow-600 hover:bg-yellow-700 text-white font-bold text-sm flex items-center justify-center gap-2 transition"
+                    >
+                      <FaCamera size={14} /> {containerReturnProof ? 'Trocar Foto' : 'Tirar Foto'}
+                    </button>
+                    <input ref={containerReturnProofRef} type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) setContainerReturnProof(f); }} className="hidden" />
+                  </div>
+
+                  {containerReturnSubmitting && (
+                    <div className="flex items-center gap-3 p-3 bg-yellow-50 border border-yellow-300 rounded-xl">
+                      <svg className="animate-spin h-5 w-5 text-yellow-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                      </svg>
+                      <span className="text-yellow-700 font-semibold text-sm">Registrando devolução...</span>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleContainerReturn}
+                      disabled={containerReturnSubmitting || !containerReturnProof}
+                      className="flex-1 py-4 bg-gradient-to-r from-yellow-500 to-amber-600 text-white rounded-2xl font-bold text-base shadow-lg active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {pendingContainerReturnStatus === 'ENTREGUE_COM_PENDENCIA_CANHOTO' ? '✓ Container devolvido' : '✓ Finalizar entrega'}
+                    </button>
+                    <button onClick={() => goToStep('finalDocs')} disabled={containerReturnSubmitting}
                       className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl font-bold text-base active:scale-95 transition disabled:opacity-50">
                       Voltar
                     </button>

@@ -628,7 +628,8 @@ const ProgramadasEntregas = () => {
       } catch (_) {}
       const msg = finalStatus === 'FINALIZADO' ? 'Entrega finalizada com sucesso!' : 'Container devolvido. Canhoto pendente!';
       setToast({ message: msg, type: 'success' });
-      await loadProgramacoes();
+      // Remove local programação immediately so it disappears from Programadas
+      setProgramacoes(prev => prev.filter(p => p._id !== currentProgramacaoForReturn._id));
       setShowContainerReturnModal(false);
       setCurrentProgramacaoForReturn(null);
       setContainerVazioProof(null);

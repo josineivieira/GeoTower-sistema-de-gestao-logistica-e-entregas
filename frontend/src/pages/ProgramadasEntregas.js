@@ -298,7 +298,11 @@ const ProgramadasEntregas = () => {
       const deliveriesRes = await deliveryService.getMyDeliveries({});
       const deliveries = deliveriesRes.data.deliveries || [];
       const map = {};
-      deliveries.forEach(d => { map[(d.deliveryNumber || '').toUpperCase()] = d; });
+      const programacaoMap = {};
+      deliveries.forEach(d => {
+        map[(d.deliveryNumber || '').toUpperCase()] = d;
+        if (d.programacaoId) programacaoMap[String(d.programacaoId)] = d;
+      });
       setDeliveriesMap(map);
       
       // Remover TODAS que foram devolvidas (independente do status) ou finalizadas/canceladas
@@ -308,6 +312,12 @@ const ProgramadasEntregas = () => {
         
         // Se marcada como containerReturned, não mostra
         if (p.containerReturned === true) return false;
+
+        // Se o delivery indexado por programacaoId já tem comprovante, não mostra
+        const byProg = programacaoMap[String(p._id)];
+        if (byProg && byProg.documents && byProg.documents.devolucaoContainerVazio && byProg.documents.devolucaoContainerVazio.length > 0) {
+          return false;
+        }
         
         // Tentar buscar o delivery por linkedDeliveryId primeiro
         if (p.linkedDeliveryId) {
@@ -623,6 +633,11 @@ const ProgramadasEntregas = () => {
       const containerObs = `[${timestamp}] (CONTAINER_VAZIO_DEVOLVIDO) Container vazio devolvido com comprovante.`;
       const newObs = `${existingObs ? existingObs + '\n' : ''}${containerObs}`;
       await deliveryService.updateDelivery(deliveryId, { status: finalStatus, observations: newObs });
+      // persist association delivery -> programacao so client can match after reload
+      try {
+        await deliveryService.updateDelivery(deliveryId, { programacaoId: currentProgramacaoForReturn._id });
+      } catch (_) {}
+      // try updating programacao in admin (may 403 for drivers) but it's optional
       try {
         await adminService.updateProgramacao(currentProgramacaoForReturn._id, { status: finalStatus, linkedDeliveryId: deliveryId, containerReturned: true });
       } catch (_) {}

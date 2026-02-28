@@ -102,13 +102,20 @@ const STATUS_CONFIG = {
   CANCELADO: { label: 'CANCELADO', color: 'bg-gray-200 text-gray-600 border-gray-300', dot: 'bg-gray-400', icon: FaTimes },
 };
 
-const StatusBadge = ({ status }) => {
-  const key = status || 'pending';
+const StatusBadge = ({ status, containerReturned }) => {
+  let key = status || 'pending';
+  let overrideLabel = null;
+  // show special message when finalizado but still waiting for empty return
+  if (key === 'FINALIZADO' && !containerReturned) {
+    overrideLabel = 'PEND. DEVOLUÇÃO';
+    // reuse color/style from ENTREGUE since it's intermediate
+    key = 'ENTREGUE';
+  }
   const cfg = STATUS_CONFIG[key] || { label: key, color: 'bg-gray-100 text-gray-600 border-gray-300', dot: 'bg-gray-400' };
   return (
     <span className={`inline-flex items-center gap-1.5 font-bold px-2.5 py-1 rounded-lg text-[11px] border ${cfg.color}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} flex-shrink-0`} />
-      {cfg.label}
+      {overrideLabel || cfg.label}
     </span>
   );
 };
@@ -305,39 +312,39 @@ const ProgramadasEntregas = () => {
       });
       setDeliveriesMap(map);
       
-      // Remover TODAS que foram devolvidas (independente do status) ou finalizadas/canceladas
+      // Remover apenas programações canceladas ou que já tiveram o container vazio devolvido
       const visibleProgramacoes = filtradas.filter(p => {
         const status = String(p.status || '').toUpperCase();
-        if (['FINALIZADO', 'CANCELADO'].includes(status)) return false;
-        
+        if (['CANCELADO'].includes(status)) return false;
+
         // Se marcada como containerReturned, não mostra
         if (p.containerReturned === true) return false;
 
         // Se o delivery indexado por programacaoId já tem comprovante, não mostra
         const byProg = programacaoMap[String(p._id)];
-        if (byProg && byProg.documents && byProg.documents.devolucaoContainerVazio && byProg.documents.devolucaoContainerVazio.length > 0) {
+        if (byProg && byProg.documents && (byProg.documents.devolucaoVazio || byProg.documents.devolucaoContainerVazio) && ((byProg.documents.devolucaoVazio && byProg.documents.devolucaoVazio.length > 0) || (byProg.documents.devolucaoContainerVazio && byProg.documents.devolucaoContainerVazio.length > 0))) {
           return false;
         }
         // also hide if delivery has observation marker (in case document upload failed)
         if (byProg && byProg.observations && byProg.observations.includes('(CONTAINER_VAZIO_DEVOLVIDO)')) {
           return false;
         }
-        
+
         // Tentar buscar o delivery por linkedDeliveryId primeiro
         if (p.linkedDeliveryId) {
           const del = deliveries.find(d => d._id === p.linkedDeliveryId);
-          if (del && del.documents && del.documents.devolucaoContainerVazio && del.documents.devolucaoContainerVazio.length > 0) {
+          if (del && del.documents && ((del.documents.devolucaoVazio && del.documents.devolucaoVazio.length > 0) || (del.documents.devolucaoContainerVazio && del.documents.devolucaoContainerVazio.length > 0))) {
             return false;
           }
         }
-        
+
         // Fallback: buscar por container/processo
         const key = ((p.container || p.processo || '').toUpperCase());
         const del = map[key];
-        if (del && del.documents && del.documents.devolucaoContainerVazio && del.documents.devolucaoContainerVazio.length > 0) {
+        if (del && del.documents && ((del.documents.devolucaoVazio && del.documents.devolucaoVazio.length > 0) || (del.documents.devolucaoContainerVazio && del.documents.devolucaoContainerVazio.length > 0))) {
           return false;
         }
-        
+
         return true;
       });
       setProgramacoes(visibleProgramacoes);
@@ -374,7 +381,7 @@ const ProgramadasEntregas = () => {
           case 'EM_DESOVA': restoredStep = 'desovaProgress'; break;
           case 'AGUARDANDO_ANEXO': case 'ANEXANDO_DOCUMENTOS_FINAIS': restoredStep = 'finalDocs'; break;
           case 'AGUARDANDO_AGENDAMENTO_DEVOLUCAO': restoredStep = 'askSchedule'; break;
-          case 'ENTREGUE': case 'ENTREGUE_COM_PENDENCIA_CANHOTO': case 'DEVOLVENDO_CONTAINER': restoredStep = 'welcome'; break;
+          case 'ENTREGUE': case 'ENTREGUE_COM_PENDENCIA_CANHOTO': case 'DEVOLVENDO_CONTAINER': case 'FINALIZADO': restoredStep = 'welcome'; break;
           default: restoredStep = 'welcome';
         }
         setCurrentStep(existing.currentStep || restoredStep);
@@ -420,7 +427,7 @@ const ProgramadasEntregas = () => {
     if (!currentProgramacao) return;
     setReturnSubmitting(true);
     try {
-      const isPendingCanhoto = String(currentProgramacao.status).toUpperCase() === 'ENTREGUE_COM_PENDENCIA_CANHOTO';
+      const isPendingCanhoto = Array.isArray(currentProgramacao.missingDocumentsAtSubmit) && currentProgramacao.missingDocumentsAtSubmit.length > 0;
       if (currentProgramacao.linkedDeliveryId) {
         if (!isPendingCanhoto) await deliveryService.updateDelivery(currentProgramacao.linkedDeliveryId, { status: 'FINALIZADO' });
         if (returnProof) await deliveryService.uploadDocument(currentProgramacao.linkedDeliveryId, 'devolucaoVazio', returnProof);
@@ -567,27 +574,44 @@ const ProgramadasEntregas = () => {
 
   const handleFinalUploadAndSubmit = async () => {
     const requiredDocs = ['canhotCTE', 'diarioBordo', 'canhotNF'];
-    const allOk = requiredDocs.every(k => documentsUpload[k] && documentsUpload[k].length > 0);
+    // list missing so we can pass observation when forcing submit
+    const missing = requiredDocs.filter(k => !(documentsUpload[k] && documentsUpload[k].length > 0));
+    const allOk = missing.length === 0;
     if (!allOk && !documentsJustification.trim()) {
       setToast({ message: 'Anexe todos os documentos ou justifique', type: 'error' }); return;
     }
     setSubmitting(true);
     try {
+      // upload any new docs
       for (const docType of requiredDocs) {
         if (documentsUpload[docType] && documentsUpload[docType].length > 0) {
           await deliveryService.uploadDocument(currentDelivery._id, docType, documentsUpload[docType]);
         }
       }
-      const docStatus = allOk ? 'ENTREGUE' : 'ENTREGUE_COM_PENDENCIA_CANHOTO';
+
+      // submit the delivery so the backend records missingDocumentsAtSubmit (if any)
+      if (allOk) {
+        await deliveryService.submitDelivery(currentDelivery._id);
+      } else {
+        await deliveryService.submitDelivery(currentDelivery._id, { force: true, observation: documentsJustification });
+      }
+
+      // update delivery to finalizado (backend tracking), but keep programacao as ENTREGUE
+      await deliveryService.updateDelivery(currentDelivery._id, { status: 'FINALIZADO' });
+      try {
+        await adminService.updateProgramacao(currentProgramacao._id, { status: 'ENTREGUE' });
+        // reflect immediately in UI
+        currentProgramacao.status = 'ENTREGUE';
+      } catch (_) {}
+
       const fresh = await deliveryService.getDelivery(currentDelivery._id);
       const existingObs = fresh.data.delivery.observations || '';
       const timestamp = new Date().toLocaleString('pt-BR');
       const docsObs = documentsJustification ? `(JUSTIFICATIVA_DOCS) ${documentsJustification}` : '';
       const newObs = `${existingObs ? existingObs + '\n' : ''}${docsObs ? `[${timestamp}] ${docsObs}` : ''}`;
-      await deliveryService.updateDelivery(currentDelivery._id, { status: docStatus, documentsJustification, observations: newObs });
-      try {
-        await adminService.updateProgramacao(currentProgramacao._id, { status: docStatus });
-      } catch (_) {}
+      // ensure observation stored as well
+      await deliveryService.updateDelivery(currentDelivery._id, { observations: newObs });
+
       setToast({ message: 'Documentos enviados! Agora faça a devolução do container vazio.', type: 'success' });
       await loadProgramacoes();
       closeModal();
@@ -621,7 +645,8 @@ const ProgramadasEntregas = () => {
       }
       if (containerVazioProof) {
         try {
-          await deliveryService.uploadDocument(deliveryId, 'devolucaoContainerVazio', containerVazioProof);
+          // write using the canonical key expected by tower UI
+          await deliveryService.uploadDocument(deliveryId, 'devolucaoVazio', containerVazioProof);
         } catch (uploadErr) {
           console.error('Erro ao fazer upload:', uploadErr);
           setToast({ message: 'Erro ao fazer upload do comprovante: ' + (uploadErr?.response?.data?.message || uploadErr.message), type: 'error' });
@@ -710,7 +735,7 @@ const ProgramadasEntregas = () => {
         </button>
       );
     }
-    if (['ENTREGUE', 'ENTREGUE_COM_PENDENCIA_CANHOTO', 'DEVOLVENDO_CONTAINER'].includes(s)) {
+    if (['ENTREGUE', 'ENTREGUE_COM_PENDENCIA_CANHOTO', 'DEVOLVENDO_CONTAINER', 'FINALIZADO'].includes(s)) {
       return (
         <button onClick={() => openContainerReturnModal(p)}
           className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-yellow-500 to-amber-600 text-white rounded-xl shadow-md hover:shadow-lg active:scale-95 transition font-bold text-sm"
@@ -843,6 +868,7 @@ const ProgramadasEntregas = () => {
               <option value="A_CAMINHO_DO_CLIENTE" className="bg-gray-900">A Caminho</option>
               <option value="ENTREGUE" className="bg-gray-900">Entregue</option>
               <option value="DEVOLVENDO_CONTAINER" className="bg-gray-900">Devolvendo Container</option>
+              <option value="FINALIZADO" className="bg-gray-900">Pendente Devolução</option>
             </select>
             <div className="flex gap-1.5">
               <select
@@ -895,7 +921,8 @@ const ProgramadasEntregas = () => {
                   p.status === 'EM_DESOVA' ? 'bg-gradient-to-r from-orange-400 to-red-500' :
                   p.status === 'ENTREGUE' ? 'bg-gradient-to-r from-yellow-400 to-amber-500' :
                   p.status === 'DEVOLVENDO_CONTAINER' ? 'bg-gradient-to-r from-yellow-400 to-amber-500' :
-                  p.status === 'FINALIZADO' ? 'bg-gradient-to-r from-emerald-400 to-teal-500' :
+                  // When a finalizado programacao is still awaiting container return, treat it like ENTREGUE for the bar color
+                  p.status === 'FINALIZADO' ? 'bg-gradient-to-r from-yellow-400 to-amber-500' :
                   'bg-gradient-to-r from-gray-300 to-gray-400'
                 }`} />
 
@@ -908,7 +935,7 @@ const ProgramadasEntregas = () => {
                       </div>
                       <h3 className="text-lg font-extrabold text-gray-900 leading-tight">{p.processo || '-'}</h3>
                     </div>
-                    <StatusBadge status={p.status} />
+                    <StatusBadge status={p.status} containerReturned={p.containerReturned} />
                   </div>
 
                   {/* Info grid */}

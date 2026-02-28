@@ -1,66 +1,195 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import { adminService } from '../services/authService';
-import { FaArrowLeft, FaBox, FaCar, FaCrown, FaCheckCircle } from 'react-icons/fa';
+import { exportToPDF, exportToExcel, formatMinutes as fmtMin } from '../services/exportService';
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell
+  FiArrowLeft, FiPackage, FiTruck, FiAward, FiClock,
+  FiTrendingUp, FiFilter, FiRefreshCw, FiCalendar,
+  FiSearch, FiBarChart2, FiDownload, FiFileText, FiGrid
+} from 'react-icons/fi';
+import {
+  AreaChart, Area, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Cell, ReferenceLine
 } from 'recharts';
 
+/* ─── Paleta ─── */
+const PALETTE = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#f43f5e'];
+
+/* ─── Tooltip customizado ─── */
+const CustomTooltip = ({ active, payload, label, formatter, labelFormatter }) => {
+  if (!active || !payload?.length) return null;
+  const displayLabel = labelFormatter ? labelFormatter(label) : label;
+  return (
+    <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl px-4 py-3 text-sm min-w-[150px]">
+      <p className="text-gray-400 font-medium mb-2 border-b border-gray-700 pb-1 text-xs uppercase tracking-wide">
+        {displayLabel}
+      </p>
+      {payload.map((entry, i) => (
+        <div key={i} className="flex items-center gap-2 mt-1">
+          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+          <span className="text-white font-semibold">
+            {formatter ? formatter(entry.value) : entry.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* ─── Sparkline ─── */
+const SparkLine = ({ data, color }) => (
+  <ResponsiveContainer width="100%" height={48}>
+    <AreaChart data={data} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+      <defs>
+        <linearGradient id={`sk-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="5%"  stopColor={color} stopOpacity={0.28} />
+          <stop offset="95%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <Area type="monotone" dataKey="count" stroke={color} strokeWidth={2}
+        fill={`url(#sk-${color.replace('#', '')})`} dot={false}
+        isAnimationActive animationDuration={800} />
+    </AreaChart>
+  </ResponsiveContainer>
+);
+
+/* ─── KPI Card ─── */
+const KpiCard = ({ title, value, subtitle, icon: Icon, color, sparkData, badge }) => {
+  const map = {
+    indigo:  { border: 'border-indigo-500',  text: 'text-indigo-500',  bg: 'bg-indigo-50',  spark: '#6366f1' },
+    cyan:    { border: 'border-cyan-500',    text: 'text-cyan-500',    bg: 'bg-cyan-50',    spark: '#06b6d4' },
+    amber:   { border: 'border-amber-500',   text: 'text-amber-500',   bg: 'bg-amber-50',   spark: '#f59e0b' },
+    emerald: { border: 'border-emerald-500', text: 'text-emerald-500', bg: 'bg-emerald-50', spark: '#10b981' },
+  };
+  const s = map[color] ?? map.indigo;
+  return (
+    <div className={`bg-white rounded-2xl shadow-sm border border-slate-100 border-l-4 ${s.border} p-5 hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 flex flex-col gap-2`}>
+      <div className="flex items-start justify-between">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1 truncate">{title}</p>
+          <p className={`text-3xl font-extrabold ${s.text} leading-none`}>{value}</p>
+          {subtitle && <p className="text-xs text-gray-400 mt-1.5 truncate">{subtitle}</p>}
+        </div>
+        <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${s.bg} ml-3 flex-shrink-0`}>
+          <Icon size={20} className={s.text} />
+        </div>
+      </div>
+      {sparkData?.length > 1 && <SparkLine data={sparkData} color={s.spark} />}
+      {badge && (
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 w-fit px-2.5 py-1 rounded-full">
+          <FiTrendingUp size={11} />
+          {badge}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ─── Chart Section Header ─── */
+const ChartHeader = ({ title, subtitle, dotColor }) => (
+  <div className="flex items-start gap-3 mb-4">
+    <div className="mt-1.5 w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
+    <div>
+      <h3 className="text-sm font-bold text-gray-800 leading-tight">{title}</h3>
+      {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+    </div>
+  </div>
+);
+
+/* ─── Skeleton ─── */
+const Skeleton = ({ className }) => (
+  <div className={`animate-pulse bg-gray-200 rounded-xl ${className}`} />
+);
+
+/* ─── Export Button ─── */
+const ExportButton = ({ onClick, loading, icon: Icon, label, colorClass, disabled }) => (
+  <button
+    onClick={onClick}
+    disabled={loading || disabled}
+    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 border 
+      ${loading || disabled
+        ? 'opacity-50 cursor-not-allowed bg-slate-100 border-slate-200 text-slate-400'
+        : colorClass
+      }`}
+  >
+    {loading ? (
+      <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+      </svg>
+    ) : (
+      <Icon size={13} />
+    )}
+    {loading ? 'Gerando...' : label}
+  </button>
+);
+
+/* ════════════════════════════════════════
+   COMPONENTE PRINCIPAL
+════════════════════════════════════════ */
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [deliveries, setDeliveries] = useState([]);
-  const [statistics, setStatistics] = useState(null);
-  const [period, setPeriod] = useState('month');
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState(null);
-  const [filters, setFilters] = useState({
-    searchTerm: '',
-    startDate: '',
-    endDate: ''
-  });
+  const [deliveries,  setDeliveries]  = useState([]);
+  const [statistics,  setStatistics]  = useState(null);
+  const [period,      setPeriod]      = useState('month');
+  const [loading,     setLoading]     = useState(true);
+  const [refreshing,  setRefreshing]  = useState(false);
+  const [exporting,   setExporting]   = useState({ pdf: false, excel: false });
+  const [toast,       setToast]       = useState(null);
+  const [activeBar,   setActiveBar]   = useState(null);
+  const [filters, setFilters] = useState({ searchTerm: '', startDate: '', endDate: '' });
 
-  useEffect(() => {
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [period, filters]);
+  /* ── Refs para captura de gráficos ── */
+  const chartRefs = {
+    area:        useRef(null),
+    barDriver:   useRef(null),
+    barReceiver: useRef(null),
+    barCli:      useRef(null),
+  };
 
-  const loadData = async () => {
-    setLoading(true);
+  /* ── Data loading ── */
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
     try {
       const [delivRes, statsRes] = await Promise.all([
         adminService.getDeliveries(filters),
-        adminService.getStatistics({ period })
+        adminService.getStatistics({ period }),
       ]);
       setDeliveries(delivRes.data.deliveries);
       setStatistics(statsRes.data.statistics);
-    } catch (error) {
+    } catch {
       setToast({ message: 'Erro ao carregar dados', type: 'error' });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }, [period, filters]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  /* ── Helpers ── */
+  const getCliMinutes = (d) => {
+    if (!d.horarioChegada) return null;
+    const chegada = new Date(d.horarioChegada);
+    const ref = d.horarioFimDesova ? new Date(d.horarioFimDesova) : new Date();
+    const diff = ref - chegada;
+    return diff < 0 ? null : diff / 60000;
   };
 
-  // helper para calcular tempo CLI
-  const getCliMinutes = (delivery) => {
-    if (!delivery.horarioChegada) return null;
-    const chegada = new Date(delivery.horarioChegada);
-    const referencia = delivery.horarioFimDesova ? new Date(delivery.horarioFimDesova) : new Date();
-    const diff = referencia - chegada;
-    if (diff < 0) return null;
-    return diff / 60000; // minutes
+  const periodLbl = { day: 'Hoje', week: 'Esta semana', month: 'Este mês' }[period];
+  const fmtDate   = (date) => {
+    const p = String(date).split('-');
+    if (p.length === 3) {
+      const d = new Date(+p[0], +p[1] - 1, +p[2]);
+      return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    }
+    return date;
   };
 
-  // calcula top 5 recebedores com contagem
+  /* ── Memos ── */
   const topRecebedores = React.useMemo(() => {
     const counts = {};
     deliveries.forEach(d => {
@@ -73,319 +202,494 @@ const AdminDashboard = () => {
       .slice(0, 5);
   }, [deliveries]);
 
-  // calcula média de tempo CLI por recebedor
   const avgCliByRecebedor = React.useMemo(() => {
-    const sums = {};
-    const counts = {};
+    const sums = {}, cnts = {};
     deliveries.forEach(d => {
       const key = d.recebedor || '-';
       const mins = getCliMinutes(d);
       if (mins != null) {
         sums[key] = (sums[key] || 0) + mins;
-        counts[key] = (counts[key] || 0) + 1;
+        cnts[key] = (cnts[key] || 0) + 1;
       }
     });
     const res = {};
-    Object.keys(sums).forEach(k => {
-      res[k] = sums[k] / counts[k];
-    });
+    Object.keys(sums).forEach(k => { res[k] = sums[k] / cnts[k]; });
     return res;
   }, [deliveries]);
 
-  // dados para gráficos
-  const recebedorCountData = React.useMemo(() => {
-    return topRecebedores.map(r => ({ name: r.recebedor, count: r.count }));
-  }, [topRecebedores]);
+  const recebedorCountData = React.useMemo(
+    () => topRecebedores.map(r => ({ name: r.recebedor, count: r.count })),
+    [topRecebedores]
+  );
 
-  const recebedorAvgData = React.useMemo(() => {
-    return Object.entries(avgCliByRecebedor)
-      .map(([recebedor, avg]) => ({ name: recebedor, avg }))
+  const recebedorAvgData = React.useMemo(
+    () => Object.entries(avgCliByRecebedor)
+      .map(([recebedor, avg]) => ({ name: recebedor, avg: parseFloat(avg.toFixed(1)) }))
       .sort((a, b) => b.avg - a.avg)
-      .slice(0, 5);
-  }, [avgCliByRecebedor]);
+      .slice(0, 5),
+    [avgCliByRecebedor]
+  );
 
-  const formatMinutes = (m) => {
-    if (m == null) return '-';
-    const h = Math.floor(m / 60);
-    const min = Math.round(m % 60);
-    if (h > 0) return `${h}h ${min}m`;
-    return `${min}m`;
+  const avgCliOverall = React.useMemo(() => {
+    const vals = deliveries.map(d => getCliMinutes(d)).filter(v => v != null);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  }, [deliveries]);
+
+  /* ── Payload compartilhado para exports ── */
+  const exportPayload = () => ({
+    statistics,
+    deliveries,
+    topRecebedores,
+    avgCliByRecebedor,
+    recebedorCountData,
+    recebedorAvgData,
+    period,
+    fmtMin,
+  });
+
+  /* ── Export handlers ── */
+  const handleExportPDF = async () => {
+    if (!statistics) return;
+    setExporting(e => ({ ...e, pdf: true }));
+    try {
+      await exportToPDF({ ...exportPayload(), chartRefs });
+      setToast({ message: 'PDF exportado com sucesso', type: 'success' });
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'Erro ao exportar PDF', type: 'error' });
+    } finally {
+      setExporting(e => ({ ...e, pdf: false }));
+    }
   };
 
-  const COLORS = ['#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
+  const handleExportExcel = () => {
+    if (!statistics) return;
+    setExporting(e => ({ ...e, excel: true }));
+    try {
+      exportToExcel(exportPayload());
+      setToast({ message: 'Excel exportado com sucesso', type: 'success' });
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'Erro ao exportar Excel', type: 'error' });
+    } finally {
+      setExporting(e => ({ ...e, excel: false }));
+    }
+  };
 
+  /* ── Skeleton ── */
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-purple-600" />
+      <div className="w-screen h-screen bg-slate-50 flex flex-col overflow-hidden">
+        <div className="h-[68px] bg-gradient-to-r from-slate-900 to-slate-800 flex-shrink-0" />
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
+          <Skeleton className="h-20 w-full" />
+          <div className="grid grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-36" />)}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-80" />)}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-screen h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-purple-700 to-purple-900 text-white shadow-xl sticky top-0 z-50 flex-shrink-0">
-        <div className="w-full px-6 py-5">
-          <div className="flex items-center justify-between">
+    <div className="w-screen h-screen bg-slate-50 flex flex-col overflow-hidden font-sans">
+
+      {/* ══════ HEADER ══════ */}
+      <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl flex-shrink-0 border-b border-slate-700">
+        <div className="w-full px-6 py-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+
+            {/* Left */}
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate('/home')}
-                className="flex items-center justify-center w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 transition"
+                className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all"
               >
-                <FaArrowLeft className="text-lg" />
+                <FiArrowLeft size={16} />
               </button>
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">Dashboard de Indicadores</h1>
-                <p className="text-purple-200 text-sm mt-1">Análise em tempo real das entregas</p>
+                <div className="flex items-center gap-2">
+                  <FiBarChart2 size={17} className="text-indigo-400" />
+                  <h1 className="text-lg font-bold tracking-tight">Dashboard de Indicadores</h1>
+                </div>
+                <p className="text-slate-400 text-xs mt-0.5 pl-6">Análise em tempo real das operações</p>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        {/* Filtros Gerais */}
-        <div className="bg-white rounded-xl shadow-lg p-5 mb-6 border-l-4 border-purple-600">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-800">Filtros Gerais</h3>
-            <button
-              onClick={() => {
-                setPeriod('month');
-                setFilters({ searchTerm: '', startDate: '', endDate: '' });
-              }}
-              className="text-sm px-3 py-1.5 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium transition"
-            >
-              Limpar
-            </button>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Período</label>
-              <select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg border-2 border-gray-300 focus:border-purple-600 focus:outline-none font-medium"
+            {/* Right */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Period toggle */}
+              <div className="flex items-center gap-1 bg-white/10 rounded-xl p-1 border border-white/10">
+                {[
+                  { val: 'day',   label: 'Hoje' },
+                  { val: 'week',  label: 'Semana' },
+                  { val: 'month', label: 'Mês' },
+                ].map(({ val, label }) => (
+                  <button
+                    key={val}
+                    onClick={() => setPeriod(val)}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                      period === val
+                        ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30'
+                        : 'text-slate-400 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Refresh */}
+              <button
+                onClick={() => loadData(true)}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-semibold transition-all disabled:opacity-50"
               >
-                <option value="day">Hoje</option>
-                <option value="week">Esta semana</option>
-                <option value="month">Este mês</option>
-              </select>
-            </div>
+                <FiRefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
+                Atualizar
+              </button>
 
-            <div>
-              <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Buscar</label>
-              <input
-                type="text"
-                placeholder="Nº entrega ou motorista"
-                value={filters.searchTerm}
-                onChange={(e) => setFilters({ ...filters, searchTerm: e.target.value })}
-                className="w-full px-3 py-2.5 rounded-lg border-2 border-gray-300 focus:border-purple-600 focus:outline-none"
+              {/* Separator */}
+              <div className="w-px h-6 bg-white/20" />
+
+              {/* Export PDF */}
+              <ExportButton
+                onClick={handleExportPDF}
+                loading={exporting.pdf}
+                icon={FiFileText}
+                label="Exportar PDF"
+                disabled={!statistics}
+                colorClass="bg-rose-500/90 hover:bg-rose-500 text-white border-rose-600/50 shadow-sm shadow-rose-500/20"
               />
-            </div>
 
-            <div>
-              <label className="block text-xs font-bold text-gray-600 uppercase mb-2">De</label>
-              <input
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                className="w-full px-3 py-2.5 rounded-lg border-2 border-gray-300 focus:border-purple-600 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Até</label>
-              <input
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                className="w-full px-3 py-2.5 rounded-lg border-2 border-gray-300 focus:border-purple-600 focus:outline-none"
+              {/* Export Excel */}
+              <ExportButton
+                onClick={handleExportExcel}
+                loading={exporting.excel}
+                icon={FiGrid}
+                label="Exportar Excel"
+                disabled={!statistics}
+                colorClass="bg-emerald-500/90 hover:bg-emerald-500 text-white border-emerald-600/50 shadow-sm shadow-emerald-500/20"
               />
             </div>
           </div>
         </div>
+      </header>
 
-        {/* KPI Cards */}
-        {statistics && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-xl shadow-lg p-5 border-t-4 border-blue-500 hover:shadow-xl transition transform hover:-translate-y-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-xs font-semibold uppercase">Total de Entregas</p>
-                  <p className="text-3xl font-bold text-blue-600 mt-1">{statistics.totalDeliveries}</p>
-                </div>
-                <FaBox className="text-5xl text-blue-200" />
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-6 py-5 space-y-5 max-w-[1600px] mx-auto">
+
+          {/* ══════ FILTROS ══════ */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                <FiFilter size={14} className="text-indigo-500" />
+                Filtros
               </div>
-              <p className="text-xs text-gray-500 mt-3">
-                {period === 'day' ? 'Hoje' : period === 'week' ? 'Esta semana' : 'Este mês'}
-              </p>
+              <button
+                onClick={() => {
+                  setPeriod('month');
+                  setFilters({ searchTerm: '', startDate: '', endDate: '' });
+                }}
+                className="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold text-slate-600 transition"
+              >
+                Limpar
+              </button>
             </div>
-
-            <div className="bg-white rounded-xl shadow-lg p-5 border-t-4 border-green-500 hover:shadow-xl transition transform hover:-translate-y-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-xs font-semibold uppercase">Motoristas Ativos</p>
-                  <p className="text-3xl font-bold text-green-600 mt-1">{statistics.deliveriesByDriver.length}</p>
-                </div>
-                <FaCar className="text-5xl text-green-200" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="relative">
+                <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar entrega ou motorista..."
+                  value={filters.searchTerm}
+                  onChange={e => setFilters({ ...filters, searchTerm: e.target.value })}
+                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+                />
               </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-lg p-5 border-t-4 border-orange-500 hover:shadow-xl transition transform hover:-translate-y-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-xs font-semibold uppercase">Top Recebedor</p>
-                  <p className="text-3xl font-bold text-orange-600 mt-1">{topRecebedores.length > 0 ? topRecebedores[0].count : '0'}</p>
-                </div>
-                <FaCrown className="text-5xl text-orange-200" />
+              <div className="relative">
+                <FiCalendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={e => setFilters({ ...filters, startDate: e.target.value })}
+                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+                />
               </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-lg p-5 border-t-4 border-purple-500 hover:shadow-xl transition transform hover:-translate-y-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-xs font-semibold uppercase">Taxa Finalização</p>
-                  <p className="text-3xl font-bold text-purple-600 mt-1">100%</p>
-                </div>
-                <FaCheckCircle className="text-5xl text-purple-200" />
+              <div className="relative">
+                <FiCalendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="date"
+                  value={filters.endDate}
+                  onChange={e => setFilters({ ...filters, endDate: e.target.value })}
+                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+                />
               </div>
             </div>
           </div>
-        )}
 
-        {/* Gráficos principais */}
-        {statistics && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-            {/* Entregas por dia */}
-            {statistics.dailyDeliveries.length > 0 && (
-              <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition">
-                <h3 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                  Entregas por Dia
-                </h3>
-                <ResponsiveContainer width="100%" height={320}>
-                  <LineChart data={statistics.dailyDeliveries} margin={{ top: 10, right: 20, left: 0, bottom: 30 }}>
-                    <defs>
-                      <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis 
-                      dataKey="_id" 
-                      stroke="#6b7280"
-                      tickFormatter={(date) => {
-                        const parts = String(date).split('-');
-                        if (parts.length === 3) {
-                          const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-                          return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-                        }
-                        return date;
-                      }}
-                    />
-                    <YAxis stroke="#6b7280" />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
-                      labelFormatter={(label) => {
-                        const parts = String(label).split('-');
-                        if (parts.length === 3) {
-                          const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-                          return d.toLocaleDateString('pt-BR');
-                        }
-                        return label;
-                      }}
-                    />
-                    <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', r: 5 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+          {/* ══════ KPI CARDS ══════ */}
+          {statistics && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              <KpiCard
+                title="Total de Entregas"
+                value={statistics.totalDeliveries}
+                subtitle={periodLbl}
+                icon={FiPackage}
+                color="indigo"
+                sparkData={statistics.dailyDeliveries}
+                badge={`${statistics.totalDeliveries} registros`}
+              />
+              <KpiCard
+                title="Motoristas Ativos"
+                value={statistics.deliveriesByDriver.length}
+                subtitle="Contratados com entregas"
+                icon={FiTruck}
+                color="cyan"
+                sparkData={statistics.dailyDeliveries}
+              />
+              <KpiCard
+                title="Top Recebedor"
+                value={topRecebedores[0]?.count ?? 0}
+                subtitle={topRecebedores[0]?.recebedor ?? '-'}
+                icon={FiAward}
+                color="amber"
+              />
+              <KpiCard
+                title="Tempo Médio CLI"
+                value={fmtMin(avgCliOverall)}
+                subtitle="Média chegada → fim desova"
+                icon={FiClock}
+                color="emerald"
+                sparkData={statistics.dailyDeliveries}
+              />
+            </div>
+          )}
 
-            {/* Entregas por contratado */}
-            {statistics.deliveriesByDriver.length > 0 && (
-              <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition">
-                <h3 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-green-500"></span>
-                  Entregas por Contratado
-                </h3>
-                <ResponsiveContainer width="100%" height={320}>
-                  <BarChart data={statistics.deliveriesByDriver} margin={{ top: 10, right: 20, left: 0, bottom: 50 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis 
-                      dataKey="_id" 
-                      stroke="#6b7280"
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                    />
-                    <YAxis stroke="#6b7280" />
-                    <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }} formatter={(value) => `${value} entrega(s)`} />
-                    <Bar dataKey="count" fill="#10b981" radius={[8, 8, 0, 0]}>
-                      {statistics.deliveriesByDriver.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+          {/* ══════ GRÁFICOS SUPERIORES ══════ */}
+          {statistics && (
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+
+              {/* Área — Evolução Diária */}
+              {statistics.dailyDeliveries.length > 0 && (
+                <div
+                  ref={chartRefs.area}
+                  className="xl:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow duration-300"
+                >
+                  <ChartHeader
+                    title="Evolução Diária de Entregas"
+                    subtitle={`Distribuição no período: ${periodLbl}`}
+                    dotColor="#6366f1"
+                  />
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={statistics.dailyDeliveries} margin={{ top: 10, right: 10, left: -10, bottom: 30 }}>
+                      <defs>
+                        <linearGradient id="gradArea" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.22} />
+                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis dataKey="_id" stroke="#94a3b8" tick={{ fontSize: 11, fill: '#94a3b8' }}
+                        tickFormatter={fmtDate} axisLine={false} tickLine={false}
+                        angle={-35} textAnchor="end" height={55} />
+                      <YAxis stroke="#94a3b8" tick={{ fontSize: 11, fill: '#94a3b8' }}
+                        axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip
+                        content={<CustomTooltip labelFormatter={fmtDate} />}
+                        cursor={{ stroke: '#6366f1', strokeWidth: 1.5, strokeDasharray: '4 4' }}
+                      />
+                      <ReferenceLine
+                        y={statistics.dailyDeliveries.length
+                          ? statistics.dailyDeliveries.reduce((s, d) => s + d.count, 0) / statistics.dailyDeliveries.length
+                          : 0}
+                        stroke="#6366f1" strokeDasharray="4 4" strokeOpacity={0.4}
+                        label={{ value: 'Média', position: 'insideTopRight', fontSize: 10, fill: '#6366f1' }}
+                      />
+                      <Area type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2.5}
+                        fill="url(#gradArea)"
+                        dot={{ fill: '#6366f1', r: 4, strokeWidth: 2, stroke: '#fff' }}
+                        activeDot={{ r: 6, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }}
+                        isAnimationActive animationDuration={800} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* Bar — Por Contratado */}
+              {statistics.deliveriesByDriver.length > 0 && (
+                <div
+                  ref={chartRefs.barDriver}
+                  className="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow duration-300"
+                >
+                  <ChartHeader
+                    title="Entregas por Contratado"
+                    subtitle="Ranking de volume no período"
+                    dotColor="#10b981"
+                  />
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={statistics.deliveriesByDriver}
+                      margin={{ top: 10, right: 10, left: -10, bottom: 50 }}
+                      onMouseLeave={() => setActiveBar(null)}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis dataKey="_id" stroke="#94a3b8" tick={{ fontSize: 10, fill: '#94a3b8' }}
+                        axisLine={false} tickLine={false} angle={-40} textAnchor="end" height={65} />
+                      <YAxis stroke="#94a3b8" tick={{ fontSize: 11, fill: '#94a3b8' }}
+                        axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip
+                        content={<CustomTooltip formatter={v => `${v} entrega(s)`} />}
+                        cursor={{ fill: 'rgba(99,102,241,0.05)' }}
+                      />
+                      <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={48}
+                        onMouseEnter={(_, idx) => setActiveBar(idx)}
+                        isAnimationActive animationDuration={700}>
+                        {statistics.deliveriesByDriver.map((_, i) => (
+                          <Cell key={i} fill={PALETTE[i % PALETTE.length]}
+                            opacity={activeBar === null || activeBar === i ? 1 : 0.35} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ══════ GRÁFICOS INFERIORES ══════ */}
+          {deliveries.length > 0 && (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+
+              {/* Horizontal — Entregas por Recebedor */}
+              <div
+                ref={chartRefs.barReceiver}
+                className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow duration-300"
+              >
+                <ChartHeader title="Entregas por Recebedor" subtitle="Top 5 recebedores no período" dotColor="#06b6d4" />
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={recebedorCountData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                    <XAxis type="number" stroke="#94a3b8" tick={{ fontSize: 11, fill: '#94a3b8' }}
+                      axisLine={false} tickLine={false} allowDecimals={false} />
+                    <YAxis type="category" dataKey="name" stroke="#94a3b8"
+                      tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} width={130} />
+                    <Tooltip content={<CustomTooltip formatter={v => `${v} entrega(s)`} />}
+                      cursor={{ fill: 'rgba(6,182,212,0.05)' }} />
+                    <Bar dataKey="count" radius={[0, 6, 6, 0]} maxBarSize={32}
+                      background={{ fill: '#f8fafc', radius: [0, 6, 6, 0] }}
+                      isAnimationActive animationDuration={700}>
+                      {recebedorCountData.map((_, i) => (
+                        <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
                       ))}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* Gráficos de recebedores */}
-        {deliveries.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-            <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition">
-              <h3 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-cyan-500"></span>
-                Entregas por Recebedor
-              </h3>
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={recebedorCountData} layout="vertical" margin={{ top: 10, right: 20, left: 150, bottom: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis type="number" stroke="#6b7280" />
-                  <YAxis type="category" dataKey="name" stroke="#6b7280" width={140} />
-                  <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }} formatter={(value) => `${value} entrega(s)`} />
-                  <Bar dataKey="count" fill="#06b6d4" radius={[0, 8, 8, 0]}>
-                    {recebedorCountData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              {/* Horizontal — Tempo Médio CLI */}
+              <div
+                ref={chartRefs.barCli}
+                className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow duration-300"
+              >
+                <ChartHeader title="Tempo Médio no Cliente" subtitle="Duração média: chegada → fim desova" dotColor="#10b981" />
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={recebedorAvgData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                    <XAxis type="number" stroke="#94a3b8" tick={{ fontSize: 11, fill: '#94a3b8' }}
+                      axisLine={false} tickLine={false} tickFormatter={fmtMin} />
+                    <YAxis type="category" dataKey="name" stroke="#94a3b8"
+                      tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} width={130} />
+                    <Tooltip content={<CustomTooltip formatter={fmtMin} />}
+                      cursor={{ fill: 'rgba(16,185,129,0.05)' }} />
+                    <Bar dataKey="avg" radius={[0, 6, 6, 0]} maxBarSize={32}
+                      background={{ fill: '#f8fafc', radius: [0, 6, 6, 0] }}
+                      isAnimationActive animationDuration={700}>
+                      {recebedorAvgData.map((_, i) => (
+                        <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
+          )}
 
-            <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition">
-              <h3 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                Tempo Médio no Cliente
-              </h3>
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={recebedorAvgData} layout="vertical" margin={{ top: 10, right: 20, left: 150, bottom: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis type="number" stroke="#6b7280" tickFormatter={(v) => formatMinutes(v)} />
-                  <YAxis type="category" dataKey="name" stroke="#6b7280" width={140} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
-                    formatter={(value) => formatMinutes(value)} 
-                  />
-                  <Bar dataKey="avg" fill="#10b981" radius={[0, 8, 8, 0]}>
-                    {recebedorAvgData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+          {/* ══════ RANKING TABLE ══════ */}
+          {topRecebedores.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow duration-300">
+              <div className="flex items-start justify-between mb-4">
+                <ChartHeader title="Ranking de Recebedores"
+                  subtitle="Desempenho detalhado por recebedor no período" dotColor="#f59e0b" />
+                {/* Mini badge de export hint */}
+                <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg">
+                  <FiDownload size={11} />
+                  Disponível no PDF e Excel
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      {['Pos.', 'Recebedor', 'Entregas', 'Tempo Médio CLI', 'Volume'].map(h => (
+                        <th key={h} className="text-left pb-3 pt-1 text-xs font-bold text-slate-400 uppercase tracking-widest first:w-12">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {topRecebedores.map((rec, i) => {
+                      const total = topRecebedores.reduce((s, r) => s + r.count, 0);
+                      const pct = total > 0 ? ((rec.count / total) * 100).toFixed(1) : 0;
+                      const avgMin = avgCliByRecebedor[rec.recebedor];
+                      const medals = ['bg-amber-400', 'bg-slate-400', 'bg-orange-600'];
+                      return (
+                        <tr key={i} className="hover:bg-slate-50 transition-colors duration-150">
+                          <td className="py-3 pr-4">
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white ${medals[i] ?? 'bg-slate-200 !text-slate-500'}`}>
+                              {i + 1}
+                            </div>
+                          </td>
+                          <td className="py-3">
+                            <span className="font-semibold text-slate-800">{rec.recebedor}</span>
+                          </td>
+                          <td className="py-3">
+                            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700">
+                              {rec.count}
+                            </span>
+                          </td>
+                          <td className="py-3">
+                            <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
+                              <FiClock size={11} className="text-slate-400" />
+                              {fmtMin(avgMin)}
+                            </span>
+                          </td>
+                          <td className="py-3 w-52">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full transition-all duration-700"
+                                  style={{ width: `${pct}%`, backgroundColor: PALETTE[i % PALETTE.length] }} />
+                              </div>
+                              <span className="text-xs font-semibold text-slate-500 w-10 text-right">{pct}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          <div className="h-4" />
+        </div>
       </div>
 
-      {toast && (
-        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 };

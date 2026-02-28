@@ -22,6 +22,9 @@
   "dependencies": {
     "browser-image-compression": "^2.0.2",
     "googleapis": "^118.0.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
     "xlsx": "^0.18.5"
   }
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/authContext';
+import { useTheme, THEMES } from '../contexts/ThemeContext';
 import { deliveryService } from '../services/authService';
 import Footer from '../components/Footer';
 import {
@@ -588,11 +589,13 @@ const Home = () => {
   const role    = user?.role;
   const rm      = ROLES[role] || ROLES.driver;
   const greet   = getGreeting();
+  const { theme } = useTheme();
+  const themeCfg = THEMES[theme] || THEMES.dark;
 
   const dateStr = now.toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' });
 
   return (
-    <div style={{ background: B.bg, minHeight: '100%' }}>
+    <div style={{ background: themeCfg.bg, color: themeCfg.text, minHeight: '100%' }}>
       <GlobalStyles />
 
       {/* ══════════════════════════════════════════

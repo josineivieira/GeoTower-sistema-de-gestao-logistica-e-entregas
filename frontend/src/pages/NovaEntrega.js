@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../services/authContext';
+import { useTheme, THEMES } from '../contexts/ThemeContext';
 import { deliveryService } from '../services/authService';
 import DocumentUpload from '../components/DocumentUpload';
 import Toast from '../components/Toast';

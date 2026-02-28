@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import { adminService } from '../services/authService';
 import { useAuth } from '../services/authContext';
+import { useTheme, THEMES } from '../contexts/ThemeContext';
 import { FaArrowLeft, FaEdit, FaTrash, FaPlus, FaUser } from 'react-icons/fa';
 
 const UserManagement = () => {

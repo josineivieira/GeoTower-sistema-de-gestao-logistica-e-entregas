@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { adminService, deliveryService } from '../services/authService';
-import { useTheme, THEMES } from '../contexts/ThemeContext';
 import { FaArrowLeft, FaFilter, FaSync, FaEdit, FaTrash, FaTimes } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
@@ -254,11 +253,8 @@ const BaseDadosGeral = () => {
     setEditingId(null);
   };
 
-  const { theme } = useTheme();
-  const themeCfg = THEMES[theme] || THEMES.dark;
-
   return (
-    <div className="min-h-screen p-4" style={{ background: themeCfg.bg, color: themeCfg.text }}>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
       {/* Header */}
       <div className="w-full mb-6">
         <div className="flex items-center justify-between">

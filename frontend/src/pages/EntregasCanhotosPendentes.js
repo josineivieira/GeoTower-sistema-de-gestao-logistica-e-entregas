@@ -4,7 +4,6 @@ import Toast from '../components/Toast';
 import { FaTimes, FaFileAlt } from 'react-icons/fa';
 import { adminService, deliveryService } from '../services/authService';
 import { useAuth } from '../services/authContext';
-import { useTheme, THEMES } from '../contexts/ThemeContext';
 
 const EntregasCanhotosPendentes = () => {
   const navigate = useNavigate();
@@ -118,11 +117,8 @@ const EntregasCanhotosPendentes = () => {
     navigate(url);
   };
 
-  const { theme } = useTheme();
-  const themeCfg = THEMES[theme] || THEMES.dark;
-
   return (
-    <div className="max-w-5xl mx-auto p-4" style={{ background: themeCfg.bg, color: themeCfg.text }}>
+    <div className="max-w-5xl mx-auto p-4">
       <button onClick={() => navigate('/home')} className="text-sm text-purple-600 mb-4">← Voltar</button>
       <h2 className="text-2xl font-bold mb-4">Entregas com Canhotos Pendentes</h2>
       {loading ? (

@@ -605,17 +605,38 @@ const MonitorEntregas = () => {
   /* ────────────────────────────────────────
      RENDER
      ──────────────────────────────────────── */
-  // inject light-theme overrides once
+  // inject light-theme overrides for better text visibility
   React.useEffect(() => {
     const styleEl = document.createElement('style');
     styleEl.id = 'theme-overrides';
     styleEl.textContent = `
+      .theme-light {
+        background-color: #eef2f6 !important;
+        color: #1a1a1a !important;
+      }
       .theme-light .text-white { color: #1a1a1a !important; }
-      .theme-light .text-white\\/20 { color: rgba(26,26,26,0.2) !important; }
-      .theme-light .bg-white\\/5 { background-color: rgba(255,255,255,0.05) !important; }
-      .theme-light .bg-white\\/10 { background-color: rgba(255,255,255,0.10) !important; }
-      .theme-light .bg-white\\/60 { background-color: rgba(255,255,255,0.60) !important; }
-      .theme-light .bg-purple-600\/80 { background-color: rgba(109,40,217,0.8) !important; }
+      .theme-light .text-white\/20 { color: rgba(26,26,26,0.5) !important; }
+      .theme-light .text-white\/40 { color: rgba(26,26,26,0.7) !important; }
+      .theme-light .text-gray-300 { color: #4b5563 !important; }
+      .theme-light .text-gray-400 { color: #6b7280 !important; }
+      .theme-light .text-gray-500 { color: #9ca3af !important; }
+      .theme-light .text-gray-600 { color: #9ca3af !important; }
+      .theme-light .text-purple-400 { color: #a855f7 !important; }
+      .theme-light .text-emerald-400 { color: #10b981 !important; }
+      .theme-light .bg-white\/5 { background-color: rgba(255,255,255,0.3) !important; }
+      .theme-light .bg-white\/10 { background-color: rgba(255,255,255,0.4) !important; }
+      .theme-light .bg-white\/60 { background-color: rgba(255,255,255,0.8) !important; }
+      .theme-light .bg-purple-600\/80 { background-color: rgba(147,51,234,0.6) !important; }
+      .theme-light .border-white\/10 { border-color: rgba(26,26,26,0.1) !important; }
+      .theme-light .placeholder-gray-500::placeholder { color: #9ca3af !important; }
+      .theme-light select {
+        background-color: #f3f4f6 !important;
+        color: #1a1a1a !important;
+      }
+      .theme-light input {
+        background-color: #f3f4f6 !important;
+        color: #1a1a1a !important;
+      }
     `;
     document.head.appendChild(styleEl);
     return () => document.head.removeChild(styleEl);

@@ -806,12 +806,8 @@ const ProgramadasEntregas = () => {
   // ─────────────────────────────────────────────
   //  RENDER
   // ─────────────────────────────────────────────
-  const { theme } = useTheme();
-  const themeCfg = THEMES[theme] || THEMES.dark;
-  
   return (
-    <div className="min-h-screen" style={{ background: themeCfg.bg, color: themeCfg.text }}
->
+    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%)' }}>
 
       {/* ── HEADER ── */}
       <div className="sticky top-0 z-30 backdrop-blur-md bg-white/5 border-b border-white/10">

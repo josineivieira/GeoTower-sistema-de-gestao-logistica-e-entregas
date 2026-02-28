@@ -1,15 +1,9 @@
 import React from 'react';
 import Header from './Header';
-import { useTheme, THEMES } from '../contexts/ThemeContext';
 
 const AppLayout = ({ children }) => {
-  const { theme } = useTheme();
-  const cfg = THEMES[theme] || THEMES.dark;
   return (
-    <div
-      className="h-[100svh] w-full overflow-hidden flex flex-col"
-      style={{ background: cfg.bg, color: cfg.text }}
-    >
+    <div className="h-[100svh] w-full overflow-hidden bg-[#f7f7fb] flex flex-col">
       <Header />
 
       {/* Scrollable content area - takes only needed height */}

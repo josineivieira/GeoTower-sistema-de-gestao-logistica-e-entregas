@@ -58,27 +58,27 @@ const SparkLine = ({ data, color }) => (
 /* ─── KPI Card ─── */
 const KpiCard = ({ title, value, subtitle, icon: Icon, color, sparkData, badge }) => {
   const map = {
-    indigo:  { border: 'border-indigo-500',  text: 'text-indigo-500',  bg: 'bg-indigo-50',  spark: '#6366f1' },
-    cyan:    { border: 'border-cyan-500',    text: 'text-cyan-500',    bg: 'bg-cyan-50',    spark: '#06b6d4' },
-    amber:   { border: 'border-amber-500',   text: 'text-amber-500',   bg: 'bg-amber-50',   spark: '#f59e0b' },
-    emerald: { border: 'border-emerald-500', text: 'text-emerald-500', bg: 'bg-emerald-50', spark: '#10b981' },
+    indigo:  { border: 'border-indigo-500',  text: 'text-indigo-600',  bg: 'bg-indigo-50',  spark: '#6366f1' },
+    cyan:    { border: 'border-cyan-500',    text: 'text-cyan-600',    bg: 'bg-cyan-50',    spark: '#06b6d4' },
+    amber:   { border: 'border-amber-500',   text: 'text-amber-600',   bg: 'bg-amber-50',   spark: '#f59e0b' },
+    emerald: { border: 'border-emerald-500', text: 'text-emerald-600', bg: 'bg-emerald-50', spark: '#10b981' },
   };
   const s = map[color] ?? map.indigo;
   return (
-    <div className={`bg-white rounded-2xl shadow-sm border border-slate-100 border-l-4 ${s.border} p-5 hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 flex flex-col gap-2`}>
+    <div className={`bg-white rounded-2xl shadow-md border border-slate-100 border-l-4 ${s.border} p-5 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col gap-2`}>
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1 truncate">{title}</p>
           <p className={`text-3xl font-extrabold ${s.text} leading-none`}>{value}</p>
           {subtitle && <p className="text-xs text-gray-400 mt-1.5 truncate">{subtitle}</p>}
         </div>
-        <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${s.bg} ml-3 flex-shrink-0`}>
-          <Icon size={20} className={s.text} />
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${s.bg} ml-3 flex-shrink-0 shadow-inner`}>
+          <Icon size={22} className={s.text} />
         </div>
       </div>
       {sparkData?.length > 1 && <SparkLine data={sparkData} color={s.spark} />}
       {badge && (
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 w-fit px-2.5 py-1 rounded-full">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 w-fit px-2.5 py-1 rounded-full border border-emerald-100">
           <FiTrendingUp size={11} />
           {badge}
         </div>
@@ -100,7 +100,7 @@ const ChartHeader = ({ title, subtitle, dotColor }) => (
 
 /* ─── Skeleton ─── */
 const Skeleton = ({ className }) => (
-  <div className={`animate-pulse bg-gray-200 rounded-xl ${className}`} />
+  <div className={`animate-pulse bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-xl ${className}`} />
 );
 
 /* ─── Export Button ─── */
@@ -141,7 +141,6 @@ const AdminDashboard = () => {
   const [activeBar,   setActiveBar]   = useState(null);
   const [filters, setFilters] = useState({ searchTerm: '', startDate: '', endDate: '' });
 
-  /* ── Refs para captura de gráficos ── */
   const chartRefs = {
     area:        useRef(null),
     barDriver:   useRef(null),
@@ -149,7 +148,6 @@ const AdminDashboard = () => {
     barCli:      useRef(null),
   };
 
-  /* ── Data loading ── */
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
@@ -170,7 +168,6 @@ const AdminDashboard = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  /* ── Helpers ── */
   const getCliMinutes = (d) => {
     if (!d.horarioChegada) return null;
     const chegada = new Date(d.horarioChegada);
@@ -189,7 +186,6 @@ const AdminDashboard = () => {
     return date;
   };
 
-  /* ── Memos ── */
   const topRecebedores = React.useMemo(() => {
     const counts = {};
     deliveries.forEach(d => {
@@ -235,19 +231,11 @@ const AdminDashboard = () => {
     return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   }, [deliveries]);
 
-  /* ── Payload compartilhado para exports ── */
   const exportPayload = () => ({
-    statistics,
-    deliveries,
-    topRecebedores,
-    avgCliByRecebedor,
-    recebedorCountData,
-    recebedorAvgData,
-    period,
-    fmtMin,
+    statistics, deliveries, topRecebedores, avgCliByRecebedor,
+    recebedorCountData, recebedorAvgData, period, fmtMin,
   });
 
-  /* ── Export handlers ── */
   const handleExportPDF = async () => {
     if (!statistics) return;
     setExporting(e => ({ ...e, pdf: true }));
@@ -255,7 +243,6 @@ const AdminDashboard = () => {
       await exportToPDF({ ...exportPayload(), chartRefs });
       setToast({ message: 'PDF exportado com sucesso', type: 'success' });
     } catch (err) {
-      console.error(err);
       setToast({ message: 'Erro ao exportar PDF', type: 'error' });
     } finally {
       setExporting(e => ({ ...e, pdf: false }));
@@ -269,7 +256,6 @@ const AdminDashboard = () => {
       exportToExcel(exportPayload());
       setToast({ message: 'Excel exportado com sucesso', type: 'success' });
     } catch (err) {
-      console.error(err);
       setToast({ message: 'Erro ao exportar Excel', type: 'error' });
     } finally {
       setExporting(e => ({ ...e, excel: false }));
@@ -279,7 +265,7 @@ const AdminDashboard = () => {
   /* ── Skeleton ── */
   if (loading) {
     return (
-      <div className="w-screen h-screen bg-slate-50 flex flex-col overflow-hidden">
+      <div className="w-screen h-screen bg-gradient-to-br from-slate-100 via-white to-indigo-50/40 flex flex-col overflow-hidden">
         <div className="h-[68px] bg-gradient-to-r from-slate-900 to-slate-800 flex-shrink-0" />
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
           <Skeleton className="h-20 w-full" />
@@ -295,14 +281,13 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="w-screen h-screen bg-slate-50 flex flex-col overflow-hidden font-sans">
+    /* ── fundo principal melhorado: gradiente suave indigo/slate ── */
+    <div className="w-screen h-screen bg-gradient-to-br from-slate-100 via-white to-indigo-50/40 flex flex-col overflow-hidden font-sans">
 
-      {/* ══════ HEADER ══════ */}
+      {/* ══════ HEADER — INTOCADO ══════ */}
       <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl flex-shrink-0 border-b border-slate-700">
         <div className="w-full px-6 py-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-
-            {/* Left */}
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate('/home')}
@@ -318,10 +303,7 @@ const AdminDashboard = () => {
                 <p className="text-slate-400 text-xs mt-0.5 pl-6">Análise em tempo real das operações</p>
               </div>
             </div>
-
-            {/* Right */}
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Period toggle */}
               <div className="flex items-center gap-1 bg-white/10 rounded-xl p-1 border border-white/10">
                 {[
                   { val: 'day',   label: 'Hoje' },
@@ -341,8 +323,6 @@ const AdminDashboard = () => {
                   </button>
                 ))}
               </div>
-
-              {/* Refresh */}
               <button
                 onClick={() => loadData(true)}
                 disabled={refreshing}
@@ -351,11 +331,7 @@ const AdminDashboard = () => {
                 <FiRefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
                 Atualizar
               </button>
-
-              {/* Separator */}
               <div className="w-px h-6 bg-white/20" />
-
-              {/* Export PDF */}
               <ExportButton
                 onClick={handleExportPDF}
                 loading={exporting.pdf}
@@ -364,8 +340,6 @@ const AdminDashboard = () => {
                 disabled={!statistics}
                 colorClass="bg-rose-500/90 hover:bg-rose-500 text-white border-rose-600/50 shadow-sm shadow-rose-500/20"
               />
-
-              {/* Export Excel */}
               <ExportButton
                 onClick={handleExportExcel}
                 loading={exporting.excel}
@@ -380,23 +354,25 @@ const AdminDashboard = () => {
       </header>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="px-6 py-5 space-y-5 max-w-[1600px] mx-auto">
+        <div className="px-6 py-6 space-y-6 max-w-[1600px] mx-auto">
 
-          {/* ══════ FILTROS ══════ */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+          {/* ══════ FILTROS — fundo branco levemente azulado ══════ */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-md border border-indigo-100/60 p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                <FiFilter size={14} className="text-indigo-500" />
-                Filtros
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center">
+                  <FiFilter size={14} className="text-indigo-500" />
+                </div>
+                Filtros de Pesquisa
               </div>
               <button
                 onClick={() => {
                   setPeriod('month');
                   setFilters({ searchTerm: '', startDate: '', endDate: '' });
                 }}
-                className="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold text-slate-600 transition"
+                className="text-xs px-3 py-1.5 bg-slate-100 hover:bg-red-50 hover:text-red-600 hover:border-red-200 border border-transparent rounded-lg font-semibold text-slate-500 transition-all duration-200"
               >
-                Limpar
+                Limpar filtros
               </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -407,7 +383,7 @@ const AdminDashboard = () => {
                   placeholder="Buscar entrega ou motorista..."
                   value={filters.searchTerm}
                   onChange={e => setFilters({ ...filters, searchTerm: e.target.value })}
-                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/80 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
                 />
               </div>
               <div className="relative">
@@ -416,7 +392,7 @@ const AdminDashboard = () => {
                   type="date"
                   value={filters.startDate}
                   onChange={e => setFilters({ ...filters, startDate: e.target.value })}
-                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/80 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
                 />
               </div>
               <div className="relative">
@@ -425,7 +401,7 @@ const AdminDashboard = () => {
                   type="date"
                   value={filters.endDate}
                   onChange={e => setFilters({ ...filters, endDate: e.target.value })}
-                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/80 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
                 />
               </div>
             </div>
@@ -433,7 +409,7 @@ const AdminDashboard = () => {
 
           {/* ══════ KPI CARDS ══════ */}
           {statistics && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
               <KpiCard
                 title="Total de Entregas"
                 value={statistics.totalDeliveries}
@@ -471,13 +447,11 @@ const AdminDashboard = () => {
 
           {/* ══════ GRÁFICOS SUPERIORES ══════ */}
           {statistics && (
-            <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-
-              {/* Área — Evolução Diária */}
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
               {statistics.dailyDeliveries.length > 0 && (
                 <div
                   ref={chartRefs.area}
-                  className="xl:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow duration-300"
+                  className="xl:col-span-3 bg-white rounded-2xl shadow-md border border-slate-100 p-6 hover:shadow-lg transition-shadow duration-300"
                 >
                   <ChartHeader
                     title="Evolução Diária de Entregas"
@@ -503,9 +477,7 @@ const AdminDashboard = () => {
                         cursor={{ stroke: '#6366f1', strokeWidth: 1.5, strokeDasharray: '4 4' }}
                       />
                       <ReferenceLine
-                        y={statistics.dailyDeliveries.length
-                          ? statistics.dailyDeliveries.reduce((s, d) => s + d.count, 0) / statistics.dailyDeliveries.length
-                          : 0}
+                        y={statistics.dailyDeliveries.reduce((s, d) => s + d.count, 0) / statistics.dailyDeliveries.length}
                         stroke="#6366f1" strokeDasharray="4 4" strokeOpacity={0.4}
                         label={{ value: 'Média', position: 'insideTopRight', fontSize: 10, fill: '#6366f1' }}
                       />
@@ -519,11 +491,10 @@ const AdminDashboard = () => {
                 </div>
               )}
 
-              {/* Bar — Por Contratado */}
               {statistics.deliveriesByDriver.length > 0 && (
                 <div
                   ref={chartRefs.barDriver}
-                  className="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow duration-300"
+                  className="xl:col-span-2 bg-white rounded-2xl shadow-md border border-slate-100 p-6 hover:shadow-lg transition-shadow duration-300"
                 >
                   <ChartHeader
                     title="Entregas por Contratado"
@@ -561,12 +532,10 @@ const AdminDashboard = () => {
 
           {/* ══════ GRÁFICOS INFERIORES ══════ */}
           {deliveries.length > 0 && (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-
-              {/* Horizontal — Entregas por Recebedor */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
               <div
                 ref={chartRefs.barReceiver}
-                className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow duration-300"
+                className="bg-white rounded-2xl shadow-md border border-slate-100 p-6 hover:shadow-lg transition-shadow duration-300"
               >
                 <ChartHeader title="Entregas por Recebedor" subtitle="Top 5 recebedores no período" dotColor="#06b6d4" />
                 <ResponsiveContainer width="100%" height={300}>
@@ -589,10 +558,9 @@ const AdminDashboard = () => {
                 </ResponsiveContainer>
               </div>
 
-              {/* Horizontal — Tempo Médio CLI */}
               <div
                 ref={chartRefs.barCli}
-                className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow duration-300"
+                className="bg-white rounded-2xl shadow-md border border-slate-100 p-6 hover:shadow-lg transition-shadow duration-300"
               >
                 <ChartHeader title="Tempo Médio no Cliente" subtitle="Duração média: chegada → fim desova" dotColor="#10b981" />
                 <ResponsiveContainer width="100%" height={300}>
@@ -619,12 +587,11 @@ const AdminDashboard = () => {
 
           {/* ══════ RANKING TABLE ══════ */}
           {topRecebedores.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow duration-300">
-              <div className="flex items-start justify-between mb-4">
+            <div className="bg-white rounded-2xl shadow-md border border-slate-100 p-6 hover:shadow-lg transition-shadow duration-300">
+              <div className="flex items-start justify-between mb-5">
                 <ChartHeader title="Ranking de Recebedores"
                   subtitle="Desempenho detalhado por recebedor no período" dotColor="#f59e0b" />
-                {/* Mini badge de export hint */}
-                <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg">
+                <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-50 border border-slate-100 px-2.5 py-1.5 rounded-lg">
                   <FiDownload size={11} />
                   Disponível no PDF e Excel
                 </div>
@@ -632,8 +599,8 @@ const AdminDashboard = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-100">
-                      {['Pos.', 'Recebedor', 'Entregas', 'Tempo Médio CLI', 'Volume'].map(h => (
+                    <tr className="border-b-2 border-slate-100">
+                      {['Pos.', 'Recebedor', 'Entregas', 'Tempo Médio CLI', 'Participação'].map(h => (
                         <th key={h} className="text-left pb-3 pt-1 text-xs font-bold text-slate-400 uppercase tracking-widest first:w-12">
                           {h}
                         </th>
@@ -647,33 +614,33 @@ const AdminDashboard = () => {
                       const avgMin = avgCliByRecebedor[rec.recebedor];
                       const medals = ['bg-amber-400', 'bg-slate-400', 'bg-orange-600'];
                       return (
-                        <tr key={i} className="hover:bg-slate-50 transition-colors duration-150">
-                          <td className="py-3 pr-4">
+                        <tr key={i} className="hover:bg-indigo-50/40 transition-colors duration-150">
+                          <td className="py-3.5 pr-4">
                             <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white ${medals[i] ?? 'bg-slate-200 !text-slate-500'}`}>
                               {i + 1}
                             </div>
                           </td>
-                          <td className="py-3">
+                          <td className="py-3.5">
                             <span className="font-semibold text-slate-800">{rec.recebedor}</span>
                           </td>
-                          <td className="py-3">
-                            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700">
+                          <td className="py-3.5">
+                            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
                               {rec.count}
                             </span>
                           </td>
-                          <td className="py-3">
+                          <td className="py-3.5">
                             <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
                               <FiClock size={11} className="text-slate-400" />
                               {fmtMin(avgMin)}
                             </span>
                           </td>
-                          <td className="py-3 w-52">
+                          <td className="py-3.5 w-52">
                             <div className="flex items-center gap-2">
                               <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                                 <div className="h-full rounded-full transition-all duration-700"
                                   style={{ width: `${pct}%`, backgroundColor: PALETTE[i % PALETTE.length] }} />
                               </div>
-                              <span className="text-xs font-semibold text-slate-500 w-10 text-right">{pct}%</span>
+                              <span className="text-xs font-bold text-slate-500 w-10 text-right">{pct}%</span>
                             </div>
                           </td>
                         </tr>

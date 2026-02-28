@@ -2,47 +2,109 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import { adminService } from '../services/authService';
-import { FaArrowLeft, FaEdit, FaTrash, FaPlus, FaTruck, FaFileExcel } from 'react-icons/fa';
+import {
+  FiArrowLeft, FiEdit2, FiTrash2, FiPlus, FiTruck,
+  FiUploadCloud, FiDownload, FiSearch, FiFilter,
+  FiChevronUp, FiChevronDown, FiChevronsUpDown, FiX,
+  FiUser, FiPhone, FiCpu, FiCalendar, FiAlertCircle
+} from 'react-icons/fi';
 import * as XLSX from 'xlsx';
 
+/* ─── Badge de Vínculo ─── */
+const VinculoBadge = ({ vinculo }) => {
+  const map = {
+    'PRÓPRIO':   'bg-emerald-50 text-emerald-700 border-emerald-200',
+    'AGREGADO':  'bg-amber-50 text-amber-700 border-amber-200',
+    'TERCEIRO':  'bg-rose-50 text-rose-700 border-rose-200',
+  };
+  return (
+    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold border ${map[vinculo] ?? 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+      {vinculo}
+    </span>
+  );
+};
+
+/* ─── Badge de Status ─── */
+const StatusBadge = ({ status }) => {
+  if (!status) return <span className="text-slate-300 text-xs">—</span>;
+  const map = {
+    'VENCIDO':   'bg-red-50 text-red-700 border-red-200',
+    'A VENCER':  'bg-amber-50 text-amber-700 border-amber-200',
+  };
+  return (
+    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-semibold border ${map[status] ?? 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+      {status}
+    </span>
+  );
+};
+
+/* ─── Sort Icon ─── */
+const SortIcon = ({ column, sort }) => {
+  if (sort.column !== column) return <FiChevronsUpDown size={12} className="text-slate-400 ml-1 inline" />;
+  return sort.direction === 'asc'
+    ? <FiChevronUp size={12} className="text-indigo-500 ml-1 inline" />
+    : <FiChevronDown size={12} className="text-indigo-500 ml-1 inline" />;
+};
+
+/* ─── Label de campo ─── */
+const FieldLabel = ({ children, required }) => (
+  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+    {children}{required && <span className="text-rose-500 ml-0.5">*</span>}
+  </label>
+);
+
+/* ─── Input padrão ─── */
+const FormInput = ({ icon: Icon, ...props }) => (
+  <div className="relative">
+    {Icon && <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />}
+    <input
+      {...props}
+      className={`w-full ${Icon ? 'pl-9' : 'pl-3'} pr-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-white focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition placeholder:text-slate-400`}
+    />
+  </div>
+);
+
+/* ─── Select padrão ─── */
+const FormSelect = ({ children, ...props }) => (
+  <select
+    {...props}
+    className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-white focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition appearance-none"
+  >
+    {children}
+  </select>
+);
+
+/* ════════════════════════════════════════
+   COMPONENTE PRINCIPAL
+════════════════════════════════════════ */
 const MotoristaManagement = () => {
   const navigate = useNavigate();
-  const [motoristas, setMotoristas] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [editingMotorista, setEditingMotorista] = useState(null);
-  const [importLoading, setImportLoading] = useState(false);
+  const [motoristas,      setMotoristas]      = useState([]);
+  const [loading,         setLoading]         = useState(true);
+  const [toast,           setToast]           = useState(null);
+  const [showForm,        setShowForm]        = useState(false);
+  const [editingMotorista,setEditingMotorista]= useState(null);
+  const [importLoading,   setImportLoading]   = useState(false);
 
-  // Filtros
-  const [filters, setFilters] = useState({
-    transportadora: '',
-    vinculo: '',
-    status: '',
-    searchTerm: ''
-  });
-  // Ordenação
-  const [sort, setSort] = useState({ column: 'transportadora', direction: 'asc' });
+  const [filters, setFilters] = useState({ transportadora: '', vinculo: '', status: '', searchTerm: '' });
+  const [sort,    setSort]    = useState({ column: 'transportadora', direction: 'asc' });
   const [formData, setFormData] = useState({
-    transportadora: '',
-    nome: '',
-    cpf: '',
-    vinculo: 'AGREGADO',
-    rastreador: '',
-    expCadastroMotorista: '',
-    cavalo: '',
-    rastreadorCavalo: '',
-    expCadastroCavalo: '',
-    carreta: '',
-    rastreadorCarreta: '',
-    expCadastroCarreta: '',
-    telefone: '',
-    observacoes: ''
+    transportadora: '', nome: '', cpf: '', vinculo: 'AGREGADO',
+    rastreador: '', expCadastroMotorista: '',
+    cavalo: '', rastreadorCavalo: '', expCadastroCavalo: '',
+    carreta: '', rastreadorCarreta: '', expCadastroCarreta: '',
+    telefone: '', observacoes: ''
   });
 
-  useEffect(() => {
-    loadMotoristas();
-  }, []);
+  const EMPTY_FORM = {
+    transportadora: '', nome: '', cpf: '', vinculo: 'AGREGADO',
+    rastreador: '', expCadastroMotorista: '',
+    cavalo: '', rastreadorCavalo: '', expCadastroCavalo: '',
+    carreta: '', rastreadorCarreta: '', expCadastroCarreta: '',
+    telefone: '', observacoes: ''
+  };
+
+  useEffect(() => { loadMotoristas(); }, []);
 
   const loadMotoristas = async () => {
     try {
@@ -51,19 +113,16 @@ const MotoristaManagement = () => {
       const data = response.data.motoristas || [];
       const computeStatus = (exp) => {
         if (!exp) return '';
-        const d = new Date(exp);
-        return d >= new Date() ? 'A VENCER' : 'VENCIDO';
+        return new Date(exp) >= new Date() ? 'A VENCER' : 'VENCIDO';
       };
-      const enriched = data.map(m => ({
+      setMotoristas(data.map(m => ({
         ...m,
         statusMotorista: computeStatus(m.expCadastroMotorista),
-        statusCavalo: computeStatus(m.expCadastroCavalo),
-        statusCarreta: computeStatus(m.expCadastroCarreta)
-      }));
-      setMotoristas(enriched);
-    } catch (error) {
+        statusCavalo:    computeStatus(m.expCadastroCavalo),
+        statusCarreta:   computeStatus(m.expCadastroCarreta),
+      })));
+    } catch {
       setToast({ message: 'Erro ao carregar motoristas', type: 'error' });
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -71,12 +130,10 @@ const MotoristaManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!formData.transportadora || !formData.nome || !formData.cpf || !formData.vinculo || !formData.telefone) {
       setToast({ message: 'Preencha todos os campos obrigatórios', type: 'error' });
       return;
     }
-
     try {
       if (editingMotorista) {
         await adminService.updateMotorista(editingMotorista._id, formData);
@@ -85,24 +142,7 @@ const MotoristaManagement = () => {
         await adminService.createMotorista(formData);
         setToast({ message: 'Motorista criado com sucesso', type: 'success' });
       }
-      setFormData({
-        transportadora: '',
-        nome: '',
-        cpf: '',
-        vinculo: 'AGREGADO',
-        rastreador: '',
-        expCadastroMotorista: '',
-        cavalo: '',
-        rastreadorCavalo: '',
-        expCadastroCavalo: '',
-        carreta: '',
-        rastreadorCarreta: '',
-        expCadastroCarreta: '',
-        telefone: '',
-        observacoes: ''
-      });
-      setEditingMotorista(null);
-      setShowForm(false);
+      handleCloseForm();
       loadMotoristas();
     } catch (error) {
       setToast({ message: error.response?.data?.message || 'Erro ao salvar motorista', type: 'error' });
@@ -125,153 +165,103 @@ const MotoristaManagement = () => {
       rastreadorCarreta: motorista.rastreadorCarreta || '',
       expCadastroCarreta: motorista.expCadastroCarreta ? motorista.expCadastroCarreta.split('T')[0] : '',
       telefone: motorista.telefone,
-      observacoes: motorista.observacoes || ''
+      observacoes: motorista.observacoes || '',
     });
     setShowForm(true);
   };
 
-  const handleDelete = async (motoristaId) => {
-    if (window.confirm('Tem certeza que deseja deletar este motorista?')) {
-      try {
-        await adminService.deleteMotorista(motoristaId);
-        setToast({ message: 'Motorista deletado com sucesso', type: 'success' });
-        loadMotoristas();
-      } catch (error) {
-        setToast({ message: 'Erro ao deletar motorista', type: 'error' });
-      }
+  const handleDelete = async (id) => {
+    if (!window.confirm('Tem certeza que deseja excluir este motorista?')) return;
+    try {
+      await adminService.deleteMotorista(id);
+      setToast({ message: 'Motorista excluído com sucesso', type: 'success' });
+      loadMotoristas();
+    } catch {
+      setToast({ message: 'Erro ao excluir motorista', type: 'error' });
     }
   };
 
   const handleCloseForm = () => {
     setShowForm(false);
     setEditingMotorista(null);
-    setFormData({
-      transportadora: '',
-      nome: '',
-      cpf: '',
-      vinculo: 'AGREGADO',
-      rastreador: '',
-      expCadastroMotorista: '',
-      cavalo: '',
-      rastreadorCavalo: '',
-      expCadastroCavalo: '',
-      carreta: '',
-      rastreadorCarreta: '',
-      expCadastroCarreta: '',
-      telefone: '',
-      observacoes: ''
-    });
+    setFormData(EMPTY_FORM);
   };
 
-  // Format CPF
-  const formatCPFData = (value) => {
-    const digits = String(value || '').replace(/\D/g, '');
-    if (digits.length !== 11) return null;
-    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+  const formatCPF = (v) => {
+    const d = v.replace(/\D/g, '');
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return `${d.slice(0,3)}.${d.slice(3)}`;
+    if (d.length <= 9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`;
+    return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9,11)}`;
   };
 
-  // Convert Excel serial date to YYYY-MM-DD string
+  const formatPhone = (v) => {
+    const d = v.replace(/\D/g, '');
+    if (d.length <= 2) return d;
+    if (d.length <= 7) return `(${d.slice(0,2)}) ${d.slice(2)}`;
+    return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7,11)}`;
+  };
+
+  const formatCPFData = (v) => {
+    const d = String(v || '').replace(/\D/g, '');
+    if (d.length !== 11) return null;
+    return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9,11)}`;
+  };
+
+  const formatPhoneData = (v) => {
+    const d = String(v || '').replace(/\D/g, '');
+    if (d.length !== 11) return null;
+    return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7,11)}`;
+  };
+
   const excelDateToString = (val) => {
     if (!val) return null;
-    // If already a string in date format, return normalized
     if (typeof val === 'string') {
-      const match = val.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})|\d{4}-\d{2}-\d{2}/);
-      if (match) {
-        if (val.includes('/')) {
-          // DD/MM/YYYY or MM/DD/YYYY - assume DD/MM/YYYY (Brazil)
-          const parts = val.split('/');
-          return `${parts[2]}-${parts[1]}-${parts[0]}`;
-        } else {
-          return val; // already YYYY-MM-DD
-        }
+      if (val.includes('/')) {
+        const p = val.split('/');
+        return `${p[2]}-${p[1]}-${p[0]}`;
       }
-      return null;
+      return val;
     }
-    // If it's a number (Excel serial)
     if (typeof val === 'number') {
-      // Excel epoch: Jan 1, 1900 = 1
-      // JavaScript epoch: Jan 1, 1970 = 0
-      const excelEpoch = new Date(1900, 0, 1);
-      const date = new Date(excelEpoch.getTime() + (val - 1) * 86400000);
-      const yyyy = date.getFullYear();
-      const mm = String(date.getMonth() + 1).padStart(2, '0');
-      const dd = String(date.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
+      const base = new Date(1900, 0, 1);
+      const date = new Date(base.getTime() + (val - 1) * 86400000);
+      return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
     }
-    // If it's a Date object
     if (val instanceof Date) {
-      const yyyy = val.getFullYear();
-      const mm = String(val.getMonth() + 1).padStart(2, '0');
-      const dd = String(val.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
+      return `${val.getFullYear()}-${String(val.getMonth()+1).padStart(2,'0')}-${String(val.getDate()).padStart(2,'0')}`;
     }
     return null;
   };
 
-  // Format Telefone
-  const formatPhoneData = (value) => {
-    const digits = String(value || '').replace(/\D/g, '');
-    if (digits.length !== 11) return null;
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
-  };
-
-  // Download Template
   const downloadTemplate = () => {
-    // headers mimic table display, including accent marks and status columns
-    const template = [
-      {
-        'TRANSPORTADORA': 'GEO TRANSPORTES',
-        'MOTORISTA': 'João da Silva',
-        'CPF': '123.456.789-10',
-        'VÍNCULO': 'AGREGADO',
-        'RASTREADOR': 'SASCAR',
-        'EXP. CADASTRO': '2025-12-31',
-        'STATUS': '',
-        'CAVALO': 'GES-0001',
-        'RAST. CAVALO': 'SASCAR',
-        'EXP. CAVALO': '2025-12-31',
-        'ST.': '',
-        'CARRETA': 'GES-00001',
-        'RAST. CARRETA': 'SASCAR',
-        'EXP. CARRETA': '2025-12-31',
-        'ST.2': '',
-        'TELEFONE': '92985284321',
-        'OBSERVAÇÕES': 'Observações do motorista'
-      }
-    ];
-    const ws = XLSX.utils.json_to_sheet(template);
+    const ws = XLSX.utils.json_to_sheet([{
+      'TRANSPORTADORA': 'GEO TRANSPORTES', 'MOTORISTA': 'João da Silva',
+      'CPF': '123.456.789-10', 'VÍNCULO': 'AGREGADO', 'RASTREADOR': 'SASCAR',
+      'EXP. CADASTRO': '2025-12-31', 'STATUS': '', 'CAVALO': 'GES-0001',
+      'RAST. CAVALO': 'SASCAR', 'EXP. CAVALO': '2025-12-31', 'ST.': '',
+      'CARRETA': 'GES-00001', 'RAST. CARRETA': 'SASCAR', 'EXP. CARRETA': '2025-12-31',
+      'ST.2': '', 'TELEFONE': '92985284321', 'OBSERVAÇÕES': ''
+    }]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Motoristas');
     XLSX.writeFile(wb, 'template_motoristas.xlsx');
   };
 
-  // Import Excel with explicit column mapping by index
   const handleImportFile = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
     setImportLoading(true);
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
+      const workbook = XLSX.read(await file.arrayBuffer());
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      if (raw.length < 2) {
-        throw new Error('Planilha vazia ou sem cabeçalho');
-      }
+      if (raw.length < 2) throw new Error('Planilha vazia');
+
       const headerRow = raw[0];
-      const dataRows = raw.slice(1);
-
-      const normalize = s => {
-        let t = String(s || '').toLowerCase().trim();
-        t = t.replace(/[\.\-_]/g, '').replace(/\s+/g, ' ');
-        if (t.endsWith('s') && !t.endsWith('rs') && !t.endsWith('is')) {
-          t = t.slice(0, -1);
-        }
-        return t;
-      };
-
+      const normalize = s => String(s||'').toLowerCase().trim().replace(/[\.\-_]/g,'').replace(/\s+/g,' ');
       const normalizedHeaders = headerRow.map(normalize);
-      const colToField = normalizedHeaders.map((h, i) => {
+      const colToField = normalizedHeaders.map(h => {
         if (h.includes('transportadora')) return 'transportadora';
         if (h.includes('nome') || h.includes('motorista')) return 'nome';
         if (h === 'cpf') return 'cpf';
@@ -282,648 +272,439 @@ const MotoristaManagement = () => {
         if (h.includes('cavalo') && h.includes('rastreador')) return 'rastreadorCavalo';
         if (h.includes('cavalo') && h.includes('exp')) return 'expCadastroCavalo';
         if (h.includes('cavalo')) return 'cavalo';
-        if (h.includes('rastreador') && !h.includes('carreta') && !h.includes('cavalo')) return 'rastreador';
+        if (h.includes('rastreador')) return 'rastreador';
         if (h.includes('exp') && h.includes('cadastro')) return 'expCadastroMotorista';
         if (h.includes('telefone')) return 'telefone';
         if (h.includes('observ')) return 'observacoes';
         return null;
       });
 
-      const mapped = dataRows.map((rowArr, idx) => {
+      const mapped = raw.slice(1).map((row, idx) => {
         const out = { rowIndex: idx + 2 };
-        rowArr.forEach((cell, col) => {
+        row.forEach((cell, col) => {
           const field = colToField[col];
-          if (field) {
-            // Convert dates for specific fields
-            if (['expCadastroMotorista', 'expCadastroCavalo', 'expCadastroCarreta'].includes(field)) {
-              out[field] = excelDateToString(cell);
-            } else {
-              out[field] = cell;
-            }
-          }
+          if (!field) return;
+          out[field] = ['expCadastroMotorista','expCadastroCavalo','expCadastroCarreta'].includes(field)
+            ? excelDateToString(cell) : cell;
         });
         return out;
       });
 
-      // validate and format before sending
-      const vinculoMap = {
-        proprio: 'PRÓPRIO',
-        agregado: 'AGREGADO',
-        terceiro: 'TERCEIRO',
-        frota: 'PRÓPRIO'
-      };
-      const errors = [];
-      const success = [];
-
-      // send each to backend. update if CPF already exists
+      const vinculoMap = { proprio:'PRÓPRIO', agregado:'AGREGADO', terceiro:'TERCEIRO', frota:'PRÓPRIO' };
       const existing = (await adminService.getMotoristas()).data.motoristas || [];
-      const normalizeCpf = s => String(s || '').replace(/\D/g, '');
-      
+      const normCpf = s => String(s||'').replace(/\D/g,'');
+      const errors = [], success = [];
+
       for (const m of mapped) {
         try {
-          if (!m.transportadora || !m.transportadora.toString().trim()) {
-            throw new Error('Transportadora obrigatória');
-          }
-          if (!m.nome || !m.nome.toString().trim()) {
-            throw new Error('Nome obrigatório');
-          }
-          if (!m.cpf) {
-            throw new Error('CPF obrigatório');
-          }
-          if (!m.telefone) {
-            throw new Error('Telefone obrigatório');
-          }
-
-          const cpfFormatted = formatCPFData(m.cpf);
-          if (!cpfFormatted) {
-            throw new Error(`CPF deve ter 11 dígitos: ${m.cpf}`);
-          }
-
-          const telefoneFormatted = formatPhoneData(m.telefone);
-          if (!telefoneFormatted) {
-            throw new Error(`Telefone deve ter 11 dígitos: ${m.telefone}`);
-          }
-
-          const rawVinc = (m.vinculo || 'AGREGADO').toString().toLowerCase().trim();
-          const vinculo = vinculoMap[rawVinc];
-          if (!vinculo) {
-            throw new Error(`Vínculo inválido: ${m.vinculo}. Aceitos: ${Object.values(vinculoMap).join(', ')}`);
-          }
-
+          if (!m.transportadora?.toString().trim()) throw new Error('Transportadora obrigatória');
+          if (!m.nome?.toString().trim()) throw new Error('Nome obrigatório');
+          if (!m.cpf) throw new Error('CPF obrigatório');
+          if (!m.telefone) throw new Error('Telefone obrigatório');
+          const cpfFmt = formatCPFData(m.cpf);
+          if (!cpfFmt) throw new Error(`CPF inválido: ${m.cpf}`);
+          const telFmt = formatPhoneData(m.telefone);
+          if (!telFmt) throw new Error(`Telefone inválido: ${m.telefone}`);
+          const vinculo = vinculoMap[(m.vinculo||'AGREGADO').toString().toLowerCase().trim()];
+          if (!vinculo) throw new Error(`Vínculo inválido: ${m.vinculo}`);
           const prepared = {
-            transportadora: m.transportadora.toString().trim(),
-            nome: m.nome.toString().trim(),
-            cpf: cpfFormatted,
-            vinculo: vinculo,
-            rastreador: m.rastreador ? m.rastreador.toString().trim() : '-',
+            transportadora: m.transportadora.toString().trim(), nome: m.nome.toString().trim(),
+            cpf: cpfFmt, vinculo, rastreador: m.rastreador?.toString().trim() || '-',
             expCadastroMotorista: m.expCadastroMotorista || null,
-            cavalo: m.cavalo ? m.cavalo.toString().trim() : '',
-            rastreadorCavalo: m.rastreadorCavalo ? m.rastreadorCavalo.toString().trim() : '',
-            expCadastroCavalo: m.expCadastroCavalo || null,
-            carreta: m.carreta ? m.carreta.toString().trim() : '',
-            rastreadorCarreta: m.rastreadorCarreta ? m.rastreadorCarreta.toString().trim() : '',
-            expCadastroCarreta: m.expCadastroCarreta || null,
-            telefone: telefoneFormatted,
-            observacoes: m.observacoes ? m.observacoes.toString().trim() : ''
+            cavalo: m.cavalo?.toString().trim() || '', rastreadorCavalo: m.rastreadorCavalo?.toString().trim() || '',
+            expCadastroCavalo: m.expCadastroCavalo || null, carreta: m.carreta?.toString().trim() || '',
+            rastreadorCarreta: m.rastreadorCarreta?.toString().trim() || '', expCadastroCarreta: m.expCadastroCarreta || null,
+            telefone: telFmt, observacoes: m.observacoes?.toString().trim() || '',
           };
-
-          const match = existing.find(e => normalizeCpf(e.cpf) === normalizeCpf(prepared.cpf));
-          if (match) {
-            await adminService.updateMotorista(match._id, prepared);
-          } else {
-            await adminService.createMotorista(prepared);
-          }
+          const match = existing.find(e => normCpf(e.cpf) === normCpf(prepared.cpf));
+          if (match) await adminService.updateMotorista(match._id, prepared);
+          else await adminService.createMotorista(prepared);
           success.push(`Linha ${m.rowIndex}: OK`);
         } catch (err) {
-          const msg = err.response?.data?.message || err.message || 'Erro desconhecido';
-          errors.push(`Linha ${m.rowIndex}: ${msg}`);
+          errors.push(`Linha ${m.rowIndex}: ${err.response?.data?.message || err.message}`);
         }
       }
-
-      if (errors.length === 0) {
-        setToast({ message: `✅ Importação completa! ${success.length} motorista(s) importado(s).`, type: 'success' });
-      } else {
-        setToast({ message: `⚠️ ${success.length} importado(s), ${errors.length} erro(s): ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '...' : ''}`, type: 'warning' });
-      }
-      
+      setToast(errors.length === 0
+        ? { message: `Importação concluída: ${success.length} motorista(s) importado(s).`, type: 'success' }
+        : { message: `${success.length} importado(s), ${errors.length} erro(s): ${errors.slice(0,3).join('; ')}`, type: 'warning' }
+      );
       loadMotoristas();
     } catch (err) {
-      console.error(err);
-      setToast({ message: 'Erro ao importar arquivo: ' + (err.message || 'erro desconhecido'), type: 'error' });
+      setToast({ message: 'Erro ao importar: ' + (err.message || 'erro desconhecido'), type: 'error' });
     } finally {
       setImportLoading(false);
       event.target.value = '';
     }
   };
 
-  const formatCPF = (value) => {
-    const digits = value.replace(/\D/g, '');
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
-    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
-    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
-  };
-
-  const formatPhone = (value) => {
-    const digits = value.replace(/\D/g, '');
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
-  };
-
-  // Filtrar e ordenar motoristas
   const getDisplayedMotoristas = () => {
-    let display = motoristas.filter(m => {
-      const matchTransportadora = !filters.transportadora || m.transportadora.toLowerCase().includes(filters.transportadora.toLowerCase());
-      const matchVinculo = !filters.vinculo || m.vinculo === filters.vinculo;
-      const matchStatus = !filters.status || m.statusMotorista === filters.status;
-      const matchSearch = !filters.searchTerm || 
+    let list = motoristas.filter(m => {
+      const matchT = !filters.transportadora || m.transportadora.toLowerCase().includes(filters.transportadora.toLowerCase());
+      const matchV = !filters.vinculo || m.vinculo === filters.vinculo;
+      const matchS = !filters.status || m.statusMotorista === filters.status;
+      const matchQ = !filters.searchTerm ||
         m.nome.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
         m.cpf.includes(filters.searchTerm);
-      return matchTransportadora && matchVinculo && matchStatus && matchSearch;
+      return matchT && matchV && matchS && matchQ;
     });
-
-    // Ordenar
-    display.sort((a, b) => {
-      let aVal = a[sort.column];
-      let bVal = b[sort.column];
-      
-      // Handle null/undefined
-      if (aVal === null || aVal === undefined) aVal = '';
-      if (bVal === null || bVal === undefined) bVal = '';
-      
-      // String comparison
-      if (typeof aVal === 'string') {
-        aVal = aVal.toLowerCase();
-        bVal = bVal.toLowerCase();
-        return sort.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    list.sort((a, b) => {
+      let av = a[sort.column] ?? '', bv = b[sort.column] ?? '';
+      if (typeof av === 'string') {
+        return sort.direction === 'asc' ? av.toLowerCase().localeCompare(bv.toLowerCase()) : bv.toLowerCase().localeCompare(av.toLowerCase());
       }
-      
-      // Number comparison
-      return sort.direction === 'asc' ? aVal - bVal : bVal - aVal;
+      return sort.direction === 'asc' ? av - bv : bv - av;
     });
-
-    return display;
+    return list;
   };
 
-  const handleSort = (column) => {
-    if (sort.column === column) {
-      setSort({ ...sort, direction: sort.direction === 'asc' ? 'desc' : 'asc' });
-    } else {
-      setSort({ column, direction: 'asc' });
-    }
+  const handleSort = (col) => {
+    setSort(s => s.column === col
+      ? { ...s, direction: s.direction === 'asc' ? 'desc' : 'asc' }
+      : { column: col, direction: 'asc' }
+    );
   };
 
-  const SortIcon = ({ column }) => {
-    if (sort.column !== column) return <span className="ml-1 text-gray-400">⇅</span>;
-    return <span className="ml-1">{sort.direction === 'asc' ? '↑' : '↓'}</span>;
-  };
+  const Th = ({ col, children }) => (
+    <th
+      onClick={() => handleSort(col)}
+      className="px-3 py-3.5 text-left text-xs font-bold text-white uppercase tracking-wide cursor-pointer select-none hover:bg-indigo-700/50 transition-colors whitespace-nowrap"
+    >
+      {children}
+      <SortIcon column={col} sort={sort} />
+    </th>
+  );
+
+  const displayed = getDisplayedMotoristas();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-20 w-full">
-      <div className="max-w-screen-2xl mx-auto px-6 py-10">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/home')}
-              className="p-2 hover:bg-gray-200 rounded-lg transition"
-              title="Voltar"
-            >
-              <FaArrowLeft className="text-xl text-gray-600" />
-            </button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-                <FaTruck className="text-blue-600" />
-                Cadastro de Motoristas
-              </h1>
-              <p className="text-gray-600 mt-1">Gerencie os motoristas da sua frota</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-indigo-50/30 font-sans">
+
+      {/* ══════ HEADER ══════ */}
+      <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl border-b border-slate-700">
+        <div className="max-w-screen-2xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/home')}
+                className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all"
+              >
+                <FiArrowLeft size={16} />
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <FiTruck size={17} className="text-indigo-400" />
+                  <h1 className="text-lg font-bold tracking-tight">Cadastro de Motoristas</h1>
+                </div>
+                <p className="text-slate-400 text-xs mt-0.5 pl-6">Gerencie os motoristas da sua frota</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setShowForm(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold border border-indigo-600/50 shadow-sm shadow-indigo-500/20 transition-all"
+              >
+                <FiPlus size={14} /> Novo Motorista
+              </button>
+              <label className="relative flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-white text-xs font-bold border border-emerald-600/50 shadow-sm shadow-emerald-500/20 transition-all cursor-pointer">
+                {importLoading
+                  ? <><svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> Importando...</>
+                  : <><FiUploadCloud size={14} /> Importar Excel</>
+                }
+                <input type="file" accept=".xls,.xlsx" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onChange={handleImportFile} disabled={importLoading} />
+              </label>
+              <button
+                onClick={downloadTemplate}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-bold transition-all"
+              >
+                <FiDownload size={13} /> Template
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
-            >
-              <FaPlus /> Novo Motorista
-            </button>
-            <label className="relative inline-flex items-center gap-2 px-5 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold cursor-pointer">
-              <FaFileExcel /> {importLoading ? 'Importando...' : 'Importar Excel'}
-              <input
-                type="file"
-                accept=".xls,.xlsx"
-                className="absolute inset-0 opacity-0 cursor-pointer"
-                onChange={handleImportFile}
-                disabled={importLoading}
-              />
-            </label>
-            <button
-              onClick={downloadTemplate}
-              className="flex items-center gap-2 px-5 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
-              title="Baixar template de exemplo"
-            >
-              <FaFileExcel /> Template
-            </button>
-          </div>
         </div>
+      </header>
 
-        {/* Fullscreen Form */}
+      <div className="max-w-screen-2xl mx-auto px-6 py-6 space-y-5">
+
+        {/* ══════ FORM FULLSCREEN ══════ */}
         {showForm && (
-          <div className="fixed inset-0 z-50 bg-white overflow-auto">
-            <div className="max-w-screen-2xl mx-auto px-6 py-8">
-              <div className="flex items-center justify-between mb-6 relative">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {editingMotorista ? 'Editar Motorista' : 'Novo Motorista'}
-                </h2>
-                <button
-                  onClick={handleCloseForm}
-                  className="text-gray-500 hover:text-gray-700 text-2xl rounded-full p-2 hover:bg-gray-100 transition absolute right-4 top-4 sm:static sm:top-0 sm:right-0"
-                  aria-label="Fechar"
-                >
-                  ×
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm overflow-auto flex items-start justify-center pt-8 pb-12">
+            <div className="w-full max-w-5xl mx-4 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+
+              {/* Form Header */}
+              <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-slate-800 to-slate-700 text-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
+                    <FiUser size={15} />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold">{editingMotorista ? 'Editar Motorista' : 'Novo Motorista'}</h2>
+                    <p className="text-slate-400 text-xs">Preencha os dados do motorista e equipamentos</p>
+                  </div>
+                </div>
+                <button onClick={handleCloseForm} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition">
+                  <FiX size={16} />
                 </button>
               </div>
 
-              <div className="bg-white rounded-lg shadow-sm border border-gray-100">
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Transportadora *</label>
-                      <input
-                        type="text"
-                        value={formData.transportadora}
-                        onChange={(e) => setFormData({ ...formData, transportadora: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Ex: GEO TRANSPORTES"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Nome do Motorista *</label>
-                      <input
-                        type="text"
-                        value={formData.nome}
-                        onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Ex: João Silva"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">CPF *</label>
-                      <input
-                        type="text"
-                        value={formData.cpf}
-                        onChange={(e) => setFormData({ ...formData, cpf: formatCPF(e.target.value) })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="000.000.000-00"
-                        maxLength="14"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Vínculo *</label>
-                      <select
-                        value={formData.vinculo}
-                        onChange={(e) => setFormData({ ...formData, vinculo: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="PRÓPRIO">PRÓPRIO</option>
-                        <option value="AGREGADO">AGREGADO</option>
-                        <option value="TERCEIRO">TERCEIRO</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Rastreador</label>
-                      <input
-                        type="text"
-                        value={formData.rastreador}
-                        onChange={(e) => setFormData({ ...formData, rastreador: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Ex: SASCAR"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Exp. cadastro motorista</label>
-                      <input
-                        type="date"
-                        value={formData.expCadastroMotorista}
-                        onChange={(e) => setFormData({ ...formData, expCadastroMotorista: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Cavalo</label>
-                      <input
-                        type="text"
-                        value={formData.cavalo}
-                        onChange={(e) => setFormData({ ...formData, cavalo: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Rastreador cavalo</label>
-                      <input
-                        type="text"
-                        value={formData.rastreadorCavalo}
-                        onChange={(e) => setFormData({ ...formData, rastreadorCavalo: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Ex: SASCAR"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Exp. cadastro cavalo</label>
-                      <input
-                        type="date"
-                        value={formData.expCadastroCavalo}
-                        onChange={(e) => setFormData({ ...formData, expCadastroCavalo: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Rastreador carreta
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.rastreadorCarreta}
-                      onChange={(e) => setFormData({ ...formData, rastreadorCarreta: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+              <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                {/* Seção: Dados Pessoais */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
+                    <div className="w-1.5 h-5 rounded-full bg-indigo-500" />
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Dados Pessoais</span>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Exp. cadastro carreta
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.expCadastroCarreta}
-                      onChange={(e) => setFormData({ ...formData, expCadastroCarreta: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Telefone *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.telefone}
-                      onChange={(e) => setFormData({ ...formData, telefone: formatPhone(e.target.value) })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="(92) 98765-4321"
-                      maxLength="15"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <FieldLabel required>Transportadora</FieldLabel>
+                      <FormInput icon={FiTruck} type="text" value={formData.transportadora}
+                        onChange={e => setFormData({...formData, transportadora: e.target.value})}
+                        placeholder="Ex: GEO TRANSPORTES" />
+                    </div>
+                    <div>
+                      <FieldLabel required>Nome do Motorista</FieldLabel>
+                      <FormInput icon={FiUser} type="text" value={formData.nome}
+                        onChange={e => setFormData({...formData, nome: e.target.value})}
+                        placeholder="Nome completo" />
+                    </div>
+                    <div>
+                      <FieldLabel required>CPF</FieldLabel>
+                      <FormInput type="text" value={formData.cpf}
+                        onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}
+                        placeholder="000.000.000-00" maxLength={14} />
+                    </div>
+                    <div>
+                      <FieldLabel required>Vínculo</FieldLabel>
+                      <FormSelect value={formData.vinculo} onChange={e => setFormData({...formData, vinculo: e.target.value})}>
+                        <option>PRÓPRIO</option>
+                        <option>AGREGADO</option>
+                        <option>TERCEIRO</option>
+                      </FormSelect>
+                    </div>
+                    <div>
+                      <FieldLabel required>Telefone</FieldLabel>
+                      <FormInput icon={FiPhone} type="text" value={formData.telefone}
+                        onChange={e => setFormData({...formData, telefone: formatPhone(e.target.value)})}
+                        placeholder="(00) 00000-0000" maxLength={15} />
+                    </div>
+                    <div>
+                      <FieldLabel>Rastreador</FieldLabel>
+                      <FormInput icon={FiCpu} type="text" value={formData.rastreador}
+                        onChange={e => setFormData({...formData, rastreador: e.target.value})}
+                        placeholder="Ex: SASCAR" />
+                    </div>
+                    <div>
+                      <FieldLabel>Exp. Cadastro Motorista</FieldLabel>
+                      <FormInput icon={FiCalendar} type="date" value={formData.expCadastroMotorista}
+                        onChange={e => setFormData({...formData, expCadastroMotorista: e.target.value})} />
+                    </div>
                   </div>
                 </div>
 
-                <div className="sm:col-span-2 md:col-span-3 lg:col-span-4">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Observações</label>
-                  <textarea
-                    value={formData.observacoes}
-                    onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                    rows="3"
-                    placeholder="Digite observações adicionais..."
-                  />
+                {/* Seção: Equipamentos */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
+                    <div className="w-1.5 h-5 rounded-full bg-cyan-500" />
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Equipamentos</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[
+                      { label:'Cavalo', field:'cavalo', rastr:'rastreadorCavalo', exp:'expCadastroCavalo' },
+                      { label:'Carreta', field:'carreta', rastr:'rastreadorCarreta', exp:'expCadastroCarreta' },
+                    ].map(({ label, field, rastr, exp }) => (
+                      <div key={field} className="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-3">
+                        <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">{label}</p>
+                        <div>
+                          <FieldLabel>Placa / ID</FieldLabel>
+                          <FormInput type="text" value={formData[field]}
+                            onChange={e => setFormData({...formData, [field]: e.target.value})}
+                            placeholder={`Placa do ${label.toLowerCase()}`} />
+                        </div>
+                        <div>
+                          <FieldLabel>Rastreador</FieldLabel>
+                          <FormInput type="text" value={formData[rastr]}
+                            onChange={e => setFormData({...formData, [rastr]: e.target.value})}
+                            placeholder="Ex: SASCAR" />
+                        </div>
+                        <div>
+                          <FieldLabel>Exp. Cadastro</FieldLabel>
+                          <FormInput type="date" value={formData[exp]}
+                            onChange={e => setFormData({...formData, [exp]: e.target.value})} />
+                        </div>
+                      </div>
+                    ))}
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                      <p className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">Observações</p>
+                      <textarea
+                        value={formData.observacoes}
+                        onChange={e => setFormData({...formData, observacoes: e.target.value})}
+                        className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-white focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition resize-none placeholder:text-slate-400"
+                        rows={5} placeholder="Observações adicionais..." />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t">
-                  <button
-                    type="submit"
-                    className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
-                  >
-                    {editingMotorista ? 'Atualizar' : 'Criar'} Motorista
+                {/* Botões */}
+                <div className="flex gap-3 pt-2 border-t border-slate-100">
+                  <button type="submit"
+                    className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition">
+                    {editingMotorista ? 'Atualizar Motorista' : 'Criar Motorista'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({
-                      transportadora: '', nome: '', cpf: '', vinculo: 'AGREGADO', rastreador: '', expCadastroMotorista: '', cavalo: '', rastreadorCavalo: '', expCadastroCavalo: '', carreta: '', rastreadorCarreta: '', expCadastroCarreta: '', telefone: '', observacoes: ''
-                    })}
-                    className="flex-1 px-6 py-2 bg-yellow-300 text-gray-800 rounded-lg hover:bg-yellow-400 transition font-semibold"
-                  >
-                    Limpar campos
+                  <button type="button" onClick={() => setFormData(EMPTY_FORM)}
+                    className="px-5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-sm font-bold transition">
+                    Limpar
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleCloseForm}
-                    className="flex-1 px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition font-semibold"
-                  >
+                  <button type="button" onClick={handleCloseForm}
+                    className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-bold transition">
                     Cancelar
                   </button>
                 </div>
-                </form>
-              </div>
+              </form>
             </div>
           </div>
         )}
 
-        {/* FILTROS AVANÇADOS */}
+        {/* ══════ FILTROS ══════ */}
         {motoristas.length > 0 && !loading && (
-          <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">🔍 FILTROS</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase mb-2">Buscar (nome/CPF)</label>
-                <input
-                  type="text"
-                  placeholder="Digite nome ou CPF..."
-                  value={filters.searchTerm}
-                  onChange={(e) => setFilters({ ...filters, searchTerm: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase mb-2">Transportadora</label>
-                <input
-                  type="text"
-                  placeholder="Digite transportadora..."
-                  value={filters.transportadora}
-                  onChange={(e) => setFilters({ ...filters, transportadora: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase mb-2">Vínculo</label>
-                <select
-                  value={filters.vinculo}
-                  onChange={(e) => setFilters({ ...filters, vinculo: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                >
-                  <option value="">Todos</option>
-                  <option value="PRÓPRIO">PRÓPRIO</option>
-                  <option value="AGREGADO">AGREGADO</option>
-                  <option value="TERCEIRO">TERCEIRO</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase mb-2">Status</label>
-                <select
-                  value={filters.status}
-                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                >
-                  <option value="">Todos</option>
-                  <option value="A VENCER">A VENCER</option>
-                  <option value="VENCIDO">VENCIDO</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase mb-2">Resultados</label>
-                <div className="px-3 py-2 bg-gray-100 rounded-lg text-center">
-                  <span className="text-lg font-bold text-blue-600">{getDisplayedMotoristas().length}</span>
-                  <p className="text-xs text-gray-600">de {motoristas.length}</p>
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-md border border-slate-100 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center">
+                  <FiFilter size={14} className="text-indigo-500" />
                 </div>
+                <span className="text-sm font-bold text-slate-700">Filtros</span>
+                {(filters.searchTerm || filters.transportadora || filters.vinculo || filters.status) && (
+                  <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">Ativo</span>
+                )}
               </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-500">
+                  <span className="font-bold text-slate-800">{displayed.length}</span> de {motoristas.length} registros
+                </span>
+                <button
+                  onClick={() => setFilters({ transportadora: '', vinculo: '', status: '', searchTerm: '' })}
+                  className="text-xs px-3 py-1.5 bg-slate-100 hover:bg-red-50 hover:text-red-600 border border-transparent hover:border-red-200 rounded-lg font-semibold text-slate-500 transition-all"
+                >
+                  Limpar
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="relative">
+                <FiSearch size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input type="text" placeholder="Buscar nome ou CPF..."
+                  value={filters.searchTerm}
+                  onChange={e => setFilters({...filters, searchTerm: e.target.value})}
+                  className="w-full pl-9 pr-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition" />
+              </div>
+              <div className="relative">
+                <FiTruck size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input type="text" placeholder="Filtrar transportadora..."
+                  value={filters.transportadora}
+                  onChange={e => setFilters({...filters, transportadora: e.target.value})}
+                  className="w-full pl-9 pr-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition" />
+              </div>
+              <select value={filters.vinculo} onChange={e => setFilters({...filters, vinculo: e.target.value})}
+                className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition">
+                <option value="">Todos os vínculos</option>
+                <option>PRÓPRIO</option><option>AGREGADO</option><option>TERCEIRO</option>
+              </select>
+              <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})}
+                className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition">
+                <option value="">Todos os status</option>
+                <option>A VENCER</option><option>VENCIDO</option>
+              </select>
             </div>
           </div>
         )}
 
-        {/* TABELA DE MOTORISTAS */}
+        {/* ══════ TABELA ══════ */}
         {loading ? (
-          <div className="text-center py-16">
-            <div className="inline-block animate-spin">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-            <p className="text-gray-600 mt-4">Carregando motoristas...</p>
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
+            <div className="w-12 h-12 rounded-full border-4 border-indigo-200 border-t-indigo-500 animate-spin" />
+            <p className="text-sm text-slate-500 font-medium">Carregando motoristas...</p>
           </div>
         ) : motoristas.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-            <FaTruck className="text-6xl text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Nenhum motorista cadastrado</h3>
-            <p className="text-gray-600">Clique em "Novo Motorista" para começar</p>
+          <div className="bg-white rounded-2xl shadow-md border border-slate-100 p-16 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+              <FiTruck size={28} className="text-slate-400" />
+            </div>
+            <h3 className="text-base font-bold text-slate-700 mb-1">Nenhum motorista cadastrado</h3>
+            <p className="text-sm text-slate-400">Clique em "Novo Motorista" para começar</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-blue-600 to-blue-700 border-b border-blue-800 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase cursor-pointer hover:bg-blue-800 transition" onClick={() => handleSort('transportadora')}>
-                      TRANSPORTADORA <SortIcon column="transportadora" />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase cursor-pointer hover:bg-blue-800 transition" onClick={() => handleSort('nome')}>
-                      MOTORISTA <SortIcon column="nome" />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase cursor-pointer hover:bg-blue-800 transition" onClick={() => handleSort('cpf')}>
-                      CPF <SortIcon column="cpf" />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase cursor-pointer hover:bg-blue-800 transition" onClick={() => handleSort('vinculo')}>
-                      VÍNCULO <SortIcon column="vinculo" />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase cursor-pointer hover:bg-blue-800 transition" onClick={() => handleSort('rastreador')}>
-                      RASTREADOR <SortIcon column="rastreador" />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase cursor-pointer hover:bg-blue-800 transition" onClick={() => handleSort('expCadastroMotorista')}>
-                      EXP. CADASTRO <SortIcon column="expCadastroMotorista" />
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-white uppercase">STATUS</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase cursor-pointer hover:bg-blue-800 transition" onClick={() => handleSort('cavalo')}>
-                      CAVALO <SortIcon column="cavalo" />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase cursor-pointer hover:bg-blue-800 transition" onClick={() => handleSort('rastreadorCavalo')}>
-                      RAST. CAVALO <SortIcon column="rastreadorCavalo" />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase cursor-pointer hover:bg-blue-800 transition" onClick={() => handleSort('expCadastroCavalo')}>
-                      EXP. CAVALO <SortIcon column="expCadastroCavalo" />
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-white uppercase">ST.</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase cursor-pointer hover:bg-blue-800 transition" onClick={() => handleSort('carreta')}>
-                      CARRETA <SortIcon column="carreta" />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase cursor-pointer hover:bg-blue-800 transition" onClick={() => handleSort('rastreadorCarreta')}>
-                      RAST. CARRETA <SortIcon column="rastreadorCarreta" />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase cursor-pointer hover:bg-blue-800 transition" onClick={() => handleSort('expCadastroCarreta')}>
-                      EXP. CARRETA <SortIcon column="expCadastroCarreta" />
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-white uppercase">ST.</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase cursor-pointer hover:bg-blue-800 transition" onClick={() => handleSort('telefone')}>
-                      TELEFONE <SortIcon column="telefone" />
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-white uppercase">AÇÕES</th>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gradient-to-r from-indigo-600 to-indigo-700 sticky top-0">
+                    <Th col="transportadora">Transportadora</Th>
+                    <Th col="nome">Motorista</Th>
+                    <Th col="cpf">CPF</Th>
+                    <Th col="vinculo">Vínculo</Th>
+                    <Th col="rastreador">Rastreador</Th>
+                    <Th col="expCadastroMotorista">Exp. Cadastro</Th>
+                    <th className="px-3 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wide">Status</th>
+                    <Th col="cavalo">Cavalo</Th>
+                    <Th col="rastreadorCavalo">Rast. Cavalo</Th>
+                    <Th col="expCadastroCavalo">Exp. Cavalo</Th>
+                    <th className="px-3 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wide">St.</th>
+                    <Th col="carreta">Carreta</Th>
+                    <Th col="rastreadorCarreta">Rast. Carreta</Th>
+                    <Th col="expCadastroCarreta">Exp. Carreta</Th>
+                    <th className="px-3 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wide">St.</th>
+                    <Th col="telefone">Telefone</Th>
+                    <th className="px-3 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wide">Ações</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {getDisplayedMotoristas().map((motorista) => (
-                    <tr key={motorista._id} className="border-b border-gray-100 hover:bg-blue-50 text-sm">
-                      <td className="px-3 py-2 font-medium text-gray-900">{motorista.transportadora}</td>
-                      <td className="px-3 py-2 text-gray-700">{motorista.nome}</td>
-                      <td className="px-3 py-2 text-gray-700 font-mono text-xs">{motorista.cpf}</td>
-                      <td className="px-6 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                          motorista.vinculo === 'PRÓPRIO'
-                            ? 'bg-green-100 text-green-800'
-                            : motorista.vinculo === 'AGREGADO'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {motorista.vinculo}
-                        </span>
+                <tbody className="divide-y divide-slate-50">
+                  {displayed.map((m, idx) => (
+                    <tr key={m._id} className={`hover:bg-indigo-50/40 transition-colors duration-150 ${idx % 2 === 0 ? '' : 'bg-slate-50/40'}`}>
+                      <td className="px-3 py-3 font-semibold text-slate-800 whitespace-nowrap">{m.transportadora}</td>
+                      <td className="px-3 py-3 text-slate-700 whitespace-nowrap">{m.nome}</td>
+                      <td className="px-3 py-3 text-slate-500 font-mono text-xs whitespace-nowrap">{m.cpf}</td>
+                      <td className="px-3 py-3"><VinculoBadge vinculo={m.vinculo} /></td>
+                      <td className="px-3 py-3 text-slate-500 text-xs">{m.rastreador || '—'}</td>
+                      <td className="px-3 py-3 text-slate-500 text-xs whitespace-nowrap">
+                        {m.expCadastroMotorista ? new Date(m.expCadastroMotorista).toLocaleDateString('pt-BR') : '—'}
                       </td>
-                      <td className="px-3 py-2 text-gray-700 text-xs">{motorista.rastreador || '-'}</td>
-                      <td className="px-3 py-2 text-gray-700 text-xs whitespace-nowrap">
-                        {motorista.expCadastroMotorista
-                          ? new Date(motorista.expCadastroMotorista).toLocaleDateString('pt-BR')
-                          : '-'}
+                      <td className="px-3 py-3 text-center"><StatusBadge status={m.statusMotorista} /></td>
+                      <td className="px-3 py-3 text-slate-500 text-xs">{m.cavalo || '—'}</td>
+                      <td className="px-3 py-3 text-slate-500 text-xs">{m.rastreadorCavalo || '—'}</td>
+                      <td className="px-3 py-3 text-slate-500 text-xs whitespace-nowrap">
+                        {m.expCadastroCavalo ? new Date(m.expCadastroCavalo).toLocaleDateString('pt-BR') : '—'}
                       </td>
-                      <td className="px-3 py-2 text-center">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${
-                          motorista.statusMotorista === 'VENCIDO'
-                            ? 'bg-red-100 text-red-800'
-                            : motorista.statusMotorista === 'A VENCER'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'text-gray-400'
-                        }`}>
-                          {motorista.statusMotorista || '-'}
-                        </span>
+                      <td className="px-3 py-3 text-center"><StatusBadge status={m.statusCavalo} /></td>
+                      <td className="px-3 py-3 text-slate-500 text-xs">{m.carreta || '—'}</td>
+                      <td className="px-3 py-3 text-slate-500 text-xs">{m.rastreadorCarreta || '—'}</td>
+                      <td className="px-3 py-3 text-slate-500 text-xs whitespace-nowrap">
+                        {m.expCadastroCarreta ? new Date(m.expCadastroCarreta).toLocaleDateString('pt-BR') : '—'}
                       </td>
-                      <td className="px-3 py-2 text-gray-700 text-xs">{motorista.cavalo || '-'}</td>
-                      <td className="px-3 py-2 text-gray-700 text-xs">{motorista.rastreadorCavalo || '-'}</td>
-                      <td className="px-3 py-2 text-gray-700 text-xs whitespace-nowrap">
-                        {motorista.expCadastroCavalo
-                          ? new Date(motorista.expCadastroCavalo).toLocaleDateString('pt-BR')
-                          : '-'}
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${
-                          motorista.statusCavalo === 'VENCIDO'
-                            ? 'bg-red-100 text-red-800'
-                            : motorista.statusCavalo === 'A VENCER'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'text-gray-400'
-                        }`}>
-                          {motorista.statusCavalo || '-'}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-gray-700 text-xs">{motorista.carreta || '-'}</td>
-                      <td className="px-3 py-2 text-gray-700 text-xs">{motorista.rastreadorCarreta || '-'}</td>
-                      <td className="px-3 py-2 text-gray-700 text-xs whitespace-nowrap">
-                        {motorista.expCadastroCarreta
-                          ? new Date(motorista.expCadastroCarreta).toLocaleDateString('pt-BR')
-                          : '-'}
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${
-                          motorista.statusCarreta === 'VENCIDO'
-                            ? 'bg-red-100 text-red-800'
-                            : motorista.statusCarreta === 'A VENCER'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'text-gray-400'
-                        }`}>
-                          {motorista.statusCarreta || '-'}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-gray-700 text-xs">{motorista.telefone}</td>
-                      <td className="px-3 py-2 text-center whitespace-nowrap">
-                        <button
-                          onClick={() => handleEdit(motorista)}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition mr-1"
-                        >
-                          <FaEdit /> Editar
-                        </button>
-                        <button
-                          onClick={() => handleDelete(motorista._id)}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded transition"
-                        >
-                          <FaTrash /> Del
-                        </button>
+                      <td className="px-3 py-3 text-center"><StatusBadge status={m.statusCarreta} /></td>
+                      <td className="px-3 py-3 text-slate-600 text-xs whitespace-nowrap">{m.telefone}</td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button onClick={() => handleEdit(m)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold border border-indigo-100 transition">
+                            <FiEdit2 size={11} /> Editar
+                          </button>
+                          <button onClick={() => handleDelete(m._id)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold border border-red-100 transition">
+                            <FiTrash2 size={11} /> Excluir
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 text-xs text-slate-400 flex items-center justify-between">
+              <span>Exibindo <span className="font-semibold text-slate-600">{displayed.length}</span> de <span className="font-semibold text-slate-600">{motoristas.length}</span> motoristas</span>
+            </div>
           </div>
         )}
+
+        <div className="h-4" />
       </div>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}

@@ -88,6 +88,25 @@
             border-radius: 4px;
         }
         
+        /* Evitar quebras de página no meio de seções */
+        h2 + ol, h2 + ul,
+        h3 + ol, h3 + ul {
+            page-break-inside: avoid;
+        }
+        
+        li {
+            page-break-inside: avoid;
+        }
+        
+        img {
+            page-break-inside: avoid;
+        }
+        
+        /* Manter fluxos juntos */
+        section, article {
+            page-break-inside: avoid;
+        }
+        
         hr {
             border: none;
             border-top: 2px solid #e0e0e0;

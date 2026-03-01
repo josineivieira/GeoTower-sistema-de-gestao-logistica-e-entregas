@@ -1,0 +1,22 @@
+/* Styles for simple PDF output */
+body {
+  font-family: Arial, sans-serif;
+  font-size: 12pt;
+  color: #000;
+  margin: 20mm 15mm 20mm 15mm;
+}
+
+h1 { font-size: 18pt; }
+h2 { font-size: 16pt; }
+h3 { font-size: 14pt; }
+
+/* Prevent breaking inside important elements */
+h1, h2, h3, p, ul, ol, li, img, section {
+  page-break-inside: avoid;
+}
+
+/* Images should scale down to fit */
+img {
+  max-width: 100%;
+  height: auto;
+}

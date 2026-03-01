@@ -224,39 +224,6 @@ const getProgress = (delivery) => {
   return Math.round((idx / (progressStatuses.length - 1)) * 100);
 };
 
-const ProgressDots = ({ delivery }) => {
-  let p = getProgress(delivery);
-  // override for finalizado / docs delivered
-  if (normalizeKey(delivery.status) === 'FINALIZADO') {
-    if (allModalDocsComplete(delivery)) p = 100;
-    else p = 90;
-  }
-  const total = 7;
-  const filled = Math.ceil((p / 100) * total);
-  const colorDot =
-    p === 100 ? 'bg-emerald-500 shadow-sm shadow-emerald-400' :
-    p >= 66   ? 'bg-amber-400 shadow-sm shadow-amber-300' :
-    p >= 33   ? 'bg-indigo-500 shadow-sm shadow-indigo-300' :
-                'bg-gray-300';
-  return (
-    <div className="flex items-center gap-1" title={`${p}%`}>
-      <span className="text-[10px] font-bold text-gray-500 w-6 text-right">{p}%</span>
-      <div className="flex gap-[3px]">
-        {Array.from({ length: total }).map((_, i) => (
-          <span
-            key={i}
-            className={`block w-2.5 h-2.5 rounded-full transition-all ${
-              i < filled
-                ? `${colorDot} ${p < 100 && i === filled - 1 ? 'animate-pulse' : ''}`
-                : 'bg-gray-200'
-            }`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
-
 /* ─────────────────────────────────────────────────────────────
    MAIN COMPONENT
    ───────────────────────────────────────────────────────────── */
@@ -405,6 +372,40 @@ const MonitorEntregas = () => {
     if (!d) return false;
     const keys = ['retiradaCheio','canhotCTE','diarioBordo','canhotNF','devolucaoVazio','chegadaCliente','inicioDesova','fimDesova'];
     return keys.every(k => getDocumentUrlsArray(d.documents?.[k]).length > 0);
+  };
+
+  // Progress indicator component with document completion check
+  const ProgressDots = ({ delivery }) => {
+    let p = getProgress(delivery);
+    // override for finalizado / docs delivered
+    if (normalizeKey(delivery.status) === 'FINALIZADO') {
+      if (allModalDocsComplete(delivery)) p = 100;
+      else p = 90;
+    }
+    const total = 7;
+    const filled = Math.ceil((p / 100) * total);
+    const colorDot =
+      p === 100 ? 'bg-emerald-500 shadow-sm shadow-emerald-400' :
+      p >= 66   ? 'bg-amber-400 shadow-sm shadow-amber-300' :
+      p >= 33   ? 'bg-indigo-500 shadow-sm shadow-indigo-300' :
+                  'bg-gray-300';
+    return (
+      <div className="flex items-center gap-1" title={`${p}%`}>
+        <span className="text-[10px] font-bold text-gray-500 w-6 text-right">{p}%</span>
+        <div className="flex gap-[3px]">
+          {Array.from({ length: total }).map((_, i) => (
+            <span
+              key={i}
+              className={`block w-2.5 h-2.5 rounded-full transition-all ${
+                i < filled
+                  ? `${colorDot} ${p < 100 && i === filled - 1 ? 'animate-pulse' : ''}`
+                  : 'bg-gray-200'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    );
   };
 
   const removeProgramacaoInfo = (obs) => obs ? obs.replace(/Criada a partir da Programação [A-Z0-9]+/g, '').trim() : '';

@@ -1,175 +1,181 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  FaCheckCircle,
-  FaExclamationCircle,
-  FaInfoCircle,
-  FaExclamationTriangle,
-  FaTimes
-} from 'react-icons/fa';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../services/authContext';
+import { useCity } from '../contexts/CityContext';
+import Toast from '../components/Toast';
+import { FaUser, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 
-const Toast = ({ message, type = 'info', onClose, duration = 3500 }) => {
-  const [open, setOpen] = useState(false);
-  const closeTimer = useRef(null);
-  const exitTimer = useRef(null);
+const Login = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [formData, setFormData] = useState({ username: '', password: '' });
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const { city, setCity } = useCity();
 
-  const cfg = useMemo(() => {
-    // Mantendo paleta da empresa (roxo/azul/esmeralda)
-    switch (type) {
-      case 'success':
-        return {
-          label: 'Sucesso',
-          Icon: FaCheckCircle,
-          accent: 'bg-emerald-600',
-          ring: 'focus:ring-emerald-200/70',
-          progress: 'from-emerald-600 to-blue-600'
-        };
-      case 'error':
-        return {
-          label: 'Atenção',
-          Icon: FaExclamationCircle,
-          accent: 'bg-purple-700',
-          ring: 'focus:ring-purple-200/70',
-          progress: 'from-purple-700 to-blue-600'
-        };
-      case 'warning':
-        return {
-          label: 'Aviso',
-          Icon: FaExclamationTriangle,
-          accent: 'bg-blue-600',
-          ring: 'focus:ring-blue-200/70',
-          progress: 'from-blue-600 to-emerald-600'
-        };
-      default:
-        return {
-          label: 'Informação',
-          Icon: FaInfoCircle,
-          accent: 'bg-blue-600',
-          ring: 'focus:ring-blue-200/70',
-          progress: 'from-blue-600 to-purple-700'
-        };
-    }
-  }, [type]);
-
-  const requestClose = () => {
-    // animação de saída
-    setOpen(false);
-    if (exitTimer.current) clearTimeout(exitTimer.current);
-    exitTimer.current = setTimeout(() => onClose?.(), 180);
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  useEffect(() => {
-    // animação de entrada
-    const t = setTimeout(() => setOpen(true), 10);
-    return () => clearTimeout(t);
-  }, []);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  useEffect(() => {
-    if (!duration || duration <= 0) return;
+    // Require city selection before attempting login to ensure header is sent
+    if (!city) {
+      setToast({ message: 'Escolha Manaus ou Itajaí antes de entrar', type: 'error' });
+      return;
+    }
 
-    closeTimer.current = setTimeout(() => requestClose(), duration);
-    return () => {
-      if (closeTimer.current) clearTimeout(closeTimer.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duration]);
+    setLoading(true);
 
-  useEffect(() => {
-    return () => {
-      if (closeTimer.current) clearTimeout(closeTimer.current);
-      if (exitTimer.current) clearTimeout(exitTimer.current);
-    };
-  }, []);
-
-  const role = type === 'error' ? 'alert' : 'status';
+    try {
+      await login(formData.username, formData.password, city);
+      setToast({ message: 'Login realizado com sucesso!', type: 'success' });
+      setTimeout(() => navigate('/home'), 900);
+    } catch (error) {
+      setToast({
+        message: error.response?.data?.message || 'Erro ao fazer login',
+        type: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
-      className="fixed inset-x-0 top-0 z-[9999] flex justify-center px-4"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}
-      aria-live={type === 'error' ? 'assertive' : 'polite'}
-      aria-atomic="true"
+      className="fixed inset-0 w-full overflow-hidden overscroll-none bg-gradient-to-br from-purple-700 via-blue-600 to-emerald-600 flex items-center justify-center px-4 py-10"
+      style={{
+        height: '100svh',
+        paddingBottom: 'calc(env(safe-area-inset-bottom) + 2rem)'
+      }}
     >
-      <div
-        role={role}
-        className={[
-          // container premium
-          'relative w-full max-w-md overflow-hidden rounded-2xl',
-          'bg-white/92 backdrop-blur-xl',
-          'border border-white/40 shadow-2xl',
-          // transição
-          'transition-all duration-200 ease-out',
-          open ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-[0.99]'
-        ].join(' ')}
-        onMouseEnter={() => {
-          // pausa o auto-close enquanto hover (opcional, mas “premium”)
-          if (closeTimer.current) clearTimeout(closeTimer.current);
-        }}
-        onMouseLeave={() => {
-          if (!duration || duration <= 0) return;
-          closeTimer.current = setTimeout(() => requestClose(), 1200);
-        }}
-      >
-        {/* Barra superior com gradiente da marca (não mexe na paleta) */}
-        <div className="h-1.5 bg-gradient-to-r from-purple-700 via-blue-600 to-emerald-600" />
+      {/* Background decoration */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-48 blur-2xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-white/10 rounded-full -ml-48 -mb-48 blur-2xl pointer-events-none" />
 
-        <div className="flex gap-4 p-4">
-          {/* Accent + ícone */}
-          <div className="flex items-start">
-            <div className={`mt-0.5 h-10 w-10 rounded-xl ${cfg.accent} text-white flex items-center justify-center shadow-sm`}>
-              <cfg.Icon />
+      {/* Card (se precisar rolar em telas pequenas, ele rola sem “balançar” a página) */}
+      <div className="w-full max-w-md max-h-[90svh] overflow-auto bg-white/95 backdrop-blur rounded-2xl shadow-2xl p-8 relative z-10 border border-white/40">
+        <div className="text-center mb-8">
+          <img
+            src="/images/geotransporteslogo.svg"
+            alt="GeoTransportes Logo"
+            className="h-20 w-auto mx-auto mb-4"
+            onError={(e) => {
+              // Fallback to alternate filename (case differences on server)
+              console.warn('Logo failed to load from /images/geotransporteslogo.svg; trying alternate path');
+              e.target.onerror = null;
+              e.target.src = '/images/GeoTransportesLogo.svg';
+            }}
+            onLoad={() => console.debug('Logo loaded successfully')}
+          />
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-purple-700 to-blue-700 bg-clip-text text-transparent mb-2">
+            GeoTransportes
+          </h1>
+          <p className="text-gray-700 font-semibold">
+            Logística Rodoviária com Excelência
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <FaUser className="inline mr-2" />
+              Usuário ou Email
+            </label>
+            <input
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 text-base transition shadow-sm"
+              placeholder="seu.usuario ou email@example.com"
+              disabled={loading}
+              required
+              autoComplete="username"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <FaLock className="inline mr-2" />
+              Senha
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 text-base transition pr-12 shadow-sm"
+                placeholder="Digite sua senha"
+                disabled={loading}
+                required
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-800 p-2 rounded-lg"
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
             </div>
           </div>
 
-          {/* Texto */}
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-extrabold text-gray-900">
-                {cfg.label}
-              </p>
+          {/* City selector (Manaus / Itajaí) */}
+          <div className="mt-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Cidade</label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setCity('manaus')}
+                className={`px-4 py-2 rounded-xl border ${city === 'manaus' ? 'bg-purple-700 text-white' : 'bg-white text-gray-700'} hover:opacity-90 transition`}
+              >
+                Manaus
+              </button>
 
               <button
                 type="button"
-                onClick={requestClose}
-                className={[
-                  'p-2 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-black/5 transition',
-                  'focus:outline-none focus:ring-4',
-                  cfg.ring
-                ].join(' ')}
-                aria-label="Fechar notificação"
+                onClick={() => setCity('itajai')}
+                className={`px-4 py-2 rounded-xl border ${city === 'itajai' ? 'bg-emerald-600 text-white' : 'bg-white text-gray-700'} hover:opacity-90 transition`}
               >
-                <FaTimes />
+                Itajaí
               </button>
             </div>
-
-            <p className="mt-1 text-sm text-gray-700 leading-relaxed break-words">
-              {message}
-            </p>
           </div>
+
+          <button
+            type="submit"
+            disabled={loading || !city}
+            className={`w-full ${!city ? 'opacity-60 cursor-not-allowed' : ''} bg-gradient-to-r from-purple-700 to-emerald-600 hover:from-purple-800 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-extrabold py-3 px-4 rounded-xl transition text-lg shadow-md active:scale-[0.99]`}
+          >
+            {loading ? 'Entrando...' : 'Entrar'}
+          </button>
+        </form>
+
+        <div className="mt-6 pt-6 border-t border-gray-200/70 text-center">
+          <p className="text-gray-600 text-sm mb-4">Não tem cadastro?</p>
+          <button
+            onClick={() => navigate('/register')}
+            className="text-emerald-700 hover:text-emerald-800 font-semibold text-base transition"
+          >
+            Criar novo usuário
+          </button>
         </div>
-
-        {/* Barra de progresso (usa cores da marca por tipo) */}
-        {duration > 0 && (
-          <div className="h-1 w-full bg-gray-100">
-            <div
-              className={`h-full bg-gradient-to-r ${cfg.progress}`}
-              style={{
-                width: '100%',
-                animation: `toast-progress ${duration}ms linear forwards`
-              }}
-            />
-          </div>
-        )}
-
-        {/* Keyframes local (sem dependência) */}
-        <style>{`
-          @keyframes toast-progress {
-            from { transform: translateX(0%); }
-            to { transform: translateX(-100%); }
-          }
-        `}</style>
       </div>
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };
 
-export default Toast;
+export default Login;

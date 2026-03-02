@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">GeoTransporte</string>
-    <string name="title_activity_main">GeoTransporte</string>
-    <string name="package_name">com.geotransportes.app</string>
-    <string name="custom_url_scheme">com.geotransportes.app</string>
+    <string name="app_name">Geotransportes</string>
+    <string name="title_activity_main">Geotransportes</string>
+    <string name="package_name">com.entregascomgeotransportes.app</string>
+    <string name="custom_url_scheme">com.entregascomgeotransportes.app</string>
 </resources>

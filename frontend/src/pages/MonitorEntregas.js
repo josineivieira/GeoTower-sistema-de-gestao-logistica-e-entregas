@@ -515,11 +515,10 @@ const ProgressDots = ({ delivery, allModalDocsComplete }) => {
 };
 
 /* ─────────────────────────────────────────────────────────────
-   COLUMN DEFINITION
+   COLUMN DEFINITION  ← ATUALIZADO
    ───────────────────────────────────────────────────────────── */
-// Colunas mais equilibradas para melhor visualização em telas grandes
 const COL_TEMPLATE =
-  '72px minmax(120px,1.5fr) minmax(100px,1fr) minmax(90px,1fr) 150px 120px 110px 110px 100px 92px 92px 130px 80px 48px 48px';
+  'minmax(110px,140px) minmax(100px,1fr) minmax(90px,1fr) minmax(80px,0.9fr) 138px 112px 105px 105px 96px 86px 86px 120px 72px 42px 42px';
 
 /* ─────────────────────────────────────────────────────────────
    MOBILE CARD — layout para telas pequenas
@@ -852,7 +851,7 @@ const MonitorEntregas = () => {
     }
   }, [loadDeliveries, autoRefresh, refreshInterval]);
 
-  /* ── FILTER (sem sort — sort removido para não interferir na animação) ── */
+  /* ── FILTER ── */
   useEffect(() => {
     let r = [...deliveries];
 
@@ -1104,9 +1103,9 @@ const MonitorEntregas = () => {
 
   const flowHistory = selectedDelivery ? getFlowHistory(selectedDelivery) : [];
 
-  /* ── COLUMN HEADERS (sem sort) ── */
+  /* ── COLUMN HEADERS ← ATUALIZADO ── */
   const HEADERS = [
-    'Nº', 'Contratado', 'Motorista', 'Recebedor',
+    'Container', 'Contratado', 'Motorista', 'Recebedor',
     'Status', 'Progresso', 'DT Retirada', 'Agendamento',
     'Chegada', 'Início', 'Fim', 'Pontualidade',
     '⏱ Tempo', 'Docs', 'Ações'
@@ -1274,7 +1273,7 @@ const MonitorEntregas = () => {
           </div>
         ) : (
           <div>
-            {/* ── MOBILE: cards (visível só em telas < md) ── */}
+            {/* ── MOBILE: cards ── */}
             <div className="md:hidden space-y-3">
               {displayList.map(d => (
                 <MobileDeliveryCard
@@ -1291,12 +1290,12 @@ const MonitorEntregas = () => {
               ))}
             </div>
 
-            {/* ── DESKTOP: tabela com grid (visível só em md+) ── */}
+            {/* ── DESKTOP: tabela grid ── */}
             <div className="hidden md:block rounded-2xl border border-white/10 overflow-hidden shadow-2xl bg-black/20">
               <div className="overflow-x-auto">
-                <div style={{ minWidth: '1300px' }}>
+                <div style={{ minWidth: '1220px' }}>
 
-                  {/* Header row — SEM sort, SEM setas */}
+                  {/* Header row */}
                   <div
                     className="grid text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.04] border-b border-white/10"
                     style={{ gridTemplateColumns: COL_TEMPLATE }}
@@ -1338,9 +1337,11 @@ const MonitorEntregas = () => {
                           `}
                           style={{ gridTemplateColumns: COL_TEMPLATE, '--rise-from': '120px' }}
                         >
-                          {/* Nº */}
-                          <div className="px-3 py-3 flex items-center gap-1.5 overflow-hidden">
-                            <span className="font-black text-purple-300 truncate text-[11px]">{d.deliveryNumber}</span>
+                          {/* ── Container (ex-Nº) ← ATUALIZADO ── */}
+                          <div className="px-3 py-3 flex items-center gap-1.5">
+                            <span className="font-black text-purple-300 text-[12px] leading-tight whitespace-nowrap">
+                              {d.deliveryNumber}
+                            </span>
                             {updatedAt && (now - updatedAt) < RISE_WINDOW && (
                               <span className="badge-pop flex-shrink-0 px-1.5 py-0.5 rounded-full bg-purple-600/80 text-white text-[8px] font-black">
                                 UP
@@ -1350,23 +1351,31 @@ const MonitorEntregas = () => {
 
                           {/* Contratado */}
                           <div className="px-3 py-3 flex items-center overflow-hidden">
-                            <span className="text-gray-300 truncate text-[11px]" title={d.userName}>{d.userName || '—'}</span>
+                            <span className="text-gray-300 truncate text-[11px]" title={d.userName}>
+                              {d.userName || '—'}
+                            </span>
                           </div>
 
                           {/* Motorista */}
                           <div className="px-3 py-3 flex items-center overflow-hidden">
-                            <span className="text-gray-300 truncate text-[11px]" title={d.driverName}>{d.driverName || '—'}</span>
+                            <span className="text-gray-300 truncate text-[11px]" title={d.driverName}>
+                              {d.driverName || '—'}
+                            </span>
                           </div>
 
                           {/* Recebedor */}
                           <div className="px-3 py-3 flex items-center overflow-hidden">
-                            <span className="text-gray-400 truncate text-[11px]" title={d.recebedor}>{d.recebedor || '—'}</span>
+                            <span className="text-gray-400 truncate text-[11px]" title={d.recebedor}>
+                              {d.recebedor || '—'}
+                            </span>
                           </div>
 
                           {/* Status */}
                           <div className="px-2 py-3 flex items-center justify-center">
                             {(() => {
-                              const disp = d.status==='FINALIZADO' && allModalDocsComplete(d) ? 'DOCUMENTOS ENTREGUES' : d.status;
+                              const disp = d.status === 'FINALIZADO' && allModalDocsComplete(d)
+                                ? 'DOCUMENTOS ENTREGUES'
+                                : d.status;
                               return <Badge status={disp} />;
                             })()}
                           </div>
@@ -1379,35 +1388,45 @@ const MonitorEntregas = () => {
                           {/* DT Retirada */}
                           <div className="px-2 py-3 flex items-center justify-center">
                             <span className="text-sky-400 font-semibold text-[11px] tabular-nums whitespace-nowrap">
-                              {d.containerMontadoAt ? new Date(d.containerMontadoAt).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'}
+                              {d.containerMontadoAt
+                                ? new Date(d.containerMontadoAt).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
+                                : '—'}
                             </span>
                           </div>
 
                           {/* Agendamento */}
                           <div className="px-2 py-3 flex items-center justify-center">
                             <span className="text-gray-400 text-[11px] tabular-nums whitespace-nowrap">
-                              {d.dataAgendamento ? new Date(d.dataAgendamento).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'}
+                              {d.dataAgendamento
+                                ? new Date(d.dataAgendamento).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
+                                : '—'}
                             </span>
                           </div>
 
                           {/* Chegada */}
                           <div className="px-2 py-3 flex items-center justify-center">
                             <span className="text-gray-300 text-[11px] tabular-nums whitespace-nowrap">
-                              {d.horarioChegada ? new Date(d.horarioChegada).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'}
+                              {d.horarioChegada
+                                ? new Date(d.horarioChegada).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
+                                : '—'}
                             </span>
                           </div>
 
                           {/* Início desova */}
                           <div className="px-2 py-3 flex items-center justify-center">
                             <span className="text-gray-400 text-[11px] tabular-nums whitespace-nowrap">
-                              {d.horarioInicioDesova ? new Date(d.horarioInicioDesova).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'}
+                              {d.horarioInicioDesova
+                                ? new Date(d.horarioInicioDesova).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
+                                : '—'}
                             </span>
                           </div>
 
                           {/* Fim desova */}
                           <div className="px-2 py-3 flex items-center justify-center">
                             <span className="text-gray-400 text-[11px] tabular-nums whitespace-nowrap">
-                              {d.horarioFimDesova ? new Date(d.horarioFimDesova).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'}
+                              {d.horarioFimDesova
+                                ? new Date(d.horarioFimDesova).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
+                                : '—'}
                             </span>
                           </div>
 

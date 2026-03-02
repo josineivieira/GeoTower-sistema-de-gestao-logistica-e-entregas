@@ -181,8 +181,15 @@ const AdminDashboard = () => {
       ]);
       setDeliveries(delivRes.data.deliveries);
       setStatistics(statsRes.data.statistics);
-    } catch {
-      setToast({ message: 'Erro ao carregar dados', type: 'error' });
+    } catch (err) {
+      // Attempt to provide a clearer message when session expired or network error
+      // If we can detect 401 from the response, ask user to login again
+      if (err && err.response && err.response.status === 401) {
+        setToast({ message: 'Sessão expirada. Faça login novamente.', type: 'error' });
+        setTimeout(() => navigate('/login'), 1200);
+      } else {
+        setToast({ message: 'Erro ao carregar dados. Se o problema persistir, faça login novamente.', type: 'error' });
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -190,13 +197,14 @@ const AdminDashboard = () => {
   }, [period, filters]);
 
   // update filters when the debounced search input changes
+  // explicit debounce using a ref timer so updates happen only after
+  // the user pauses typing (700ms) or presses Enter (handled onKeyDown).
+  const searchTimerRef = React.useRef(null);
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setFilters(f => ({ ...f, searchTerm: searchInput.trim() }));
-    }, 700); // wait for 700ms of inactivity
-
-    return () => clearTimeout(handler);
-  }, [searchInput]);
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
 
   // whenever filters or period change we reload data
   useEffect(() => { loadData(); }, [loadData]);
@@ -433,11 +441,19 @@ const AdminDashboard = () => {
                   type="text"
                   placeholder="Buscar entrega ou motorista..."
                   value={searchInput}
-                  onChange={e => setSearchInput(e.target.value)}
+                  onChange={e => {
+                    const v = e.target.value;
+                    setSearchInput(v);
+                    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                    searchTimerRef.current = setTimeout(() => {
+                      setFilters(f => ({ ...f, searchTerm: v.trim() }));
+                      searchTimerRef.current = null;
+                    }, 700);
+                  }}
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      // apply immediately on Enter
+                      if (searchTimerRef.current) { clearTimeout(searchTimerRef.current); searchTimerRef.current = null; }
                       setFilters(f => ({ ...f, searchTerm: searchInput.trim() }));
                     }
                   }}

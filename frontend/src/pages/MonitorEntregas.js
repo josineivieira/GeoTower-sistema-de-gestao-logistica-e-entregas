@@ -499,14 +499,52 @@ const MonitorEntregas = () => {
   /* ── Actions ── */
   const handleDownload = async (id, type) => {
     try {
+      // if delivery already contains direct URLs for this document, download them directly
+      const delivery = deliveries.find(d => d._id === id);
+      const docEntry = delivery?.documents?.[type];
+      if (docEntry) {
+        // docEntry can be a single URL or array of URLs or an object with urls
+        if (typeof docEntry === 'string' && docEntry.startsWith('http')) {
+          const a = document.createElement('a'); a.href = docEntry;
+          a.setAttribute('download', `${delivery.deliveryNumber||'doc'}_${type}`);
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          setToast({ message: 'Documento baixado', type: 'success' });
+          return;
+        }
+        if (Array.isArray(docEntry)) {
+          docEntry.forEach((url, i) => {
+            const a = document.createElement('a'); a.href = url;
+            a.setAttribute('download', `${delivery.deliveryNumber||'doc'}_${type}_${i+1}`);
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          });
+          setToast({ message: 'Documento(s) baixado(s)', type: 'success' });
+          return;
+        }
+        // If docEntry is an object with urls array
+        if (docEntry.urls && Array.isArray(docEntry.urls)) {
+          docEntry.urls.forEach((url, i) => {
+            const a = document.createElement('a'); a.href = url;
+            a.setAttribute('download', `${delivery.deliveryNumber||'doc'}_${type}_${i+1}`);
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          });
+          setToast({ message: 'Documento(s) baixado(s)', type: 'success' });
+          return;
+        }
+      }
+
       const res = await adminService.downloadDocument(id, type);
-      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'image/jpeg' }));
+      const contentType = res.headers?.['content-type'] || res.headers?.['Content-Type'] || '';
+      const ext = contentType.includes('pdf') ? 'pdf' : (contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpg' : (contentType.includes('png') ? 'png' : 'bin'));
+      const blob = new Blob([res.data], { type: contentType || 'application/octet-stream' });
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url;
-      a.setAttribute('download', `${deliveries.find(d=>d._id===id)?.deliveryNumber||'doc'}_${type}.jpg`);
+      a.setAttribute('download', `${deliveries.find(d=>d._id===id)?.deliveryNumber||'doc'}_${type}.${ext}`);
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
       setToast({ message: 'Documento baixado', type: 'success' });
-    } catch (e) { setToast({ message: 'Erro ao baixar: ' + (e.response?.data?.message || e.message), type: 'error' }); }
+    } catch (e) {
+      setToast({ message: 'Erro ao baixar: ' + (e.response?.data?.message || e.message), type: 'error' });
+    }
   };
 
   const handleDownloadAll = async (id) => {

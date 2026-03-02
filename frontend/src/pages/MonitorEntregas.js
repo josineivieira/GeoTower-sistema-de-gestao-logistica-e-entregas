@@ -518,8 +518,8 @@ const ProgressDots = ({ delivery, allModalDocsComplete }) => {
    COLUMN DEFINITION  ← ATUALIZADO
    ───────────────────────────────────────────────────────────── */
 const COL_TEMPLATE =
-  // fixed pixel widths to avoid uneven spacing between columns; adjust as needed
-  '110px 160px 140px 180px 138px 112px 105px 105px 96px 86px 86px 120px 72px 42px 42px';
+  // fixed pixel widths; agendamento/chegada/início/fim maiores para evitar colapso de datas
+  '110px 160px 140px 180px 138px 112px 105px 140px 140px 140px 140px 120px 72px 42px 42px';
 
 /* ─────────────────────────────────────────────────────────────
    MOBILE CARD — layout para telas pequenas

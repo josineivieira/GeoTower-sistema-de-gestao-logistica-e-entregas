@@ -368,18 +368,23 @@ const MonitorEntregas = () => {
     // No arrival yet
     const eta = computeEta();
 
+    // se o horário agendado já passou e não chegou -> atrasado
+    if (now.getTime() >= scheduled.getTime()) {
+      return { label: 'Atrasado', type: 'late', eta: eta || 0, lateBy: null };
+    }
+
+    // caso ainda não tenha começado, não há base para possível atraso
     if (!start) {
-      if (now.getTime() >= scheduled.getTime()) return { label: 'Atrasado', type: 'late', eta, lateBy: null };
       return { label: 'Sem início', type: 'unknown', eta, lateBy: null };
     }
 
-    const expectedArrival = new Date(start.getTime() + travel * 60000);
-    if (expectedArrival.getTime() > scheduled.getTime()) {
-      if (now.getTime() >= scheduled.getTime()) return { label: 'Atrasado', type: 'late', eta, lateBy: null };
+    // verificar se estamos dentro da janela crítica (<= travel minutos antes)
+    const timeLeft = Math.round((scheduled - now) / 60000);
+    if (timeLeft <= travel) {
       return { label: 'Possível atraso', type: 'possible', eta, lateBy: null };
     }
 
-    if (now.getTime() >= scheduled.getTime()) return { label: 'Atrasado', type: 'late', eta, lateBy: null };
+    // fora da janela crítica e antes do horário: no prazo
     return { label: 'No prazo', type: 'ok', eta, lateBy: null };
   };
 

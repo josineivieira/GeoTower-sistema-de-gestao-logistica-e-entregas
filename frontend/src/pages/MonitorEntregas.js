@@ -1,4 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, {
+  useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect
+} from 'react';
 import { useTheme, THEMES } from '../contexts/ThemeContext';
 import { useAuth } from '../services/authContext';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +12,8 @@ import {
   FaTrash, FaEdit, FaExclamationTriangle, FaShareAlt, FaCalendarAlt,
   FaClock, FaBox, FaTruck, FaCheckCircle, FaTimesCircle, FaFilePdf,
   FaUsers, FaDolly, FaSearch, FaChevronDown, FaChevronRight,
-  FaExpand, FaBell, FaMapMarkerAlt, FaPalette
+  FaExpand, FaBell, FaMapMarkerAlt, FaPalette, FaCog, FaChevronUp,
+  FaBolt, FaSlidersH, FaMoon, FaSun, FaDesktop
 } from 'react-icons/fa';
 import { MdLocalShipping, MdDashboard } from 'react-icons/md';
 import manaConfig from '../config/cities/manaus.json';
@@ -17,107 +21,73 @@ import itajaiConfig from '../config/cities/itajai.json';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
-/* themes are provided by ThemeContext; imported at top of file */
-
 /* ─────────────────────────────────────────────────────────────
    DESIGN TOKENS
    ───────────────────────────────────────────────────────────── */
 const STATUS_CONFIG = {
   AGENDADO: {
     label: 'Agendado',
-    bg: 'bg-indigo-600',
-    light: 'bg-indigo-50',
-    text: 'text-indigo-700',
+    bg: 'bg-indigo-600', light: 'bg-indigo-50', text: 'text-indigo-700',
     border: 'border-indigo-300',
     badge: 'bg-indigo-100 text-indigo-800 border border-indigo-300',
-    icon: <FaCalendarAlt />,
-    gradient: 'from-indigo-500 to-indigo-700',
-    ring: 'ring-indigo-400/30',
-    dot: 'bg-indigo-500'
+    icon: <FaCalendarAlt />, gradient: 'from-indigo-500 to-indigo-700',
+    ring: 'ring-indigo-400/30', dot: 'bg-indigo-500', hex: '#6366f1'
   },
   'CONTAINER MONTADO': {
     label: 'Container Montado',
-    bg: 'bg-sky-600',
-    light: 'bg-sky-50',
-    text: 'text-sky-700',
+    bg: 'bg-sky-600', light: 'bg-sky-50', text: 'text-sky-700',
     border: 'border-sky-300',
     badge: 'bg-sky-100 text-sky-800 border border-sky-300',
-    icon: <FaBox />,
-    gradient: 'from-sky-500 to-sky-700',
-    ring: 'ring-sky-400/30',
-    dot: 'bg-sky-500'
+    icon: <FaBox />, gradient: 'from-sky-500 to-sky-700',
+    ring: 'ring-sky-400/30', dot: 'bg-sky-500', hex: '#0ea5e9'
   },
   'A CAMINHO DO CLIENTE': {
     label: 'A Caminho',
-    bg: 'bg-amber-500',
-    light: 'bg-amber-50',
-    text: 'text-amber-700',
+    bg: 'bg-amber-500', light: 'bg-amber-50', text: 'text-amber-700',
     border: 'border-amber-300',
     badge: 'bg-amber-100 text-amber-800 border border-amber-300',
-    icon: <FaTruck />,
-    gradient: 'from-amber-400 to-amber-600',
-    ring: 'ring-amber-400/30',
-    dot: 'bg-amber-500'
+    icon: <FaTruck />, gradient: 'from-amber-400 to-amber-600',
+    ring: 'ring-amber-400/30', dot: 'bg-amber-500', hex: '#f59e0b'
   },
   'AGUARDANDO DESOVA': {
     label: 'Aguard. Desova',
-    bg: 'bg-orange-500',
-    light: 'bg-orange-50',
-    text: 'text-orange-700',
+    bg: 'bg-orange-500', light: 'bg-orange-50', text: 'text-orange-700',
     border: 'border-orange-300',
     badge: 'bg-orange-100 text-orange-800 border border-orange-300',
-    icon: <FaExclamationTriangle />,
-    gradient: 'from-orange-400 to-orange-600',
-    ring: 'ring-orange-400/30',
-    dot: 'bg-orange-500'
+    icon: <FaExclamationTriangle />, gradient: 'from-orange-400 to-orange-600',
+    ring: 'ring-orange-400/30', dot: 'bg-orange-500', hex: '#f97316'
   },
   'EM DESOVA': {
     label: 'Em Desova',
-    bg: 'bg-violet-600',
-    light: 'bg-violet-50',
-    text: 'text-violet-700',
+    bg: 'bg-violet-600', light: 'bg-violet-50', text: 'text-violet-700',
     border: 'border-violet-300',
     badge: 'bg-violet-100 text-violet-800 border border-violet-300',
-    icon: <FaDolly />,
-    gradient: 'from-violet-500 to-violet-700',
-    ring: 'ring-violet-400/30',
-    dot: 'bg-violet-500'
+    icon: <FaDolly />, gradient: 'from-violet-500 to-violet-700',
+    ring: 'ring-violet-400/30', dot: 'bg-violet-500', hex: '#8b5cf6'
   },
   'ANEXANDO DOCUMENTOS FINAIS': {
     label: 'Anexando Docs',
-    bg: 'bg-pink-600',
-    light: 'bg-pink-50',
-    text: 'text-pink-700',
+    bg: 'bg-pink-600', light: 'bg-pink-50', text: 'text-pink-700',
     border: 'border-pink-300',
     badge: 'bg-pink-100 text-pink-800 border border-pink-300',
-    icon: <FaFilePdf />,
-    gradient: 'from-pink-500 to-pink-700',
-    ring: 'ring-pink-400/30',
-    dot: 'bg-pink-500'
+    icon: <FaFilePdf />, gradient: 'from-pink-500 to-pink-700',
+    ring: 'ring-pink-400/30', dot: 'bg-pink-500', hex: '#ec4899'
   },
   ENTREGUE: {
     label: 'Entregue',
-    bg: 'bg-emerald-600',
-    light: 'bg-emerald-50',
-    text: 'text-emerald-700',
+    bg: 'bg-emerald-600', light: 'bg-emerald-50', text: 'text-emerald-700',
     border: 'border-emerald-300',
     badge: 'bg-emerald-100 text-emerald-800 border border-emerald-300',
-    icon: <FaCheckCircle />,
-    gradient: 'from-emerald-500 to-emerald-700',
-    ring: 'ring-emerald-400/30',
-    dot: 'bg-emerald-500'
+    icon: <FaCheckCircle />, gradient: 'from-emerald-500 to-emerald-700',
+    ring: 'ring-emerald-400/30', dot: 'bg-emerald-500', hex: '#10b981'
   },
   CANCELADO: {
     label: 'Cancelado',
-    bg: 'bg-gray-500',
-    light: 'bg-gray-50',
-    text: 'text-gray-600',
+    bg: 'bg-gray-500', light: 'bg-gray-50', text: 'text-gray-600',
     border: 'border-gray-300',
     badge: 'bg-gray-100 text-gray-600 border border-gray-300',
-    icon: <FaTimesCircle />,
-    gradient: 'from-gray-400 to-gray-600',
-    ring: 'ring-gray-400/30',
-    dot: 'bg-gray-500'
+    icon: <FaTimesCircle />, gradient: 'from-gray-400 to-gray-600',
+    ring: 'ring-gray-400/30', dot: 'bg-gray-500', hex: '#6b7280'
   }
 };
 
@@ -136,7 +106,62 @@ const resolveConfig = (rawStatus) => {
 };
 
 /* ─────────────────────────────────────────────────────────────
-   SMALL REUSABLE COMPONENTS
+   GLOBAL ANIMATION STYLES
+   ───────────────────────────────────────────────────────────── */
+const GLOBAL_STYLES = `
+@keyframes riseToTop {
+  0%   { opacity: 0.6; transform: translateY(var(--rise-from, 120px)) scale(1.025);
+         box-shadow: 0 24px 80px rgba(139,92,246,0.85), 0 0 0 2px rgba(139,92,246,0.7); }
+  35%  { opacity: 1;   transform: translateY(-6px) scale(1.015);
+         box-shadow: 0 12px 50px rgba(139,92,246,0.6), 0 0 0 2px rgba(139,92,246,0.5); }
+  60%  { transform: translateY(3px) scale(1.008); }
+  80%  { transform: translateY(-2px) scale(1.003); }
+  100% { opacity: 1;   transform: translateY(0) scale(1);
+         box-shadow: 0 0 0 0 rgba(139,92,246,0); }
+}
+@keyframes glowPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(139,92,246,0); border-color: rgba(255,255,255,0.08); background: transparent; }
+  30%      { box-shadow: 0 0 30px rgba(139,92,246,0.45); border-color: rgba(139,92,246,0.55); background: rgba(139,92,246,0.1); }
+}
+.row-rise {
+  animation: riseToTop 0.9s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  position: relative;
+  z-index: 30;
+}
+.row-glow {
+  animation: glowPulse 3.5s ease-in-out forwards;
+  position: relative;
+  z-index: 20;
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slideOutRight {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(100%); opacity: 0; }
+}
+.panel-enter  { animation: slideInRight  0.3s cubic-bezier(0.34,1.2,0.64,1) forwards; }
+.panel-exit   { animation: slideOutRight 0.25s ease-in forwards; }
+@keyframes badgePopIn {
+  0%   { transform: scale(0) rotate(-12deg); opacity: 0; }
+  70%  { transform: scale(1.15) rotate(3deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.badge-pop { animation: badgePopIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.shimmer-bg {
+  background: linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.15) 50%, transparent 100%);
+  background-size: 400px 100%;
+  animation: shimmer 1.5s linear infinite;
+}
+`;
+
+/* ─────────────────────────────────────────────────────────────
+   SMALL COMPONENTS
    ───────────────────────────────────────────────────────────── */
 const Badge = ({ status }) => {
   const cfg = resolveConfig(status);
@@ -153,24 +178,14 @@ const Badge = ({ status }) => {
 const StatCard = ({ label, value, icon, gradient, ring, onClick, pulse }) => (
   <button
     onClick={onClick}
-    className={`
-      relative overflow-hidden rounded-2xl p-5 flex flex-col items-start justify-between
-      bg-gradient-to-br ${gradient}
-      shadow-lg hover:shadow-2xl
-      ring-2 ${ring}
-      hover:-translate-y-1 hover:scale-[1.02]
-      transition-all duration-300 ease-out
-      text-white w-full group
-    `}
+    className={`relative overflow-hidden rounded-2xl p-5 flex flex-col items-start justify-between
+      bg-gradient-to-br ${gradient} shadow-lg hover:shadow-2xl ring-2 ${ring}
+      hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out text-white w-full group`}
   >
-    {/* glassmorphism sheen */}
     <span className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
     <span className="absolute -bottom-8 -left-4 w-20 h-20 bg-white/5 rounded-full" />
-
     <div className="relative flex w-full items-start justify-between">
-      <span className="text-[11px] font-bold uppercase tracking-widest text-white/80 leading-tight max-w-[80%]">
-        {label}
-      </span>
+      <span className="text-[11px] font-bold uppercase tracking-widest text-white/80 leading-tight max-w-[80%]">{label}</span>
       <span className="text-white/70 text-xl">{icon}</span>
     </div>
     <div className="relative mt-3 flex items-end gap-1">
@@ -194,7 +209,7 @@ const Pill = ({ active, onClick, children, color = 'purple' }) => {
     gray:   'bg-gray-800 text-white border-gray-900 shadow-md shadow-gray-200',
     blue:   'bg-blue-600 text-white border-blue-700 shadow-md shadow-blue-200',
   };
-  const off = 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50';
+  const off = 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20 hover:bg-white/10 hover:text-white';
   return (
     <button className={`${base} ${active ? on[color] : off}`} onClick={onClick}>
       {children}
@@ -206,18 +221,16 @@ const Pill = ({ active, onClick, children, color = 'purple' }) => {
    PROGRESS DOTS
    ───────────────────────────────────────────────────────────── */
 const progressStatuses = [
-  'AGENDADO', 'CONTAINER MONTADO', 'A CAMINHO DO CLIENTE',
-  'AGUARDANDO DESOVA', 'EM DESOVA', 'ANEXANDO DOCUMENTOS FINAIS', 'ENTREGUE'
+  'AGENDADO','CONTAINER MONTADO','A CAMINHO DO CLIENTE',
+  'AGUARDANDO DESOVA','EM DESOVA','ANEXANDO DOCUMENTOS FINAIS','ENTREGUE'
 ];
 
 const getProgress = (delivery) => {
   const key = normalizeKey(delivery.status);
   const norm =
-    key === 'ENTREGUE' || key === 'SUBMITTED' || key === 'ENTREGUE COM PENDENCIA CANHOTO'
-      ? 'ENTREGUE'
-      : key === 'PENDING' || key === 'A CAMINHO DO CLIENTE'
-      ? 'A CAMINHO DO CLIENTE'
-      : key;
+    key === 'ENTREGUE' || key === 'SUBMITTED' || key === 'ENTREGUE COM PENDENCIA CANHOTO' ? 'ENTREGUE'
+    : key === 'PENDING' || key === 'A CAMINHO DO CLIENTE' ? 'A CAMINHO DO CLIENTE'
+    : key;
   if (norm === 'CANCELADO' || !norm) return 0;
   const idx = progressStatuses.indexOf(norm);
   if (idx === -1) return 0;
@@ -225,204 +238,500 @@ const getProgress = (delivery) => {
 };
 
 /* ─────────────────────────────────────────────────────────────
+   PONTUALIDADE CHIP  (redesenhado)
+   ───────────────────────────────────────────────────────────── */
+const PunctualityCell = ({ p }) => {
+  const styles = {
+    ok:       { bg: 'bg-emerald-500/15', border: 'border-emerald-500/40', text: 'text-emerald-300', dot: 'bg-emerald-400', ring: 'shadow-emerald-500/20' },
+    possible: { bg: 'bg-amber-500/15',   border: 'border-amber-500/40',   text: 'text-amber-300',   dot: 'bg-amber-400',   ring: 'shadow-amber-500/20' },
+    late:     { bg: 'bg-red-500/15',     border: 'border-red-500/40',     text: 'text-red-300',     dot: 'bg-red-400',     ring: 'shadow-red-500/20' },
+    unknown:  { bg: 'bg-gray-700/30',    border: 'border-gray-600/30',    text: 'text-gray-400',    dot: 'bg-gray-500',    ring: '' },
+  };
+  const s = styles[p.type] || styles.unknown;
+  return (
+    <div className="flex flex-col items-center gap-1 min-w-[110px]">
+      <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-bold uppercase tracking-wide ${s.bg} ${s.border} ${s.text} shadow-md ${s.ring}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${s.dot} ${p.type === 'late' ? 'animate-pulse' : ''}`} />
+        {p.label}
+      </span>
+      <div className="flex items-center gap-2">
+        {p.eta !== null && p.eta > 0 && (
+          <span className="text-[10px] text-gray-500 font-mono">ETA {p.eta}m</span>
+        )}
+        {p.lateBy != null && p.lateBy !== 0 && (
+          <span className={`text-[10px] font-bold font-mono ${p.lateBy > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+            {p.lateBy > 0 ? `+${p.lateBy}m` : `${p.lateBy}m`}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────
+   SETTINGS PANEL (drawer)
+   ───────────────────────────────────────────────────────────── */
+const SettingsPanel = ({
+  open, onClose, theme, setTheme,
+  autoRefresh, setAutoRefresh, refreshInterval, setRefreshInterval,
+  filters, setFilters, themeConfig
+}) => {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setVisible(true);
+    } else {
+      const t = setTimeout(() => setVisible(false), 280);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
+
+  if (!visible) return null;
+
+  const inputCls = `w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm
+    focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-600`;
+
+  return (
+    <>
+      {/* Overlay */}
+      <div
+        className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 transition-opacity"
+        style={{ opacity: open ? 1 : 0 }}
+        onClick={onClose}
+      />
+
+      {/* Drawer */}
+      <div
+        className={`fixed right-0 top-0 h-full w-full max-w-sm z-50 flex flex-col shadow-2xl ${open ? 'panel-enter' : 'panel-exit'}`}
+        style={{ backgroundColor: '#13131f', borderLeft: '1px solid rgba(255,255,255,0.08)' }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-gradient-to-r from-purple-900/40 to-indigo-900/40 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-purple-600/30 flex items-center justify-center">
+              <FaSlidersH className="text-purple-400 text-sm" />
+            </span>
+            <h3 className="text-sm font-black text-white uppercase tracking-widest">Configurações</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
+          >
+            <FaTimes size={12} />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 p-5 space-y-6">
+
+          {/* ── TEMA ── */}
+          <section>
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+              <FaPalette className="text-purple-400" /> Tema
+            </p>
+            <div className="grid grid-cols-1 gap-2">
+              {Object.entries(THEMES).map(([key, t]) => (
+                <button
+                  key={key}
+                  onClick={() => setTheme(key)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${
+                    theme === key
+                      ? 'bg-purple-600/30 border-purple-500/60 text-purple-200 shadow-md shadow-purple-900/30'
+                      : 'bg-white/[0.03] border-white/8 text-gray-400 hover:bg-white/8 hover:text-gray-200'
+                  }`}
+                >
+                  <span className={`w-6 h-6 rounded-full border-2 flex-shrink-0 ${
+                    theme === key ? 'border-purple-400' : 'border-gray-600'
+                  }`} style={{ background: t.bg }} />
+                  {t.name}
+                  {theme === key && (
+                    <FaCheckCircle className="ml-auto text-purple-400 text-xs" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* ── AUTO-REFRESH ── */}
+          <section>
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+              <FaSync className="text-emerald-400" /> Auto-Refresh
+            </p>
+            <div className="bg-white/[0.03] border border-white/8 rounded-xl p-4 space-y-4">
+              <label className="flex items-center justify-between cursor-pointer select-none">
+                <div>
+                  <p className="text-sm font-semibold text-gray-200">Atualização automática</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Recarrega dados periodicamente</p>
+                </div>
+                <span
+                  onClick={() => setAutoRefresh(v => !v)}
+                  className={`w-11 h-6 rounded-full relative transition-colors duration-300 flex-shrink-0 cursor-pointer ${autoRefresh ? 'bg-emerald-500' : 'bg-gray-700'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300 ${autoRefresh ? 'translate-x-5' : ''}`} />
+                </span>
+              </label>
+
+              {autoRefresh && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-2">Intervalo (segundos)</label>
+                  <div className="flex items-center gap-3">
+                    {[10,30,60,120].map(v => (
+                      <button
+                        key={v}
+                        onClick={() => setRefreshInterval(v)}
+                        className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          refreshInterval === v
+                            ? 'bg-emerald-600 text-white shadow-md'
+                            : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                        }`}
+                      >
+                        {v}s
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="range" min="5" max="300" step="5"
+                    value={refreshInterval}
+                    onChange={e => setRefreshInterval(Number(e.target.value))}
+                    className="w-full mt-3 accent-emerald-500"
+                  />
+                  <p className="text-center text-xs text-gray-400 mt-1">{refreshInterval} seg</p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ── FILTROS ── */}
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                <FaFilter className="text-purple-400" /> Filtros
+              </p>
+              {(filters.status !== 'all' || filters.searchTerm || filters.startDate || filters.endDate) && (
+                <button
+                  onClick={() => setFilters({ status:'all', searchTerm:'', startDate:'', endDate:'' })}
+                  className="flex items-center gap-1.5 text-[11px] text-red-400 hover:text-red-300 font-semibold transition"
+                >
+                  <FaTimes size={10} /> Limpar
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              {/* Status */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Status</label>
+                <select
+                  value={filters.status}
+                  onChange={e => setFilters({...filters, status: e.target.value})}
+                  className={inputCls}
+                >
+                  <option value="all" className="bg-gray-900">Todos</option>
+                  <option value="OPERACAO_FINALIZADA" className="bg-gray-900">Operação Finalizada</option>
+                  <option value="DOCUMENTOS_ENTREGUES" className="bg-gray-900">Documentos Entregues</option>
+                  <option value="FINALIZADO" className="bg-gray-900">Finalizado (sem docs)</option>
+                  <option value="A CAMINHO DO CLIENTE" className="bg-gray-900">A Caminho do Cliente</option>
+                  <option value="AGENDADO" className="bg-gray-900">Agendado</option>
+                  <option value="AGUARDANDO_DESOVA" className="bg-gray-900">Aguardando Desova</option>
+                  <option value="EM_DESOVA" className="bg-gray-900">Em Desova</option>
+                  <option value="DESOVA_FINALIZADA" className="bg-gray-900">Desova Finalizada</option>
+                  <option value="ANEXANDO_DOCUMENTOS_FINAIS" className="bg-gray-900">Anexando Docs Finais</option>
+                  <option value="CANCELADO" className="bg-gray-900">Cancelado</option>
+                </select>
+              </div>
+
+              {/* Search */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Buscar</label>
+                <div className="relative">
+                  <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs" />
+                  <input
+                    type="text"
+                    placeholder="Número, motorista, placa…"
+                    value={filters.searchTerm}
+                    onChange={e => setFilters({...filters, searchTerm: e.target.value})}
+                    className={`${inputCls} pl-8`}
+                  />
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Data Inicial</label>
+                  <input type="date" value={filters.startDate}
+                    onChange={e => setFilters({...filters, startDate: e.target.value})}
+                    className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Data Final</label>
+                  <input type="date" value={filters.endDate}
+                    onChange={e => setFilters({...filters, endDate: e.target.value})}
+                    className={inputCls} />
+                </div>
+              </div>
+
+              {/* Active filters badges */}
+              {(filters.status !== 'all' || filters.searchTerm || filters.startDate || filters.endDate) && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {filters.status !== 'all' && (
+                    <span className="flex items-center gap-1 px-2.5 py-1 bg-purple-600/20 border border-purple-500/30 rounded-full text-[11px] text-purple-300 font-semibold">
+                      Status: {filters.status}
+                      <button onClick={() => setFilters({...filters, status:'all'})} className="hover:text-white ml-1">×</button>
+                    </span>
+                  )}
+                  {filters.searchTerm && (
+                    <span className="flex items-center gap-1 px-2.5 py-1 bg-blue-600/20 border border-blue-500/30 rounded-full text-[11px] text-blue-300 font-semibold">
+                      "{filters.searchTerm}"
+                      <button onClick={() => setFilters({...filters, searchTerm:''})} className="hover:text-white ml-1">×</button>
+                    </span>
+                  )}
+                  {(filters.startDate || filters.endDate) && (
+                    <span className="flex items-center gap-1 px-2.5 py-1 bg-amber-600/20 border border-amber-500/30 rounded-full text-[11px] text-amber-300 font-semibold">
+                      <FaCalendarAlt size={9} /> {filters.startDate || '...'} → {filters.endDate || '...'}
+                      <button onClick={() => setFilters({...filters, startDate:'', endDate:''})} className="hover:text-white ml-1">×</button>
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
+    </>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────
+   PROGRESS DOTS component
+   ───────────────────────────────────────────────────────────── */
+const ProgressDots = ({ delivery, allModalDocsComplete }) => {
+  let p = getProgress(delivery);
+  if (normalizeKey(delivery.status) === 'FINALIZADO') {
+    p = allModalDocsComplete(delivery) ? 100 : 90;
+  }
+  const total = 7;
+  const filled = Math.ceil((p / 100) * total);
+  const colorDot =
+    p === 100 ? 'bg-emerald-500 shadow-sm shadow-emerald-400' :
+    p >= 66   ? 'bg-amber-400 shadow-sm shadow-amber-300' :
+    p >= 33   ? 'bg-indigo-500 shadow-sm shadow-indigo-300' :
+                'bg-gray-300';
+  return (
+    <div className="flex items-center gap-1" title={`${p}%`}>
+      <span className="text-[10px] font-bold text-gray-500 w-6 text-right">{p}%</span>
+      <div className="flex gap-[3px]">
+        {Array.from({ length: total }).map((_, i) => (
+          <span key={i} className={`block w-2.5 h-2.5 rounded-full transition-all ${
+            i < filled
+              ? `${colorDot} ${p < 100 && i === filled - 1 ? 'animate-pulse' : ''}`
+              : 'bg-gray-700'
+          }`} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────
+   COLUMN DEFINITION  (for the div-grid rows)
+   ───────────────────────────────────────────────────────────── */
+const COL_TEMPLATE =
+  '80px minmax(110px,1fr) 110px 90px 148px 108px 108px 108px 96px 90px 90px 130px 80px 52px 52px';
+
+/* ─────────────────────────────────────────────────────────────
    MAIN COMPONENT
    ───────────────────────────────────────────────────────────── */
 const MonitorEntregas = () => {
   const { user } = useAuth();
-  const isGeoMar = () => user?.role === 'geomar';
-  // only users with "manager" profile should be allowed to modify
-  // programações from the control tower modal. admins no longer get the
-  // buttons so they can only view.
-  const canEdit = () => user?.role === 'manager';
+  const isGeoMar   = () => user?.role === 'geomar';
+  const canEdit    = () => user?.role === 'manager';
 
   const [viewingDocument, setViewingDocument] = useState(null);
-  const [modalFotos, setModalFotos] = useState(null);
+  const [modalFotos, setModalFotos]           = useState(null);
   const navigate = useNavigate();
-  const [deliveries, setDeliveries] = useState([]);
+  const [deliveries, setDeliveries]           = useState([]);
   const [filteredDeliveries, setFilteredDeliveries] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState(null);
+  const [loading, setLoading]                 = useState(true);
+  const [toast, setToast]                     = useState(null);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh]         = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(30);
   const [editingDelivery, setEditingDelivery] = useState(null);
-  const [sortBy, setSortBy] = useState(null);
-  const [sortDir, setSortDir] = useState('asc');
-  const [editForm, setEditForm] = useState({
-    deliveryNumber: '', userName: '', driverName: '', vehiclePlate: '',
-    recebedor: '', status: '', dataAgendamento: '', horarioChegada: '',
-    horarioInicioDesova: '', horarioFimDesova: '', observations: ''
+  const [sortBy, setSortBy]                   = useState(null);
+  const [sortDir, setSortDir]                 = useState('asc');
+  const [editForm, setEditForm]               = useState({
+    deliveryNumber:'', userName:'', driverName:'', vehiclePlate:'',
+    recebedor:'', status:'', dataAgendamento:'', horarioChegada:'',
+    horarioInicioDesova:'', horarioFimDesova:'', observations:''
   });
-  const [filters, setFilters] = useState({ status: 'all', searchTerm: '', startDate: '', endDate: '' });
-  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters]   = useState({ status:'all', searchTerm:'', startDate:'', endDate:'' });
   const [currentTime, setCurrentTime] = useState(new Date());
   const [statsPeriod, setStatsPeriod] = useState('today');
-  const [stats, setStats] = useState({ total: 0, statusCounts: {}, byDriver: 0 });
-  // theme comes from context so it's globally available
+  const [stats, setStats]       = useState({ total:0, statusCounts:{}, byDriver:0 });
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  /* Animation state */
+  const [recentlyUpdated, setRecentlyUpdated] = useState({}); // { id: timestamp }
+  const prevStatusRef   = useRef({});  // { id: status }
+  const rowRefs         = useRef({});  // { id: DOM element }
+  const prevPositions   = useRef({});  // { id: { top } }
+  const RISE_WINDOW     = 8000;        // ms to keep rise animation active
+
   const { theme, setTheme } = useTheme();
   const themeConfig = THEMES[theme] || THEMES.dark;
 
   const statusMapToBackend = {
-    // 'Operação finalizada' should include any delivery that reached a terminal state
-    // final status is now either ENTREGUE or FINALIZADO (we converted legacy pendência
-    // records to FINALIZADO during load), so we don't send the old status anymore.
-    OPERACAO_FINALIZADA: ['ENTREGUE', 'submitted', 'FINALIZADO'],
-    'A CAMINHO DO CLIENTE': ['pending', 'PENDING'],
-    AGUARDANDO_DESOVA: ['AGUARDANDO_DESOVA'],
-    EM_DESOVA: ['EM_DESOVA'],
-    DESOVA_FINALIZADA: ['DESOVA_FINALIZADA'],
+    OPERACAO_FINALIZADA: ['ENTREGUE','submitted','FINALIZADO'],
+    'A CAMINHO DO CLIENTE': ['pending','PENDING'],
+    AGUARDANDO_DESOVA:   ['AGUARDANDO_DESOVA'],
+    EM_DESOVA:           ['EM_DESOVA'],
+    DESOVA_FINALIZADA:   ['DESOVA_FINALIZADA'],
     ANEXANDO_DOCUMENTOS_FINAIS: ['ANEXANDO_DOCUMENTOS_FINAIS'],
-    AGENDADO: ['AGENDADO'],
-    CANCELADO: ['CANCELADO']
+    AGENDADO:            ['AGENDADO'],
+    CANCELADO:           ['CANCELADO']
   };
 
+  /* clock */
   useEffect(() => {
     const t = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  // Fullscreen
+  /* Inject global animation CSS */
+  useEffect(() => {
+    const el = document.createElement('style');
+    el.id = 'monitor-anim-styles';
+    el.textContent = GLOBAL_STYLES;
+    document.head.appendChild(el);
+    return () => document.head.removeChild(el);
+  }, []);
+
+  /* Light-theme overrides */
+  useEffect(() => {
+    const el = document.createElement('style');
+    el.id = 'theme-overrides';
+    el.textContent = `
+      .theme-light { background-color:#eef2f6!important;color:#1a1a1a!important; }
+      .theme-light .text-white{color:#1a1a1a!important}
+      .theme-light .text-gray-300{color:#4b5563!important}
+      .theme-light .text-gray-400{color:#6b7280!important}
+      .theme-light .bg-white\/5{background-color:rgba(0,0,0,0.04)!important}
+      .theme-light .border-white\/10{border-color:rgba(0,0,0,0.1)!important}
+      .theme-light select,.theme-light input{background-color:#f3f4f6!important;color:#1a1a1a!important}
+    `;
+    document.head.appendChild(el);
+    return () => document.head.removeChild(el);
+  }, []);
+
+  /* fullscreen */
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement) {
       try { await document.documentElement.requestFullscreen(); } catch {}
-    } else {
-      await document.exitFullscreen();
-    }
+    } else { await document.exitFullscreen(); }
   };
   useEffect(() => {
-    const handler = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
-        e.preventDefault(); toggleFullscreen();
-      }
+    const h = (e) => {
+      if ((e.ctrlKey||e.metaKey) && e.shiftKey && e.key==='F') { e.preventDefault(); toggleFullscreen(); }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
   }, []);
 
   /* helpers */
   const calculateCliTime = (delivery, now = new Date()) => {
-    if (!delivery.horarioChegada) return { tempo: null, isActive: false };
+    if (!delivery.horarioChegada) return { tempo:null, isActive:false };
     const chegada = new Date(delivery.horarioChegada);
     const isActive = !delivery.horarioFimDesova;
     const ref = isActive ? now : new Date(delivery.horarioFimDesova);
     const diffMs = ref - chegada;
-    if (diffMs < 0) return { tempo: null, isActive };
-    const totalMin = Math.floor(diffMs / 60000);
-    const h = Math.floor(totalMin / 60), m = totalMin % 60;
-    return { tempo: h > 0 ? `${h}h ${m}m` : `${m}m`, isActive };
+    if (diffMs < 0) return { tempo:null, isActive };
+    const totalMin = Math.floor(diffMs/60000);
+    const h = Math.floor(totalMin/60), m = totalMin%60;
+    return { tempo: h>0 ? `${h}h ${m}m` : `${m}m`, isActive };
   };
 
   const getFlowHistory = (d) => {
     const ev = [];
-    if (d.containerMontadoAt) ev.push({ label: 'Montagem do container', date: d.containerMontadoAt });
-    if (d.horarioChegada)       ev.push({ label: 'Chegada', date: d.horarioChegada });
-    if (d.horarioInicioDesova)  ev.push({ label: 'Início da desova', date: d.horarioInicioDesova });
-    if (d.horarioFimDesova)     ev.push({ label: 'Fim da desova', date: d.horarioFimDesova });
-    return ev.sort((a, b) => new Date(a.date) - new Date(b.date));
+    if (d.containerMontadoAt) ev.push({ label:'Montagem do container', date:d.containerMontadoAt });
+    if (d.horarioChegada)      ev.push({ label:'Chegada',              date:d.horarioChegada });
+    if (d.horarioInicioDesova) ev.push({ label:'Início da desova',     date:d.horarioInicioDesova });
+    if (d.horarioFimDesova)    ev.push({ label:'Fim da desova',        date:d.horarioFimDesova });
+    return ev.sort((a,b) => new Date(a.date)-new Date(b.date));
   };
 
-  // Pontualidade e tempo estimado de chegada: calcula status com base em agendamento, inicio da rota e chegada
-  //
-  // O campo "ETA" representa quantos minutos faltam para a chegada prevista,
-  // assumindo um tempo mínimo de viagem (40m por padrão ou valor presente em
-  // estimatedTravelMinutes/minimumTravelMinutes). Se o motorista já confirmou
-  // chegada, eta = 0 e lateBy indica quantos minutos de atraso (+) ou adiantado (-)
-  // em relação ao horário agendado.
-  //
-  // A lógica também aplica a regra desejada: caso o entregador inicie a rota
-  // tarde demais para conseguir cumprir o agendamento com o tempo mínimo,
-  // o status imediatamente vira "Possível atraso". Exemplo:
-  //   agendamento 08:00, início em 07:30, mínimo 40m → chegada prevista 08:10
-  //   (08:10 > 08:00) → possível atraso mesmo que ainda sejam 30 minutos para o horário.
-  //
-  // » start + travelMinutes > scheduled  => "Possível atraso" ou "Atrasado"
-  // » chegada registrada determina "Pontual"/"Atrasado" e lateBy
-  //
   const getPunctualityStatus = (d, now = new Date()) => {
-    if (!d) return { label: '-', type: 'unknown', eta: null, lateBy: null };
+    if (!d) return { label:'-', type:'unknown', eta:null, lateBy:null };
     const schedStr = d.dataAgendamento || d.data;
-    if (!schedStr) return { label: 'Sem agendamento', type: 'unknown', eta: null, lateBy: null };
+    if (!schedStr) return { label:'Sem agendamento', type:'unknown', eta:null, lateBy:null };
     const scheduled = new Date(schedStr);
-    const arrival = d.horarioChegada ? new Date(d.horarioChegada) : null;
-    const start = d.createdAt ? new Date(d.createdAt) : null;
-    const travel = Number(d.estimatedTravelMinutes || d.minimumTravelMinutes || 40);
+    const arrival   = d.horarioChegada ? new Date(d.horarioChegada) : null;
+    const start     = d.createdAt      ? new Date(d.createdAt)      : null;
+    const travel    = Number(d.estimatedTravelMinutes || d.minimumTravelMinutes || 40);
 
-    // Helper to compute eta from start
     const computeEta = () => {
       if (!start) return null;
-      const expectedArrival = new Date(start.getTime() + travel * 60000);
-      const diff = Math.round((expectedArrival - now) / 60000);
+      const expected = new Date(start.getTime() + travel*60000);
+      const diff = Math.round((expected-now)/60000);
       return diff < 0 ? 0 : diff;
     };
 
     if (arrival) {
-      const lateBy = Math.round((arrival - scheduled) / 60000); // positive = late
+      const lateBy = Math.round((arrival-scheduled)/60000);
       return {
         label: arrival.getTime() <= scheduled.getTime() ? 'Pontual' : 'Atrasado',
-        type: arrival.getTime() <= scheduled.getTime() ? 'ok' : 'late',
-        eta: 0,
-        lateBy
+        type:  arrival.getTime() <= scheduled.getTime() ? 'ok' : 'late',
+        eta:0, lateBy
       };
     }
-
-    // No arrival yet
     const eta = computeEta();
-
-    // se o horário agendado já passou e não chegou -> atrasado
-    if (now.getTime() >= scheduled.getTime()) {
-      return { label: 'Atrasado', type: 'late', eta: eta || 0, lateBy: null };
-    }
-
-    // caso ainda não tenha começado, não há base para possível atraso
-    if (!start) {
-      return { label: 'Sem início', type: 'unknown', eta, lateBy: null };
-    }
-
-    // verificar se estamos dentro da janela crítica (<= travel minutos antes)
-    const timeLeft = Math.round((scheduled - now) / 60000);
-    if (timeLeft <= travel) {
-      return { label: 'Possível atraso', type: 'possible', eta, lateBy: null };
-    }
-
-    // fora da janela crítica e antes do horário: no prazo
-    return { label: 'No prazo', type: 'ok', eta, lateBy: null };
+    if (now.getTime() >= scheduled.getTime())
+      return { label:'Atrasado', type:'late', eta:eta||0, lateBy:null };
+    if (!start)
+      return { label:'Sem início', type:'unknown', eta, lateBy:null };
+    const timeLeft = Math.round((scheduled-now)/60000);
+    if (timeLeft <= travel)
+      return { label:'Possível atraso', type:'possible', eta, lateBy:null };
+    return { label:'No prazo', type:'ok', eta, lateBy:null };
   };
 
-  const flowHistory = selectedDelivery ? getFlowHistory(selectedDelivery) : [];
+  const allModalDocsComplete = (d) => {
+    if (!d) return false;
+    const keys = ['retiradaCheio','canhotCTE','diarioBordo','canhotNF','devolucaoVazio',
+                  'chegadaCliente','inicioDesova','fimDesova'];
+    return keys.every(k => getDocumentUrlsArray(d.documents?.[k]).length > 0);
+  };
 
   const formatStatus = (s, delivery) => {
     if (!s) return '-';
-    // legacy values are treated as finalizados with missing docs
-    if (s === 'ENTREGUE_COM_PENDENCIA_CANHOTO') {
-      s = 'FINALIZADO';
-    }
+    if (s === 'ENTREGUE_COM_PENDENCIA_CANHOTO') s = 'FINALIZADO';
     if (s === 'FINALIZADO') {
       if (allModalDocsComplete(delivery)) return 'DOCUMENTOS ENTREGUES';
       return 'FINALIZADO';
     }
     if (s === 'ENTREGUE' || s === 'submitted') return 'OPERAÇÃO FINALIZADA';
-    if (s === 'pending' || s === 'PENDING') return 'A CAMINHO DO CLIENTE';
-    return s.replace(/_/g, ' ');
+    if (s === 'pending'  || s === 'PENDING')   return 'A CAMINHO DO CLIENTE';
+    return s.replace(/_/g,' ');
   };
 
   const getDocumentsStatus = (delivery) => {
     if (!delivery) return 'PENDENTE';
-    const required = ['canhotCTE', 'diarioBordo', 'canhotNF', 'devolucaoVazio'];
+    const required = ['canhotCTE','diarioBordo','canhotNF','devolucaoVazio'];
     const docs = delivery.documents || {};
     if (required.every(k => docs[k])) return 'COMPLETO';
     const pending = required.filter(k => !docs[k]).map(k =>
-      ({ canhotCTE: 'CTE', canhotNF: 'NF', diarioBordo: 'DIÁRIO', devolucaoVazio: 'RIC' }[k] || k)
+      ({ canhotCTE:'CTE', canhotNF:'NF', diarioBordo:'DIÁRIO', devolucaoVazio:'RIC' }[k]||k)
     ).join(' + ');
     return `PENDENTE ${pending}`;
   };
 
   const defaultDocumentLabels = manaConfig.documents || {
-    canhotNF: 'NF', canhotCTE: 'CTE', diarioBordo: 'Diário', devolucaoVazio: 'Vazio', retiradaCheio: 'Cheio'
+    canhotNF:'NF', canhotCTE:'CTE', diarioBordo:'Diário', devolucaoVazio:'Vazio', retiradaCheio:'Cheio'
   };
 
   const getLabelsForDelivery = (d) => {
     if (!d) return defaultDocumentLabels;
-    return (d.city || '').toLowerCase() === 'itajai' ? itajaiConfig.documents || {} : defaultDocumentLabels;
+    return (d.city||'').toLowerCase() === 'itajai' ? itajaiConfig.documents||{} : defaultDocumentLabels;
   };
 
   const getDocumentUrlsArray = (docData) => {
@@ -430,57 +739,16 @@ const MonitorEntregas = () => {
     if (typeof docData === 'string') return [docData];
     if (Array.isArray(docData)) return docData.map(i => {
       if (typeof i === 'string') return i;
-      if (typeof i === 'object' && i) return i.url || (i.path && `/uploads/${i.path}`) || i.link || i.webViewLink || null;
+      if (typeof i === 'object' && i) return i.url||(i.path&&`/uploads/${i.path}`)||i.link||i.webViewLink||null;
       return null;
     }).filter(Boolean);
-    if (typeof docData === 'object') return [docData.url || (docData.path && `/uploads/${docData.path}`) || docData.link || docData.webViewLink].filter(Boolean);
+    if (typeof docData === 'object') return [docData.url||(docData.path&&`/uploads/${docData.path}`)||docData.link||docData.webViewLink].filter(Boolean);
     return [];
   };
 
-  // verifica se todos os documentos/fotos do modal foram anexados
-  const allModalDocsComplete = (d) => {
-    if (!d) return false;
-    const keys = ['retiradaCheio','canhotCTE','diarioBordo','canhotNF','devolucaoVazio','chegadaCliente','inicioDesova','fimDesova'];
-    return keys.every(k => getDocumentUrlsArray(d.documents?.[k]).length > 0);
-  };
+  const removeProgramacaoInfo = (obs) => obs ? obs.replace(/Criada a partir da Programação [A-Z0-9]+/g,'').trim() : '';
 
-  // Progress indicator component with document completion check
-  const ProgressDots = ({ delivery }) => {
-    let p = getProgress(delivery);
-    // override for finalizado / docs delivered
-    if (normalizeKey(delivery.status) === 'FINALIZADO') {
-      if (allModalDocsComplete(delivery)) p = 100;
-      else p = 90;
-    }
-    const total = 7;
-    const filled = Math.ceil((p / 100) * total);
-    const colorDot =
-      p === 100 ? 'bg-emerald-500 shadow-sm shadow-emerald-400' :
-      p >= 66   ? 'bg-amber-400 shadow-sm shadow-amber-300' :
-      p >= 33   ? 'bg-indigo-500 shadow-sm shadow-indigo-300' :
-                  'bg-gray-300';
-    return (
-      <div className="flex items-center gap-1" title={`${p}%`}>
-        <span className="text-[10px] font-bold text-gray-500 w-6 text-right">{p}%</span>
-        <div className="flex gap-[3px]">
-          {Array.from({ length: total }).map((_, i) => (
-            <span
-              key={i}
-              className={`block w-2.5 h-2.5 rounded-full transition-all ${
-                i < filled
-                  ? `${colorDot} ${p < 100 && i === filled - 1 ? 'animate-pulse' : ''}`
-                  : 'bg-gray-200'
-              }`}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const removeProgramacaoInfo = (obs) => obs ? obs.replace(/Criada a partir da Programação [A-Z0-9]+/g, '').trim() : '';
-
-  /* ── Data loading ── */
+  /* ── DATA LOADING ── */
   const loadDeliveries = useCallback(async () => {
     try {
       setLoading(true);
@@ -492,30 +760,29 @@ const MonitorEntregas = () => {
       let periodDate = '';
       if (statsPeriod && statsPeriod !== 'general') {
         const today = new Date(); today.setHours(0,0,0,0);
-        if (statsPeriod === 'yesterday') today.setDate(today.getDate() - 1);
-        if (statsPeriod === 'tomorrow')  today.setDate(today.getDate() + 1);
+        if (statsPeriod === 'yesterday') today.setDate(today.getDate()-1);
+        if (statsPeriod === 'tomorrow')  today.setDate(today.getDate()+1);
         periodDate = today.toLocaleDateString('pt-BR');
       }
       const response = await adminService.getDeliveries(backendFilters, statsPeriod, periodDate);
       const data = response.data.deliveries || [];
-      // Normalize legacy pendência status so it never surfaces separately in the UI
       const normalized = data.map(d => {
         if (d.status === 'ENTREGUE_COM_PENDENCIA_CANHOTO') d.status = 'FINALIZADO';
         return d;
       });
       setDeliveries(normalized);
       const sc = {};
-      normalized.forEach(d => { const s = normalizeKey(d.status) || 'UNKNOWN'; sc[s] = (sc[s] || 0) + 1; });
+      normalized.forEach(d => { const s = normalizeKey(d.status)||'UNKNOWN'; sc[s]=(sc[s]||0)+1; });
       const drivers = new Set(normalized.map(d => d.driverName).filter(Boolean));
-      setStats({ total: normalized.length, statusCounts: sc, byDriver: drivers.size });
-      setToast({ message: `${data.length} entregas carregadas`, type: 'success' });
+      setStats({ total:normalized.length, statusCounts:sc, byDriver:drivers.size });
+      setToast({ message:`${data.length} entregas carregadas`, type:'success' });
       setTimeout(() => setToast(null), 3000);
     } catch (err) {
-      if (err && err.response && err.response.status === 401) {
-        setToast({ message: 'Sessão expirada. Faça login novamente.', type: 'error' });
-        setTimeout(() => { window.location.href = '/login'; }, 1200);
+      if (err?.response?.status === 401) {
+        setToast({ message:'Sessão expirada. Faça login novamente.', type:'error' });
+        setTimeout(() => { window.location.href='/login'; }, 1200);
       } else {
-        setToast({ message: 'Erro ao carregar entregas. Se o problema persistir, faça login novamente.', type: 'error' });
+        setToast({ message:'Erro ao carregar entregas.', type:'error' });
       }
     } finally { setLoading(false); }
   }, [filters, statsPeriod]);
@@ -523,52 +790,48 @@ const MonitorEntregas = () => {
   useEffect(() => {
     loadDeliveries();
     if (autoRefresh) {
-      const t = setInterval(loadDeliveries, refreshInterval * 1000);
+      const t = setInterval(loadDeliveries, refreshInterval*1000);
       return () => clearInterval(t);
     }
   }, [loadDeliveries, autoRefresh, refreshInterval]);
 
+  /* ── FILTER + SORT ── */
   useEffect(() => {
     let r = [...deliveries];
     if (sortBy) {
-      r.sort((a, b) => {
+      r.sort((a,b) => {
         if (sortBy === 'createdAt') {
-          const diff = new Date(a[sortBy]) - new Date(b[sortBy]);
-          return sortDir === 'asc' ? diff : -diff;
+          const diff = new Date(a[sortBy])-new Date(b[sortBy]);
+          return sortDir==='asc' ? diff : -diff;
         }
-        const sa = String(a[sortBy] || '').toLowerCase();
-        const sb = String(b[sortBy] || '').toLowerCase();
-        return sortDir === 'asc' ? sa.localeCompare(sb) : sb.localeCompare(sa);
+        const sa = String(a[sortBy]||'').toLowerCase();
+        const sb = String(b[sortBy]||'').toLowerCase();
+        return sortDir==='asc' ? sa.localeCompare(sb) : sb.localeCompare(sa);
       });
     }
-    if (statsPeriod === 'general' && filters.status !== 'all') {
+    if (statsPeriod==='general' && filters.status!=='all') {
       r = r.filter(d => {
-        if (filters.status === 'OPERACAO_FINALIZADA') return d.status === 'ENTREGUE' || d.status === 'submitted' || d.status === 'FINALIZADO';
-        if (filters.status === 'A CAMINHO DO CLIENTE') return d.status === 'pending' || d.status === 'PENDING';
-        if (filters.status === 'DOCUMENTOS_ENTREGUES') return d.status === 'FINALIZADO' && allModalDocsComplete(d);
-        if (filters.status === 'FINALIZADO') return d.status === 'FINALIZADO' && !allModalDocsComplete(d);
-        return d.status === filters.status;
+        if (filters.status==='OPERACAO_FINALIZADA') return d.status==='ENTREGUE'||d.status==='submitted'||d.status==='FINALIZADO';
+        if (filters.status==='A CAMINHO DO CLIENTE') return d.status==='pending'||d.status==='PENDING';
+        if (filters.status==='DOCUMENTOS_ENTREGUES') return d.status==='FINALIZADO' && allModalDocsComplete(d);
+        if (filters.status==='FINALIZADO') return d.status==='FINALIZADO' && !allModalDocsComplete(d);
+        return d.status===filters.status;
       });
     }
     if (filters.searchTerm.trim()) {
       const q = filters.searchTerm.toLowerCase();
       r = r.filter(d =>
-        [d.deliveryNumber, d.driverName, d.userName, d.recebedor, d.vehiclePlate]
-          .some(v => (v || '').toLowerCase().includes(q))
+        [d.deliveryNumber,d.driverName,d.userName,d.recebedor,d.vehiclePlate]
+          .some(v => (v||'').toLowerCase().includes(q))
       );
     }
-    // Date filtering: compare YYYY-MM-DD strings derived from the delivery's
-    // local date to avoid timezone shifts (server timestamps in UTC can roll
-    // the local date back to the previous day). This makes "today" match
-    // deliveries whose local calendar date is today.
-    const pad = (v) => String(v).padStart(2, '0');
+    const pad = v => String(v).padStart(2,'0');
     if (filters.startDate) {
-      const sdStr = filters.startDate; // YYYY-MM-DD from date input
+      const sdStr = filters.startDate;
       r = r.filter(d => {
         if (!d.dataAgendamento) return false;
         const dt = new Date(d.dataAgendamento);
-        const y = dt.getFullYear(); const m = pad(dt.getMonth() + 1); const day = pad(dt.getDate());
-        const dStr = `${y}-${m}-${day}`;
+        const dStr = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
         return dStr >= sdStr;
       });
     }
@@ -577,93 +840,142 @@ const MonitorEntregas = () => {
       r = r.filter(d => {
         if (!d.dataAgendamento) return false;
         const dt = new Date(d.dataAgendamento);
-        const y = dt.getFullYear(); const m = pad(dt.getMonth() + 1); const day = pad(dt.getDate());
-        const dStr = `${y}-${m}-${day}`;
+        const dStr = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
         return dStr <= edStr;
       });
     }
     setFilteredDeliveries(r);
   }, [deliveries, filters, sortBy, sortDir, statsPeriod]);
 
-  /* ── Actions ── */
+  /* ── ANIMATION: detect status changes ── */
+  useEffect(() => {
+    if (filteredDeliveries.length === 0) return;
+
+    // Capture current DOM positions before any state change
+    const capturedPositions = {};
+    filteredDeliveries.forEach(d => {
+      const el = rowRefs.current[d._id];
+      if (el) capturedPositions[d._id] = el.getBoundingClientRect().top;
+    });
+
+    const updates = {};
+    filteredDeliveries.forEach(d => {
+      const prev = prevStatusRef.current[d._id];
+      if (prev !== undefined && prev !== d.status) {
+        updates[d._id] = Date.now();
+      }
+      prevStatusRef.current[d._id] = d.status;
+    });
+
+    if (Object.keys(updates).length > 0) {
+      prevPositions.current = capturedPositions;
+      setRecentlyUpdated(prev => ({ ...prev, ...updates }));
+      // Auto-clear after window
+      setTimeout(() => {
+        setRecentlyUpdated(prev => {
+          const next = { ...prev };
+          Object.keys(updates).forEach(id => delete next[id]);
+          return next;
+        });
+      }, RISE_WINDOW + 500);
+    }
+  }, [filteredDeliveries]);
+
+  /* Sorted display list: recently updated rows always float to top */
+  const displayList = useMemo(() => {
+    const now = Date.now();
+    return [...filteredDeliveries].sort((a, b) => {
+      const aT = recentlyUpdated[a._id];
+      const bT = recentlyUpdated[b._id];
+      const aActive = aT && (now - aT) < RISE_WINDOW;
+      const bActive = bT && (now - bT) < RISE_WINDOW;
+      if (aActive && !bActive) return -1;
+      if (!aActive && bActive) return  1;
+      if (aActive && bActive)  return bT - aT;
+      return 0;
+    });
+  }, [filteredDeliveries, recentlyUpdated]);
+
+  /* ── FLIP: apply translateY after reorder ── */
+  useLayoutEffect(() => {
+    if (!prevPositions.current || Object.keys(prevPositions.current).length === 0) return;
+    displayList.forEach(d => {
+      const el = rowRefs.current[d._id];
+      if (!el) return;
+      const oldTop = prevPositions.current[d._id];
+      if (oldTop === undefined) return;
+      const newTop = el.getBoundingClientRect().top;
+      const delta = oldTop - newTop;
+      if (Math.abs(delta) < 2) return;
+      // set CSS variable for rise distance
+      el.style.setProperty('--rise-from', `${delta}px`);
+    });
+    prevPositions.current = {};
+  }, [displayList]);
+
+  /* ── ACTIONS ── */
   const handleDownload = async (id, type) => {
     try {
-      // if delivery already contains direct URLs for this document, download them directly
       const delivery = deliveries.find(d => d._id === id);
       const docEntry = delivery?.documents?.[type];
       if (docEntry) {
-        // docEntry can be a single URL or array of URLs or an object with urls
-        if (typeof docEntry === 'string' && docEntry.startsWith('http')) {
-          const a = document.createElement('a'); a.href = docEntry;
-          a.setAttribute('download', `${delivery.deliveryNumber||'doc'}_${type}`);
-          document.body.appendChild(a); a.click(); document.body.removeChild(a);
-          setToast({ message: 'Documento baixado', type: 'success' });
-          return;
-        }
-        if (Array.isArray(docEntry)) {
-          docEntry.forEach((url, i) => {
+        const urls = getDocumentUrlsArray(docEntry);
+        if (urls.length > 0) {
+          urls.forEach((url, i) => {
             const a = document.createElement('a'); a.href = url;
             a.setAttribute('download', `${delivery.deliveryNumber||'doc'}_${type}_${i+1}`);
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
           });
-          setToast({ message: 'Documento(s) baixado(s)', type: 'success' });
-          return;
-        }
-        // If docEntry is an object with urls array
-        if (docEntry.urls && Array.isArray(docEntry.urls)) {
-          docEntry.urls.forEach((url, i) => {
-            const a = document.createElement('a'); a.href = url;
-            a.setAttribute('download', `${delivery.deliveryNumber||'doc'}_${type}_${i+1}`);
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-          });
-          setToast({ message: 'Documento(s) baixado(s)', type: 'success' });
+          setToast({ message:'Documento(s) baixado(s)', type:'success' });
           return;
         }
       }
-
       const res = await adminService.downloadDocument(id, type);
-      const contentType = res.headers?.['content-type'] || res.headers?.['Content-Type'] || '';
-      const ext = contentType.includes('pdf') ? 'pdf' : (contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpg' : (contentType.includes('png') ? 'png' : 'bin'));
-      const blob = new Blob([res.data], { type: contentType || 'application/octet-stream' });
+      const contentType = res.headers?.['content-type']||'';
+      const ext = contentType.includes('pdf')?'pdf':contentType.includes('jpeg')||contentType.includes('jpg')?'jpg':contentType.includes('png')?'png':'bin';
+      const blob = new Blob([res.data],{type:contentType||'application/octet-stream'});
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url;
-      a.setAttribute('download', `${deliveries.find(d=>d._id===id)?.deliveryNumber||'doc'}_${type}.${ext}`);
+      const a = document.createElement('a'); a.href=url;
+      a.setAttribute('download',`${deliveries.find(d=>d._id===id)?.deliveryNumber||'doc'}_${type}.${ext}`);
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-      setToast({ message: 'Documento baixado', type: 'success' });
+      setToast({ message:'Documento baixado', type:'success' });
     } catch (e) {
-      setToast({ message: 'Erro ao baixar: ' + (e.response?.data?.message || e.message), type: 'error' });
+      setToast({ message:'Erro ao baixar: '+(e.response?.data?.message||e.message), type:'error' });
     }
   };
 
   const handleDownloadAll = async (id) => {
     try {
       const res = await adminService.downloadAllDocuments(id);
-      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/zip' }));
-      const a = document.createElement('a'); a.href = url;
-      a.setAttribute('download', `${deliveries.find(d=>d._id===id)?.deliveryNumber||'documents'}.zip`);
+      const url = window.URL.createObjectURL(new Blob([res.data],{type:'application/zip'}));
+      const a = document.createElement('a'); a.href=url;
+      a.setAttribute('download',`${deliveries.find(d=>d._id===id)?.deliveryNumber||'documents'}.zip`);
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-      setToast({ message: 'ZIP baixado', type: 'success' });
-    } catch (e) { setToast({ message: 'Erro ao baixar ZIP: ' + (e.response?.data?.message || e.message), type: 'error' }); }
+      setToast({ message:'ZIP baixado', type:'success' });
+    } catch (e) { setToast({ message:'Erro ao baixar ZIP: '+(e.response?.data?.message||e.message), type:'error' }); }
   };
 
   const handleShareDelivery = async () => {
     if (!selectedDelivery) return;
     try {
-      const doc = new jsPDF({ unit: 'pt' });
+      const doc = new jsPDF({ unit:'pt' });
       const loadImage = (url) => new Promise(resolve => {
-        const img = new Image(); img.crossOrigin = 'Anonymous';
-        img.onload = () => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; c.getContext('2d').drawImage(img,0,0); resolve(c.toDataURL('image/png')); };
-        img.onerror = () => resolve(null); img.src = url;
+        const img = new Image(); img.crossOrigin='Anonymous';
+        img.onload = () => {
+          const c = document.createElement('canvas'); c.width=img.width; c.height=img.height;
+          c.getContext('2d').drawImage(img,0,0); resolve(c.toDataURL('image/png'));
+        };
+        img.onerror = () => resolve(null); img.src=url;
       });
       const logo = await loadImage('/images/geotransporteslogo.png');
       if (logo) {
-        const ip = doc.getImageProperties(logo); const w=100, h=(ip.height*w)/ip.width;
+        const ip = doc.getImageProperties(logo); const w=100,h=(ip.height*w)/ip.width;
         doc.addImage(logo,'PNG',(doc.internal.pageSize.getWidth()-w)/2,20,w,h);
       }
       doc.setFontSize(16);
-      doc.text('Detalhes da Entrega', doc.internal.pageSize.getWidth()/2, 60, { align: 'center' });
+      doc.text('Detalhes da Entrega', doc.internal.pageSize.getWidth()/2, 60, { align:'center' });
       const rows = [];
       const add = (l,v) => rows.push([l, v||'-']);
       add('Número', selectedDelivery.deliveryNumber);
@@ -677,7 +989,7 @@ const MonitorEntregas = () => {
       add('Fim desova', selectedDelivery.horarioFimDesova ? new Date(selectedDelivery.horarioFimDesova).toLocaleString('pt-BR') : '-');
       getFlowHistory(selectedDelivery).forEach(ev => add(ev.label, new Date(ev.date).toLocaleString('pt-BR')));
       if (selectedDelivery.observations) add('Observações', selectedDelivery.observations);
-      doc.autoTable({ startY: logo ? 100 : 80, head: [['Campo','Valor']], body: rows, styles:{fontSize:10}, headStyles:{fillColor:[88,28,135]} });
+      doc.autoTable({ startY:logo?100:80, head:[['Campo','Valor']], body:rows, styles:{fontSize:10}, headStyles:{fillColor:[88,28,135]} });
       doc.save(`Entrega_${selectedDelivery.deliveryNumber}.pdf`);
       setToast({ type:'success', message:'PDF gerado' });
     } catch (err) { setToast({ type:'error', message:'Falha ao gerar PDF: '+err.message }); }
@@ -687,9 +999,9 @@ const MonitorEntregas = () => {
     if (!window.confirm('Deletar esta entrega? Ação irreversível.')) return;
     try {
       await adminService.deleteDelivery(id);
-      setToast({ message: 'Entrega deletada', type: 'success' });
+      setToast({ message:'Entrega deletada', type:'success' });
       setSelectedDelivery(null); loadDeliveries();
-    } catch { setToast({ message: 'Erro ao deletar', type: 'error' }); }
+    } catch { setToast({ message:'Erro ao deletar', type:'error' }); }
   };
 
   const handleEditStart = (d) => {
@@ -710,207 +1022,170 @@ const MonitorEntregas = () => {
   const handleEditSave = async () => {
     if (!editForm.observations?.trim()) { setToast({ message:'Motivo da edição obrigatório', type:'error' }); return; }
     const motivo = editForm.observations.replace(/Criada a partir da Programação [A-Z0-9]+/g,'').trim();
-    const prog = (editForm.observations.match(/Criada a partir da Programação [A-Z0-9]+/)||[]).join(' ');
+    const prog   = (editForm.observations.match(/Criada a partir da Programação [A-Z0-9]+/)||[]).join(' ');
     const payload = {
       ...editForm,
       observations: prog ? `${motivo}\n${prog}` : motivo,
-      editedBy: user?.name || user?.username || user?.email || 'Desconhecido',
+      editedBy: user?.name||user?.username||user?.email||'Desconhecido',
       editedAt: new Date().toISOString()
     };
     try {
       await adminService.updateDelivery(editingDelivery, payload);
       setToast({ message:'Entrega atualizada', type:'success' });
       setEditingDelivery(null);
-      // Update selectedDelivery to reflect changes immediately in modal
-      if (selectedDelivery && selectedDelivery._id === editingDelivery) {
+      if (selectedDelivery && selectedDelivery._id === editingDelivery)
         setSelectedDelivery({ ...selectedDelivery, ...editForm });
-      }
       loadDeliveries();
     } catch { setToast({ message:'Erro ao atualizar', type:'error' }); }
   };
 
-  /* ─────────── stat cards order ─────────── */
+  /* stat card order */
   const CARD_ORDER = [
     'AGENDADO','CONTAINER MONTADO','A CAMINHO DO CLIENTE',
-    'AGUARDANDO DESOVA','EM DESOVA','ANEXANDO DOCUMENTOS FINAIS',
-    'ENTREGUE','CANCELADO'
+    'AGUARDANDO DESOVA','EM DESOVA','ANEXANDO DOCUMENTOS FINAIS','ENTREGUE','CANCELADO'
   ];
-
   const sortedStatusEntries = Object.entries(stats.statusCounts).sort(([a],[b]) => {
-    const ia = CARD_ORDER.indexOf(a), ib = CARD_ORDER.indexOf(b);
-    if (ia !== -1 && ib !== -1) return ia - ib;
-    if (ia !== -1) return -1; if (ib !== -1) return 1;
+    const ia=CARD_ORDER.indexOf(a), ib=CARD_ORDER.indexOf(b);
+    if (ia!==-1&&ib!==-1) return ia-ib;
+    if (ia!==-1) return -1; if (ib!==-1) return 1;
     return a.localeCompare(b);
   });
+
+  /* active filter count */
+  const activeFilterCount = [
+    filters.status !== 'all',
+    !!filters.searchTerm,
+    !!filters.startDate,
+    !!filters.endDate
+  ].filter(Boolean).length;
+
+  const flowHistory = selectedDelivery ? getFlowHistory(selectedDelivery) : [];
 
   /* ────────────────────────────────────────
      RENDER
      ──────────────────────────────────────── */
-  // inject light-theme overrides for better text visibility
-  React.useEffect(() => {
-    const styleEl = document.createElement('style');
-    styleEl.id = 'theme-overrides';
-    styleEl.textContent = `
-      .theme-light {
-        background-color: #eef2f6 !important;
-        color: #1a1a1a !important;
-      }
-      .theme-light .text-white { color: #1a1a1a !important; }
-      .theme-light .text-white\/20 { color: rgba(26,26,26,0.5) !important; }
-      .theme-light .text-white\/40 { color: rgba(26,26,26,0.7) !important; }
-      .theme-light .text-gray-300 { color: #4b5563 !important; }
-      .theme-light .text-gray-400 { color: #6b7280 !important; }
-      .theme-light .text-gray-500 { color: #9ca3af !important; }
-      .theme-light .text-gray-600 { color: #9ca3af !important; }
-      .theme-light .text-purple-400 { color: #a855f7 !important; }
-      .theme-light .text-emerald-400 { color: #10b981 !important; }
-      .theme-light .bg-white\/5 { background-color: rgba(255,255,255,0.3) !important; }
-      .theme-light .bg-white\/10 { background-color: rgba(255,255,255,0.4) !important; }
-      .theme-light .bg-white\/60 { background-color: rgba(255,255,255,0.8) !important; }
-      .theme-light .bg-purple-600\/80 { background-color: rgba(147,51,234,0.6) !important; }
-      .theme-light .border-white\/10 { border-color: rgba(26,26,26,0.1) !important; }
-      .theme-light .placeholder-gray-500::placeholder { color: #9ca3af !important; }
-      .theme-light select {
-        background-color: #f3f4f6 !important;
-        color: #1a1a1a !important;
-      }
-      .theme-light input {
-        background-color: #f3f4f6 !important;
-        color: #1a1a1a !important;
-      }
-    `;
-    document.head.appendChild(styleEl);
-    return () => document.head.removeChild(styleEl);
-  }, []);
-
   return (
     <div
       style={{ backgroundColor: themeConfig.bg, color: themeConfig.text }}
-      className={`min-h-screen font-sans transition-colors duration-300 ${theme === 'light' ? 'theme-light' : ''}`}
+      className={`min-h-screen font-sans transition-colors duration-300 ${theme==='light' ? 'theme-light' : ''}`}
     >
-      {/* Header com Seletor de Tema */}
+      {/* ── SETTINGS PANEL ── */}
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        theme={theme} setTheme={setTheme}
+        autoRefresh={autoRefresh} setAutoRefresh={setAutoRefresh}
+        refreshInterval={refreshInterval} setRefreshInterval={setRefreshInterval}
+        filters={filters} setFilters={setFilters}
+        themeConfig={themeConfig}
+      />
+
+      {/* ── HEADER ── */}
       <header className={`sticky top-0 z-40 ${themeConfig.header} backdrop-blur-md border-b ${themeConfig.border}`}>
-        <div className="w-full px-4 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <div className="w-full px-4 lg:px-8 h-16 flex items-center gap-4">
+          {/* Back */}
           <button
             onClick={() => navigate('/home')}
-            className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-white transition"
+            className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-white transition flex-shrink-0"
           >
             <FaArrowLeft className="text-purple-400" />
             <span className="hidden sm:inline">Voltar</span>
           </button>
 
-          <div className="flex items-center gap-3">
+          {/* Title */}
+          <div className="flex items-center gap-3 flex-shrink-0">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-900/40">
               <MdDashboard className="text-white text-base" />
             </div>
-            <h1 className="text-base sm:text-lg font-black tracking-[0.15em] uppercase" style={{ color: themeConfig.text }}>
+            <h1 className="text-base sm:text-lg font-black tracking-[0.15em] uppercase" style={{ color:themeConfig.text }}>
               Torre de Controle
             </h1>
           </div>
 
-          <div className="flex items-center gap-2 ml-auto">
-            {/* Theme Selector */}
-            <div className="hidden sm:flex items-center gap-1 rounded-xl p-1 border" style={{ backgroundColor: `${themeConfig.bgSecondary}33`, borderColor: themeConfig.border }}>
-              {Object.entries(THEMES).map(([key, t]) => (
-                <button
-                  key={key}
-                  onClick={() => setTheme(key)}
-                  title={t.name}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    theme === key
-                      ? 'bg-purple-600 text-white shadow-md'
-                      : 'hover:bg-white/10'
-                  }`}
-                  style={{ color: theme === key ? '#fff' : themeConfig.text }}
-                >
-                  {t.name.split(' ')[0]}
-                </button>
-              ))}
-            </div>
+          {/* Spacer */}
+          <div className="flex-1" />
 
-            {/* Mobile Theme Menu */}
-            <div className="sm:hidden relative group">
-              <button className="w-9 h-9 rounded-xl flex items-center justify-center transition" style={{ backgroundColor: `${themeConfig.card}` }}>
-                <FaPalette size={14} />
-              </button>
-              <div className="absolute right-0 mt-2 w-44 rounded-lg shadow-2xl hidden group-hover:block z-50" style={{ backgroundColor: themeConfig.bgSecondary, borderColor: themeConfig.border, border: '1px solid' }}>
-                {Object.entries(THEMES).map(([key, t]) => (
-                  <button
-                    key={key}
-                    onClick={() => setTheme(key)}
-                    className={`w-full text-left px-4 py-2.5 text-sm transition-all transition-all ${
-                      theme === key ? 'bg-purple-600 text-white' : 'hover:bg-white/5'
-                    }`}
-                  >
-                    {t.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Clock */}
+          <span className="hidden lg:flex items-center gap-1.5 text-sm font-mono font-semibold text-gray-400 tabular-nums">
+            <FaClock className="text-purple-400" size={12} />
+            {currentTime.toLocaleTimeString('pt-BR')}
+          </span>
 
-            {autoRefresh && (
-              <span className="hidden sm:flex items-center gap-1.5 text-xs text-emerald-400 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                LIVE
+          {/* Live indicator */}
+          {autoRefresh && (
+            <span className="hidden sm:flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              LIVE · {refreshInterval}s
+            </span>
+          )}
+
+          {/* Fullscreen */}
+          <button
+            onClick={toggleFullscreen}
+            title="Fullscreen (Ctrl+Shift+F)"
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition hover:bg-white/10 text-gray-400 hover:text-white"
+          >
+            <FaExpand size={14} />
+          </button>
+
+          {/* Refresh */}
+          <button
+            onClick={loadDeliveries}
+            disabled={loading}
+            title="Atualizar"
+            className="w-9 h-9 rounded-xl bg-purple-600/80 hover:bg-purple-600 text-white flex items-center justify-center transition disabled:opacity-40"
+          >
+            <FaSync size={13} className={loading ? 'animate-spin' : ''} />
+          </button>
+
+          {/* Settings gear  */}
+          <button
+            onClick={() => setSettingsOpen(v => !v)}
+            title="Configurações, Filtros & Tema"
+            className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition
+              ${settingsOpen ? 'bg-purple-600 text-white' : 'hover:bg-white/10 text-gray-400 hover:text-white'}`}
+          >
+            <FaCog size={15} className={settingsOpen ? 'animate-spin' : ''} style={{ animationDuration:'3s' }} />
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center">
+                {activeFilterCount}
               </span>
             )}
-            <button
-              onClick={() => toggleFullscreen()}
-              title="Fullscreen (Ctrl+Shift+F)"
-              className="w-9 h-9 rounded-xl flex items-center justify-center transition" style={{ backgroundColor: `${themeConfig.card}` }}
-            >
-              <FaExpand size={14} />
-            </button>
-            <button
-              onClick={loadDeliveries}
-              disabled={loading}
-              title="Atualizar"
-              className="w-9 h-9 rounded-xl bg-purple-600/80 hover:bg-purple-600 text-white flex items-center justify-center transition disabled:opacity-40"
-            >
-              <FaSync size={13} className={loading ? 'animate-spin' : ''} />
-            </button>
-          </div>
+          </button>
         </div>
       </header>
 
-      {/* Main Content - Full Width */}
+      {/* ── MAIN ── */}
       <main className="w-full px-4 lg:px-8 py-8 space-y-8">
 
-        {/* ── PERIOD SELECTOR ── */}
+        {/* ── PERIOD + INFO BAR ── */}
         <div className="flex items-center gap-3 flex-wrap">
-          <Pill active={statsPeriod==='general'} onClick={()=>setStatsPeriod('general')} color="indigo">
+          <Pill active={statsPeriod==='general'}   onClick={() => setStatsPeriod('general')}   color="indigo">
             <MdDashboard /> Geral
           </Pill>
-          <Pill active={statsPeriod==='yesterday'} onClick={()=>setStatsPeriod('yesterday')} color="gray">
+          <Pill active={statsPeriod==='yesterday'} onClick={() => setStatsPeriod('yesterday')} color="gray">
             <FaCalendarAlt /> Ontem
           </Pill>
-          <Pill active={statsPeriod==='today'} onClick={()=>setStatsPeriod('today')} color="purple">
+          <Pill active={statsPeriod==='today'}     onClick={() => setStatsPeriod('today')}     color="purple">
             <FaClock /> Hoje
           </Pill>
-          <Pill active={statsPeriod==='tomorrow'} onClick={()=>setStatsPeriod('tomorrow')} color="blue">
+          <Pill active={statsPeriod==='tomorrow'}  onClick={() => setStatsPeriod('tomorrow')}  color="blue">
             <FaCalendarAlt /> Amanhã
           </Pill>
 
-          {/* auto-refresh controls inline */}
-          <div className="ml-auto flex items-center gap-3 bg-white/5 rounded-xl px-4 py-2 border border-white/10">
-            <label className="flex items-center gap-2 text-sm text-gray-300 font-semibold cursor-pointer select-none">
-              <span className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${autoRefresh ? 'bg-purple-600' : 'bg-gray-600'}`}
-                onClick={() => setAutoRefresh(v => !v)}>
-                <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-300 ${autoRefresh ? 'translate-x-5' : ''}`} />
-              </span>
-              Auto-refresh
-            </label>
-            {autoRefresh && (
-              <div className="flex items-center gap-1.5 text-sm text-gray-400">
-                <input
-                  type="number" min="5" max="300" step="5"
-                  value={refreshInterval}
-                  onChange={e => setRefreshInterval(Number(e.target.value))}
-                  className="w-14 px-2 py-0.5 bg-white/10 border border-white/10 rounded-lg text-white text-center focus:outline-none"
-                />
-                <span>seg</span>
-              </div>
-            )}
+          {/* Filter summary chips (read-only, click opens settings) */}
+          {activeFilterCount > 0 && (
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold transition hover:bg-amber-500/25"
+            >
+              <FaFilter size={10} />
+              {activeFilterCount} filtro{activeFilterCount > 1 ? 's' : ''} ativo{activeFilterCount > 1 ? 's' : ''}
+            </button>
+          )}
+
+          <div className="ml-auto text-xs text-gray-500 font-semibold">
+            {filteredDeliveries.length} de {stats.total} programações
           </div>
         </div>
 
@@ -918,18 +1193,12 @@ const MonitorEntregas = () => {
         <div>
           <SectionTitle sub={`${stats.total} programações encontradas`}>Resumo Operacional</SectionTitle>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-10 gap-3">
-
-            {/* TOTAL */}
             <StatCard
-              label="Programadas"
-              value={stats.total}
+              label="Programadas" value={stats.total}
               icon={<FaCalendarAlt />}
               gradient="from-purple-600 to-indigo-700"
-              ring="ring-purple-500/30"
-              pulse={loading}
+              ring="ring-purple-500/30" pulse={loading}
             />
-
-            {/* STATUS CARDS */}
             {sortedStatusEntries.map(([status, count]) => {
               const cfg = STATUS_CONFIG[status] || null;
               return (
@@ -943,11 +1212,8 @@ const MonitorEntregas = () => {
                 />
               );
             })}
-
-            {/* MOTORISTAS */}
             <StatCard
-              label="Motoristas"
-              value={stats.byDriver}
+              label="Motoristas" value={stats.byDriver}
               icon={<FaUsers />}
               gradient="from-teal-500 to-cyan-700"
               ring="ring-teal-400/30"
@@ -955,233 +1221,181 @@ const MonitorEntregas = () => {
           </div>
         </div>
 
-        {/* ── FILTERS ── */}
-        <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
-          <button
-            onClick={() => setShowFilters(v => !v)}
-            className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/5 transition"
-          >
-            <div className="flex items-center gap-3">
-              <span className="w-8 h-8 rounded-lg bg-purple-600/20 flex items-center justify-center">
-                <FaFilter className="text-purple-400 text-sm" />
-              </span>
-              <span className="font-bold text-sm uppercase tracking-widest text-gray-300">Filtros</span>
-              {(filters.status !== 'all' || filters.searchTerm || filters.startDate || filters.endDate) && (
-                <span className="px-2 py-0.5 rounded-full bg-purple-600 text-white text-xs font-bold">Ativo</span>
-              )}
-            </div>
-            {showFilters ? <FaChevronDown className="text-gray-400" /> : <FaChevronRight className="text-gray-400" />}
-          </button>
-
-          {showFilters && (
-            <div className="border-t border-white/10 p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Status */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">Status</label>
-                <select
-                  value={filters.status}
-                  onChange={e => setFilters({...filters, status: e.target.value})}
-                  className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="all" className="bg-gray-900">Todos</option>
-                  <option value="OPERACAO_FINALIZADA" className="bg-gray-900">Operação Finalizada</option>
-                  <option value="DOCUMENTOS_ENTREGUES" className="bg-gray-900">Documentos Entregues</option>
-                  <option value="FINALIZADO" className="bg-gray-900">Finalizado (sem docs)</option>
-                  <option value="A CAMINHO DO CLIENTE" className="bg-gray-900">A Caminho do Cliente</option>
-                  <option value="AGENDADO" className="bg-gray-900">Agendado</option>
-                  <option value="AGUARDANDO_DESOVA" className="bg-gray-900">Aguardando Desova</option>
-                  <option value="EM_DESOVA" className="bg-gray-900">Em Desova</option>
-                  <option value="DESOVA_FINALIZADA" className="bg-gray-900">Desova Finalizada</option>
-                  <option value="ANEXANDO_DOCUMENTOS_FINAIS" className="bg-gray-900">Anexando Docs Finais</option>
-                  <option value="CANCELADO" className="bg-gray-900">Cancelado</option>
-                </select>
-              </div>
-              {/* Search */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">Buscar</label>
-                <div className="relative">
-                  <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs" />
-                  <input
-                    type="text"
-                    placeholder="Número, motorista, placa…"
-                    value={filters.searchTerm}
-                    onChange={e => setFilters({...filters, searchTerm: e.target.value})}
-                    className="w-full pl-8 pr-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-              </div>
-              {/* Start date */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">Data Inicial</label>
-                <input type="date" value={filters.startDate} onChange={e => setFilters({...filters, startDate: e.target.value})}
-                  className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
-              </div>
-              {/* End date */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">Data Final</label>
-                <input type="date" value={filters.endDate} onChange={e => setFilters({...filters, endDate: e.target.value})}
-                  className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
-              </div>
-
-              {/* Clear filters */}
-              {(filters.status !== 'all' || filters.searchTerm || filters.startDate || filters.endDate) && (
-                <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
-                  <button
-                    onClick={() => setFilters({ status:'all', searchTerm:'', startDate:'', endDate:'' })}
-                    className="flex items-center gap-2 text-xs text-red-400 hover:text-red-300 font-semibold transition"
-                  >
-                    <FaTimes /> Limpar filtros
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* ── TABLE ── */}
-        {filteredDeliveries.length === 0 ? (
+        {/* ── DELIVERY LIST ── */}
+        {displayList.length === 0 ? (
           <div className="bg-white/5 rounded-2xl border border-white/10 p-16 text-center">
             <MdLocalShipping className="mx-auto text-5xl text-gray-600 mb-4" />
             <p className="text-gray-400 text-lg font-semibold">Nenhuma entrega encontrada</p>
-            <p className="text-gray-600 text-sm mt-1">Tente ajustar os filtros ou período selecionado</p>
+            <p className="text-gray-600 text-sm mt-1">Ajuste os filtros ou período nas configurações</p>
           </div>
         ) : (
           <div>
-            <SectionTitle sub={`${filteredDeliveries.length} resultado(s)`}>Entregas</SectionTitle>
-            <div className="rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+            <SectionTitle sub={`${displayList.length} resultado(s)`}>Entregas</SectionTitle>
+
+            {/* div-based scrollable grid */}
+            <div className="rounded-2xl border border-white/10 overflow-hidden shadow-2xl bg-black/20">
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="bg-white/5 border-b border-white/10 text-gray-400 uppercase tracking-wider">
-                      {[
-                        ['Nº','deliveryNumber'],['Contratado','userName'],['Motorista','driverName'],
-                        ['Recebedor','recebedor'],['Status',null],['Progresso',null],
-                        ['DT Retirada','containerMontadoAt'],['Agendamento','dataAgendamento'],
-                        ['Chegada','horarioChegada'],['Início','horarioInicioDesova'],
-                        ['Fim','horarioFimDesova'], ['Pontualidade', null]
-                      ].map(([col, field]) => (
-                        <th
-                          key={col}
-                          className={`px-3 py-3.5 text-left font-bold whitespace-nowrap ${field ? 'cursor-pointer hover:text-white transition' : ''}`}
-                          onClick={() => {
-                            if (!field) return;
-                            if (sortBy === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-                            else { setSortBy(field); setSortDir('asc'); }
-                          }}
-                        >
-                          <span className="flex items-center gap-1">
-                            {col}
-                            {sortBy === field && <span className="text-purple-400">{sortDir==='asc'?'↑':'↓'}</span>}
-                          </span>
-                        </th>
-                      ))}
-                      <th className="px-3 py-3.5 text-center font-bold whitespace-nowrap bg-amber-900/20 text-amber-400">
-                        ⏱ Tempo
-                      </th>
-                      <th className="px-3 py-3.5 text-center font-bold whitespace-nowrap">Docs</th>
-                      <th className="px-3 py-3.5 text-center font-bold whitespace-nowrap">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {filteredDeliveries.map((d, i) => {
-                      const cliTime = calculateCliTime(d, currentTime);
-                      const docStatus = getDocumentsStatus(d);
+                <div style={{ minWidth: '1380px' }}>
+
+                  {/* Header row */}
+                  <div
+                    className="grid text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.04] border-b border-white/10"
+                    style={{ gridTemplateColumns: COL_TEMPLATE }}
+                  >
+                    {[
+                      ['Nº','deliveryNumber'],['Contratado','userName'],['Motorista','driverName'],
+                      ['Recebedor','recebedor'],['Status',null],['Progresso',null],
+                      ['DT Retirada','containerMontadoAt'],['Agendamento','dataAgendamento'],
+                      ['Chegada','horarioChegada'],['Início','horarioInicioDesova'],
+                      ['Fim','horarioFimDesova'],['Pontualidade',null],
+                      ['⏱ Tempo',null],['Docs',null],['Ações',null]
+                    ].map(([col, field], ci) => (
+                      <div
+                        key={col}
+                        onClick={() => {
+                          if (!field) return;
+                          if (sortBy===field) setSortDir(d=>d==='asc'?'desc':'asc');
+                          else { setSortBy(field); setSortDir('asc'); }
+                        }}
+                        className={`px-3 py-3.5 flex items-center gap-1 whitespace-nowrap select-none
+                          ${ci >= 12 ? 'justify-center' : ''}
+                          ${field ? 'cursor-pointer hover:text-white transition-colors' : ''}
+                          ${ci === 12 ? 'text-amber-500' : ''}`}
+                      >
+                        {col}
+                        {sortBy === field && (
+                          <span className="text-purple-400">{sortDir==='asc'?'↑':'↓'}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Data rows */}
+                  <div className="relative">
+                    {displayList.map((d, i) => {
+                      const cliTime    = calculateCliTime(d, currentTime);
+                      const docStatus  = getDocumentsStatus(d);
                       const isComplete = docStatus.includes('COMPLETO');
-                      const cfg = resolveConfig(d.status);
+                      const cfg        = resolveConfig(d.status);
+                      const now        = Date.now();
+                      const updatedAt  = recentlyUpdated[d._id];
+                      const isRising   = updatedAt && (now - updatedAt) < 900;
+                      const isGlowing  = updatedAt && (now - updatedAt) >= 900 && (now - updatedAt) < RISE_WINDOW;
+
                       return (
-                        <tr
+                        <div
                           key={d._id}
-                          className={`transition-colors hover:bg-white/5 ${i % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]'}`}
+                          ref={el => { rowRefs.current[d._id] = el; }}
+                          className={`
+                            grid text-xs border-b border-white/[0.06] transition-colors
+                            hover:bg-white/[0.04]
+                            ${i % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.015]'}
+                            ${isRising  ? 'row-rise'  : ''}
+                            ${isGlowing ? 'row-glow'  : ''}
+                          `}
+                          style={{ gridTemplateColumns: COL_TEMPLATE, '--rise-from': '120px' }}
                         >
-                          <td className="px-3 py-3 font-bold text-purple-300 whitespace-nowrap">{d.deliveryNumber}</td>
-                          <td className="px-3 py-3 text-gray-300 max-w-[120px] truncate" title={d.userName}>{d.userName}</td>
-                          <td className="px-3 py-3 text-gray-300 whitespace-nowrap">{d.driverName || '—'}</td>
-                          <td className="px-3 py-3 text-gray-400">{d.recebedor || '—'}</td>
-                          <td className="px-3 py-3">
+                          {/* Nº */}
+                          <div className="px-3 py-3 flex items-center gap-2">
+                            <span className="font-black text-purple-300 truncate">{d.deliveryNumber}</span>
+                            {updatedAt && (now - updatedAt) < RISE_WINDOW && (
+                              <span className="badge-pop flex-shrink-0 px-1.5 py-0.5 rounded-full bg-purple-600/80 text-white text-[9px] font-black">
+                                UP
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Contratado */}
+                          <div className="px-3 py-3 flex items-center text-gray-300 truncate" title={d.userName}>
+                            {d.userName}
+                          </div>
+
+                          {/* Motorista */}
+                          <div className="px-3 py-3 flex items-center text-gray-300 whitespace-nowrap">
+                            {d.driverName || '—'}
+                          </div>
+
+                          {/* Recebedor */}
+                          <div className="px-3 py-3 flex items-center text-gray-400 truncate">
+                            {d.recebedor || '—'}
+                          </div>
+
+                          {/* Status */}
+                          <div className="px-3 py-3 flex items-center">
                             {(() => {
-                              const disp = d.status === 'FINALIZADO' && allModalDocsComplete(d) ? 'DOCUMENTOS ENTREGUES' : d.status;
+                              const disp = d.status==='FINALIZADO' && allModalDocsComplete(d) ? 'DOCUMENTOS ENTREGUES' : d.status;
                               return <Badge status={disp} />;
                             })()}
-                          </td>
-                          <td className="px-3 py-3"><ProgressDots delivery={d} /></td>
+                          </div>
+
+                          {/* Progresso */}
+                          <div className="px-3 py-3 flex items-center">
+                            <ProgressDots delivery={d} allModalDocsComplete={allModalDocsComplete} />
+                          </div>
+
                           {/* DT Retirada */}
-                          <td className="px-3 py-3 text-sky-400 whitespace-nowrap text-center font-semibold">
+                          <div className="px-3 py-3 flex items-center justify-center text-sky-400 font-semibold whitespace-nowrap">
                             {d.containerMontadoAt ? new Date(d.containerMontadoAt).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'}
-                          </td>
-                          <td className="px-3 py-3 text-gray-400 whitespace-nowrap text-center">
+                          </div>
+
+                          {/* Agendamento */}
+                          <div className="px-3 py-3 flex items-center justify-center text-gray-400 whitespace-nowrap">
                             {d.dataAgendamento ? new Date(d.dataAgendamento).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'}
-                          </td>
-                          <td className="px-3 py-3 text-gray-300 whitespace-nowrap text-center">
+                          </div>
+
+                          {/* Chegada */}
+                          <div className="px-3 py-3 flex items-center justify-center text-gray-300 whitespace-nowrap">
                             {d.horarioChegada ? new Date(d.horarioChegada).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'}
-                          </td>
-                          <td className="px-3 py-3 text-gray-400 whitespace-nowrap text-center">
+                          </div>
+
+                          {/* Início desova */}
+                          <div className="px-3 py-3 flex items-center justify-center text-gray-400 whitespace-nowrap">
                             {d.horarioInicioDesova ? new Date(d.horarioInicioDesova).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'}
-                          </td>
-                          <td className="px-3 py-3 text-gray-400 whitespace-nowrap text-center">
+                          </div>
+
+                          {/* Fim desova */}
+                          <div className="px-3 py-3 flex items-center justify-center text-gray-400 whitespace-nowrap">
                             {d.horarioFimDesova ? new Date(d.horarioFimDesova).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'}
-                          </td>
-                          {/* Pontualidade */}
-                          <td className="px-3 py-3 text-center">
-                            {(() => {
-                              const p = getPunctualityStatus(d, currentTime);
-                              const cls =
-                                p.type === 'ok' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                                p.type === 'possible' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                                p.type === 'late' ? 'bg-red-100 text-red-700 border border-red-200' :
-                                'bg-gray-100 text-gray-700 border border-gray-200';
-                              return (
-                                <div className="flex flex-col items-center gap-1">
-                                  <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${cls}`}>
-                                    <span>{p.label}</span>
-                                  </span>
-                                  {p.eta !== null && (
-                                    <span className="text-[10px] text-gray-500">
-                                      Chegada em {p.eta}m
-                                    </span>
-                                  )}
-                                  {p.lateBy != null && p.lateBy !== 0 && (
-                                    <span className="text-[10px] text-red-700">
-                                      {p.lateBy > 0 ? `+${p.lateBy}m` : `${p.lateBy}m`}
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            })()}
-                          </td>
+                          </div>
+
+                          {/* Pontualidade — REDESENHADA */}
+                          <div className="px-2 py-3 flex items-center justify-center">
+                            <PunctualityCell p={getPunctualityStatus(d, currentTime)} />
+                          </div>
+
                           {/* Tempo CLI */}
-                          <td className="px-3 py-3 text-center bg-amber-900/10">
+                          <div className="px-3 py-3 flex items-center justify-center bg-amber-900/10">
                             {cliTime.tempo ? (
-                              <span className={`font-bold tabular-nums ${cliTime.isActive ? 'text-amber-400' : 'text-amber-600'}`}>
+                              <span className={`font-black tabular-nums text-sm ${cliTime.isActive ? 'text-amber-400' : 'text-amber-600'}`}>
                                 {cliTime.tempo}
                                 {cliTime.isActive && <span className="ml-1 animate-pulse">⏱</span>}
                               </span>
                             ) : <span className="text-gray-600">—</span>}
-                          </td>
+                          </div>
+
                           {/* Docs */}
-                          <td className="px-3 py-3 text-center">
-                            {isComplete ? (
-                              <FaCheckCircle className="text-emerald-400" title={docStatus} size={18} />
-                            ) : (
-                              <FaTimesCircle className="text-red-400" title={docStatus} size={18} />
-                            )}
-                          </td>
-                          {/* Actions */}
-                          <td className="px-3 py-3 text-center">
-                            <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                onClick={() => setSelectedDelivery(d)}
-                                title="Visualizar"
-                                className="w-7 h-7 rounded-lg bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 hover:text-purple-200 flex items-center justify-center transition"
-                              >
-                                <FaEye size={12} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
+                          <div className="px-3 py-3 flex items-center justify-center">
+                            {isComplete
+                              ? <FaCheckCircle className="text-emerald-400" title={docStatus} size={16} />
+                              : <FaTimesCircle className="text-red-400/70"  title={docStatus} size={16} />
+                            }
+                          </div>
+
+                          {/* Ações */}
+                          <div className="px-3 py-3 flex items-center justify-center">
+                            <button
+                              onClick={() => setSelectedDelivery(d)}
+                              title="Visualizar"
+                              className="w-7 h-7 rounded-lg bg-purple-600/20 hover:bg-purple-600/50 text-purple-400 hover:text-white flex items-center justify-center transition"
+                            >
+                              <FaEye size={12} />
+                            </button>
+                          </div>
+                        </div>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1197,36 +1411,27 @@ const MonitorEntregas = () => {
       {selectedDelivery && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-[#1a1a2e] rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl border border-white/10 flex flex-col">
-
-            {/* Header */}
             <div className="flex items-center justify-between px-6 py-5 bg-gradient-to-r from-purple-700/60 to-indigo-700/60 border-b border-white/10 flex-shrink-0">
               <div>
                 <p className="text-xs text-purple-300 uppercase tracking-widest font-semibold mb-0.5">Entrega</p>
-                <h2 className="text-xl font-black text-white tracking-wide">
-                  #{selectedDelivery.deliveryNumber}
-                </h2>
+                <h2 className="text-xl font-black text-white tracking-wide">#{selectedDelivery.deliveryNumber}</h2>
               </div>
               <div className="flex items-center gap-3">
-                <Badge status={(selectedDelivery.status === 'FINALIZADO' && allModalDocsComplete(selectedDelivery)) ? 'DOCUMENTOS ENTREGUES' : selectedDelivery.status} />
-                <button
-                  onClick={() => setSelectedDelivery(null)}
-                  className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
-                >
+                <Badge status={(selectedDelivery.status==='FINALIZADO' && allModalDocsComplete(selectedDelivery)) ? 'DOCUMENTOS ENTREGUES' : selectedDelivery.status} />
+                <button onClick={() => setSelectedDelivery(null)}
+                  className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
                   <FaTimes />
                 </button>
               </div>
             </div>
 
-            {/* Content */}
             <div className="overflow-y-auto flex-1 p-6 space-y-6">
-
-              {/* Info Grid */}
               <div className="grid grid-cols-2 gap-3">
                 {[
                   ['Contratado', selectedDelivery.userName],
-                  ['Motorista', selectedDelivery.driverName || '—'],
-                  ['Placa', selectedDelivery.vehiclePlate || '—'],
-                  ['Recebedor', selectedDelivery.recebedor || '—'],
+                  ['Motorista', selectedDelivery.driverName||'—'],
+                  ['Placa', selectedDelivery.vehiclePlate||'—'],
+                  ['Recebedor', selectedDelivery.recebedor||'—'],
                   ['Agendamento', selectedDelivery.dataAgendamento ? new Date(selectedDelivery.dataAgendamento).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'],
                   ['Montagem Container', selectedDelivery.containerMontadoAt ? new Date(selectedDelivery.containerMontadoAt).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'],
                   ['Chegada', selectedDelivery.horarioChegada ? new Date(selectedDelivery.horarioChegada).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'],
@@ -1240,28 +1445,26 @@ const MonitorEntregas = () => {
                 ))}
               </div>
 
-              {/* Progress bar visual */}
+              {/* Progress visual */}
               <div className="bg-white/5 rounded-xl p-4 border border-white/5">
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-3">Progresso da Entrega</p>
                 <div className="flex items-center gap-1.5">
                   {progressStatuses.map((s, i) => {
                     let p = getProgress(selectedDelivery);
-                    if (normalizeKey(selectedDelivery.status) === 'FINALIZADO') {
-                      if (allModalDocsComplete(selectedDelivery)) p = 100;
-                      else p = 90;
-                    }
-                    const filled = Math.ceil((p / 100) * progressStatuses.length);
-                    const cfg = STATUS_CONFIG[s];
+                    if (normalizeKey(selectedDelivery.status)==='FINALIZADO')
+                      p = allModalDocsComplete(selectedDelivery) ? 100 : 90;
+                    const filled = Math.ceil((p/100)*progressStatuses.length);
+                    const cfg2 = STATUS_CONFIG[s];
                     return (
                       <React.Fragment key={s}>
-                        <div className={`flex flex-col items-center gap-1 flex-1 ${i <= filled - 1 ? '' : 'opacity-30'}`}>
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[8px] ${i <= filled - 1 ? (cfg?.bg || 'bg-purple-600') : 'bg-gray-700'} transition-all`}>
-                            {cfg?.icon}
+                        <div className={`flex flex-col items-center gap-1 flex-1 ${i<=filled-1?'':'opacity-30'}`}>
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[8px] ${i<=filled-1?(cfg2?.bg||'bg-purple-600'):'bg-gray-700'} transition-all`}>
+                            {cfg2?.icon}
                           </div>
-                          <p className="text-[7px] text-center text-gray-500 leading-tight hidden sm:block">{cfg?.label || s}</p>
+                          <p className="text-[7px] text-center text-gray-500 leading-tight hidden sm:block">{cfg2?.label||s}</p>
                         </div>
-                        {i < progressStatuses.length - 1 && (
-                          <div className={`h-0.5 flex-1 rounded-full transition-colors ${i < filled - 1 ? 'bg-purple-500' : 'bg-gray-700'}`} />
+                        {i<progressStatuses.length-1 && (
+                          <div className={`h-0.5 flex-1 rounded-full transition-colors ${i<filled-1?'bg-purple-500':'bg-gray-700'}`} />
                         )}
                       </React.Fragment>
                     );
@@ -1286,13 +1489,13 @@ const MonitorEntregas = () => {
               )}
 
               {/* Observations */}
-              {(selectedDelivery.observations || selectedDelivery.observacoes || selectedDelivery.documentsJustification || selectedDelivery.submissionObservation) && (
+              {(selectedDelivery.observations||selectedDelivery.observacoes||selectedDelivery.documentsJustification||selectedDelivery.submissionObservation) && (
                 <div className="space-y-3">
-                  {(selectedDelivery.observations || selectedDelivery.observacoes) && (
+                  {(selectedDelivery.observations||selectedDelivery.observacoes) && (
                     <div className="bg-blue-900/20 border border-blue-500/20 rounded-xl p-4">
                       <p className="text-[10px] text-blue-400 uppercase tracking-widest font-bold mb-2">📝 Observações</p>
                       {selectedDelivery.observations && <p className="text-sm text-gray-300 whitespace-pre-wrap">{selectedDelivery.observations}</p>}
-                      {selectedDelivery.observacoes && <p className="text-sm text-gray-300 whitespace-pre-wrap mt-1">{selectedDelivery.observacoes}</p>}
+                      {selectedDelivery.observacoes   && <p className="text-sm text-gray-300 whitespace-pre-wrap mt-1">{selectedDelivery.observacoes}</p>}
                     </div>
                   )}
                   {selectedDelivery.documentsJustification && (
@@ -1325,24 +1528,23 @@ const MonitorEntregas = () => {
                     </button>
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   {(() => {
                     const labels = getLabelsForDelivery(selectedDelivery);
-                    const docRows = Object.keys(selectedDelivery.documents || {})
+                    const docRows = Object.keys(selectedDelivery.documents||{})
                       .filter(k => !['chegadaCliente','inicioDesova','fimDesova'].includes(k))
                       .map(k => {
                         const present = !!selectedDelivery.documents[k];
                         return (
-                          <div key={k} className={`flex items-center justify-between px-4 py-3 rounded-xl border ${present ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/5 opacity-50'}`}>
+                          <div key={k} className={`flex items-center justify-between px-4 py-3 rounded-xl border ${present?'bg-white/5 border-white/10':'bg-white/[0.02] border-white/5 opacity-50'}`}>
                             <div className="flex items-center gap-3">
-                              <span className={`w-2 h-2 rounded-full ${present ? 'bg-emerald-400' : 'bg-gray-600'}`} />
-                              <span className="text-sm text-gray-300 font-semibold">{labels[k] || k}</span>
+                              <span className={`w-2 h-2 rounded-full ${present?'bg-emerald-400':'bg-gray-600'}`} />
+                              <span className="text-sm text-gray-300 font-semibold">{labels[k]||k}</span>
                               {!present && <span className="text-xs text-gray-600">Não anexado</span>}
                             </div>
                             {present && (
                               <div className="flex gap-2">
-                                <button onClick={() => setViewingDocument({ label: labels[k]||k, urls: getDocumentUrlsArray(selectedDelivery.documents[k]) })}
+                                <button onClick={() => setViewingDocument({ label:labels[k]||k, urls:getDocumentUrlsArray(selectedDelivery.documents[k]) })}
                                   className="w-7 h-7 rounded-lg bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 flex items-center justify-center transition">
                                   <FaEye size={11} />
                                 </button>
@@ -1355,19 +1557,18 @@ const MonitorEntregas = () => {
                           </div>
                         );
                       });
-
                     const fotoFields = [
                       { key:'chegadaCliente', label:'Chegada no Cliente' },
                       { key:'inicioDesova',   label:'Início da Desova' },
                       { key:'fimDesova',      label:'Finalização da Desova' }
                     ];
                     const fotosRows = fotoFields.map(f => {
-                      const files = getDocumentUrlsArray(selectedDelivery.documents?.[f.key]);
+                      const files   = getDocumentUrlsArray(selectedDelivery.documents?.[f.key]);
                       const present = files.length > 0;
                       return (
-                        <div key={f.key} className={`flex items-center justify-between px-4 py-3 rounded-xl border ${present ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/5 opacity-50'}`}>
+                        <div key={f.key} className={`flex items-center justify-between px-4 py-3 rounded-xl border ${present?'bg-white/5 border-white/10':'bg-white/[0.02] border-white/5 opacity-50'}`}>
                           <div className="flex items-center gap-3">
-                            <span className={`w-2 h-2 rounded-full ${present ? 'bg-sky-400' : 'bg-gray-600'}`} />
+                            <span className={`w-2 h-2 rounded-full ${present?'bg-sky-400':'bg-gray-600'}`} />
                             <span className="text-sm text-gray-300 font-semibold">{f.label}</span>
                             {present && <span className="text-xs text-gray-500">{files.length} foto(s)</span>}
                             {!present && <span className="text-xs text-gray-600">Não anexado</span>}
@@ -1379,10 +1580,10 @@ const MonitorEntregas = () => {
                                 <FaEye size={11} />
                               </button>
                               <button onClick={() => files.forEach((url,i) => {
-                                const a = document.createElement('a'); a.href=url;
-                                a.setAttribute('download',`${f.label.replace(/\s+/g,'_')}_${i+1}.jpg`);
-                                document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                              })}
+                                  const a=document.createElement('a'); a.href=url;
+                                  a.setAttribute('download',`${f.label.replace(/\s+/g,'_')}_${i+1}.jpg`);
+                                  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                                })}
                                 className="w-7 h-7 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 flex items-center justify-center transition">
                                 <FaDownload size={11} />
                               </button>
@@ -1396,13 +1597,11 @@ const MonitorEntregas = () => {
                 </div>
               </div>
 
-              {/* Footer */}
               <p className="text-[10px] text-gray-600 text-right border-t border-white/5 pt-4">
                 Criado em {new Date(selectedDelivery.createdAt).toLocaleString('pt-BR')}
               </p>
             </div>
 
-            {/* Actions footer */}
             {canEdit() && (
               <div className="flex-shrink-0 px-6 py-4 border-t border-white/10 bg-white/[0.02] flex justify-end gap-3">
                 <button onClick={() => handleEditStart(selectedDelivery)}
@@ -1420,7 +1619,7 @@ const MonitorEntregas = () => {
       )}
 
       {/* ═══════════════════════════════════════
-          MODAL: FOTOS DO FLUXO
+          MODAL: FOTOS
           ═══════════════════════════════════════ */}
       {modalFotos && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
@@ -1434,7 +1633,7 @@ const MonitorEntregas = () => {
             </div>
             <div className="p-5 max-h-[75vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
-                {modalFotos.files.map((url, i) => (
+                {modalFotos.files.map((url,i) => (
                   <img key={i} src={url} alt={`Foto ${i+1}`} className="w-full h-44 object-cover rounded-xl shadow-lg" />
                 ))}
               </div>
@@ -1459,7 +1658,7 @@ const MonitorEntregas = () => {
             <div className="overflow-y-auto flex-1 p-5 bg-gray-950/50">
               {viewingDocument.urls?.length > 0 ? (
                 <div className="space-y-4">
-                  {viewingDocument.urls.map((url, i) => (
+                  {viewingDocument.urls.map((url,i) => (
                     <div key={i} className="rounded-xl overflow-hidden">
                       {url?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
                         ? <img src={url} alt={`${viewingDocument.label} ${i+1}`} className="w-full h-auto rounded-xl" />
@@ -1511,16 +1710,16 @@ const MonitorEntregas = () => {
 
             <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
               {[
-                ['Número do Container', 'deliveryNumber', 'text', true],
-                ['Contratado', 'userName', 'text', false],
-                ['Motorista', 'driverName', 'text', false],
-                ['Placa', 'vehiclePlate', 'text', true],
-                ['Recebedor', 'recebedor', 'text', false],
-              ].map(([label, field, type, upper]) => (
+                ['Número do Container','deliveryNumber','text',true],
+                ['Contratado','userName','text',false],
+                ['Motorista','driverName','text',false],
+                ['Placa','vehiclePlate','text',true],
+                ['Recebedor','recebedor','text',false],
+              ].map(([label,field,type,upper]) => (
                 <div key={field}>
                   <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">{label}</label>
                   <input type={type} disabled={isGeoMar()} value={editForm[field]}
-                    onChange={e => setEditForm({...editForm, [field]: upper ? e.target.value.toUpperCase() : e.target.value})}
+                    onChange={e => setEditForm({...editForm,[field]:upper?e.target.value.toUpperCase():e.target.value})}
                     className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-40 disabled:cursor-not-allowed" />
                 </div>
               ))}
@@ -1528,11 +1727,11 @@ const MonitorEntregas = () => {
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">Status</label>
                 <select disabled={isGeoMar()} value={editForm.status}
-                  onChange={e => setEditForm({...editForm, status: e.target.value})}
+                  onChange={e => setEditForm({...editForm,status:e.target.value})}
                   className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-40 disabled:cursor-not-allowed">
                   <option value="" className="bg-gray-900">Selecione…</option>
                   <option value="ENTREGUE" className="bg-gray-900">Operação Finalizada</option>
-                  <option value="pending" className="bg-gray-900">A Caminho do Cliente</option>
+                  <option value="pending"  className="bg-gray-900">A Caminho do Cliente</option>
                   <option value="AGUARDANDO_DESOVA" className="bg-gray-900">Aguardando Desova</option>
                   <option value="EM_DESOVA" className="bg-gray-900">Em Desova</option>
                   <option value="DESOVA_FINALIZADA" className="bg-gray-900">Desova Finalizada</option>
@@ -1542,15 +1741,15 @@ const MonitorEntregas = () => {
               </div>
 
               {[
-                ['Data Agendamento', 'dataAgendamento'],
-                ['Horário Chegada', 'horarioChegada'],
-                ['Início Desova', 'horarioInicioDesova'],
-                ['Fim Desova', 'horarioFimDesova'],
-              ].map(([label, field]) => (
+                ['Data Agendamento','dataAgendamento'],
+                ['Horário Chegada','horarioChegada'],
+                ['Início Desova','horarioInicioDesova'],
+                ['Fim Desova','horarioFimDesova'],
+              ].map(([label,field]) => (
                 <div key={field}>
                   <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">{label}</label>
                   <input type="datetime-local" disabled={isGeoMar()} value={editForm[field]}
-                    onChange={e => setEditForm({...editForm, [field]: e.target.value})}
+                    onChange={e => setEditForm({...editForm,[field]:e.target.value})}
                     className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-40 disabled:cursor-not-allowed" />
                 </div>
               ))}
@@ -1560,7 +1759,7 @@ const MonitorEntregas = () => {
                   Motivo da Edição <span className="text-red-400">*</span>
                 </label>
                 <textarea disabled={isGeoMar()} value={editForm.observations}
-                  onChange={e => setEditForm({...editForm, observations: e.target.value})}
+                  onChange={e => setEditForm({...editForm,observations:e.target.value})}
                   rows={3}
                   placeholder="Explique o motivo da edição (obrigatório)"
                   className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none placeholder-gray-600 disabled:opacity-40 disabled:cursor-not-allowed" />

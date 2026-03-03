@@ -53,6 +53,13 @@ async function main() {
       if (dryRun) continue;
 
       // preserve username, email, name; store legacy sha256 as separate field so auth can handle it
+      // Validar role: apenas 'driver', 'manager', 'admin' são válidos
+      let role = d.role || 'driver';
+      if (!['driver', 'manager', 'admin'].includes(role)) {
+        console.log(`  - invalid role "${role}", using "driver" instead`);
+        role = 'driver';
+      }
+
       const payload = {
         username: d.username,
         email: d.email,
@@ -60,7 +67,7 @@ async function main() {
         password: d.password || 'driver123', // will be hashed by mongoose pre-save
         phone: d.phoneNumber || d.phone || null,
         isActive: d.isActive === undefined ? true : d.isActive,
-        role: d.role || 'driver'
+        role: role
       };
       const created = await Driver.create(payload);
 

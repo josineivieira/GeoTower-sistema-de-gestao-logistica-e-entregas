@@ -172,9 +172,10 @@ const EntregasCanhotosPendentes = () => {
         }
       }
       await deliveryService.submitDelivery(deliveryId);
-      await deliveryService.updateDelivery(deliveryId, { status: 'FINALIZADO' });
+      // Limpar documentos pendentes e marcar como finalizado
+      await deliveryService.updateDelivery(deliveryId, { status: 'FINALIZADO', missingDocumentsAtSubmit: [] });
       try {
-        await adminService.updateProgramacao(modalProgramacao._id, { status: 'FINALIZADO' });
+        await adminService.updateProgramacao(modalProgramacao._id, { status: 'FINALIZADO', missingDocumentsAtSubmit: [] });
       } catch (_) {}
 
       setToast({ message: 'Documentos anexados e entrega finalizada com sucesso!', type: 'success' });

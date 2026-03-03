@@ -18,3 +18,5 @@ services:
         value: "REPLACE_WITH_A_SECURE_SECRET"
       - key: MONGODB_URI
         value: "MONGODB_URI_REMOVED"
+      - key: USE_MONGODB
+        value: "true"

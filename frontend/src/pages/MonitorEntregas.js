@@ -797,7 +797,6 @@ const MonitorEntregas = () => {
     const pageW = doc.internal.pageSize.getWidth();
     // fallback if autoTable still not available
     const useFallback = typeof doc.autoTable !== 'function';
-    const marginX = 40;
     const safe = (v) => (v == null || v === '') ? '—' : String(v);
     if (useFallback) {
       // write minimal info as plain text

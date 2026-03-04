@@ -501,16 +501,19 @@ const ProgramadasEntregas = () => {
   const removePhoto = (index) => setPhotos(prev => prev.filter((_, i) => i !== index));
 
   const handleCameraCapture = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = Array.from(e.target.files || []);
+    // reset the input immediately so subsequent captures always
+    // fire a change event even if the same file name is returned
+    try { e.target.value = null; } catch(_) {}
+    if (files.length === 0) return;
+    files.forEach(file => {
       const reader = new FileReader();
-      reader.onload = ev => addPhoto(ev.target?.result);
+      reader.onload = ev => {
+        const data = ev.target?.result;
+        if (data) addPhoto(data);
+      };
       reader.readAsDataURL(file);
-    }
-    // clear the input value so the same camera action can be
-    // triggered repeatedly, otherwise the second photo may not
-    // fire the change event if the file object hasn't changed.
-    e.target.value = '';
+    });
   };
 
   function dataURLtoFile(dataurl, filename) {

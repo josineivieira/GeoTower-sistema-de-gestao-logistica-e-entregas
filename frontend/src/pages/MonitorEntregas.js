@@ -111,19 +111,17 @@ const GLOBAL_STYLES = `
 @keyframes riseToTop {
   0%   { opacity: 0.6; transform: translateY(var(--rise-from, 120px)) scale(1.025);
          box-shadow: 0 24px 80px rgba(139,92,246,0.85), 0 0 0 2px rgba(139,92,246,0.7); }
-  35%  { opacity: 1;   transform: translateY(-6px) scale(1.015);
+  50%  { opacity: 1;   transform: translateY(-30px) scale(1.015);
          box-shadow: 0 12px 50px rgba(139,92,246,0.6), 0 0 0 2px rgba(139,92,246,0.5); }
-  60%  { transform: translateY(3px) scale(1.008); }
-  80%  { transform: translateY(-2px) scale(1.003); }
-  100% { opacity: 1;   transform: translateY(0) scale(1);
-         box-shadow: 0 0 0 0 rgba(139,92,246,0); }
+  100% { opacity: 1;   transform: translateY(-120px) scale(1);
+         box-shadow: 0 8px 30px rgba(139,92,246,0.4), 0 0 0 1px rgba(139,92,246,0.3); }
 }
 @keyframes glowPulse {
   0%,100% { box-shadow: 0 0 0 0 rgba(139,92,246,0); border-color: rgba(255,255,255,0.08); background: transparent; }
   30%      { box-shadow: 0 0 30px rgba(139,92,246,0.45); border-color: rgba(139,92,246,0.55); background: rgba(139,92,246,0.1); }
 }
 .row-rise {
-  animation: riseToTop 0.9s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  animation: riseToTop 2.5s ease-in-out forwards;
   position: relative;
   z-index: 30;
 }

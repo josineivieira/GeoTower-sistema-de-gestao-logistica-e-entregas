@@ -795,7 +795,7 @@ const MonitorEntregas = () => {
       } catch (_) {}
     }
     const pageW = doc.internal.pageSize.getWidth();
-    const marginX = 40; // global margin for PDF (used even in fallback)
+    const pdfMargin = 40; // global margin for PDF (used even in fallback)
     // fallback if autoTable still not available
     let useFallback = typeof doc.autoTable !== 'function';
     if (!useFallback) {
@@ -828,7 +828,7 @@ const MonitorEntregas = () => {
         ['Fim Desova', formatDT(delivery.horarioFimDesova)],
       ];
       infoRows.forEach(([k,v]) => {
-        doc.text(`${k}: ${v}`, marginX, y);
+        doc.text(`${k}: ${v}`, pdfMargin, y);
         y += 14;
       });
       const fileName = `Comprovante_Entrega_${delivery.deliveryNumber || delivery._id || 'sem_numero'}.pdf`;
@@ -862,7 +862,7 @@ const MonitorEntregas = () => {
         const imgProps = doc.getImageProperties(logoDataUrl);
         const targetH = 34;
         const targetW = (imgProps.width * targetH) / imgProps.height;
-        doc.addImage(logoDataUrl, 'PNG', marginX, 26, targetW, targetH);
+        doc.addImage(logoDataUrl, 'PNG', pdfMargin, 26, targetW, targetH);
       } catch {}
     }
 
@@ -870,23 +870,23 @@ const MonitorEntregas = () => {
     doc.setTextColor(255,255,255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
-    doc.text('COMPROVANTE DE ENTREGA', pageW - marginX, 36, { align:'right' });
+    doc.text('COMPROVANTE DE ENTREGA', pageW - pdfMargin, 36, { align:'right' });
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageW - marginX, 54, { align:'right' });
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageW - pdfMargin, 54, { align:'right' });
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.text(`Entrega #${delivery.deliveryNumber || '—'}`, pageW - marginX, 74, { align:'right' });
+    doc.text(`Entrega #${delivery.deliveryNumber || '—'}`, pageW - pdfMargin, 74, { align:'right' });
 
     // status pill (simple)
     doc.setFillColor(255,255,255);
-    doc.roundedRect(marginX, 62, 185, 22, 11, 11, 'F');
+    doc.roundedRect(pdfMargin, 62, 185, 22, 11, 11, 'F');
     doc.setTextColor(rgb.r, rgb.g, rgb.b);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.text(`STATUS: ${formatStatus(delivery.status, delivery)}`, marginX + 12, 77);
+    doc.text(`STATUS: ${formatStatus(delivery.status, delivery)}`, pdfMargin + 12, 77);
 
     doc.setTextColor(20,20,20);
 
@@ -913,8 +913,8 @@ const MonitorEntregas = () => {
           theme: 'grid',
           styles: { font: 'helvetica', fontSize: 10, cellPadding: 6 },
           headStyles: { fillColor: [rgb.r, rgb.g, rgb.b], textColor: [255,255,255] },
-          columnStyles: { 0: { cellWidth: 160 }, 1: { cellWidth: pageW - marginX*2 - 160 } },
-          margin: { left: marginX, right: marginX },
+          columnStyles: { 0: { cellWidth: 160 }, 1: { cellWidth: pageW - pdfMargin*2 - 160 } },
+          margin: { left: pdfMargin, right: pdfMargin },
         });
 
         // FLOW HISTORY
@@ -930,7 +930,7 @@ const MonitorEntregas = () => {
           theme: 'grid',
           styles: { font: 'helvetica', fontSize: 10, cellPadding: 6 },
           headStyles: { fillColor: [34, 36, 58], textColor: [255,255,255] },
-          margin: { left: marginX, right: marginX },
+          margin: { left: pdfMargin, right: pdfMargin },
         });
       } catch (err) {
         console.error('autoTable render failed, falling back to text PDF', err);
@@ -968,7 +968,7 @@ const MonitorEntregas = () => {
           theme: 'grid',
           styles: { font: 'helvetica', fontSize: 10, cellPadding: 6 },
           headStyles: { fillColor: [88, 28, 135], textColor: [255,255,255] },
-          margin: { left: marginX, right: marginX },
+          margin: { left: pdfMargin, right: pdfMargin },
           didParseCell: (data) => {
             if (data.section === 'body' && data.column.index === 1) {
               const v = String(data.cell.raw || '');
@@ -997,24 +997,24 @@ const MonitorEntregas = () => {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       const y = doc.lastAutoTable.finalY + 18;
-      doc.text('Observações', marginX, y);
+      doc.text('Observações', pdfMargin, y);
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      const lines = doc.splitTextToSize(obsText, pageW - marginX*2);
-      doc.text(lines, marginX, y + 16);
+      const lines = doc.splitTextToSize(obsText, pageW - pdfMargin*2);
+      doc.text(lines, pdfMargin, y + 16);
     }
 
     // FOOTER
     const footerY = pageH - 42;
     doc.setDrawColor(230);
-    doc.line(marginX, footerY - 14, pageW - marginX, footerY - 14);
+    doc.line(pdfMargin, footerY - 14, pageW - pdfMargin, footerY - 14);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(90);
-    doc.text('Este comprovante foi gerado automaticamente pela Torre de Controle.', marginX, footerY);
-    doc.text(`ID interno: ${delivery._id || '—'}  •  Criado em: ${formatDT(delivery.createdAt)}`, marginX, footerY + 14);
+    doc.text('Este comprovante foi gerado automaticamente pela Torre de Controle.', pdfMargin, footerY);
+    doc.text(`ID interno: ${delivery._id || '—'}  •  Criado em: ${formatDT(delivery.createdAt)}`, pdfMargin, footerY + 14);
 
     const fileName = `Comprovante_Entrega_${delivery.deliveryNumber || delivery._id || 'sem_numero'}.pdf`;
     const blob = doc.output('blob');

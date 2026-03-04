@@ -110,11 +110,12 @@ const resolveConfig = (rawStatus) => {
 const GLOBAL_STYLES = `
 @keyframes riseToTop {
   0%   { opacity: 0.6; transform: translateY(var(--rise-from, 120px)) scale(1.025);
-         box-shadow: 0 24px 80px rgba(139,92,246,0.85), 0 0 0 2px rgba(139,92,246,0.7); }
-  50%  { opacity: 1;   transform: translateY(-30px) scale(1.015);
-         box-shadow: 0 12px 50px rgba(139,92,246,0.6), 0 0 0 2px rgba(139,92,246,0.5); }
-  100% { opacity: 1;   transform: translateY(-120px) scale(1);
-         box-shadow: 0 8px 30px rgba(139,92,246,0.4), 0 0 0 1px rgba(139,92,246,0.3); }
+    box-shadow: 0 24px 80px rgba(139,92,246,0.85), 0 0 0 2px rgba(139,92,246,0.7); }
+  50%  { opacity: 1;   transform: translateY(-12px) scale(1.01);
+    box-shadow: 0 12px 50px rgba(139,92,246,0.6), 0 0 0 2px rgba(139,92,246,0.5); }
+  /* end at zero transform so the element does not stay offset after animation */
+  100% { opacity: 1;   transform: translateY(0) scale(1);
+    box-shadow: 0 8px 30px rgba(139,92,246,0.28), 0 0 0 0 rgba(139,92,246,0); }
 }
 @keyframes glowPulse {
   0%,100% { box-shadow: 0 0 0 0 rgba(139,92,246,0); border-color: rgba(255,255,255,0.08); background: transparent; }
@@ -155,6 +156,10 @@ const GLOBAL_STYLES = `
   background-size: 400px 100%;
   animation: shimmer 1.5s linear infinite;
 }
+/* table helpers to avoid overlap and allow truncation */
+.monitor-table { grid-auto-rows: minmax(36px, auto); }
+.monitor-table-row { min-height: 40px; }
+.cell-trunc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 `;
 
 /* ─────────────────────────────────────────────────────────────
@@ -860,10 +865,20 @@ const MonitorEntregas = () => {
      scroll on large TVs. The container min-width has also been removed
      below. */
   useEffect(() => {
-    setColTemplate(DEFAULT_COL_TEMPLATE);
-    const onResize = () => setColTemplate(DEFAULT_COL_TEMPLATE);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    const computeTemplate = () => {
+      // 15 columns; keep most flexible but make last 3 narrower (Tempo, Docs, Ações)
+      const cols = Array.from({ length: 15 }).map((_, idx) => {
+        if (idx === 12) return 'minmax(64px, 0.7fr)';
+        if (idx === 13) return 'minmax(56px, 0.45fr)';
+        if (idx === 14) return 'minmax(48px, 0.35fr)';
+        return 'minmax(0, 1fr)';
+      });
+      return cols.join(' ');
+    };
+    const apply = () => setColTemplate(computeTemplate());
+    apply();
+    window.addEventListener('resize', apply);
+    return () => window.removeEventListener('resize', apply);
   }, []);
 
   /* ── FILTER ── */
@@ -1308,17 +1323,19 @@ const MonitorEntregas = () => {
             {/* ── DESKTOP: tabela grid ── */}
             <div className="hidden md:block rounded-2xl border border-white/10 overflow-hidden shadow-2xl bg-black/20">
               <div className="overflow-x-auto">
-                <div style={{ width: '100%' }}>
+                <div style={{ width: '100%' }} className="monitor-table">
 
                   {/* Header row */}
                   <div
-                    className="grid text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.04] border-b border-white/10"
+                    className="grid text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.04] border-b border-white/10"
                     style={{ gridTemplateColumns: colTemplate }}
                   >
                     {HEADERS.map((col, ci) => (
                       <div
                         key={col}
-                        className={`px-3 py-3.5 flex items-center whitespace-nowrap select-none
+                        className={`${
+                          ci >= 12 ? 'px-1 py-3.5' : 'px-3 py-3.5'
+                        } flex items-center min-w-0 select-none
                           ${ci >= 4 ? 'justify-center' : ''}
                           ${ci === 12 ? 'text-amber-500' : ''}
                         `}
@@ -1365,22 +1382,22 @@ const MonitorEntregas = () => {
                           </div>
 
                           {/* Contratado */}
-                          <div className="px-3 py-3 flex items-center overflow-hidden">
-                            <span className="text-gray-300 truncate text-[11px]" title={d.userName}>
+                          <div className="px-3 py-3 flex items-center overflow-hidden min-w-0">
+                            <span className="text-gray-300 truncate text-[10px] cell-trunc" title={d.userName}>
                               {d.userName || '—'}
                             </span>
                           </div>
 
                           {/* Motorista */}
-                          <div className="px-3 py-3 flex items-center overflow-hidden">
-                            <span className="text-gray-300 truncate text-[11px]" title={d.driverName}>
+                          <div className="px-3 py-3 flex items-center overflow-hidden min-w-0">
+                            <span className="text-gray-300 truncate text-[10px] cell-trunc" title={d.driverName}>
                               {d.driverName || '—'}
                             </span>
                           </div>
 
                           {/* Recebedor */}
-                          <div className="px-3 py-3 flex items-center overflow-hidden">
-                            <span className="text-gray-400 truncate text-[11px]" title={d.recebedor}>
+                          <div className="px-3 py-3 flex items-center overflow-hidden min-w-0">
+                            <span className="text-gray-400 truncate text-[10px] cell-trunc" title={d.recebedor}>
                               {d.recebedor || '—'}
                             </span>
                           </div>
@@ -1401,8 +1418,8 @@ const MonitorEntregas = () => {
                           </div>
 
                           {/* DT Retirada */}
-                          <div className="px-2 py-3 flex items-center justify-center">
-                            <span className="text-sky-400 font-semibold text-[11px] tabular-nums whitespace-nowrap">
+                          <div className="px-2 py-3 flex items-center justify-center min-w-0">
+                            <span className="text-sky-400 font-semibold text-[10px] tabular-nums cell-trunc">
                               {d.containerMontadoAt
                                 ? new Date(d.containerMontadoAt).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
                                 : '—'}
@@ -1410,8 +1427,8 @@ const MonitorEntregas = () => {
                           </div>
 
                           {/* Agendamento */}
-                          <div className="px-2 py-3 flex items-center justify-center">
-                            <span className="text-gray-400 text-[11px] tabular-nums whitespace-nowrap">
+                          <div className="px-2 py-3 flex items-center justify-center min-w-0">
+                            <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
                               {d.dataAgendamento
                                 ? new Date(d.dataAgendamento).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
                                 : '—'}
@@ -1419,8 +1436,8 @@ const MonitorEntregas = () => {
                           </div>
 
                           {/* Chegada */}
-                          <div className="px-2 py-3 flex items-center justify-center">
-                            <span className="text-gray-300 text-[11px] tabular-nums whitespace-nowrap">
+                          <div className="px-2 py-3 flex items-center justify-center min-w-0">
+                            <span className="text-gray-300 text-[10px] tabular-nums cell-trunc">
                               {d.horarioChegada
                                 ? new Date(d.horarioChegada).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
                                 : '—'}
@@ -1428,8 +1445,8 @@ const MonitorEntregas = () => {
                           </div>
 
                           {/* Início desova */}
-                          <div className="px-2 py-3 flex items-center justify-center">
-                            <span className="text-gray-400 text-[11px] tabular-nums whitespace-nowrap">
+                          <div className="px-2 py-3 flex items-center justify-center min-w-0">
+                            <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
                               {d.horarioInicioDesova
                                 ? new Date(d.horarioInicioDesova).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
                                 : '—'}
@@ -1437,8 +1454,8 @@ const MonitorEntregas = () => {
                           </div>
 
                           {/* Fim desova */}
-                          <div className="px-2 py-3 flex items-center justify-center">
-                            <span className="text-gray-400 text-[11px] tabular-nums whitespace-nowrap">
+                          <div className="px-2 py-3 flex items-center justify-center min-w-0">
+                            <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
                               {d.horarioFimDesova
                                 ? new Date(d.horarioFimDesova).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
                                 : '—'}
@@ -1451,31 +1468,31 @@ const MonitorEntregas = () => {
                           </div>
 
                           {/* Tempo CLI */}
-                          <div className="px-2 py-3 flex items-center justify-center bg-amber-900/10">
+                          <div className="px-1 py-3 flex items-center justify-center bg-amber-900/10 min-w-0">
                             {cliTime.tempo ? (
-                              <span className={`font-black tabular-nums text-[12px] ${cliTime.isActive ? 'text-amber-400' : 'text-amber-600'}`}>
+                              <span className={`font-black tabular-nums text-[10px] ${cliTime.isActive ? 'text-amber-400' : 'text-amber-600'}`}>
                                 {cliTime.tempo}
                                 {cliTime.isActive && <span className="ml-0.5 animate-pulse">⏱</span>}
                               </span>
-                            ) : <span className="text-gray-600">—</span>}
+                            ) : <span className="text-gray-600 text-[10px]">—</span>}
                           </div>
 
                           {/* Docs */}
-                          <div className="px-2 py-3 flex items-center justify-center">
+                          <div className="px-1 py-3 flex items-center justify-center min-w-0">
                             {isComplete
-                              ? <FaCheckCircle className="text-emerald-400" title={docStatus} size={15} />
-                              : <FaTimesCircle className="text-red-400/70"  title={docStatus} size={15} />
+                              ? <FaCheckCircle className="text-emerald-400" title={docStatus} size={13} />
+                              : <FaTimesCircle className="text-red-400/70"  title={docStatus} size={13} />
                             }
                           </div>
 
                           {/* Ações */}
-                          <div className="px-2 py-3 flex items-center justify-center">
+                          <div className="px-1 py-3 flex items-center justify-center min-w-0">
                             <button
                               onClick={() => setSelectedDelivery(d)}
                               title="Visualizar"
-                              className="w-7 h-7 rounded-lg bg-purple-600/20 hover:bg-purple-600/50 text-purple-400 hover:text-white flex items-center justify-center transition"
+                              className="w-6 h-6 rounded-lg bg-purple-600/20 hover:bg-purple-600/50 text-purple-400 hover:text-white flex items-center justify-center transition"
                             >
-                              <FaEye size={12} />
+                              <FaEye size={11} />
                             </button>
                           </div>
                         </div>

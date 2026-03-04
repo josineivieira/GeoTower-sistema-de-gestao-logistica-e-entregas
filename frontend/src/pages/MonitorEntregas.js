@@ -517,7 +517,7 @@ const ProgressDots = ({ delivery, allModalDocsComplete }) => {
 /* ─────────────────────────────────────────────────────────────
    COLUMN DEFINITION  ← ATUALIZADO
    ───────────────────────────────────────────────────────────── */
-const COL_TEMPLATE =
+const DEFAULT_COL_TEMPLATE =
   // fixed pixel widths; agendamento/chegada/início/fim maiores para evitar colapso de datas
   '110px 160px 140px 180px 138px 112px 105px 140px 140px 140px 140px 120px 72px 42px 42px';
 
@@ -627,6 +627,7 @@ const MonitorEntregas = () => {
   const [statsPeriod, setStatsPeriod] = useState('today');
   const [stats, setStats]       = useState({ total:0, statusCounts:{}, byDriver:0 });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [colTemplate, setColTemplate] = useState(DEFAULT_COL_TEMPLATE);
 
   /* Animation state */
   const [recentlyUpdated, setRecentlyUpdated] = useState({});
@@ -851,6 +852,24 @@ const MonitorEntregas = () => {
       return () => clearInterval(t);
     }
   }, [loadDeliveries, autoRefresh, refreshInterval]);
+
+  /* responsive columns for towers and big screens (TV) */
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth || 1200;
+      if (w >= 1920) {
+        // distribute columns evenly on very large screens
+        setColTemplate(Array(15).fill('minmax(100px,1fr)').join(' '));
+      } else if (w >= 1400) {
+        setColTemplate('120px 180px 140px 1fr 120px 1fr 140px 140px 120px 120px 120px 120px 90px 60px 60px');
+      } else {
+        setColTemplate(DEFAULT_COL_TEMPLATE);
+      }
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   /* ── FILTER ── */
   useEffect(() => {
@@ -1299,7 +1318,7 @@ const MonitorEntregas = () => {
                   {/* Header row */}
                   <div
                     className="grid text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.04] border-b border-white/10"
-                    style={{ gridTemplateColumns: COL_TEMPLATE }}
+                    style={{ gridTemplateColumns: colTemplate }}
                   >
                     {HEADERS.map((col, ci) => (
                       <div
@@ -1336,7 +1355,7 @@ const MonitorEntregas = () => {
                             ${isRising  ? 'row-rise'  : ''}
                             ${isGlowing ? 'row-glow'  : ''}
                           `}
-                          style={{ gridTemplateColumns: COL_TEMPLATE, '--rise-from': '120px' }}
+                          style={{ gridTemplateColumns: colTemplate, '--rise-from': '120px' }}
                         >
                           {/* ── Container (ex-Nº) ← ATUALIZADO ── */}
                           <div className="px-3 py-3 flex items-center gap-1.5">

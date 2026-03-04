@@ -6,7 +6,7 @@ import { exportToPDF, exportToExcel, formatMinutes as fmtMin } from '../services
 import {
   FiArrowLeft, FiPackage, FiTruck, FiAward, FiClock,
   FiTrendingUp, FiFilter, FiRefreshCw, FiCalendar,
-  FiSearch, FiBarChart2, FiDownload, FiFileText, FiGrid
+  FiSearch, FiBarChart2, FiDownload, FiFileText, FiGrid, FiSettings
 } from 'react-icons/fi';
 import {
   AreaChart, Area, BarChart, Bar,
@@ -163,6 +163,7 @@ const AdminDashboard = () => {
   // long reports).
   const [filters, setFilters] = useState({ searchTerm: '', startDate: '', endDate: '' });
   const [searchInput, setSearchInput] = useState('');
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const chartRefs = {
     area:        useRef(null),
@@ -303,6 +304,76 @@ const AdminDashboard = () => {
     }
   };
 
+  /* ── SETTINGS DRAWER (for filters + export) ── */
+  const SettingsDrawer = ({ open, onClose }) => {
+    const [visible, setVisible] = useState(false);
+    useEffect(() => {
+      if (open) setVisible(true);
+      else {
+        const t = setTimeout(() => setVisible(false), 260);
+        return () => clearTimeout(t);
+      }
+    }, [open]);
+    if (!visible) return null;
+    return (
+      <>
+        <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
+        <div className={`fixed right-0 top-0 h-full w-full max-w-md z-50 p-4 ${open ? 'panel-enter' : 'panel-exit'}`}>
+          <div className="h-full rounded-2xl bg-[#0b1220] border border-white/10 shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600/20 flex items-center justify-center">
+                  <FiFilter className="text-indigo-300" />
+                </div>
+                <h3 className="text-sm font-bold text-white">Configurações</h3>
+              </div>
+              <button onClick={onClose} className="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 text-white">Fechar</button>
+            </div>
+
+            <div className="p-4 overflow-y-auto flex-1 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-2">Buscar</label>
+                <div className="relative">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input type="text" placeholder="Buscar entrega ou motorista..." value={searchInput}
+                    onChange={e => { const v = e.target.value; setSearchInput(v); if (searchTimerRef.current) clearTimeout(searchTimerRef.current); searchTimerRef.current = setTimeout(() => { setFilters(f => ({ ...f, searchTerm: v.trim() })); searchTimerRef.current = null; }, 700); }}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (searchTimerRef.current) { clearTimeout(searchTimerRef.current); searchTimerRef.current = null; } setFilters(f => ({ ...f, searchTerm: searchInput.trim() })); } }}
+                    className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-white/[0.09] bg-white/[0.04] text-slate-100 placeholder-slate-600" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">Data início</label>
+                  <input type="date" value={filters.startDate} onChange={e => setFilters({ ...filters, startDate: e.target.value })} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-100" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">Data fim</label>
+                  <input type="date" value={filters.endDate} onChange={e => setFilters({ ...filters, endDate: e.target.value })} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-100" />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button onClick={() => { setFilters({ searchTerm:'', startDate:'', endDate:'' }); setSearchInput(''); }} className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-semibold">Limpar filtros</button>
+                <button onClick={() => { loadData(true); onClose(); }} className="flex-1 py-2 rounded-xl bg-indigo-600 text-white font-bold">Aplicar</button>
+              </div>
+
+              <div className="pt-2 border-t border-white/6" />
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-400">Exportar</p>
+                <div className="flex gap-2">
+                  <button onClick={handleExportPDF} disabled={!statistics} className="flex-1 py-2 rounded-xl bg-rose-500 text-white font-bold">Exportar PDF</button>
+                  <button onClick={handleExportExcel} disabled={!statistics} className="flex-1 py-2 rounded-xl bg-emerald-500 text-white font-bold">Exportar Excel</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  };
+
   /* ── Skeleton loading ── */
   if (loading) {
     return (
@@ -387,33 +458,28 @@ const AdminDashboard = () => {
 
               <div className="w-px h-6 bg-white/20" />
 
-              <ExportButton
-                onClick={handleExportPDF}
-                loading={exporting.pdf}
-                icon={FiFileText}
-                label="Exportar PDF"
-                disabled={!statistics}
-                colorClass="bg-rose-500/90 hover:bg-rose-500 text-white border-rose-600/50 shadow-sm shadow-rose-500/20"
-              />
-              <ExportButton
-                onClick={handleExportExcel}
-                loading={exporting.excel}
-                icon={FiGrid}
-                label="Exportar Excel"
-                disabled={!statistics}
-                colorClass="bg-emerald-500/90 hover:bg-emerald-500 text-white border-emerald-600/50 shadow-sm shadow-emerald-500/20"
-              />
+              <button
+                onClick={() => setSettingsOpen(v => !v)}
+                title="Configurações"
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition ${settingsOpen ? 'bg-indigo-500 text-white' : 'hover:bg-white/10 text-slate-200'}`}
+              >
+                <FiSettings size={16} />
+              </button>
             </div>
           </div>
         </div>
       </header>
+
+      {/* Settings drawer */}
+      <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       {/* ══════ CONTEÚDO SCROLLÁVEL ══════ */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-6 py-6 space-y-6 max-w-[1600px] mx-auto">
 
           {/* ══════ FILTROS ══════ */}
-          <div className="bg-gradient-to-br from-indigo-500/[0.08] via-white/[0.03] to-transparent backdrop-blur-xl rounded-2xl shadow-xl border border-white/[0.08] p-5">
+          {!settingsOpen && (
+            <div className="bg-gradient-to-br from-indigo-500/[0.08] via-white/[0.03] to-transparent backdrop-blur-xl rounded-2xl shadow-xl border border-white/[0.08] p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 text-sm font-bold text-slate-200">
                 <div className="w-7 h-7 rounded-lg bg-indigo-500/20 flex items-center justify-center">

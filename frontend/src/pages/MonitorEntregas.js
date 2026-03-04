@@ -16,11 +16,8 @@ import { MdLocalShipping, MdDashboard } from 'react-icons/md';
 import manaConfig from '../config/cities/manaus.json';
 import itajaiConfig from '../config/cities/itajai.json';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-// some bundlers/tree-shakers may not automatically attach the plugin
-if (autoTable && typeof autoTable === 'function') {
-  try { autoTable(jsPDF); } catch {} // register plugin if needed
-}
+// plugin will be loaded dynamically inside generator if needed
+
 
 /* ─────────────────────────────────────────────────────────────
    DESIGN TOKENS
@@ -787,10 +784,46 @@ const MonitorEntregas = () => {
 
   const generateDeliveryReceiptPdf = async (delivery) => {
     const doc = new jsPDF({ unit:'pt', format:'a4' });
+    // ensure plugin attached, try dynamic import if missing
     if (typeof doc.autoTable !== 'function') {
-      throw new Error('autoTable plugin not available');
+      try {
+        const atModule = await import('jspdf-autotable');
+        const atFunc = atModule && (atModule.default || atModule);
+        if (typeof atFunc === 'function') {
+          atFunc(jsPDF);
+        }
+      } catch (_) {}
     }
     const pageW = doc.internal.pageSize.getWidth();
+    // fallback if autoTable still not available
+    const useFallback = typeof doc.autoTable !== 'function';
+    const marginX = 40;
+    const safe = (v) => (v == null || v === '') ? '—' : String(v);
+    if (useFallback) {
+      // write minimal info as plain text
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      let y = 100;
+      const infoRows = [
+        ['Contratado', safe(delivery.userName)],
+        ['Motorista', safe(delivery.driverName)],
+        ['Placa', safe(delivery.vehiclePlate)],
+        ['Recebedor', safe(delivery.recebedor)],
+        ['Status', safe(formatStatus(delivery.status, delivery))],
+        ['Agendamento', formatDT(delivery.dataAgendamento)],
+        ['Montagem Container', formatDT(delivery.containerMontadoAt)],
+        ['Chegada', formatDT(delivery.horarioChegada)],
+        ['Início Desova', formatDT(delivery.horarioInicioDesova)],
+        ['Fim Desova', formatDT(delivery.horarioFimDesova)],
+      ];
+      infoRows.forEach(([k,v]) => {
+        doc.text(`${k}: ${v}`, marginX, y);
+        y += 14;
+      });
+      const fileName = `Comprovante_Entrega_${delivery.deliveryNumber || delivery._id || 'sem_numero'}.pdf`;
+      const blob = doc.output('blob');
+      return { blob, fileName };
+    }
     const pageH = doc.internal.pageSize.getHeight();
     const marginX = 40;
 

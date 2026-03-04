@@ -10,9 +10,7 @@ import {
   FaArrowLeft, FaEye, FaDownload, FaSync, FaFilter, FaTimes,
   FaTrash, FaEdit, FaExclamationTriangle, FaShareAlt, FaCalendarAlt,
   FaClock, FaBox, FaTruck, FaCheckCircle, FaTimesCircle, FaFilePdf,
-  FaUsers, FaDolly, FaSearch, FaChevronDown, FaChevronRight,
-  FaExpand, FaBell, FaMapMarkerAlt, FaPalette, FaCog, FaChevronUp,
-  FaBolt, FaSlidersH, FaMoon, FaSun, FaDesktop
+  FaUsers, FaDolly, FaSearch, FaExpand, FaPalette, FaCog, FaSlidersH
 } from 'react-icons/fa';
 import { MdLocalShipping, MdDashboard } from 'react-icons/md';
 import manaConfig from '../config/cities/manaus.json';
@@ -113,7 +111,6 @@ const GLOBAL_STYLES = `
     box-shadow: 0 24px 80px rgba(139,92,246,0.85), 0 0 0 2px rgba(139,92,246,0.7); }
   50%  { opacity: 1;   transform: translateY(-12px) scale(1.01);
     box-shadow: 0 12px 50px rgba(139,92,246,0.6), 0 0 0 2px rgba(139,92,246,0.5); }
-  /* end at zero transform so the element does not stay offset after animation */
   100% { opacity: 1;   transform: translateY(0) scale(1);
     box-shadow: 0 8px 30px rgba(139,92,246,0.28), 0 0 0 0 rgba(139,92,246,0); }
 }
@@ -121,42 +118,16 @@ const GLOBAL_STYLES = `
   0%,100% { box-shadow: 0 0 0 0 rgba(139,92,246,0); border-color: rgba(255,255,255,0.08); background: transparent; }
   30%      { box-shadow: 0 0 30px rgba(139,92,246,0.45); border-color: rgba(139,92,246,0.55); background: rgba(139,92,246,0.1); }
 }
-.row-rise {
-  animation: riseToTop 2.5s ease-in-out forwards;
-  position: relative;
-  z-index: 30;
-}
-.row-glow {
-  animation: glowPulse 3.5s ease-in-out forwards;
-  position: relative;
-  z-index: 20;
-}
-@keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to   { transform: translateX(0);    opacity: 1; }
-}
-@keyframes slideOutRight {
-  from { transform: translateX(0);    opacity: 1; }
-  to   { transform: translateX(100%); opacity: 0; }
-}
+.row-rise { animation: riseToTop 2.5s ease-in-out forwards; position: relative; z-index: 30; }
+.row-glow { animation: glowPulse 3.5s ease-in-out forwards; position: relative; z-index: 20; }
+@keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
 .panel-enter  { animation: slideInRight  0.3s cubic-bezier(0.34,1.2,0.64,1) forwards; }
 .panel-exit   { animation: slideOutRight 0.25s ease-in forwards; }
-@keyframes badgePopIn {
-  0%   { transform: scale(0) rotate(-12deg); opacity: 0; }
-  70%  { transform: scale(1.15) rotate(3deg); opacity: 1; }
-  100% { transform: scale(1) rotate(0deg); opacity: 1; }
-}
+@keyframes badgePopIn { 0% { transform: scale(0) rotate(-12deg); opacity: 0; } 70% { transform: scale(1.15) rotate(3deg); opacity: 1; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
 .badge-pop { animation: badgePopIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
-@keyframes shimmer {
-  0%   { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
-}
-.shimmer-bg {
-  background: linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.15) 50%, transparent 100%);
-  background-size: 400px 100%;
-  animation: shimmer 1.5s linear infinite;
-}
-/* table helpers to avoid overlap and allow truncation */
+@keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+.shimmer-bg { background: linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.15) 50%, transparent 100%); background-size: 400px 100%; animation: shimmer 1.5s linear infinite; }
 .monitor-table { grid-auto-rows: minmax(36px, auto); }
 .monitor-table-row { min-height: 40px; }
 .cell-trunc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -276,14 +247,13 @@ const PunctualityCell = ({ p }) => {
 const SettingsPanel = ({
   open, onClose, theme, setTheme,
   autoRefresh, setAutoRefresh, refreshInterval, setRefreshInterval,
-  filters, setFilters, themeConfig
+  filters, setFilters
 }) => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      setVisible(true);
-    } else {
+    if (open) setVisible(true);
+    else {
       const t = setTimeout(() => setVisible(false), 280);
       return () => clearTimeout(t);
     }
@@ -408,6 +378,7 @@ const SettingsPanel = ({
                 </button>
               )}
             </div>
+
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">Status</label>
@@ -429,6 +400,7 @@ const SettingsPanel = ({
                   <option value="CANCELADO" className="bg-gray-900">Cancelado</option>
                 </select>
               </div>
+
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">Buscar</label>
                 <div className="relative">
@@ -442,6 +414,7 @@ const SettingsPanel = ({
                   />
                 </div>
               </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5">Data Inicial</label>
@@ -456,28 +429,6 @@ const SettingsPanel = ({
                     className={inputCls} />
                 </div>
               </div>
-              {(filters.status !== 'all' || filters.searchTerm || filters.startDate || filters.endDate) && (
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {filters.status !== 'all' && (
-                    <span className="flex items-center gap-1 px-2.5 py-1 bg-purple-600/20 border border-purple-500/30 rounded-full text-[11px] text-purple-300 font-semibold">
-                      Status: {filters.status}
-                      <button onClick={() => setFilters({...filters, status:'all'})} className="hover:text-white ml-1">×</button>
-                    </span>
-                  )}
-                  {filters.searchTerm && (
-                    <span className="flex items-center gap-1 px-2.5 py-1 bg-blue-600/20 border border-blue-500/30 rounded-full text-[11px] text-blue-300 font-semibold">
-                      "{filters.searchTerm}"
-                      <button onClick={() => setFilters({...filters, searchTerm:''})} className="hover:text-white ml-1">×</button>
-                    </span>
-                  )}
-                  {(filters.startDate || filters.endDate) && (
-                    <span className="flex items-center gap-1 px-2.5 py-1 bg-amber-600/20 border border-amber-500/30 rounded-full text-[11px] text-amber-300 font-semibold">
-                      <FaCalendarAlt size={9} /> {filters.startDate || '...'} → {filters.endDate || '...'}
-                      <button onClick={() => setFilters({...filters, startDate:'', endDate:''})} className="hover:text-white ml-1">×</button>
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
           </section>
         </div>
@@ -517,16 +468,10 @@ const ProgressDots = ({ delivery, allModalDocsComplete }) => {
   );
 };
 
-/* ─────────────────────────────────────────────────────────────
-   COLUMN DEFINITION  ← ATUALIZADO
-   ───────────────────────────────────────────────────────────── */
-// each of the 15 columns gets an equal share and can shrink to 0 —
-// this guarantees every column will always be visible regardless of
-// screen width, as requested for TV displays and other wide panels.
 const DEFAULT_COL_TEMPLATE = 'repeat(15, minmax(0, 1fr))';
 
 /* ─────────────────────────────────────────────────────────────
-   MOBILE CARD — layout para telas pequenas
+   MOBILE CARD
    ───────────────────────────────────────────────────────────── */
 const MobileDeliveryCard = ({ d, currentTime, allModalDocsComplete, getDocumentsStatus, getPunctualityStatus, recentlyUpdated, RISE_WINDOW, setSelectedDelivery }) => {
   const now = Date.now();
@@ -544,7 +489,6 @@ const MobileDeliveryCard = ({ d, currentTime, allModalDocsComplete, getDocuments
     `}
       style={isActive ? { '--rise-from': '80px' } : {}}
     >
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="font-black text-purple-300 text-base">#{d.deliveryNumber}</span>
@@ -563,7 +507,6 @@ const MobileDeliveryCard = ({ d, currentTime, allModalDocsComplete, getDocuments
         </div>
       </div>
 
-      {/* Info grid */}
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div>
           <p className="text-gray-600 text-[10px] uppercase font-bold">Contratado</p>
@@ -587,7 +530,6 @@ const MobileDeliveryCard = ({ d, currentTime, allModalDocsComplete, getDocuments
         </div>
       </div>
 
-      {/* Bottom row */}
       <div className="flex items-center justify-between pt-1 border-t border-white/5">
         <ProgressDots delivery={d} allModalDocsComplete={allModalDocsComplete} />
         <PunctualityCell p={punct} />
@@ -757,6 +699,18 @@ const MonitorEntregas = () => {
     return { label:'No prazo', type:'ok', eta, lateBy:null };
   };
 
+  const getDocumentUrlsArray = (docData) => {
+    if (!docData) return [];
+    if (typeof docData === 'string') return [docData];
+    if (Array.isArray(docData)) return docData.map(i => {
+      if (typeof i === 'string') return i;
+      if (typeof i === 'object' && i) return i.url||(i.path&&`/uploads/${i.path}`)||i.link||i.webViewLink||null;
+      return null;
+    }).filter(Boolean);
+    if (typeof docData === 'object') return [docData.url||(docData.path&&`/uploads/${docData.path}`)||docData.link||docData.webViewLink].filter(Boolean);
+    return [];
+  };
+
   const allModalDocsComplete = (d) => {
     if (!d) return false;
     const keys = ['retiradaCheio','canhotCTE','diarioBordo','canhotNF','devolucaoVazio',
@@ -796,19 +750,235 @@ const MonitorEntregas = () => {
     return (d.city||'').toLowerCase() === 'itajai' ? itajaiConfig.documents||{} : defaultDocumentLabels;
   };
 
-  const getDocumentUrlsArray = (docData) => {
-    if (!docData) return [];
-    if (typeof docData === 'string') return [docData];
-    if (Array.isArray(docData)) return docData.map(i => {
-      if (typeof i === 'string') return i;
-      if (typeof i === 'object' && i) return i.url||(i.path&&`/uploads/${i.path}`)||i.link||i.webViewLink||null;
+  const removeProgramacaoInfo = (obs) => obs ? obs.replace(/Criada a partir da Programação [A-Z0-9]+/g,'').trim() : '';
+
+  /* ─────────────────────────────────────────
+     PDF/COMPARTILHAMENTO (NOVO)
+     ───────────────────────────────────────── */
+  const urlToDataUrl = async (url) => {
+    try {
+      const res = await fetch(url, { cache: 'force-cache' });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      return await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
       return null;
-    }).filter(Boolean);
-    if (typeof docData === 'object') return [docData.url||(docData.path&&`/uploads/${docData.path}`)||docData.link||docData.webViewLink].filter(Boolean);
-    return [];
+    }
   };
 
-  const removeProgramacaoInfo = (obs) => obs ? obs.replace(/Criada a partir da Programação [A-Z0-9]+/g,'').trim() : '';
+  const hexToRgb = (hex) => {
+    if (!hex) return { r: 88, g: 28, b: 135 }; // fallback roxo
+    const h = hex.replace('#','').trim();
+    const full = h.length === 3 ? h.split('').map(c => c+c).join('') : h;
+    const n = parseInt(full, 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  };
+
+  const formatDT = (v) => v ? new Date(v).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' }) : '—';
+
+  const generateDeliveryReceiptPdf = async (delivery) => {
+    const doc = new jsPDF({ unit:'pt', format:'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const marginX = 40;
+
+    const dispStatus =
+      delivery.status === 'FINALIZADO' && allModalDocsComplete(delivery)
+        ? 'DOCUMENTOS ENTREGUES'
+        : delivery.status;
+
+    const cfg = resolveConfig(dispStatus) || resolveConfig(delivery.status);
+    const rgb = hexToRgb(cfg?.hex);
+
+    // HEADER
+    doc.setFillColor(rgb.r, rgb.g, rgb.b);
+    doc.rect(0, 0, pageW, 92, 'F');
+
+    doc.setFillColor(0, 0, 0);
+    doc.setGState?.(new doc.GState({ opacity: 0.12 }));
+    doc.rect(0, 92, pageW, 10, 'F');
+    doc.setGState?.(new doc.GState({ opacity: 1 }));
+
+    const logoDataUrl = await urlToDataUrl('/images/geotransporteslogo.png');
+
+    // logo
+    if (logoDataUrl) {
+      try {
+        const imgProps = doc.getImageProperties(logoDataUrl);
+        const targetH = 34;
+        const targetW = (imgProps.width * targetH) / imgProps.height;
+        doc.addImage(logoDataUrl, 'PNG', marginX, 26, targetW, targetH);
+      } catch {}
+    }
+
+    // title
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('COMPROVANTE DE ENTREGA', pageW - marginX, 36, { align:'right' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageW - marginX, 54, { align:'right' });
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text(`Entrega #${delivery.deliveryNumber || '—'}`, pageW - marginX, 74, { align:'right' });
+
+    // status pill (simple)
+    doc.setFillColor(255,255,255);
+    doc.roundedRect(marginX, 62, 185, 22, 11, 11, 'F');
+    doc.setTextColor(rgb.r, rgb.g, rgb.b);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text(`STATUS: ${formatStatus(delivery.status, delivery)}`, marginX + 12, 77);
+
+    doc.setTextColor(20,20,20);
+
+    const safe = (v) => (v == null || v === '') ? '—' : String(v);
+
+    const infoRows = [
+      ['Contratado', safe(delivery.userName)],
+      ['Motorista', safe(delivery.driverName)],
+      ['Placa', safe(delivery.vehiclePlate)],
+      ['Recebedor', safe(delivery.recebedor)],
+      ['Status', safe(formatStatus(delivery.status, delivery))],
+      ['Agendamento', formatDT(delivery.dataAgendamento)],
+      ['Montagem Container', formatDT(delivery.containerMontadoAt)],
+      ['Chegada', formatDT(delivery.horarioChegada)],
+      ['Início Desova', formatDT(delivery.horarioInicioDesova)],
+      ['Fim Desova', formatDT(delivery.horarioFimDesova)],
+    ];
+
+    // MAIN TABLE
+    doc.autoTable({
+      startY: 115,
+      head: [['Campo', 'Valor']],
+      body: infoRows,
+      theme: 'grid',
+      styles: { font: 'helvetica', fontSize: 10, cellPadding: 6 },
+      headStyles: { fillColor: [rgb.r, rgb.g, rgb.b], textColor: [255,255,255] },
+      columnStyles: { 0: { cellWidth: 160 }, 1: { cellWidth: pageW - marginX*2 - 160 } },
+      margin: { left: marginX, right: marginX },
+    });
+
+    // FLOW HISTORY
+    const flow = getFlowHistory(delivery);
+    const flowRows = flow.length > 0
+      ? flow.map(ev => [ev.label, formatDT(ev.date)])
+      : [['Sem eventos registrados', '—']];
+
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 14,
+      head: [['Histórico do Fluxo', 'Data/Hora']],
+      body: flowRows,
+      theme: 'grid',
+      styles: { font: 'helvetica', fontSize: 10, cellPadding: 6 },
+      headStyles: { fillColor: [34, 36, 58], textColor: [255,255,255] },
+      margin: { left: marginX, right: marginX },
+    });
+
+    // DOCUMENTS CHECKLIST
+    const labels = getLabelsForDelivery(delivery);
+    const docs = delivery.documents || {};
+
+    const checklistItems = [
+      { key:'retiradaCheio',  label: labels.retiradaCheio || 'Retirada Cheio' },
+      { key:'canhotCTE',      label: labels.canhotCTE || 'CTE' },
+      { key:'diarioBordo',    label: labels.diarioBordo || 'Diário de Bordo' },
+      { key:'canhotNF',       label: labels.canhotNF || 'NF' },
+      { key:'devolucaoVazio', label: labels.devolucaoVazio || 'Devolução Vazio' },
+      { key:'chegadaCliente', label: 'Foto: Chegada no Cliente' },
+      { key:'inicioDesova',   label: 'Foto: Início da Desova' },
+      { key:'fimDesova',      label: 'Foto: Finalização da Desova' },
+    ].map(it => {
+      const files = getDocumentUrlsArray(docs[it.key]);
+      return [
+        it.label,
+        files.length > 0 ? `OK (${files.length})` : 'Pendente'
+      ];
+    });
+
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 14,
+      head: [['Documentos / Fotos', 'Situação']],
+      body: checklistItems,
+      theme: 'grid',
+      styles: { font: 'helvetica', fontSize: 10, cellPadding: 6 },
+      headStyles: { fillColor: [88, 28, 135], textColor: [255,255,255] },
+      margin: { left: marginX, right: marginX },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 1) {
+          const v = String(data.cell.raw || '');
+          if (v.startsWith('OK')) data.cell.styles.textColor = [16,185,129];
+          if (v === 'Pendente') data.cell.styles.textColor = [239,68,68];
+        }
+      }
+    });
+
+    // OBS
+    const obs =
+      delivery.observations ||
+      delivery.observacoes ||
+      delivery.documentsJustification ||
+      delivery.submissionObservation ||
+      '';
+
+    const obsText = String(obs || '').trim();
+
+    if (obsText) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      const y = doc.lastAutoTable.finalY + 18;
+      doc.text('Observações', marginX, y);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      const lines = doc.splitTextToSize(obsText, pageW - marginX*2);
+      doc.text(lines, marginX, y + 16);
+    }
+
+    // FOOTER
+    const footerY = pageH - 42;
+    doc.setDrawColor(230);
+    doc.line(marginX, footerY - 14, pageW - marginX, footerY - 14);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(90);
+    doc.text('Este comprovante foi gerado automaticamente pela Torre de Controle.', marginX, footerY);
+    doc.text(`ID interno: ${delivery._id || '—'}  •  Criado em: ${formatDT(delivery.createdAt)}`, marginX, footerY + 14);
+
+    const fileName = `Comprovante_Entrega_${delivery.deliveryNumber || delivery._id || 'sem_numero'}.pdf`;
+    const blob = doc.output('blob');
+    return { blob, fileName };
+  };
+
+  const shareOrDownloadPdf = async ({ blob, fileName, title, text }) => {
+    const file = new File([blob], fileName, { type: 'application/pdf' });
+
+    // Share API (mobile/tablet)
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title, text });
+      return { mode: 'share' };
+    }
+
+    // Fallback: download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.setAttribute('download', fileName);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return { mode: 'download' };
+  };
 
   /* ── DATA LOADING ── */
   const loadDeliveries = useCallback(async () => {
@@ -833,10 +1003,12 @@ const MonitorEntregas = () => {
         return d;
       });
       setDeliveries(normalized);
+
       const sc = {};
       normalized.forEach(d => { const s = normalizeKey(d.status)||'UNKNOWN'; sc[s]=(sc[s]||0)+1; });
       const drivers = new Set(normalized.map(d => d.driverName).filter(Boolean));
       setStats({ total:normalized.length, statusCounts:sc, byDriver:drivers.size });
+
       setToast({ message:`${data.length} entregas carregadas`, type:'success' });
       setTimeout(() => setToast(null), 3000);
     } catch (err) {
@@ -857,16 +1029,9 @@ const MonitorEntregas = () => {
     }
   }, [loadDeliveries, autoRefresh, refreshInterval]);
 
-  /* responsive columns for towers and big screens (TV)
-     -------------------------------------------------------
-     Always use the default template; every column is `minmax(0,1fr)` so
-     they shrink evenly and stay visible. The previous breakpoints and
-     fixed pixel widths caused some columns to overflow, forcing horizontal
-     scroll on large TVs. The container min-width has also been removed
-     below. */
+  /* responsive columns */
   useEffect(() => {
     const computeTemplate = () => {
-      // 15 columns; keep most flexible but make last 3 narrower (Tempo, Docs, Ações)
       const cols = Array.from({ length: 15 }).map((_, idx) => {
         if (idx === 12) return 'minmax(64px, 0.7fr)';
         if (idx === 13) return 'minmax(56px, 0.45fr)';
@@ -894,6 +1059,7 @@ const MonitorEntregas = () => {
         return d.status===filters.status;
       });
     }
+
     if (filters.searchTerm.trim()) {
       const q = filters.searchTerm.toLowerCase();
       r = r.filter(d =>
@@ -901,6 +1067,7 @@ const MonitorEntregas = () => {
           .some(v => (v||'').toLowerCase().includes(q))
       );
     }
+
     const pad = v => String(v).padStart(2,'0');
     if (filters.startDate) {
       const sdStr = filters.startDate;
@@ -955,18 +1122,17 @@ const MonitorEntregas = () => {
     }
   }, [filteredDeliveries]);
 
-  /* Sorted display list: recently updated rows float to top */
+  /* Sorted display list */
   const displayList = useMemo(() => {
-    // sort so that any delivery which has been updated at least once
-    // lives at the top; newest updates first. animation still uses
-    // recentlyUpdated timestamps and RISE_WINDOW but ordering no
-    // longer depends on the window.
+    const now = Date.now();
     return [...filteredDeliveries].sort((a, b) => {
       const aT = recentlyUpdated[a._id];
       const bT = recentlyUpdated[b._id];
-      if (aT && !bT) return -1;
-      if (!aT && bT) return 1;
-      if (aT && bT) return bT - aT;
+      const aActive = aT && (now - aT) < RISE_WINDOW;
+      const bActive = bT && (now - bT) < RISE_WINDOW;
+      if (aActive && !bActive) return -1;
+      if (!aActive && bActive) return  1;
+      if (aActive && bActive)  return bT - aT;
       return 0;
     });
   }, [filteredDeliveries, recentlyUpdated]);
@@ -1031,42 +1197,30 @@ const MonitorEntregas = () => {
     } catch (e) { setToast({ message:'Erro ao baixar ZIP: '+(e.response?.data?.message||e.message), type:'error' }); }
   };
 
+  // ✅ NOVO: agora compartilha (Web Share) ou baixa (fallback)
   const handleShareDelivery = async () => {
     if (!selectedDelivery) return;
     try {
-      const doc = new jsPDF({ unit:'pt' });
-      const loadImage = (url) => new Promise(resolve => {
-        const img = new Image(); img.crossOrigin='Anonymous';
-        img.onload = () => {
-          const c = document.createElement('canvas'); c.width=img.width; c.height=img.height;
-          c.getContext('2d').drawImage(img,0,0); resolve(c.toDataURL('image/png'));
-        };
-        img.onerror = () => resolve(null); img.src=url;
+      setToast({ type:'success', message:'Gerando comprovante…' });
+
+      const { blob, fileName } = await generateDeliveryReceiptPdf(selectedDelivery);
+
+      const title = `Comprovante • Entrega #${selectedDelivery.deliveryNumber || ''}`.trim();
+      const text = `Segue comprovante da entrega #${selectedDelivery.deliveryNumber || '—'}.`;
+
+      const result = await shareOrDownloadPdf({ blob, fileName, title, text });
+
+      setToast({
+        type:'success',
+        message: result.mode === 'share'
+          ? 'Comprovante pronto para compartilhar'
+          : 'Comprovante baixado (seu dispositivo não suporta compartilhamento de arquivo)'
       });
-      const logo = await loadImage('/images/geotransporteslogo.png');
-      if (logo) {
-        const ip = doc.getImageProperties(logo); const w=100,h=(ip.height*w)/ip.width;
-        doc.addImage(logo,'PNG',(doc.internal.pageSize.getWidth()-w)/2,20,w,h);
-      }
-      doc.setFontSize(16);
-      doc.text('Detalhes da Entrega', doc.internal.pageSize.getWidth()/2, 60, { align:'center' });
-      const rows = [];
-      const add = (l,v) => rows.push([l, v||'-']);
-      add('Número', selectedDelivery.deliveryNumber);
-      add('Contratado', selectedDelivery.userName);
-      add('Motorista', selectedDelivery.driverName);
-      add('Placa', selectedDelivery.vehiclePlate);
-      add('Status', formatStatus(selectedDelivery.status, selectedDelivery));
-      add('Agendamento', selectedDelivery.dataAgendamento ? new Date(selectedDelivery.dataAgendamento).toLocaleString('pt-BR') : '-');
-      add('Chegada', selectedDelivery.horarioChegada ? new Date(selectedDelivery.horarioChegada).toLocaleString('pt-BR') : '-');
-      add('Início desova', selectedDelivery.horarioInicioDesova ? new Date(selectedDelivery.horarioInicioDesova).toLocaleString('pt-BR') : '-');
-      add('Fim desova', selectedDelivery.horarioFimDesova ? new Date(selectedDelivery.horarioFimDesova).toLocaleString('pt-BR') : '-');
-      getFlowHistory(selectedDelivery).forEach(ev => add(ev.label, new Date(ev.date).toLocaleString('pt-BR')));
-      if (selectedDelivery.observations) add('Observações', selectedDelivery.observations);
-      doc.autoTable({ startY:logo?100:80, head:[['Campo','Valor']], body:rows, styles:{fontSize:10}, headStyles:{fillColor:[88,28,135]} });
-      doc.save(`Entrega_${selectedDelivery.deliveryNumber}.pdf`);
-      setToast({ type:'success', message:'PDF gerado' });
-    } catch (err) { setToast({ type:'error', message:'Falha ao gerar PDF: '+err.message }); }
+      setTimeout(() => setToast(null), 3500);
+    } catch (err) {
+      setToast({ type:'error', message:'Falha ao gerar/compartilhar PDF: ' + (err?.message || 'erro desconhecido') });
+      setTimeout(() => setToast(null), 4500);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -1113,7 +1267,6 @@ const MonitorEntregas = () => {
     } catch { setToast({ message:'Erro ao atualizar', type:'error' }); }
   };
 
-  /* stat card order */
   const CARD_ORDER = [
     'AGENDADO','CONTAINER MONTADO','A CAMINHO DO CLIENTE',
     'AGUARDANDO DESOVA','EM DESOVA','ANEXANDO DOCUMENTOS FINAIS','ENTREGUE','CANCELADO'
@@ -1134,7 +1287,6 @@ const MonitorEntregas = () => {
 
   const flowHistory = selectedDelivery ? getFlowHistory(selectedDelivery) : [];
 
-  /* ── COLUMN HEADERS ← ATUALIZADO ── */
   const HEADERS = [
     'Container', 'Contratado', 'Motorista', 'Recebedor',
     'Status', 'Progresso', 'DT Retirada', 'Agendamento',
@@ -1150,7 +1302,6 @@ const MonitorEntregas = () => {
       style={{ backgroundColor: themeConfig.bg, color: themeConfig.text }}
       className={`min-h-screen font-sans transition-colors duration-300 ${theme==='light' ? 'theme-light' : ''}`}
     >
-      {/* ── SETTINGS PANEL ── */}
       <SettingsPanel
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -1158,10 +1309,8 @@ const MonitorEntregas = () => {
         autoRefresh={autoRefresh} setAutoRefresh={setAutoRefresh}
         refreshInterval={refreshInterval} setRefreshInterval={setRefreshInterval}
         filters={filters} setFilters={setFilters}
-        themeConfig={themeConfig}
       />
 
-      {/* ── HEADER ── */}
       <header className={`sticky top-0 z-40 ${themeConfig.header} backdrop-blur-md border-b ${themeConfig.border}`}>
         <div className="w-full px-4 lg:px-8 h-16 flex items-center gap-3">
           <button
@@ -1228,10 +1377,7 @@ const MonitorEntregas = () => {
         </div>
       </header>
 
-      {/* ── MAIN ── */}
       <main className="w-full px-3 sm:px-4 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
-
-        {/* ── PERIOD + INFO BAR ── */}
         <div className="flex items-center gap-2 flex-wrap">
           <Pill active={statsPeriod==='general'}   onClick={() => setStatsPeriod('general')}   color="indigo">
             <MdDashboard className="text-xs" /> <span className="hidden sm:inline">Geral</span><span className="sm:hidden">Geral</span>
@@ -1261,7 +1407,6 @@ const MonitorEntregas = () => {
           </div>
         </div>
 
-        {/* ── STATS CARDS ── */}
         <div>
           <SectionTitle sub={`${stats.total} programações encontradas — ${filteredDeliveries.length} exibidas`}>
             Resumo Operacional
@@ -1295,7 +1440,6 @@ const MonitorEntregas = () => {
           </div>
         </div>
 
-        {/* ── DELIVERY LIST ── */}
         {displayList.length === 0 ? (
           <div className="bg-white/5 rounded-2xl border border-white/10 p-12 sm:p-16 text-center">
             <MdLocalShipping className="mx-auto text-5xl text-gray-600 mb-4" />
@@ -1304,7 +1448,6 @@ const MonitorEntregas = () => {
           </div>
         ) : (
           <div>
-            {/* ── MOBILE: cards ── */}
             <div className="md:hidden space-y-3">
               {displayList.map(d => (
                 <MobileDeliveryCard
@@ -1321,12 +1464,9 @@ const MonitorEntregas = () => {
               ))}
             </div>
 
-            {/* ── DESKTOP: tabela grid ── */}
             <div className="hidden md:block rounded-2xl border border-white/10 overflow-hidden shadow-2xl bg-black/20">
               <div className="overflow-x-auto">
                 <div style={{ width: '100%' }} className="monitor-table">
-
-                  {/* Header row */}
                   <div
                     className="grid text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.04] border-b border-white/10"
                     style={{ gridTemplateColumns: colTemplate }}
@@ -1334,19 +1474,14 @@ const MonitorEntregas = () => {
                     {HEADERS.map((col, ci) => (
                       <div
                         key={col}
-                        className={`${
-                          ci >= 12 ? 'px-1 py-3.5' : 'px-3 py-3.5'
-                        } flex items-center min-w-0 select-none
-                          ${ci >= 4 ? 'justify-center' : ''}
-                          ${ci === 12 ? 'text-amber-500' : ''}
-                        `}
+                        className={`${ci >= 12 ? 'px-1 py-3.5' : 'px-3 py-3.5'} flex items-center min-w-0 select-none
+                          ${ci >= 4 ? 'justify-center' : ''} ${ci === 12 ? 'text-amber-500' : ''}`}
                       >
                         {col}
                       </div>
                     ))}
                   </div>
 
-                  {/* Data rows */}
                   <div className="relative">
                     {displayList.map((d, i) => {
                       const cliTime    = calculateCliTime(d, currentTime);
@@ -1370,7 +1505,6 @@ const MonitorEntregas = () => {
                           `}
                           style={{ gridTemplateColumns: colTemplate, '--rise-from': '120px' }}
                         >
-                          {/* ── Container (ex-Nº) ← ATUALIZADO ── */}
                           <div className="px-3 py-3 flex items-center gap-1.5">
                             <span className="font-black text-purple-300 text-[12px] leading-tight whitespace-nowrap">
                               {d.deliveryNumber}
@@ -1382,28 +1516,24 @@ const MonitorEntregas = () => {
                             )}
                           </div>
 
-                          {/* Contratado */}
                           <div className="px-3 py-3 flex items-center overflow-hidden min-w-0">
                             <span className="text-gray-300 truncate text-[10px] cell-trunc" title={d.userName}>
                               {d.userName || '—'}
                             </span>
                           </div>
 
-                          {/* Motorista */}
                           <div className="px-3 py-3 flex items-center overflow-hidden min-w-0">
                             <span className="text-gray-300 truncate text-[10px] cell-trunc" title={d.driverName}>
                               {d.driverName || '—'}
                             </span>
                           </div>
 
-                          {/* Recebedor */}
                           <div className="px-3 py-3 flex items-center overflow-hidden min-w-0">
                             <span className="text-gray-400 truncate text-[10px] cell-trunc" title={d.recebedor}>
                               {d.recebedor || '—'}
                             </span>
                           </div>
 
-                          {/* Status */}
                           <div className="px-2 py-3 flex items-center justify-center">
                             {(() => {
                               const disp = d.status === 'FINALIZADO' && allModalDocsComplete(d)
@@ -1413,12 +1543,10 @@ const MonitorEntregas = () => {
                             })()}
                           </div>
 
-                          {/* Progresso */}
                           <div className="px-2 py-3 flex items-center justify-center">
                             <ProgressDots delivery={d} allModalDocsComplete={allModalDocsComplete} />
                           </div>
 
-                          {/* DT Retirada */}
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             <span className="text-sky-400 font-semibold text-[10px] tabular-nums cell-trunc">
                               {d.containerMontadoAt
@@ -1427,7 +1555,6 @@ const MonitorEntregas = () => {
                             </span>
                           </div>
 
-                          {/* Agendamento */}
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
                               {d.dataAgendamento
@@ -1436,7 +1563,6 @@ const MonitorEntregas = () => {
                             </span>
                           </div>
 
-                          {/* Chegada */}
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             <span className="text-gray-300 text-[10px] tabular-nums cell-trunc">
                               {d.horarioChegada
@@ -1445,7 +1571,6 @@ const MonitorEntregas = () => {
                             </span>
                           </div>
 
-                          {/* Início desova */}
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
                               {d.horarioInicioDesova
@@ -1454,7 +1579,6 @@ const MonitorEntregas = () => {
                             </span>
                           </div>
 
-                          {/* Fim desova */}
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
                               {d.horarioFimDesova
@@ -1463,12 +1587,10 @@ const MonitorEntregas = () => {
                             </span>
                           </div>
 
-                          {/* Pontualidade */}
                           <div className="px-1 py-3 flex items-center justify-center">
                             <PunctualityCell p={getPunctualityStatus(d, currentTime)} />
                           </div>
 
-                          {/* Tempo CLI */}
                           <div className="px-1 py-3 flex items-center justify-center bg-amber-900/10 min-w-0">
                             {cliTime.tempo ? (
                               <span className={`font-black tabular-nums text-[10px] ${cliTime.isActive ? 'text-amber-400' : 'text-amber-600'}`}>
@@ -1478,7 +1600,6 @@ const MonitorEntregas = () => {
                             ) : <span className="text-gray-600 text-[10px]">—</span>}
                           </div>
 
-                          {/* Docs */}
                           <div className="px-1 py-3 flex items-center justify-center min-w-0">
                             {isComplete
                               ? <FaCheckCircle className="text-emerald-400" title={docStatus} size={13} />
@@ -1486,7 +1607,6 @@ const MonitorEntregas = () => {
                             }
                           </div>
 
-                          {/* Ações */}
                           <div className="px-1 py-3 flex items-center justify-center min-w-0">
                             <button
                               onClick={() => setSelectedDelivery(d)}
@@ -1500,6 +1620,7 @@ const MonitorEntregas = () => {
                       );
                     })}
                   </div>
+
                 </div>
               </div>
             </div>
@@ -1507,12 +1628,9 @@ const MonitorEntregas = () => {
         )}
       </main>
 
-      {/* ── TOAST ── */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* ═══════════════════════════════════════
-          MODAL: DETALHES DA ENTREGA
-          ═══════════════════════════════════════ */}
+      {/* MODAL: DETALHES */}
       {selectedDelivery && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
           <div className="bg-[#1a1a2e] rounded-3xl w-full max-w-2xl max-h-[92vh] overflow-hidden shadow-2xl border border-white/10 flex flex-col">
@@ -1548,33 +1666,6 @@ const MonitorEntregas = () => {
                     <p className="text-sm text-gray-100 font-semibold">{value}</p>
                   </div>
                 ))}
-              </div>
-
-              {/* Progress visual */}
-              <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-3">Progresso da Entrega</p>
-                <div className="flex items-center gap-1">
-                  {progressStatuses.map((s, i) => {
-                    let p = getProgress(selectedDelivery);
-                    if (normalizeKey(selectedDelivery.status)==='FINALIZADO')
-                      p = allModalDocsComplete(selectedDelivery) ? 100 : 90;
-                    const filled = Math.ceil((p/100)*progressStatuses.length);
-                    const cfg2 = STATUS_CONFIG[s];
-                    return (
-                      <React.Fragment key={s}>
-                        <div className={`flex flex-col items-center gap-1 flex-1 ${i<=filled-1?'':'opacity-30'}`}>
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[8px] ${i<=filled-1?(cfg2?.bg||'bg-purple-600'):'bg-gray-700'} transition-all`}>
-                            {cfg2?.icon}
-                          </div>
-                          <p className="text-[7px] text-center text-gray-500 leading-tight hidden sm:block">{cfg2?.label||s}</p>
-                        </div>
-                        {i<progressStatuses.length-1 && (
-                          <div className={`h-0.5 flex-1 rounded-full transition-colors ${i<filled-1?'bg-purple-500':'bg-gray-700'}`} />
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </div>
               </div>
 
               {/* Flow history */}
@@ -1633,6 +1724,7 @@ const MonitorEntregas = () => {
                     </button>
                   </div>
                 </div>
+
                 <div className="space-y-2">
                   {(() => {
                     const labels = getLabelsForDelivery(selectedDelivery);
@@ -1662,6 +1754,7 @@ const MonitorEntregas = () => {
                           </div>
                         );
                       });
+
                     const fotoFields = [
                       { key:'chegadaCliente', label:'Chegada no Cliente' },
                       { key:'inicioDesova',   label:'Início da Desova' },
@@ -1697,6 +1790,7 @@ const MonitorEntregas = () => {
                         </div>
                       );
                     });
+
                     return [...docRows, ...fotosRows];
                   })()}
                 </div>
@@ -1723,9 +1817,7 @@ const MonitorEntregas = () => {
         </div>
       )}
 
-      {/* ═══════════════════════════════════════
-          MODAL: FOTOS
-          ═══════════════════════════════════════ */}
+      {/* MODAL: FOTOS */}
       {modalFotos && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-3 sm:p-4">
           <div className="bg-[#1a1a2e] rounded-2xl w-full max-w-lg border border-white/10 shadow-2xl overflow-hidden">
@@ -1747,9 +1839,7 @@ const MonitorEntregas = () => {
         </div>
       )}
 
-      {/* ═══════════════════════════════════════
-          MODAL: VISUALIZAR DOCUMENTO
-          ═══════════════════════════════════════ */}
+      {/* MODAL: VISUALIZAR DOCUMENTO */}
       {viewingDocument && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-3 sm:p-4">
           <div className="bg-[#1a1a2e] rounded-2xl w-full max-w-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -1788,9 +1878,7 @@ const MonitorEntregas = () => {
         </div>
       )}
 
-      {/* ═══════════════════════════════════════
-          MODAL: EDIÇÃO
-          ═══════════════════════════════════════ */}
+      {/* MODAL: EDIÇÃO */}
       {editingDelivery && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
           <div className="bg-[#1a1a2e] rounded-3xl w-full max-w-lg border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">

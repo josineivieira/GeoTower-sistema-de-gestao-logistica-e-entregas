@@ -16,7 +16,11 @@ import { MdLocalShipping, MdDashboard } from 'react-icons/md';
 import manaConfig from '../config/cities/manaus.json';
 import itajaiConfig from '../config/cities/itajai.json';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
+// some bundlers/tree-shakers may not automatically attach the plugin
+if (autoTable && typeof autoTable === 'function') {
+  try { autoTable(jsPDF); } catch {} // register plugin if needed
+}
 
 /* ─────────────────────────────────────────────────────────────
    DESIGN TOKENS
@@ -783,6 +787,9 @@ const MonitorEntregas = () => {
 
   const generateDeliveryReceiptPdf = async (delivery) => {
     const doc = new jsPDF({ unit:'pt', format:'a4' });
+    if (typeof doc.autoTable !== 'function') {
+      throw new Error('autoTable plugin not available');
+    }
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     const marginX = 40;

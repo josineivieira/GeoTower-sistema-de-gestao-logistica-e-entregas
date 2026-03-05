@@ -310,13 +310,13 @@ const Header = () => {
           >
             <div className="relative shrink-0">
               <img
-                src="/images/geotransporteslogo.svg"
+                src="/GeoTower.svg"
                 alt="GeoTower"
                 className="h-9 sm:h-10 w-auto group-hover:scale-105
                   transition-transform duration-300 drop-shadow-md"
                 onError={(e) => {
                   e.target.onerror = null;
-                  e.target.src = '/images/GeoTransportesLogo.svg';
+                  e.target.src = '/GeoTower.svg';
                 }}
               />
             </div>

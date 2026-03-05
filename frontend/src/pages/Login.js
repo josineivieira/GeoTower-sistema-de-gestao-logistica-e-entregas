@@ -61,7 +61,7 @@ const Login = () => {
       <div className="w-full max-w-md max-h-[90svh] overflow-auto bg-white/95 backdrop-blur rounded-2xl shadow-2xl p-8 relative z-10 border border-white/40">
         <div className="text-center mb-8">
           <img
-            src="/GeoTransportesLogo.svg.png"
+            src="/GeoTower.svg"
             alt="GeoTower Logo"
             className="h-20 w-auto mx-auto mb-4"
           />

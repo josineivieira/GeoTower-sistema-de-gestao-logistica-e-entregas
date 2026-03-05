@@ -64,13 +64,13 @@ const Register = () => {
 
         <div className="text-center mb-8">
           <img
-            src="/images/geotransporteslogo.svg"
+            src="/GeoTower.svg"
             alt="GeoTower Logo"
             className="h-20 w-auto mx-auto mb-4"
             onError={(e) => {
               console.warn('Register logo failed to load; trying alternate path');
               e.target.onerror = null;
-              e.target.src = '/images/GeoTransportesLogo.svg';
+              e.target.src = '/GeoTower.svg';
             }}
             onLoad={() => console.debug('Register logo loaded')}
           />

@@ -25,10 +25,13 @@
     "html-docx-js": "^0.3.1",
     "html-pdf": "^3.0.1",
     "html2canvas": "^1.4.1",
+    "imap-simple": "^5.1.0",
     "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",
+    "mailparser": "^3.9.3",
     "markdown-it": "^14.1.1",
     "markdown-pdf": "^11.0.0",
+    "mongodb": "^7.1.0",
     "puppeteer": "^24.37.5",
     "xlsx": "^0.18.5"
   }

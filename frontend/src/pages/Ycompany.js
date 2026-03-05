@@ -2,90 +2,184 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaDownload, FaFilter, FaSearch } from 'react-icons/fa';
 
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:3000/api';
+
 const Ycompany = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Mapeamento entre nomes de display e campos de banco de dados
+  const fieldMapping = {
+    'Código': 'codigo',
+    'N° GeoMaritima': 'geomaritima',
+    'Dt. início': 'dtInicio',
+    'Situação': 'situacao',
+    'Cliente': 'cliente',
+    'Remetente': 'remetente',
+    'Destinatário': 'destinatario',
+    'Contratado': 'contratado',
+    'Tipo': 'tipo',
+    'Dt. SM': 'dtSM',
+    'Motorista': 'motorista',
+    'Tração': 'tracao',
+    'Reboque': 'reboque',
+    'Origem': 'origem',
+    'UF coleta': 'ufColeta',
+    'Pagamento': 'pagamento',
+    'TAG Pedágio': 'tagPedagio',
+    'Vl. frete processo': 'vlFreteProcesso',
+    'Vl. pedágio': 'vlPedagio',
+    'Vl. frete lista': 'vlFreteLista',
+    'Vl. abastecimento': 'vlAbastecimento',
+    'Dt. agendamento descarga': 'dtAgendamentoDescarga',
+    'Dt. chegada': 'dtChegada',
+    'Dt.Início Descarga': 'dtInicioDescarga',
+    'Hr.Inicio Descarga': 'hrInicioDescarga',
+    'Dt. descida CNTR/Carga': 'dtDescidaCNTRCarga',
+    'Dt. retirada P.D.': 'dtRetiraPD',
+    'Dt. fim descarga': 'dtFimDescarga',
+    'Dt. devolução CNTR': 'dtDevolucaoCNTR',
+    'Terminal': 'terminal',
+    'Destino': 'destino',
+    'UF entrega': 'ufEntrega',
+    'Estab. CT-e/NFS-e': 'estabCTeNFSe',
+    'N° CT-e/NFS-e': 'numCTeNFSe',
+    'N° averbação CTE': 'numAverbacaoCTE',
+    'N° CIOT': 'numCIOT',
+    'Situação CIOT': 'situacaoCIOT',
+    'N° MDFE': 'numMDFE',
+    'Situação MDFE': 'situacaoMDFE',
+    'Dt. averbação MDFE': 'dtAverbacaoMDFE',
+    'N° boooking': 'numBooking',
+    'N° boooking agendamento': 'numBookingAgendamento',
+    'Armador': 'armador',
+    'Navio': 'navio',
+    'Número': 'numero',
+    'Tara': 'tara',
+    'Lacre': 'lacre',
+    'Payload': 'payload',
+    'Temperatura (C°)': 'temperatura',
+    'Umidade (%)': 'umidade',
+    'Ventilação (Cbm)': 'ventilacao',
+    'Peso bruto': 'pesoBruto',
+    'Motorista pulmão': 'motoristaPulmao',
+    'Motorista retro': 'motoristaRetro',
+    'Estab.': 'estab',
+  };
 
   // Colunas da tabela
-  const columns = [
-    'Código',
-    'N° GeoMaritima',
-    'Dt. início',
-    'Situação',
-    'Cliente',
-    'Remetente',
-    'Destinatário',
-    'Contratado',
-    'Tipo',
-    'Dt. SM',
-    'Motorista',
-    'Tração',
-    'Reboque',
-    'Origem',
-    'UF coleta',
-    'Pagamento',
-    'TAG Pedágio',
-    'Vl. frete processo',
-    'Vl. pedágio',
-    'Vl. frete lista',
-    'Vl. abastecimento',
-    'Dt. agendamento descarga',
-    'Dt. chegada',
-    'Dt.Início Descarga',
-    'Hr.Inicio Descarga',
-    'Dt. descida CNTR/Carga',
-    'Dt. retirada P.D.',
-    'Dt. fim descarga',
-    'Dt. devolução CNTR',
-    'Terminal',
-    'Destino',
-    'UF entrega',
-    'Estab. CT-e/NFS-e',
-    'N° CT-e/NFS-e',
-    'N° averbação CTE',
-    'N° CIOT',
-    'Situação CIOT',
-    'N° MDFE',
-    'Situação MDFE',
-    'Dt. averbação MDFE',
-    'N° boooking',
-    'N° boooking agendamento',
-    'Armador',
-    'Navio',
-    'Tipo',
-    'Número',
-    'Tara',
-    'Lacre',
-    'Payload',
-    'Temperatura (C°)',
-    'Umidade (%)',
-    'Ventilação (Cbm)',
-    'Peso bruto',
-    'Motorista pulmão',
-    'Motorista retro',
-    'Estab.',
-  ];
+  const columns = Object.keys(fieldMapping);
 
   useEffect(() => {
-    // Inicializa com dados vazios (integrar com API depois)
-    setData([]);
-    setLoading(false);
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE}/ycompany`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'X-City': localStorage.getItem('userCity') || 'default',
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error('Falha ao carregar dados');
+        }
+        
+        const result = await response.json();
+        setData(result.data || []);
+      } catch (err) {
+        console.error('Erro ao buscar dados:', err);
+        setError('Falha ao carregar dados da Ycompany');
+        setData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  const handleSearch = (value) => {
+  const handleSearch = async (value) => {
     setSearchTerm(value);
+    
+    if (!value.trim()) {
+      // Se vazio, recarrega todos os dados
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE}/ycompany`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'X-City': localStorage.getItem('userCity') || 'default',
+          },
+        });
+        const result = await response.json();
+        setData(result.data || []);
+      } catch (err) {
+        console.error('Erro ao recarregar dados:', err);
+      }
+      return;
+    }
+
+    // Busca com termo
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/ycompany/search?q=${encodeURIComponent(value)}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-City': localStorage.getItem('userCity') || 'default',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha na busca');
+      }
+      
+      const result = await response.json();
+      setData(result.data || []);
+    } catch (err) {
+      console.error('Erro na busca:', err);
+      setError('Falha ao buscar registros');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleExport = () => {
-    // Implementar exportação para Excel/CSV
-    console.log('Exportar dados...');
+  const handleExport = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/ycompany/export`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-City': localStorage.getItem('userCity') || 'default',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao exportar');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ycompany-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Erro ao exportar:', err);
+      alert('Falha ao exportar dados');
+    }
   };
 
-  const filteredData = data.filter((row) =>
-    columns.some((col) => String(row[col] || '').toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredData = data;
 
   return (
     <div style={{ minHeight: '100vh', background: '#F4F3FA' }}>
@@ -140,6 +234,13 @@ const Ycompany = () => {
           </div>
         </div>
 
+        {/* Mensagem de erro */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            {error}
+          </div>
+        )}
+
         {/* Tabela */}
         {loading ? (
           <div className="text-center py-12">
@@ -177,7 +278,7 @@ const Ycompany = () => {
                           key={`${idx}-${col}`}
                           className="px-4 py-3 text-gray-600 whitespace-nowrap"
                         >
-                          {row[col] || '—'}
+                          {row[fieldMapping[col]] || '—'}
                         </td>
                       ))}
                     </tr>

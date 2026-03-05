@@ -123,6 +123,8 @@ app.use("/api/gdrive", require("./routes/gdrive-auth-web"));
 app.use("/api/meta", require("./routes/meta"));
 // Uploads to Cloudflare R2 via S3-compatible API
 app.use("/api", require("./routes/uploadR2"));
+// Ycompany - Maritime Logistics Database
+app.use("/api/ycompany", require("./routes/ycompanyRoutes"));
 
 // Health check
 app.get("/api/health", (req, res) => {

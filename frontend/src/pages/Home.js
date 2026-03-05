@@ -1137,6 +1137,18 @@ const Home = () => {
                   delay={240}
                 />
               )}
+              {hasAccess(['manager']) && (
+                <ManageCard
+                  onClick={() => navigate('/ycompany')}
+                  accentColor="#DC2626"
+                  accentDark="#991B1B"
+                  icon={<FaTable />}
+                  titleIcon={<FaDatabase />}
+                  title="Ycompany"
+                  description="Base de dados com operações marítimas, rastreamento e documentação logística."
+                  delay={320}
+                />
+              )}
             </div>
 
             {/* Status strip */}

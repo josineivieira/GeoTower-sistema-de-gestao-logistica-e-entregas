@@ -61,16 +61,9 @@ const Login = () => {
       <div className="w-full max-w-md max-h-[90svh] overflow-auto bg-white/95 backdrop-blur rounded-2xl shadow-2xl p-8 relative z-10 border border-white/40">
         <div className="text-center mb-8">
           <img
-            src="/images/geotransporteslogo.svg"
+            src="/GeoTransportesLogo.svg.png"
             alt="GeoTransportes Logo"
             className="h-20 w-auto mx-auto mb-4"
-            onError={(e) => {
-              // Fallback to alternate filename (case differences on server)
-              console.warn('Logo failed to load from /images/geotransporteslogo.svg; trying alternate path');
-              e.target.onerror = null;
-              e.target.src = '/images/GeoTransportesLogo.svg';
-            }}
-            onLoad={() => console.debug('Logo loaded successfully')}
           />
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-purple-700 to-blue-700 bg-clip-text text-transparent mb-2">
             GeoTransportes

@@ -63,7 +63,7 @@ const Login = () => {
           <img
             src="/logo.png"
             alt="GeoTower Logo"
-            className="h-20 w-auto mx-auto mb-4"
+            className="h-28 w-auto mx-auto mb-4"
           />
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-purple-700 to-blue-700 bg-clip-text text-transparent mb-2">
             GeoTower

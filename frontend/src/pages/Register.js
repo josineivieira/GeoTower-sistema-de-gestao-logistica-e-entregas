@@ -64,7 +64,7 @@ const Register = () => {
 
         <div className="text-center mb-8">
           <img
-            src="/GeoTower.svg"
+            src="/logo.png"
             alt="GeoTower Logo"
             className="h-20 w-auto mx-auto mb-4"
             onError={(e) => {

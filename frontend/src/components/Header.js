@@ -310,7 +310,7 @@ const Header = () => {
           >
             <div className="relative shrink-0">
               <img
-                src="/GeoTower.svg"
+                src="/logo.png"
                 alt="GeoTower"
                 className="h-9 sm:h-10 w-auto group-hover:scale-105
                   transition-transform duration-300 drop-shadow-md"

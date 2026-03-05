@@ -854,7 +854,7 @@ const MonitorEntregas = () => {
     doc.rect(0, 92, pageW, 10, 'F');
     doc.setGState?.(new doc.GState({ opacity: 1 }));
 
-    const logoDataUrl = await urlToDataUrl('/images/geotowerlogo.png');
+    const logoDataUrl = await urlToDataUrl('/logo.png');
 
     // logo
     if (logoDataUrl) {

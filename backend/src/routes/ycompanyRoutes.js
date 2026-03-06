@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const ycompanyController = require("../controllers/ycompanyController");
 const { MongoClient } = require("mongodb");
 
 const MONGODB_URI = process.env.MONGODB_URI; // ⚠️ no Render tem que ser esse nome
@@ -18,6 +19,13 @@ async function col() {
 function isEmpty(v) {
   return v === null || v === undefined || (typeof v === "string" && v.trim() === "");
 }
+
+// --- new endpoints for the React Ycompany page ------------------------------------------------
+router.get('/', ycompanyController.getAll);
+router.get('/search', ycompanyController.search);
+router.get('/export', ycompanyController.export);
+// --------------------------------------------------------------------------------------------
+
 
 /**
  * GET /api/ycompany/entregas?status=&q=&limit=

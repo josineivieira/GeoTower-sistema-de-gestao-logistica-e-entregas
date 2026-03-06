@@ -20,3 +20,5 @@ services:
         value: "MONGODB_URI_REMOVED"
       - key: USE_MONGODB
         value: "true"
+      - key: MONGO_COLLECTION
+        value: "basegeomars"

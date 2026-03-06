@@ -21,9 +21,71 @@ function isEmpty(v) {
 }
 
 // --- new endpoints for the React Ycompany page ------------------------------------------------
-router.get('/', ycompanyController.getAll);
-router.get('/search', ycompanyController.search);
-router.get('/export', ycompanyController.export);
+router.get('/', async (req, res) => {
+  try {
+    const c = await col();
+    const data = await c.find({})
+      .sort({ updatedAt: -1, _id: -1 })
+      .limit(2000)
+      .toArray();
+    res.json({ ok: true, count: data.length, data });
+  } catch (e) {
+    console.error('Ycompany GET / error:', e);
+    res.status(500).json({ ok: false, error: 'Erro ao buscar dados' });
+  }
+});
+
+router.get('/search', async (req, res) => {
+  try {
+    const c = await col();
+    const { q, limit = '500' } = req.query;
+    const filter = {};
+    
+    if (q && q.trim()) {
+      filter.$or = [
+        { codigo: { $regex: q.trim(), $options: 'i' } },
+        { geomaritima: { $regex: q.trim(), $options: 'i' } },
+        { cliente: { $regex: q.trim(), $options: 'i' } },
+        { remetente: { $regex: q.trim(), $options: 'i' } },
+        { destinatario: { $regex: q.trim(), $options: 'i' } },
+        { navio: { $regex: q.trim(), $options: 'i' } },
+      ];
+    }
+    
+    const data = await c.find(filter)
+      .sort({ updatedAt: -1, _id: -1 })
+      .limit(Math.min(parseInt(limit, 10) || 500, 2000))
+      .toArray();
+    res.json({ ok: true, count: data.length, data });
+  } catch (e) {
+    console.error('Ycompany search error:', e);
+    res.status(500).json({ ok: false, error: 'Erro ao buscar dados' });
+  }
+});
+
+router.get('/export', async (req, res) => {
+  try {
+    const c = await col();
+    const records = await c.find({}).toArray();
+    
+    if (!records.length) {
+      return res.status(404).json({ ok: false, error: 'Nenhum registro para exportar' });
+    }
+    
+    const keys = Object.keys(records[0]);
+    const csv = [
+      keys.join(','),
+      ...records.map(r => keys.map(k => `"${r[k] || ''}"`).join(',')),
+    ].join('\n');
+    
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=ycompany.csv');
+    res.send(csv);
+  } catch (e) {
+    console.error('Ycompany export error:', e);
+    res.status(500).json({ ok: false, error: 'Erro ao exportar dados' });
+  }
+});
 // --------------------------------------------------------------------------------------------
 
 

@@ -5,7 +5,7 @@ import { useAuth } from '../services/authContext';
 import {
   FaArrowLeft, FaPlus, FaEdit, FaTrash, FaFileDownload,
   FaFileExcel, FaSort, FaSortUp, FaSortDown, FaFilter,
-  FaCalendarAlt, FaTimes, FaSearch, FaEye
+  FaCalendarAlt, FaTimes, FaSearch, FaEye, FaSyncAlt
 } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import '../styles/MotoristaManagement.css';
@@ -25,6 +25,7 @@ const ProgramacaoManagement = () => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
 
   const [filters, setFilters] = useState({ search: '', status: 'all', startDate: '', endDate: '' });
   const [showFilters, setShowFilters] = useState(false);
@@ -71,6 +72,25 @@ const ProgramacaoManagement = () => {
       showToast('Erro ao carregar programações', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncYcompany = async () => {
+    if (syncLoading) return;
+    try {
+      setSyncLoading(true);
+      const response = await adminService.syncProgramacoesYcompany();
+      
+      if (response.data.success) {
+        showToast(`✅ ${response.data.sincronizados} registro(s) sincronizado(s) do Ycompany` + 
+                  (response.data.duplicados > 0 ? ` (${response.data.duplicados} duplicados ignorados)` : ''));
+        loadProgramacoes();
+      }
+    } catch (err) {
+      const message = err.response?.data?.message || err.message || 'Erro ao sincronizar';
+      showToast(message, 'error');
+    } finally {
+      setSyncLoading(false);
     }
   };
 
@@ -400,6 +420,24 @@ const ProgramacaoManagement = () => {
 
           {!isGeoMar() && (
             <>
+              <button
+                onClick={handleSyncYcompany}
+                disabled={syncLoading}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+                  border: '1px solid rgba(255,255,255,.2)',
+                  background: syncLoading ? 'rgba(59, 130, 246, 0.2)' : 'rgba(34, 197, 94, 0.15)',
+                  color: syncLoading ? '#60a5fa' : '#22c55e',
+                  cursor: syncLoading ? 'not-allowed' : 'pointer', 
+                  transition: 'all .2s',
+                  opacity: syncLoading ? 0.7 : 1
+                }}
+              >
+                <FaSyncAlt size={12} style={{ animation: syncLoading ? 'spin 1s linear infinite' : 'none' }} /> 
+                {syncLoading ? 'Sincronizando...' : 'Sincronizar Ycompany'}
+              </button>
+
               <button
                 onClick={() => setShowImportModal(true)}
                 style={{

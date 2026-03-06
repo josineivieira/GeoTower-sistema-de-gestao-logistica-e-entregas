@@ -1611,4 +1611,81 @@ router.post("/programacoes/import", auth, managerOnly, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/admin/programacoes/sync/ycompany
+ * Sincronizar dados do Ycompany para Programação de Entregas
+ * Mapeia: Processo←geomaritima, RECEBEDOR←destinatario, CONTAINER←containerNumero, STATUS←situacao
+ */
+router.get("/programacoes/sync/ycompany", auth, managerOnly, async (req, res) => {
+  try {
+    console.log('[SYNC YCOMPANY] Iniciando sincronização');
+
+    const Ycompany = require("../models/Ycompany");
+    const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
+
+    // Buscar todos os registros do Ycompany
+    const ycompanyRecords = await Ycompany.find({}).lean();
+    console.log(`[SYNC YCOMPANY] Encontrados ${ycompanyRecords.length} registros no Ycompany`);
+
+    // Buscar todos os processos já existentes para evitar duplicação
+    const existingProcessos = await ProgramacaoEntrega.find({}).select('processo').lean();
+    const existingProcessosSet = new Set(existingProcessos.map(p => String(p.processo || '').trim().toUpperCase()));
+
+    console.log(`[SYNC YCOMPANY] ${existingProcessosSet.size} processos já existentes`);
+
+    // Mapear dados do Ycompany para Programação de Entregas
+    const novosRegistros = ycompanyRecords
+      .filter(y => {
+        // Filtrar registros que já existem
+        const processo = String(y.geomaritima || '').trim().toUpperCase();
+        return processo && !existingProcessosSet.has(processo);
+      })
+      .map(y => ({
+        processo: String(y.geomaritima || '').trim(),
+        recebedor: String(y.destinatario || '').trim() || 'N/A',
+        container: String(y.numero || '').trim() || '',
+        dataAgendamento: y.dtAgendamentoDescarga 
+          ? new Date(y.dtAgendamentoDescarga).toISOString().slice(0, 16)
+          : new Date().toISOString().slice(0, 16),
+        contratado: String(y.contratado || '').trim() || 'OUTRO',
+        motorista: String(y.motorista || '').trim() || '',
+        // Mapear situação do Ycompany para AGENDADO (como solicitado)
+        status: 'AGENDADO',
+        observacoes: `Sincronizado do Ycompany - ${y.situacao || 'N/A'}`
+      }));
+
+    console.log(`[SYNC YCOMPANY] ${novosRegistros.length} novos registros para importar (sem duplicação)`);
+
+    if (novosRegistros.length === 0) {
+      return res.json({
+        success: true,
+        message: 'Nenhum registro novo para sincronizar',
+        sincronizados: 0,
+        duplicados: ycompanyRecords.length,
+        total: ycompanyRecords.length
+      });
+    }
+
+    // Inserir novos registros
+    const inserted = await ProgramacaoEntrega.insertMany(novosRegistros, { ordered: false });
+    console.log(`[SYNC YCOMPANY] ✅ ${inserted.length} registros sincronizados com sucesso`);
+
+    return res.json({
+      success: true,
+      message: `${inserted.length} registro(s) sincronizado(s) com sucesso do Ycompany`,
+      sincronizados: inserted.length,
+      duplicados: ycompanyRecords.length - novosRegistros.length,
+      total: ycompanyRecords.length,
+      registros: inserted
+    });
+  } catch (err) {
+    console.error('[SYNC YCOMPANY] ❌ Erro ao sincronizar:', err);
+    return res.status(500).json({ 
+      success: false,
+      message: "Erro ao sincronizar dados do Ycompany", 
+      error: err.message 
+    });
+  }
+});
+
 module.exports = router;

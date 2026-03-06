@@ -1614,7 +1614,7 @@ router.post("/programacoes/import", auth, managerOnly, async (req, res) => {
 /**
  * GET /api/admin/programacoes/sync/ycompany
  * Sincronizar dados do Ycompany para Programação de Entregas
- * Mapeia: Processo←geomaritima, RECEBEDOR←destinatario, CONTAINER←containerNumero, STATUS←situacao
+ * Mapeia: Processo←processo, RECEBEDOR←destinatario, CONTAINER←containerNumero, STATUS=AGENDADO
  */
 router.get("/programacoes/sync/ycompany", auth, managerOnly, async (req, res) => {
   try {
@@ -1637,13 +1637,13 @@ router.get("/programacoes/sync/ycompany", auth, managerOnly, async (req, res) =>
     const novosRegistros = ycompanyRecords
       .filter(y => {
         // Filtrar registros que já existem
-        const processo = String(y.geomaritima || '').trim().toUpperCase();
+        const processo = String(y.processo || '').trim().toUpperCase();
         return processo && !existingProcessosSet.has(processo);
       })
       .map(y => ({
-        processo: String(y.geomaritima || '').trim(),
+        processo: String(y.processo || '').trim(),
         recebedor: String(y.destinatario || '').trim() || 'N/A',
-        container: String(y.numero || '').trim() || '',
+        container: String(y.containerNumero || '').trim() || '',
         dataAgendamento: y.dtAgendamentoDescarga 
           ? new Date(y.dtAgendamentoDescarga).toISOString().slice(0, 16)
           : new Date().toISOString().slice(0, 16),

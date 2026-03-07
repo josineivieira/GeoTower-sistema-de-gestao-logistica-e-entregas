@@ -83,6 +83,35 @@ router.post("/", auth, async (req, res) => {
       city
     });
 
+    // Tentar encontrar Ycompany correspondente e armazenar referência
+    try {
+      const Ycompany = require('../models/Ycompany');
+      const ycompanyRecord = await Ycompany.findOne({
+        $or: [
+          { geomaritima: new RegExp(`^${deliveryNumber}$`, 'i') },
+          { numero: new RegExp(`^${deliveryNumber}$`, 'i') },
+          { containerNumero: new RegExp(`^${deliveryNumber}$`, 'i') },
+          { processo: new RegExp(`^${deliveryNumber}$`, 'i') },
+          { codigo: new RegExp(`^${deliveryNumber}$`, 'i') },
+          { geomaritima: deliveryNumber },
+          { numero: deliveryNumber },
+          { containerNumero: deliveryNumber },
+          { processo: deliveryNumber },
+          { codigo: deliveryNumber }
+        ]
+      });
+
+      if (ycompanyRecord) {
+        console.log('[DELIVERY] ✅ Ycompany encontrado para delivery', deliveryNumber, '- ID:', ycompanyRecord._id);
+        await db.updateOne('deliveries', { _id: delivery._id }, { linkedYcompanyId: ycompanyRecord._id });
+        delivery.linkedYcompanyId = ycompanyRecord._id;
+      } else {
+        console.log('[DELIVERY] ❌ Ycompany não encontrado para delivery', deliveryNumber);
+      }
+    } catch (linkErr) {
+      console.warn('[DELIVERY] Erro ao tentar linkar Ycompany:', linkErr.message);
+    }
+
     // Attempt to update matching programacao to indicate it is now em rota
     try {
       const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
@@ -229,48 +258,126 @@ router.put("/:id", auth, async (req, res) => {
       const deliveryNum = String(delivery.deliveryNumber || '').trim().toUpperCase();
       let ycompanyRecord = null;
 
+      console.log('[DELIVERY] 🔍 Tentando sincronizar Ycompany para deliveryNumber:', deliveryNum);
+      console.log('[DELIVERY] 📝 Body recebido:', JSON.stringify(req.body, null, 2));
+
       if (deliveryNum) {
-        // Buscar por processo ou container
-        ycompanyRecord = await Ycompany.findOne({
-          $or: [
-            { processo: new RegExp(`^${deliveryNum}$`, 'i') },
-            { numero: new RegExp(`^${deliveryNum}$`, 'i') },
-            { containerNumero: new RegExp(`^${deliveryNum}$`, 'i') }
-          ]
-        });
+        // Primeiro tentar usar referência direta se existir
+        if (delivery.linkedYcompanyId) {
+          console.log('[DELIVERY] 🔗 Usando referência direta linkedYcompanyId:', delivery.linkedYcompanyId);
+          ycompanyRecord = await Ycompany.findById(delivery.linkedYcompanyId);
+          if (ycompanyRecord) {
+            console.log('[DELIVERY] ✅ Ycompany encontrado via referência direta');
+          }
+        }
+
+        // Se não encontrou via referência, buscar por campos
+        if (!ycompanyRecord) {
+          console.log('[DELIVERY] 🔍 Buscando Ycompany por campos...');
+          // Buscar por processo ou container - tentar múltiplas possibilidades
+          ycompanyRecord = await Ycompany.findOne({
+            $or: [
+              { geomaritima: new RegExp(`^${deliveryNum}$`, 'i') },
+              { numero: new RegExp(`^${deliveryNum}$`, 'i') },
+              { containerNumero: new RegExp(`^${deliveryNum}$`, 'i') },
+              { processo: new RegExp(`^${deliveryNum}$`, 'i') },
+              { codigo: new RegExp(`^${deliveryNum}$`, 'i') },
+              { geomaritima: deliveryNum },
+              { numero: deliveryNum },
+              { containerNumero: deliveryNum },
+              { processo: deliveryNum },
+              { codigo: deliveryNum }
+            ]
+          });
+
+          // Se não encontrou, tentar busca mais ampla
+          if (!ycompanyRecord) {
+            console.log('[DELIVERY] 🔍 Tentando busca mais ampla...');
+            ycompanyRecord = await Ycompany.findOne({
+              $or: [
+                { geomaritima: new RegExp(deliveryNum, 'i') },
+                { numero: new RegExp(deliveryNum, 'i') },
+                { containerNumero: new RegExp(deliveryNum, 'i') },
+                { processo: new RegExp(deliveryNum, 'i') },
+                { codigo: new RegExp(deliveryNum, 'i') }
+              ]
+            });
+          }
+        }
+
+        console.log('[DELIVERY] 📋 Ycompany encontrado:', ycompanyRecord ? `ID: ${ycompanyRecord._id}, codigo: ${ycompanyRecord.codigo}` : 'NÃO ENCONTRADO');
+        if (ycompanyRecord) {
+          console.log('[DELIVERY] 📋 Ycompany campos:', {
+            processo: ycompanyRecord.processo,
+            numero: ycompanyRecord.numero,
+            containerNumero: ycompanyRecord.containerNumero,
+            codigo: ycompanyRecord.codigo
+          });
+        }
       }
 
       if (ycompanyRecord) {
         const ycompanyUpdates = {};
 
-        // Mapear campos do delivery para Ycompany
-        if (req.body.status === 'A_CAMINHO_DO_CLIENTE' && !ycompanyRecord.dtInicioRota) {
+        console.log('[DELIVERY] 🔄 Verificando campos para atualização...');
+
+        // Mapear campos do delivery para Ycompany - sempre atualizar se o valor foi enviado
+        if (req.body.status === 'A_CAMINHO_DO_CLIENTE') {
           ycompanyUpdates.dtInicioRota = new Date();
+          console.log('[DELIVERY] ✅ Definindo dtInicioRota');
         }
-        if (req.body.desovaStartAt !== undefined && req.body.desovaStartAt && !ycompanyRecord.dtInicioDescarga) {
-          ycompanyUpdates.dtInicioDescarga = new Date(req.body.desovaStartAt);
+        if (req.body.desovaStartAt !== undefined) {
+          if (req.body.desovaStartAt) {
+            ycompanyUpdates.dtInicioDescarga = new Date(req.body.desovaStartAt);
+            console.log('[DELIVERY] ✅ Definindo dtInicioDescarga:', req.body.desovaStartAt);
+          } else {
+            console.log('[DELIVERY] ⚠️ desovaStartAt enviado mas vazio');
+          }
         }
-        if (req.body.desovaEndAt !== undefined && req.body.desovaEndAt && !ycompanyRecord.dtFimDescarga) {
-          ycompanyUpdates.dtFimDescarga = new Date(req.body.desovaEndAt);
+        if (req.body.desovaEndAt !== undefined) {
+          if (req.body.desovaEndAt) {
+            ycompanyUpdates.dtFimDescarga = new Date(req.body.desovaEndAt);
+            console.log('[DELIVERY] ✅ Definindo dtFimDescarga:', req.body.desovaEndAt);
+          } else {
+            console.log('[DELIVERY] ⚠️ desovaEndAt enviado mas vazio');
+          }
         }
-        if (req.body.containerMontadoAt !== undefined && req.body.containerMontadoAt && !ycompanyRecord.dtRetiraPD) {
-          ycompanyUpdates.dtRetiraPD = new Date(req.body.containerMontadoAt);
+        if (req.body.containerMontadoAt !== undefined) {
+          if (req.body.containerMontadoAt) {
+            ycompanyUpdates.dtRetiraPD = new Date(req.body.containerMontadoAt);
+            console.log('[DELIVERY] ✅ Definindo dtRetiraPD:', req.body.containerMontadoAt);
+          } else {
+            console.log('[DELIVERY] ⚠️ containerMontadoAt enviado mas vazio');
+          }
         }
-        if (req.body.horarioDevolucaoVazio !== undefined && req.body.horarioDevolucaoVazio && !ycompanyRecord.dtDevolucaoCNTR) {
-          ycompanyUpdates.dtDevolucaoCNTR = new Date(req.body.horarioDevolucaoVazio);
+        if (req.body.horarioDevolucaoVazio !== undefined) {
+          if (req.body.horarioDevolucaoVazio) {
+            ycompanyUpdates.dtDevolucaoCNTR = new Date(req.body.horarioDevolucaoVazio);
+            console.log('[DELIVERY] ✅ Definindo dtDevolucaoCNTR via horarioDevolucaoVazio:', req.body.horarioDevolucaoVazio);
+          } else {
+            console.log('[DELIVERY] ⚠️ horarioDevolucaoVazio enviado mas vazio');
+          }
         }
         // Verificar se observations contém CONTAINER_VAZIO_DEVOLVIDO
-        if (req.body.observations !== undefined && req.body.observations && req.body.observations.includes('(CONTAINER_VAZIO_DEVOLVIDO)') && !ycompanyRecord.dtDevolucaoCNTR) {
+        if (req.body.observations !== undefined && req.body.observations && req.body.observations.includes('(CONTAINER_VAZIO_DEVOLVIDO)')) {
           ycompanyUpdates.dtDevolucaoCNTR = new Date();
+          console.log('[DELIVERY] ✅ Definindo dtDevolucaoCNTR via observations');
         }
 
+        console.log('[DELIVERY] 📝 Campos a atualizar no Ycompany:', Object.keys(ycompanyUpdates));
+
         if (Object.keys(ycompanyUpdates).length > 0) {
-          await Ycompany.findByIdAndUpdate(ycompanyRecord._id, ycompanyUpdates);
-          console.log('[DELIVERY] sincronizado campos do Ycompany', ycompanyRecord._id, Object.keys(ycompanyUpdates));
+          const updateResult = await Ycompany.findByIdAndUpdate(ycompanyRecord._id, ycompanyUpdates, { new: true });
+          console.log('[DELIVERY] ✅ Sincronizado campos do Ycompany', ycompanyRecord._id, Object.keys(ycompanyUpdates));
+          console.log('[DELIVERY] 📊 Valores atualizados:', ycompanyUpdates);
+        } else {
+          console.log('[DELIVERY] ⚠️ Nenhum campo para atualizar no Ycompany');
         }
+      } else {
+        console.log('[DELIVERY] ❌ Registro Ycompany não encontrado para deliveryNumber:', deliveryNum);
       }
     } catch (syncErr) {
-      console.warn('[DELIVERY] erro sync Ycompany:', syncErr.message || syncErr);
+      console.error('[DELIVERY] ❌ Erro sync Ycompany:', syncErr.message || syncErr);
     }
 
     if (req.body.arrivedAt !== undefined) updates.arrivedAt = req.body.arrivedAt;

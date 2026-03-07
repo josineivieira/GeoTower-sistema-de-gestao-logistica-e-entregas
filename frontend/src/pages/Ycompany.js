@@ -161,7 +161,9 @@ const Ycompany = () => {
     setLoading(true); setError(null);
     try {
       const res = await api.get('/ycompany');
-      setData(res.data?.data || []);
+      const fetchedData = res.data?.data || [];
+      console.log('Ycompany data fetched:', fetchedData.slice(0, 3).map(d => ({ codigo: d.codigo, dtInicioRota: d.dtInicioRota, dtInicioDescarga: d.dtInicioDescarga })));
+      setData(fetchedData);
     } catch {
       setError('Falha ao carregar dados da Ycompany');
       setData([]);

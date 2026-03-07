@@ -27,14 +27,21 @@ async function syncDeliveryDatesToYcompany() {
       }
 
       if (!ycompanyRecord) {
-        // Buscar por campos
+        // Buscar por campos, normalizando
+        const normalizedDeliveryNum = deliveryNumber.trim().toUpperCase();
         ycompanyRecord = await Ycompany.findOne({
           $or: [
-            { geomaritima: new RegExp(`^${deliveryNumber}$`, 'i') },
-            { numero: new RegExp(`^${deliveryNumber}$`, 'i') },
-            { containerNumero: new RegExp(`^${deliveryNumber}$`, 'i') },
-            { processo: new RegExp(`^${deliveryNumber}$`, 'i') },
-            { codigo: new RegExp(`^${deliveryNumber}$`, 'i') },
+            { geomaritima: new RegExp(`^${normalizedDeliveryNum}$`, 'i') },
+            { numero: new RegExp(`^${normalizedDeliveryNum}$`, 'i') },
+            { containerNumero: new RegExp(`^${normalizedDeliveryNum}$`, 'i') },
+            { processo: new RegExp(`^${normalizedDeliveryNum}$`, 'i') },
+            { codigo: new RegExp(`^${normalizedDeliveryNum}$`, 'i') },
+            { geomaritima: normalizedDeliveryNum },
+            { numero: normalizedDeliveryNum },
+            { containerNumero: normalizedDeliveryNum },
+            { processo: normalizedDeliveryNum },
+            { codigo: normalizedDeliveryNum },
+            // Também tentar sem normalizar
             { geomaritima: deliveryNumber },
             { numero: deliveryNumber },
             { containerNumero: deliveryNumber },
@@ -47,6 +54,12 @@ async function syncDeliveryDatesToYcompany() {
       if (!ycompanyRecord) {
         console.log(`❌ Ycompany não encontrado para entrega: ${deliveryNumber}`);
         continue;
+      }
+
+      // Atualizar linkedYcompanyId na entrega se não estiver setado
+      if (!delivery.linkedYcompanyId) {
+        await Delivery.findByIdAndUpdate(delivery._id, { linkedYcompanyId: ycompanyRecord._id });
+        console.log(`✅ Linked Ycompany ID setado para entrega ${deliveryNumber}`);
       }
 
       const updates = {};

@@ -1640,19 +1640,40 @@ router.get("/programacoes/sync/ycompany", auth, managerOnly, async (req, res) =>
         const processo = String(y.processo || '').trim().toUpperCase();
         return processo && !existingProcessosSet.has(processo);
       })
-      .map(y => ({
-        processo: String(y.processo || '').trim(),
-        recebedor: String(y.destinatario || '').trim() || 'N/A',
-        container: String(y.containerNumero || '').trim() || '',
-        dataAgendamento: y.dtAgendamentoDescarga 
-          ? new Date(y.dtAgendamentoDescarga).toISOString().slice(0, 16)
-          : new Date().toISOString().slice(0, 16),
-        contratado: String(y.contratado || '').trim() || 'OUTRO',
-        motorista: String(y.motorista || '').trim() || '',
-        // Mapear situação do Ycompany para AGENDADO (como solicitado)
-        status: 'AGENDADO',
-        observacoes: `Sincronizado do Ycompany - ${y.situacao || 'N/A'}`
-      }));
+      .map(y => {
+        // Converter data mantendo o horário original (sem timezone conversion)
+        let dataAgendamento = '';
+        if (y.dtAgendamentoDescarga) {
+          const dtStr = String(y.dtAgendamentoDescarga).trim();
+          // Se é string formato "YYYY-MM-DD HH:MM:SS", converter para "YYYY-MM-DDTHH:MM"
+          if (dtStr.includes(' ')) {
+            const parts = dtStr.split(' ');
+            dataAgendamento = parts[0] + 'T' + parts[1].substring(0, 5);
+          } else if (dtStr.includes('T')) {
+            // Se já é ISO string, manter formato
+            dataAgendamento = dtStr.substring(0, 16);
+          } else if (dtStr.includes('-')) {
+            // Se é só data, adicionar hora padrão
+            dataAgendamento = dtStr.substring(0, 10) + 'T00:00';
+          }
+        }
+        
+        if (!dataAgendamento) {
+          dataAgendamento = new Date().toISOString().slice(0, 16);
+        }
+        
+        return {
+          processo: String(y.processo || '').trim(),
+          recebedor: String(y.destinatario || '').trim() || 'N/A',
+          container: String(y.containerNumero || '').trim() || '',
+          dataAgendamento: dataAgendamento,
+          contratado: String(y.contratado || '').trim() || 'OUTRO',
+          motorista: String(y.motorista || '').trim() || '',
+          // Mapear situação do Ycompany para AGENDADO (como solicitado)
+          status: 'AGENDADO',
+          observacoes: `Sincronizado do Ycompany - ${y.situacao || 'N/A'}`
+        };
+      });
 
     console.log(`[SYNC YCOMPANY] ${novosRegistros.length} novos registros para importar (sem duplicação)`);
 

@@ -1,3 +1,4 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 require("dotenv").config();
 
 const imaps = require("imap-simple");
@@ -6,10 +7,20 @@ const XLSX = require("xlsx");
 const { MongoClient } = require("mongodb");
 
 // ---------- helpers ----------
-function toISOorNull(v) {
+function toLocalDateTimeString(v) {
   if (!v) return null;
+
   const d = v instanceof Date ? v : new Date(v);
-  return isNaN(d.getTime()) ? null : d.toISOString();
+  if (isNaN(d.getTime())) return null;
+
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const seconds = String(d.getSeconds()).padStart(2, "0");
+
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
 function cleanRow(row) {
@@ -30,16 +41,12 @@ function isAllowedAttachment(name) {
   return n.endsWith(".xlsx") || n.endsWith(".xls") || n.endsWith(".xlsm") || n.endsWith(".csv");
 }
 
-/**
- * ✅ Mapeamento (mantenha/expanda com todos os campos que você quer preencher)
- * Importante: pode devolver null/vazio — o algoritmo ignora vazio do Excel.
- */
 function mapToEntrega(row) {
   return {
     codigo: row["Código"] ?? null,
     processo: row["N° GeoMaritima"] ?? row["Nº GeoMaritima"] ?? row["Processo"] ?? null,
 
-    dtInicio: toISOorNull(row["Dt. início"]),
+    dtInicio: toLocalDateTimeString(row["Dt. início"]),
     situacao: row["Situação"] ?? null,
 
     cliente: row["Cliente"] ?? null,
@@ -48,7 +55,7 @@ function mapToEntrega(row) {
     contratado: row["Contratado"] ?? null,
 
     tipo: row["Tipo"] ?? null,
-    dtSM: toISOorNull(row["Dt. SM"]),
+    dtSM: toLocalDateTimeString(row["Dt. SM"]),
 
     motorista: row["Motorista"] ?? null,
     tracao: row["Tração"] ?? null,
@@ -66,11 +73,11 @@ function mapToEntrega(row) {
     vlFreteLista: row["Vl. frete lista"] ?? null,
     vlAbastecimento: row["Vl. abastecimento"] ?? null,
 
-    dtAgendamentoDescarga: toISOorNull(row["Dt. agendamento descarga"]),
-    dtChegada: toISOorNull(row["Dt. chegada"]),
-    dtInicioDescarga: toISOorNull(row["Dt.Início Descarga"]),
+    dtAgendamentoDescarga: toLocalDateTimeString(row["Dt. agendamento descarga"]),
+    dtChegada: toLocalDateTimeString(row["Dt. chegada"]),
+    dtInicioDescarga: toLocalDateTimeString(row["Dt.Início Descarga"]),
     hrInicioDescarga: row["Hr.Inicio Descarga"] ?? null,
-    dtFimDescarga: toISOorNull(row["Dt. fim descarga"]),
+    dtFimDescarga: toLocalDateTimeString(row["Dt. fim descarga"]),
 
     containerNumero: row["Número"] ?? null,
     tara: row["Tara"] ?? null,
@@ -84,26 +91,20 @@ function mapToEntrega(row) {
   };
 }
 
-/**
- * ✅ Regra principal:
- * - Se Excel vier vazio -> ignora (não mexe no banco)
- * - Se Mongo já tem valor -> não mexe
- * - Se Mongo está vazio e Excel tem -> preenche
- */
+// ✅ Só preenche campo vazio no banco
 function pickOnlyMissingFields(existingDoc, incomingDoc) {
   const patch = {};
   for (const [k, newVal] of Object.entries(incomingDoc)) {
-    if (k === "processo") continue;        // chave
-    if (isEmpty(newVal)) continue;         // Excel vazio NÃO entra
+    if (k === "processo") continue;
+    if (isEmpty(newVal)) continue;
     const oldVal = existingDoc ? existingDoc[k] : undefined;
-    if (isEmpty(oldVal)) patch[k] = newVal; // só preenche lacuna
+    if (isEmpty(oldVal)) patch[k] = newVal;
   }
   return patch;
 }
 
-// ---------- mailbox open ----------
+// ---------- mailbox ----------
 async function openBestMailbox(connection) {
-  // ✅ INBOX primeiro (mais rápido)
   const mailboxes = [
     "INBOX",
     "[Gmail]/Todos os e-mails",
@@ -118,6 +119,7 @@ async function openBestMailbox(connection) {
       return box;
     } catch (e) {}
   }
+
   throw new Error("Não consegui abrir nenhuma mailbox (INBOX/All Mail).");
 }
 
@@ -130,9 +132,8 @@ async function run() {
   const MONGO_DB = process.env.MONGO_DB || "delivery-docs";
   const MONGO_COLLECTION = process.env.MONGO_COLLECTION || "programacaoentregas";
 
-  // turbo controls
-  const MAX_EMAILS = Number(process.env.MAX_EMAILS || 20);     // quantos emails processar no máximo
-  const SINCE_DAYS = Number(process.env.SINCE_DAYS || 2);      // últimos X dias
+  const MAX_EMAILS = Number(process.env.MAX_EMAILS || 20);
+  const SINCE_DAYS = Number(process.env.SINCE_DAYS || 2);
 
   console.log("EMAIL:", GMAIL_EMAIL);
   console.log("HAS_PASS:", !!GMAIL_APP_PASSWORD);
@@ -149,7 +150,10 @@ async function run() {
       host: "imap.gmail.com",
       port: 993,
       tls: true,
-      authTimeout: 20000
+      authTimeout: 20000,
+      tlsOptions: {
+        rejectUnauthorized: false
+      }
     }
   };
 
@@ -165,7 +169,6 @@ async function run() {
 
   await openBestMailbox(connection);
 
-  // ✅ mais rápido: só últimos X dias
   const sinceDate = new Date(Date.now() - SINCE_DAYS * 24 * 60 * 60 * 1000);
   const searchCriteria = [["SINCE", sinceDate]];
   const fetchOptions = { bodies: [""], struct: true };
@@ -173,8 +176,6 @@ async function run() {
   console.log(`⏱️ Buscando emails desde: ${sinceDate.toISOString()}`);
 
   const messages = await connection.search(searchCriteria, fetchOptions);
-
-  // pega só os últimos MAX_EMAILS resultados
   const emails = messages.slice(-MAX_EMAILS);
 
   console.log(`📨 Emails encontrados (desde ${SINCE_DAYS} dias): ${messages.length} | Processando: ${emails.length}`);
@@ -191,11 +192,9 @@ async function run() {
     const parsed = await simpleParser(all.body);
     const attachments = parsed.attachments || [];
 
-    // ignora email sem anexo
     if (!attachments.length) continue;
 
-    // pega só anexos permitidos
-    const allowedAtts = attachments.filter(a => isAllowedAttachment(a.filename));
+    const allowedAtts = attachments.filter((a) => isAllowedAttachment(a.filename));
     if (!allowedAtts.length) continue;
 
     console.log(`🧾 Assunto: ${parsed.subject || "(sem assunto)"} | Anexos válidos: ${allowedAtts.length}`);
@@ -208,28 +207,27 @@ async function run() {
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: null }).map(cleanRow);
 
-      const docs = rows.map(mapToEntrega).filter(d => d.processo);
+      const docs = rows.map(mapToEntrega).filter((d) => d.processo);
 
       if (!docs.length) {
         console.log("⚠️ Nenhuma linha com 'processo' encontrado no Excel.");
         continue;
       }
 
-      // ✅ TURBO: busca todos existentes de uma vez
-      const processos = [...new Set(docs.map(d => d.processo))];
+      const processos = [...new Set(docs.map((d) => d.processo))];
       const existentes = await col.find({ processo: { $in: processos } }).toArray();
-      const mapExist = new Map(existentes.map(x => [x.processo, x]));
+      const mapExist = new Map(existentes.map((x) => [x.processo, x]));
 
-      // ✅ TURBO: bulkWrite (muito mais rápido que updateOne em loop)
       const ops = [];
 
       for (const d of docs) {
         const existing = mapExist.get(d.processo);
 
         if (!existing) {
-          // cria novo (sem vazios)
           const toInsert = {};
-          for (const [k, v] of Object.entries(d)) if (!isEmpty(v)) toInsert[k] = v;
+          for (const [k, v] of Object.entries(d)) {
+            if (!isEmpty(v)) toInsert[k] = v;
+          }
 
           ops.push({
             insertOne: {
@@ -260,7 +258,13 @@ async function run() {
         ops.push({
           updateOne: {
             filter: { processo: d.processo },
-            update: { $set: { ...patch, updatedAt: new Date(), _lastImportAt: new Date() } }
+            update: {
+              $set: {
+                ...patch,
+                updatedAt: new Date(),
+                _lastImportAt: new Date()
+              }
+            }
           }
         });
 

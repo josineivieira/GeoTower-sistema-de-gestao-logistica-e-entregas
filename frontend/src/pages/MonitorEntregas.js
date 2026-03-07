@@ -1717,7 +1717,7 @@ const MonitorEntregas = () => {
                 {[
                   ['Contratado', selectedDelivery.userName],
                   ['Motorista', selectedDelivery.driverName||'—'],
-                  ['Placa', selectedDelivery.vehiclePlate||'—'],
+                  ['Data Devolução Container Vazio', selectedDelivery.horarioDevolucaoVazio ? new Date(selectedDelivery.horarioDevolucaoVazio).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'],
                   ['Recebedor', selectedDelivery.recebedor||'—'],
                   ['Agendamento', selectedDelivery.dataAgendamento ? new Date(selectedDelivery.dataAgendamento).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'],
                   ['Montagem Container', selectedDelivery.containerMontadoAt ? new Date(selectedDelivery.containerMontadoAt).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'],

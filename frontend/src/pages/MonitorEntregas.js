@@ -1390,7 +1390,7 @@ const MonitorEntregas = () => {
               <MdDashboard className="text-white text-base" />
             </div>
             <h1 className="text-base sm:text-lg font-black tracking-[0.15em] uppercase" style={{ color:themeConfig.text }}>
-              Torre de Controle [TESTE]
+              Torre de Controle
             </h1>
           </div>
 

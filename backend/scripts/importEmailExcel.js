@@ -7,20 +7,105 @@ const XLSX = require("xlsx");
 const { MongoClient } = require("mongodb");
 
 // ---------- helpers ----------
-function toLocalDateTimeString(v) {
-  if (!v) return null;
-
-  const d = v instanceof Date ? v : new Date(v);
-  if (isNaN(d.getTime())) return null;
-
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
-  const seconds = String(d.getSeconds()).padStart(2, "0");
+function formatDateLocal(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
 
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+function excelSerialToDate(serial) {
+  // Excel serial date -> JS Date
+  const utcDays = Math.floor(serial - 25569);
+  const utcValue = utcDays * 86400;
+  const dateInfo = new Date(utcValue * 1000);
+
+  const fractionalDay = serial - Math.floor(serial) + 0.0000001;
+  let totalSeconds = Math.floor(86400 * fractionalDay);
+
+  const seconds = totalSeconds % 60;
+  totalSeconds -= seconds;
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds - hours * 3600) / 60);
+
+  return new Date(
+    dateInfo.getUTCFullYear(),
+    dateInfo.getUTCMonth(),
+    dateInfo.getUTCDate(),
+    hours,
+    minutes,
+    seconds
+  );
+}
+
+function parseBrazilianDateTimeString(value) {
+  if (!value || typeof value !== "string") return null;
+
+  const text = value.trim();
+
+  // formatos aceitos:
+  // 03/05/2026
+  // 03/05/2026 08:00
+  // 03/05/2026 08:00:00
+  const match = text.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
+  );
+
+  if (!match) return null;
+
+  const [, dd, mm, yyyy, hh = "00", mi = "00", ss = "00"] = match;
+
+  const day = Number(dd);
+  const month = Number(mm) - 1;
+  const year = Number(yyyy);
+  const hour = Number(hh);
+  const minute = Number(mi);
+  const second = Number(ss);
+
+  const d = new Date(year, month, day, hour, minute, second);
+
+  // valida se a data continua igual após criar
+  if (
+    d.getFullYear() !== year ||
+    d.getMonth() !== month ||
+    d.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return d;
+}
+
+function toLocalDateTimeString(value) {
+  if (value === null || value === undefined || value === "") return null;
+
+  // Se já veio como Date do XLSX
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return formatDateLocal(value);
+  }
+
+  // Se veio como número serial do Excel
+  if (typeof value === "number" && !Number.isNaN(value)) {
+    const d = excelSerialToDate(value);
+    if (!isNaN(d.getTime())) return formatDateLocal(d);
+  }
+
+  // Se veio string em formato BR
+  if (typeof value === "string") {
+    const brDate = parseBrazilianDateTimeString(value);
+    if (brDate) return formatDateLocal(brDate);
+
+    // fallback: tenta parse normal
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) return formatDateLocal(d);
+  }
+
+  return null;
 }
 
 function cleanRow(row) {
@@ -38,7 +123,12 @@ function isEmpty(v) {
 
 function isAllowedAttachment(name) {
   const n = (name || "").toLowerCase();
-  return n.endsWith(".xlsx") || n.endsWith(".xls") || n.endsWith(".xlsm") || n.endsWith(".csv");
+  return (
+    n.endsWith(".xlsx") ||
+    n.endsWith(".xls") ||
+    n.endsWith(".xlsm") ||
+    n.endsWith(".csv")
+  );
 }
 
 function mapToEntrega(row) {
@@ -178,7 +268,9 @@ async function run() {
   const messages = await connection.search(searchCriteria, fetchOptions);
   const emails = messages.slice(-MAX_EMAILS);
 
-  console.log(`📨 Emails encontrados (desde ${SINCE_DAYS} dias): ${messages.length} | Processando: ${emails.length}`);
+  console.log(
+    `📨 Emails encontrados (desde ${SINCE_DAYS} dias): ${messages.length} | Processando: ${emails.length}`
+  );
 
   let anexosProcessados = 0;
   let processosCriados = 0;
@@ -203,14 +295,18 @@ async function run() {
       anexosProcessados++;
       console.log(`📎 Processando anexo: ${att.filename}`);
 
-      const wb = XLSX.read(att.content, { type: "buffer", cellDates: true });
+      const wb = XLSX.read(att.content, {
+        type: "buffer",
+        cellDates: true
+      });
+
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: null }).map(cleanRow);
 
       const docs = rows.map(mapToEntrega).filter((d) => d.processo);
 
       if (!docs.length) {
-        console.log("⚠️ Nenhuma linha com 'processo' encontrado no Excel.");
+        console.log("⚠️ Nenhuma linha com 'processo' encontrada no Excel.");
         continue;
       }
 

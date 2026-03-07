@@ -1620,6 +1620,9 @@ router.get("/programacoes/sync/ycompany", auth, managerOnly, async (req, res) =>
   try {
     console.log('[SYNC YCOMPANY] Iniciando sincronização');
 
+    const { connectIfNeeded } = require("../db/mongo");
+    await connectIfNeeded();
+
     const Ycompany = require("../models/Ycompany");
     const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
 

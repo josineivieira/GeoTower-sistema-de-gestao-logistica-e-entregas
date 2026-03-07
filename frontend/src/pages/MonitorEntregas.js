@@ -1303,6 +1303,7 @@ const MonitorEntregas = () => {
       driverName: d.driverName||'', vehiclePlate: d.vehiclePlate||'',
       recebedor: d.recebedor||'', status: d.status||'',
       dataAgendamento: d.dataAgendamento?.slice(0,16)||'',
+      horarioDevolucaoVazio: d.horarioDevolucaoVazio?.slice(0,16)||'',
       horarioChegada: d.horarioChegada?.slice(0,16)||'',
       horarioInicioDesova: d.horarioInicioDesova?.slice(0,16)||'',
       horarioFimDesova: d.horarioFimDesova?.slice(0,16)||'',
@@ -1969,7 +1970,6 @@ const MonitorEntregas = () => {
                 ['Número do Container','deliveryNumber','text',true],
                 ['Contratado','userName','text',false],
                 ['Motorista','driverName','text',false],
-                ['Placa','vehiclePlate','text',true],
                 ['Recebedor','recebedor','text',false],
               ].map(([label,field,type,upper]) => (
                 <div key={field}>
@@ -1998,6 +1998,7 @@ const MonitorEntregas = () => {
 
               {[
                 ['Data Agendamento','dataAgendamento'],
+                ['Data Devolução Container Vazio','horarioDevolucaoVazio'],
                 ['Horário Chegada','horarioChegada'],
                 ['Início Desova','horarioInicioDesova'],
                 ['Fim Desova','horarioFimDesova'],

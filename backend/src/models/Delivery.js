@@ -28,8 +28,8 @@ const DeliverySchema = new mongoose.Schema(
     desovaStartAt: { type: Date },
     desovaEndAt: { type: Date },
 
-    // Etapa atual do fluxo de desova
-    currentStep: { type: String, default: "" },
+    // registrar quando o motorista confirmou a devolução do container vazio
+    horarioDevolucaoVazio: { type: Date },
 
     // Dados do recebedor
     recebedor: { type: String, default: "" },

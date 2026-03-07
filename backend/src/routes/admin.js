@@ -158,6 +158,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
         recebedor: prog ? prog.recebedor : '',
         dataAgendamento: prog ? prog.dataAgendamento : '',
         horarioChegada: delivery.arrivedAt || '',
+        horarioDevolucaoVazio: delivery.horarioDevolucaoVazio || '',
         horarioInicioDesova: delivery.desovaStartAt || '',
         horarioFimDesova: delivery.desovaEndAt || '',
         status: delivery.status
@@ -700,9 +701,9 @@ router.get('/deliveries/:id/documents/zip', auth, onlyAdmin, async (req, res) =>
 router.put("/deliveries/:id", auth, onlyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { deliveryNumber, userName, driverName, vehiclePlate, observations } = req.body;
+    const { deliveryNumber, userName, driverName, vehiclePlate, observations, dataAgendamento, horarioChegada, horarioDevolucaoVazio, horarioInicioDesova, horarioFimDesova } = req.body;
 
-    console.log('📝 Recebido PUT /deliveries/:id', { id, deliveryNumber, userName, driverName, vehiclePlate, observations });
+    console.log('📝 Recebido PUT /deliveries/:id', { id, deliveryNumber, userName, driverName, vehiclePlate, observations, horarioDevolucaoVazio });
 
     // Validar se motivo da edição foi fornecido
     if (!observations || observations.trim() === '') {
@@ -725,6 +726,10 @@ router.put("/deliveries/:id", auth, onlyAdmin, async (req, res) => {
     if (driverName !== undefined) updates.driverName = driverName;
     if (vehiclePlate !== undefined) updates.vehiclePlate = vehiclePlate.trim();
     if (observations !== undefined) updates.observations = observations;
+    if (horarioChegada !== undefined && horarioChegada) updates.arrivedAt = new Date(horarioChegada);
+    if (horarioDevolucaoVazio !== undefined && horarioDevolucaoVazio) updates.horarioDevolucaoVazio = new Date(horarioDevolucaoVazio);
+    if (horarioInicioDesova !== undefined && horarioInicioDesova) updates.desovaStartAt = new Date(horarioInicioDesova);
+    if (horarioFimDesova !== undefined && horarioFimDesova) updates.desovaEndAt = new Date(horarioFimDesova);
     updates.editedAt = new Date().toISOString();
     updates.editReason = observations;
 

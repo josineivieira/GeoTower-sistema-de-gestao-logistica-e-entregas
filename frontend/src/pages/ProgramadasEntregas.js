@@ -674,7 +674,8 @@ const ProgramadasEntregas = () => {
       const timestamp = new Date().toLocaleString('pt-BR');
       const containerObs = `[${timestamp}] (CONTAINER_VAZIO_DEVOLVIDO) Container vazio devolvido com comprovante.`;
       const newObs = `${existingObs ? existingObs + '\n' : ''}${containerObs}`;
-      await deliveryService.updateDelivery(deliveryId, { status: finalStatus, observations: newObs });
+      const horarioDevolucaoVazio = new Date().toISOString();
+      await deliveryService.updateDelivery(deliveryId, { status: finalStatus, observations: newObs, horarioDevolucaoVazio });
       // persist association delivery -> programacao so client can match after reload
       try {
         await deliveryService.updateDelivery(deliveryId, { programacaoId: currentProgramacaoForReturn._id });

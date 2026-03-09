@@ -143,18 +143,40 @@ const MonitorProcessos = () => {
     try {
       setLoading(true);
       const response = await adminService.getProgramacoes();
-      setProgramacoes(response.data || []);
+      console.log('Response:', response);
+      const programacoesData = response?.data?.programacoes || response?.data || [];
+      console.log('Programacoes data:', programacoesData, 'isArray:', Array.isArray(programacoesData));
+      if (Array.isArray(programacoesData)) {
+        setProgramacoes(programacoesData);
+      } else {
+        console.error('Programacoes is not an array:', programacoesData);
+        setProgramacoes([]);
+        setToast({
+          message: 'Erro: dados inválidos da API',
+          type: 'error'
+        });
+      }
     } catch (error) {
+      console.error('Error loading programacoes:', error);
       setToast({
-        message: 'Erro ao carregar programações',
+        message: 'Erro ao carregar programações: ' + (error.message || 'Erro desconhecido'),
         type: 'error'
       });
+      setProgramacoes([]);
     } finally {
       setLoading(false);
     }
   };
 
   const getProcessesByStatus = (filterFn) => {
+    if (!Array.isArray(programacoes)) {
+      console.error('programacoes is not an array:', programacoes);
+      return [];
+    }
+    if (typeof filterFn !== 'function') {
+      console.error('filterFn is not a function:', filterFn);
+      return [];
+    }
     return programacoes.filter(filterFn);
   };
 

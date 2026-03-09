@@ -85,7 +85,8 @@ const STATUS_COLUMNS = [
     icon: FaCheckCircle, gradient: 'from-green-600 to-teal-700',
     lightBg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700',
     badge: 'bg-green-100 text-green-700',
-    filter: (p) => p.status === 'ENTREGUE_COM_PENDENCIA_CANHOTO',
+    // show when programacao marked returned by motorista
+    filter: (p) => p.containerReturned === true || p.status === 'ENTREGUE_COM_PENDENCIA_CANHOTO',
   },
 ];
 

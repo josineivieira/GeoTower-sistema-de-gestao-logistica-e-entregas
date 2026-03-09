@@ -143,23 +143,29 @@ const MonitorProcessos = () => {
     try {
       setLoading(true);
       const response = await adminService.getProgramacoes();
-      console.log('Response:', response);
-      const programacoesData = response?.data?.programacoes || response?.data || [];
-      console.log('Programacoes data:', programacoesData, 'isArray:', Array.isArray(programacoesData));
-      if (Array.isArray(programacoesData)) {
-        setProgramacoes(programacoesData);
+      console.log('[MonitorProcessos] API Response:', response);
+      
+      // A resposta da API vem como { success: true, programacoes: [...] }
+      let programacoesData = [];
+      
+      if (response?.data?.programacoes && Array.isArray(response.data.programacoes)) {
+        programacoesData = response.data.programacoes;
+      } else if (Array.isArray(response?.data)) {
+        programacoesData = response.data;
+      } else if (response?.programacoes && Array.isArray(response.programacoes)) {
+        programacoesData = response.programacoes;
       } else {
-        console.error('Programacoes is not an array:', programacoesData);
-        setProgramacoes([]);
-        setToast({
-          message: 'Erro: dados inválidos da API',
-          type: 'error'
-        });
+        console.warn('[MonitorProcessos] Resposta da API em formato inesperado:', response);
+        programacoesData = [];
       }
+      
+      console.log('[MonitorProcessos] Programações carregadas:', programacoesData.length, 'registros');
+      setProgramacoes(programacoesData);
     } catch (error) {
-      console.error('Error loading programacoes:', error);
+      console.error('[MonitorProcessos] Erro ao carregar programacoes:', error);
+      const errorMsg = error?.response?.data?.message || error?.message || 'Erro desconhecido';
       setToast({
-        message: 'Erro ao carregar programações: ' + (error.message || 'Erro desconhecido'),
+        message: 'Erro ao carregar programações: ' + errorMsg,
         type: 'error'
       });
       setProgramacoes([]);
@@ -169,15 +175,23 @@ const MonitorProcessos = () => {
   };
 
   const getProcessesByStatus = (filterFn) => {
+    // Validações defensivas
     if (!Array.isArray(programacoes)) {
-      console.error('programacoes is not an array:', programacoes);
+      console.warn('[MonitorProcessos] programacoes não é um array:', typeof programacoes, programacoes);
       return [];
     }
+    
     if (typeof filterFn !== 'function') {
-      console.error('filterFn is not a function:', filterFn);
+      console.warn('[MonitorProcessos] filterFn não é uma função:', typeof filterFn);
       return [];
     }
-    return programacoes.filter(filterFn);
+    
+    try {
+      return programacoes.filter(filterFn);
+    } catch (error) {
+      console.error('[MonitorProcessos] Erro ao filtrar programacoes:', error);
+      return [];
+    }
   };
 
   if (!user || loading) {

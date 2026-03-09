@@ -74,11 +74,11 @@ const STATUS_COLUMNS = [
     filter: (p) => p.status === 'ANEXANDO_DOCUMENTOS_FINAIS',
   },
   {
-    key: 'VIAGEM_RETORNO', title: 'Retorno', description: 'Devolução do container',
+    key: 'VIAGEM_RETORNO', title: 'Retorno', description: 'Pend. Devolução',
     icon: FaUndo, gradient: 'from-cyan-500 to-sky-600',
     lightBg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-700',
     badge: 'bg-cyan-100 text-cyan-700',
-    filter: (p) => p.status === 'EM_ROTA',
+    filter: (p) => p.status === 'FINALIZADO' && !p.containerReturned,
   },
   {
     key: 'CNTR_ENTREGUE', title: 'CNTR Entregue', description: 'Container devolvido',

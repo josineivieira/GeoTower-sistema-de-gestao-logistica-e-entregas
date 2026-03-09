@@ -717,7 +717,23 @@ const MonitorProcessos = () => {
     if (!user) return;
     if (!['manager','admin','geomar'].includes(user.role)) { navigate('/home'); return; }
     loadProgramacoes();
+
+    const handler = () => {
+      loadProgramacoes();
+    };
+    window.addEventListener('programacoesUpdated', handler);
+    return () => window.removeEventListener('programacoesUpdated', handler);
   }, [user, navigate]);
+
+  // refresh periodically when Kanban tab is active so that updates from other screens
+  // (e.g. motorista confirming return) appear without manual click
+  useEffect(() => {
+    if (activeTab !== 'kanban') return;
+    const iv = setInterval(() => {
+      if (!loading) loadProgramacoes();
+    }, 30_000);
+    return () => clearInterval(iv);
+  }, [activeTab, loading, loadProgramacoes]);
 
   const loadProgramacoes = useCallback(async () => {
     try {

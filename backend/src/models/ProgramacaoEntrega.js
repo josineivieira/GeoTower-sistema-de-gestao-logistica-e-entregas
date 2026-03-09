@@ -59,6 +59,11 @@ const programacaoEntregaSchema = new mongoose.Schema({
     },
     default: 'AGENDADO'
   },
+  // indica se o motorista já confirmou a devolução do container vazio
+  containerReturned: {
+    type: Boolean,
+    default: false,
+  },
   observacoes: {
     type: String,
     default: '',

@@ -1446,7 +1446,7 @@ router.post("/programacoes", auth, managerOnly, async (req, res) => {
 router.put("/programacoes/:id", auth, managerOnly, async (req, res) => {
   try {
     const { id } = req.params;
-    const { processo, recebedor, container, dataAgendamento, contratado, motorista, status, observacoes } = req.body;
+    const { processo, recebedor, container, dataAgendamento, contratado, motorista, status, observacoes, containerReturned } = req.body;
     // Get editor name from logged-in user
     const editorName = req.user?.name || req.user?.username || req.user?._id || 'Desconhecido';
 
@@ -1468,6 +1468,7 @@ router.put("/programacoes/:id", auth, managerOnly, async (req, res) => {
     if (motorista !== undefined) programacao.motorista = motorista;
     if (status !== undefined) programacao.status = status;
     if (observacoes !== undefined) programacao.observacoes = observacoes;
+    if (containerReturned !== undefined) programacao.containerReturned = containerReturned;
     // Register editor and time
     programacao.editedBy = editorName;
     programacao.editedAt = new Date();

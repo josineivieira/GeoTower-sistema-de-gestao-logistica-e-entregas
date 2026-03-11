@@ -1,3 +1,4 @@
+
 import React, {
   useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect
 } from 'react';
@@ -5,13 +6,14 @@ import { useTheme, THEMES } from '../contexts/ThemeContext';
 import { useAuth } from '../services/authContext';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
-import KanbanProcessosPanel from '../components/KanbanProcessosPanel';
 import { adminService } from '../services/authService';
 import {
   FaArrowLeft, FaEye, FaDownload, FaSync, FaFilter, FaTimes,
   FaTrash, FaEdit, FaExclamationTriangle, FaShareAlt, FaCalendarAlt,
   FaClock, FaBox, FaTruck, FaCheckCircle, FaTimesCircle, FaFilePdf,
-  FaUsers, FaDolly, FaSearch, FaExpand, FaPalette, FaCog, FaSlidersH
+  FaUsers, FaDolly, FaSearch, FaExpand, FaPalette, FaCog, FaSlidersH,
+  FaPlus, FaMapMarkerAlt, FaShippingFast, FaUndo, FaChevronRight,
+  FaUser, FaBoxOpen, FaBuilding, FaLayerGroup
 } from 'react-icons/fa';
 import { MdLocalShipping, MdDashboard } from 'react-icons/md';
 import manaConfig from '../config/cities/manaus.json';
@@ -19,8 +21,133 @@ import itajaiConfig from '../config/cities/itajai.json';
 import jsPDF from 'jspdf';
 
 /* ─────────────────────────────────────────────────────────────
+   KANBAN - MESMA LÓGICA DO MONITOR DE PROCESSOS
+───────────────────────────────────────────────────────────── */
+const normalizeKey = (s) => {
+  if (!s) return '';
+  return String(s).replace(/_/g, ' ').toUpperCase().trim();
+};
+
+const STATUS_COLUMNS = [
+  {
+    key: 'NOVO_PROCESSO',
+    title: 'Novo Processo',
+    description: 'Sem motorista',
+    icon: FaPlus,
+    gradient: 'from-blue-500 to-blue-600',
+    lightBg: 'bg-blue-50',
+    border: 'border-blue-200',
+    text: 'text-blue-700',
+    badge: 'bg-blue-100 text-blue-700',
+    filter: (p) => !p.driverName || p.driverName === '-' || String(p.driverName).trim() === '',
+  },
+  {
+    key: 'PROGRAMADO',
+    title: 'Programado',
+    description: 'Agendado c/ motorista',
+    icon: FaClock,
+    gradient: 'from-violet-500 to-purple-600',
+    lightBg: 'bg-violet-50',
+    border: 'border-violet-200',
+    text: 'text-violet-700',
+    badge: 'bg-violet-100 text-violet-700',
+    filter: (p) => normalizeKey(p.status) === 'AGENDADO' && p.driverName && p.driverName !== '-',
+  },
+  {
+    key: 'CNTR_COLETADO',
+    title: 'CNTR Coletado',
+    description: 'Container montado',
+    icon: FaBox,
+    gradient: 'from-emerald-500 to-green-600',
+    lightBg: 'bg-emerald-50',
+    border: 'border-emerald-200',
+    text: 'text-emerald-700',
+    badge: 'bg-emerald-100 text-emerald-700',
+    filter: (p) => normalizeKey(p.status) === 'CONTAINER MONTADO',
+  },
+  {
+    key: 'INICIAR_VIAGEM',
+    title: 'Em Viagem',
+    description: 'A caminho do cliente',
+    icon: FaTruck,
+    gradient: 'from-orange-500 to-amber-600',
+    lightBg: 'bg-orange-50',
+    border: 'border-orange-200',
+    text: 'text-orange-700',
+    badge: 'bg-orange-100 text-orange-700',
+    filter: (p) => {
+      const s = normalizeKey(p.status);
+      return s === 'A CAMINHO DO CLIENTE' || s === 'PENDING';
+    },
+  },
+  {
+    key: 'CHEGADA_CLIENTE',
+    title: 'No Cliente',
+    description: 'Aguardando desova',
+    icon: FaMapMarkerAlt,
+    gradient: 'from-yellow-500 to-amber-500',
+    lightBg: 'bg-yellow-50',
+    border: 'border-yellow-200',
+    text: 'text-yellow-700',
+    badge: 'bg-yellow-100 text-yellow-700',
+    filter: (p) => normalizeKey(p.status) === 'AGUARDANDO DESOVA',
+  },
+  {
+    key: 'OPERACAO_INICIADA',
+    title: 'Em Desova',
+    description: 'Operação iniciada',
+    icon: FaShippingFast,
+    gradient: 'from-rose-500 to-red-600',
+    lightBg: 'bg-rose-50',
+    border: 'border-rose-200',
+    text: 'text-rose-700',
+    badge: 'bg-rose-100 text-rose-700',
+    filter: (p) => normalizeKey(p.status) === 'EM DESOVA',
+  },
+  {
+    key: 'OPERACAO_FINALIZADA',
+    title: 'Op. Finalizada',
+    description: 'Desova concluída / anexando canhotos',
+    icon: FaCheckCircle,
+    gradient: 'from-teal-500 to-emerald-600',
+    lightBg: 'bg-teal-50',
+    border: 'border-teal-200',
+    text: 'text-teal-700',
+    badge: 'bg-teal-100 text-teal-700',
+    filter: (p) => normalizeKey(p.status) === 'ANEXANDO DOCUMENTOS FINAIS',
+  },
+  {
+    key: 'VIAGEM_RETORNO',
+    title: 'Retorno',
+    description: 'Pend. devolução',
+    icon: FaUndo,
+    gradient: 'from-cyan-500 to-sky-600',
+    lightBg: 'bg-cyan-50',
+    border: 'border-cyan-200',
+    text: 'text-cyan-700',
+    badge: 'bg-cyan-100 text-cyan-700',
+    filter: (p) => normalizeKey(p.status) === 'FINALIZADO' && p.containerReturned !== true,
+  },
+  {
+    key: 'CNTR_ENTREGUE',
+    title: 'CNTR Entregue',
+    description: 'Container devolvido',
+    icon: FaCheckCircle,
+    gradient: 'from-green-600 to-teal-700',
+    lightBg: 'bg-green-50',
+    border: 'border-green-200',
+    text: 'text-green-700',
+    badge: 'bg-green-100 text-green-700',
+    filter: (p) => {
+      const s = normalizeKey(p.status);
+      return p.containerReturned === true || s === 'ENTREGUE COM PENDENCIA CANHOTO';
+    },
+  },
+];
+
+/* ─────────────────────────────────────────────────────────────
    DESIGN TOKENS
-   ───────────────────────────────────────────────────────────── */
+───────────────────────────────────────────────────────────── */
 const STATUS_CONFIG = {
   AGENDADO: {
     label: 'Não Iniciado',
@@ -88,32 +215,32 @@ const STATUS_CONFIG = {
   }
 };
 
-const normalizeKey = (s) => {
-  if (!s) return '';
-  return s.replace(/_/g, ' ').toUpperCase().trim();
-};
-
 const resolveConfig = (rawStatus) => {
   const key = normalizeKey(rawStatus);
-  if (key === 'ENTREGUE' || key === 'SUBMITTED' || key === 'ENTREGUE COM PENDENCIA CANHOTO')
+  if (key === 'ENTREGUE' || key === 'SUBMITTED' || key === 'ENTREGUE COM PENDENCIA CANHOTO') {
     return STATUS_CONFIG['ENTREGUE'];
-  if (key === 'PENDING' || key === 'A CAMINHO DO CLIENTE')
+  }
+  if (key === 'PENDING' || key === 'A CAMINHO DO CLIENTE') {
     return STATUS_CONFIG['A CAMINHO DO CLIENTE'];
+  }
   return STATUS_CONFIG[key] || null;
 };
 
+/* ─────────────────────────────────────────────────────────────
+   GLOBAL ANIMATION STYLES
+───────────────────────────────────────────────────────────── */
 const GLOBAL_STYLES = `
 @keyframes riseToTop {
   0%   { opacity: 0.6; transform: translateY(var(--rise-from, 120px)) scale(1.025);
     box-shadow: 0 24px 80px rgba(139,92,246,0.85), 0 0 0 2px rgba(139,92,246,0.7); }
-  50%  { opacity: 1;   transform: translateY(-12px) scale(1.01);
+  50%  { opacity: 1; transform: translateY(-12px) scale(1.01);
     box-shadow: 0 12px 50px rgba(139,92,246,0.6), 0 0 0 2px rgba(139,92,246,0.5); }
-  100% { opacity: 1;   transform: translateY(0) scale(1);
+  100% { opacity: 1; transform: translateY(0) scale(1);
     box-shadow: 0 8px 30px rgba(139,92,246,0.28), 0 0 0 0 rgba(139,92,246,0); }
 }
 @keyframes glowPulse {
   0%,100% { box-shadow: 0 0 0 0 rgba(139,92,246,0); border-color: rgba(255,255,255,0.08); background: transparent; }
-  30%      { box-shadow: 0 0 30px rgba(139,92,246,0.45); border-color: rgba(139,92,246,0.55); background: rgba(139,92,246,0.1); }
+  30% { box-shadow: 0 0 30px rgba(139,92,246,0.45); border-color: rgba(139,92,246,0.55); background: rgba(139,92,246,0.1); }
 }
 .row-rise { animation: riseToTop 2.5s ease-in-out forwards; position: relative; z-index: 30; }
 .row-glow { animation: glowPulse 3.5s ease-in-out forwards; position: relative; z-index: 20; }
@@ -123,13 +250,13 @@ const GLOBAL_STYLES = `
 .panel-exit   { animation: slideOutRight 0.25s ease-in forwards; }
 @keyframes badgePopIn { 0% { transform: scale(0) rotate(-12deg); opacity: 0; } 70% { transform: scale(1.15) rotate(3deg); opacity: 1; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
 .badge-pop { animation: badgePopIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
-@keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
-.shimmer-bg { background: linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.15) 50%, transparent 100%); background-size: 400px 100%; animation: shimmer 1.5s linear infinite; }
 .monitor-table { grid-auto-rows: minmax(36px, auto); }
-.monitor-table-row { min-height: 40px; }
 .cell-trunc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 `;
 
+/* ─────────────────────────────────────────────────────────────
+   SMALL COMPONENTS
+───────────────────────────────────────────────────────────── */
 const Badge = ({ status }) => {
   const cfg = resolveConfig(status);
   const label = cfg?.label || normalizeKey(status);
@@ -142,13 +269,20 @@ const Badge = ({ status }) => {
   );
 };
 
+const SectionTitle = ({ children, sub }) => (
+  <div className="mb-4">
+    <h2 className="text-sm font-extrabold text-gray-400 uppercase tracking-[0.2em]">{children}</h2>
+    {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+  </div>
+);
+
 const Pill = ({ active, onClick, children, color = 'purple' }) => {
   const base = 'px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 border';
   const on = {
     purple: 'bg-purple-600 text-white border-purple-700 shadow-md shadow-purple-200',
     indigo: 'bg-indigo-600 text-white border-indigo-700 shadow-md shadow-indigo-200',
-    gray:   'bg-gray-800 text-white border-gray-900 shadow-md shadow-gray-200',
-    blue:   'bg-blue-600 text-white border-blue-700 shadow-md shadow-blue-200',
+    gray: 'bg-gray-800 text-white border-gray-900 shadow-md shadow-gray-200',
+    blue: 'bg-blue-600 text-white border-blue-700 shadow-md shadow-blue-200',
   };
   const off = 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20 hover:bg-white/10 hover:text-white';
   return (
@@ -158,9 +292,136 @@ const Pill = ({ active, onClick, children, color = 'purple' }) => {
   );
 };
 
+/* ─────────────────────────────────────────────────────────────
+   KANBAN UI
+───────────────────────────────────────────────────────────── */
+const formatBoardDate = (value) => {
+  if (!value) return '—';
+  try {
+    return new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  } catch {
+    return value;
+  }
+};
+
+const DeliveryKanbanCard = ({ delivery, column, onOpen }) => (
+  <button
+    type="button"
+    onClick={() => onOpen(delivery)}
+    className={`group relative w-full text-left bg-white rounded-xl border ${column.border} shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 overflow-hidden`}
+  >
+    <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${column.gradient}`} />
+    <div className="pl-4 pr-3 pt-3 pb-3">
+      <div className="flex items-start justify-between gap-2 mb-2.5">
+        <span className="font-bold text-gray-800 text-sm leading-tight truncate">
+          #{delivery.deliveryNumber || '—'}
+        </span>
+        <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${column.badge} border ${column.border}`}>
+          {delivery.vehiclePlate || 'S/ placa'}
+        </span>
+      </div>
+
+      <div className="space-y-1.5">
+        {delivery.recebedor && (
+          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+            <FaBuilding className="text-gray-400 shrink-0" />
+            <span className="truncate">{delivery.recebedor}</span>
+          </div>
+        )}
+
+        {delivery.userName && (
+          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+            <FaBoxOpen className="text-gray-400 shrink-0" />
+            <span className="truncate">{delivery.userName}</span>
+          </div>
+        )}
+
+        {delivery.driverName && delivery.driverName !== '-' && (
+          <div className={`flex items-center gap-1.5 text-[11px] font-medium ${column.text}`}>
+            <FaUser className="shrink-0" />
+            <span className="truncate">{delivery.driverName}</span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+          <FaCalendarAlt className="shrink-0" />
+          <span className="truncate">{formatBoardDate(delivery.dataAgendamento)}</span>
+        </div>
+      </div>
+    </div>
+  </button>
+);
+
+const KanbanColumnHeader = ({ column, count }) => {
+  const Icon = column.icon;
+  return (
+    <div className={`px-4 py-3 ${column.lightBg} border-b ${column.border}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${column.gradient} flex items-center justify-center shadow-sm`}>
+            <Icon className="text-white text-sm" />
+          </div>
+          <div>
+            <p className={`text-sm font-bold ${column.text} leading-tight`}>{column.title}</p>
+            <p className="text-[10px] text-gray-500 leading-tight">{column.description}</p>
+          </div>
+        </div>
+        <span className={`min-w-[26px] h-6 px-1.5 rounded-full text-xs font-bold flex items-center justify-center bg-gradient-to-br ${column.gradient} text-white shadow-sm`}>
+          {count}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const DeliveryKanbanColumn = ({ column, deliveries, onOpen }) => {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? deliveries : deliveries.slice(0, 4);
+
+  return (
+    <div className={`flex flex-col rounded-2xl border ${column.border} bg-white shadow-sm overflow-hidden min-w-[220px] max-w-[260px] flex-shrink-0`}>
+      <KanbanColumnHeader column={column} count={deliveries.length} />
+
+      <div className="flex-1 p-3 space-y-2.5 overflow-y-auto max-h-[430px]">
+        {deliveries.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-gray-300">
+            <column.icon className="text-3xl mb-2" />
+            <p className="text-xs font-medium">Nenhuma entrega</p>
+          </div>
+        ) : (
+          <>
+            {visible.map((delivery) => (
+              <DeliveryKanbanCard
+                key={delivery._id || delivery.deliveryNumber}
+                delivery={delivery}
+                column={column}
+                onOpen={onOpen}
+              />
+            ))}
+
+            {deliveries.length > 4 && (
+              <button
+                type="button"
+                onClick={() => setExpanded(!expanded)}
+                className={`w-full text-xs font-semibold py-2 rounded-lg ${column.lightBg} ${column.text} border ${column.border} hover:opacity-80 transition-opacity flex items-center justify-center gap-1`}
+              >
+                {expanded ? 'Ver menos' : `+${deliveries.length - 4} mais entregas`}
+                <FaChevronRight className={`transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────
+   PROGRESS
+───────────────────────────────────────────────────────────── */
 const progressStatuses = [
-  'AGENDADO','CONTAINER MONTADO','A CAMINHO DO CLIENTE',
-  'AGUARDANDO DESOVA','EM DESOVA','ANEXANDO DOCUMENTOS FINAIS','ENTREGUE'
+  'AGENDADO', 'CONTAINER MONTADO', 'A CAMINHO DO CLIENTE',
+  'AGUARDANDO DESOVA', 'EM DESOVA', 'ANEXANDO DOCUMENTOS FINAIS', 'ENTREGUE'
 ];
 
 const getProgress = (delivery) => {
@@ -175,20 +436,54 @@ const getProgress = (delivery) => {
   return Math.round((idx / (progressStatuses.length - 1)) * 100);
 };
 
+const ProgressDots = ({ delivery, allModalDocsComplete }) => {
+  let p = getProgress(delivery);
+  if (normalizeKey(delivery.status) === 'FINALIZADO') {
+    p = allModalDocsComplete(delivery) ? 100 : 90;
+  }
+  const total = 7;
+  const filled = Math.ceil((p / 100) * total);
+  const colorDot =
+    p === 100 ? 'bg-emerald-500 shadow-sm shadow-emerald-400' :
+    p >= 66 ? 'bg-amber-400 shadow-sm shadow-amber-300' :
+    p >= 33 ? 'bg-indigo-500 shadow-sm shadow-indigo-300' :
+    'bg-gray-300';
+
+  return (
+    <div className="flex items-center gap-1" title={`${p}%`}>
+      <span className="text-[10px] font-bold text-gray-500 w-6 text-right">{p}%</span>
+      <div className="flex gap-[3px]">
+        {Array.from({ length: total }).map((_, i) => (
+          <span
+            key={i}
+            className={`block w-2 h-2 rounded-full transition-all ${
+              i < filled
+                ? `${colorDot} ${p < 100 && i === filled - 1 ? 'animate-pulse' : ''}`
+                : 'bg-gray-700'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const PunctualityCell = ({ p }) => {
   const styles = {
-    ok:       { bg: 'bg-emerald-500/15', border: 'border-emerald-500/40', text: 'text-emerald-300', dot: 'bg-emerald-400', ring: 'shadow-emerald-500/20' },
-    possible: { bg: 'bg-amber-500/15',   border: 'border-amber-500/40',   text: 'text-amber-300',   dot: 'bg-amber-400',   ring: 'shadow-amber-500/20' },
-    late:     { bg: 'bg-red-500/15',     border: 'border-red-500/40',     text: 'text-red-300',     dot: 'bg-red-400',     ring: 'shadow-red-500/20' },
-    unknown:  { bg: 'bg-gray-700/30',    border: 'border-gray-600/30',    text: 'text-gray-400',    dot: 'bg-gray-500',    ring: '' },
+    ok: { bg: 'bg-emerald-500/15', border: 'border-emerald-500/40', text: 'text-emerald-300', dot: 'bg-emerald-400', ring: 'shadow-emerald-500/20' },
+    possible: { bg: 'bg-amber-500/15', border: 'border-amber-500/40', text: 'text-amber-300', dot: 'bg-amber-400', ring: 'shadow-amber-500/20' },
+    late: { bg: 'bg-red-500/15', border: 'border-red-500/40', text: 'text-red-300', dot: 'bg-red-400', ring: 'shadow-red-500/20' },
+    unknown: { bg: 'bg-gray-700/30', border: 'border-gray-600/30', text: 'text-gray-400', dot: 'bg-gray-500', ring: '' },
   };
   const s = styles[p.type] || styles.unknown;
+
   return (
     <div className="flex flex-col items-center gap-1 min-w-[100px]">
       <span className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-wide ${s.bg} ${s.border} ${s.text} shadow-md ${s.ring}`}>
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot} ${p.type === 'late' ? 'animate-pulse' : ''}`} />
         {p.label}
       </span>
+
       <div className="flex items-center gap-1.5">
         {p.eta !== null && p.eta > 0 && (
           <span className="text-[9px] text-gray-500 font-mono">ETA {p.eta}m</span>
@@ -203,6 +498,11 @@ const PunctualityCell = ({ p }) => {
   );
 };
 
+const DEFAULT_COL_TEMPLATE = 'repeat(15, minmax(0, 1fr))';
+
+/* ─────────────────────────────────────────────────────────────
+   SETTINGS PANEL
+───────────────────────────────────────────────────────────── */
 const SettingsPanel = ({
   open, onClose, theme, setTheme,
   autoRefresh, setAutoRefresh, refreshInterval, setRefreshInterval,
@@ -230,6 +530,7 @@ const SettingsPanel = ({
         style={{ opacity: open ? 1 : 0 }}
         onClick={onClose}
       />
+
       <div
         className={`fixed right-0 top-0 h-full w-full max-w-sm z-50 flex flex-col shadow-2xl ${open ? 'panel-enter' : 'panel-exit'}`}
         style={{ backgroundColor: '#13131f', borderLeft: '1px solid rgba(255,255,255,0.08)' }}
@@ -241,6 +542,7 @@ const SettingsPanel = ({
             </span>
             <h3 className="text-sm font-black text-white uppercase tracking-widest">Configurações</h3>
           </div>
+
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
@@ -254,6 +556,7 @@ const SettingsPanel = ({
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
               <FaPalette className="text-purple-400" /> Tema
             </p>
+
             <div className="grid grid-cols-1 gap-2">
               {Object.entries(THEMES).map(([key, t]) => (
                 <button
@@ -265,9 +568,10 @@ const SettingsPanel = ({
                       : 'bg-white/[0.03] border-white/8 text-gray-400 hover:bg-white/8 hover:text-gray-200'
                   }`}
                 >
-                  <span className={`w-6 h-6 rounded-full border-2 flex-shrink-0 ${
-                    theme === key ? 'border-purple-400' : 'border-gray-600'
-                  }`} style={{ background: t.bg }} />
+                  <span
+                    className={`w-6 h-6 rounded-full border-2 flex-shrink-0 ${theme === key ? 'border-purple-400' : 'border-gray-600'}`}
+                    style={{ background: t.bg }}
+                  />
                   {t.name}
                   {theme === key && <FaCheckCircle className="ml-auto text-purple-400 text-xs" />}
                 </button>
@@ -279,24 +583,27 @@ const SettingsPanel = ({
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
               <FaSync className="text-emerald-400" /> Auto-Refresh
             </p>
+
             <div className="bg-white/[0.03] border border-white/8 rounded-xl p-4 space-y-4">
               <label className="flex items-center justify-between cursor-pointer select-none">
                 <div>
                   <p className="text-sm font-semibold text-gray-200">Atualização automática</p>
                   <p className="text-xs text-gray-500 mt-0.5">Recarrega dados periodicamente</p>
                 </div>
+
                 <span
-                  onClick={() => setAutoRefresh(v => !v)}
+                  onClick={() => setAutoRefresh((v) => !v)}
                   className={`w-11 h-6 rounded-full relative transition-colors duration-300 flex-shrink-0 cursor-pointer ${autoRefresh ? 'bg-emerald-500' : 'bg-gray-700'}`}
                 >
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300 ${autoRefresh ? 'translate-x-5' : ''}`} />
                 </span>
               </label>
+
               {autoRefresh && (
                 <div>
                   <label className="block text-xs text-gray-500 mb-2">Intervalo (segundos)</label>
                   <div className="flex items-center gap-3">
-                    {[10,30,60,120].map(v => (
+                    {[10, 30, 60, 120].map((v) => (
                       <button
                         key={v}
                         onClick={() => setRefreshInterval(v)}
@@ -308,10 +615,14 @@ const SettingsPanel = ({
                       </button>
                     ))}
                   </div>
+
                   <input
-                    type="range" min="5" max="300" step="5"
+                    type="range"
+                    min="5"
+                    max="300"
+                    step="5"
                     value={refreshInterval}
-                    onChange={e => setRefreshInterval(Number(e.target.value))}
+                    onChange={(e) => setRefreshInterval(Number(e.target.value))}
                     className="w-full mt-3 accent-emerald-500"
                   />
                   <p className="text-center text-xs text-gray-400 mt-1">{refreshInterval} seg</p>
@@ -325,9 +636,10 @@ const SettingsPanel = ({
               <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
                 <FaFilter className="text-purple-400" /> Filtros
               </p>
+
               {(filters.status !== 'all' || filters.searchTerm || filters.startDate || filters.endDate) && (
                 <button
-                  onClick={() => setFilters({ status:'all', searchTerm:'', startDate:'', endDate:'' })}
+                  onClick={() => setFilters({ status: 'all', searchTerm: '', startDate: '', endDate: '' })}
                   className="flex items-center gap-1.5 text-[11px] text-red-400 hover:text-red-300 font-semibold transition"
                 >
                   <FaTimes size={10} /> Limpar
@@ -340,7 +652,7 @@ const SettingsPanel = ({
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">Status</label>
                 <select
                   value={filters.status}
-                  onChange={e => setFilters({...filters, status: e.target.value})}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                   className={inputCls}
                 >
                   <option value="all" className="bg-gray-900">Todos</option>
@@ -365,7 +677,7 @@ const SettingsPanel = ({
                     type="text"
                     placeholder="Número, motorista, placa…"
                     value={filters.searchTerm}
-                    onChange={e => setFilters({...filters, searchTerm: e.target.value})}
+                    onChange={(e) => setFilters({ ...filters, searchTerm: e.target.value })}
                     className={`${inputCls} pl-8`}
                   />
                 </div>
@@ -374,15 +686,22 @@ const SettingsPanel = ({
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5">Data Inicial</label>
-                  <input type="date" value={filters.startDate}
-                    onChange={e => setFilters({...filters, startDate: e.target.value})}
-                    className={inputCls} />
+                  <input
+                    type="date"
+                    value={filters.startDate}
+                    onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                    className={inputCls}
+                  />
                 </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5">Data Final</label>
-                  <input type="date" value={filters.endDate}
-                    onChange={e => setFilters({...filters, endDate: e.target.value})}
-                    className={inputCls} />
+                  <input
+                    type="date"
+                    value={filters.endDate}
+                    onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                    className={inputCls}
+                  />
                 </div>
               </div>
             </div>
@@ -393,50 +712,24 @@ const SettingsPanel = ({
   );
 };
 
-const ProgressDots = ({ delivery, allModalDocsComplete }) => {
-  let p = getProgress(delivery);
-  if (normalizeKey(delivery.status) === 'FINALIZADO') {
-    p = allModalDocsComplete(delivery) ? 100 : 90;
-  }
-  const total = 7;
-  const filled = Math.ceil((p / 100) * total);
-  const colorDot =
-    p === 100 ? 'bg-emerald-500 shadow-sm shadow-emerald-400' :
-    p >= 66   ? 'bg-amber-400 shadow-sm shadow-amber-300' :
-    p >= 33   ? 'bg-indigo-500 shadow-sm shadow-indigo-300' :
-                'bg-gray-300';
-  return (
-    <div className="flex items-center gap-1" title={`${p}%`}>
-      <span className="text-[10px] font-bold text-gray-500 w-6 text-right">{p}%</span>
-      <div className="flex gap-[3px]">
-        {Array.from({ length: total }).map((_, i) => (
-          <span key={i} className={`block w-2 h-2 rounded-full transition-all ${
-            i < filled
-              ? `${colorDot} ${p < 100 && i === filled - 1 ? 'animate-pulse' : ''}`
-              : 'bg-gray-700'
-          }`} />
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const DEFAULT_COL_TEMPLATE = 'repeat(15, minmax(0, 1fr))';
-
-const MobileDeliveryCard = ({ d, currentTime, allModalDocsComplete, getDocumentsStatus, getPunctualityStatus, recentlyUpdated, RISE_WINDOW, setSelectedDelivery }) => {
+/* ─────────────────────────────────────────────────────────────
+   MOBILE CARD
+───────────────────────────────────────────────────────────── */
+const MobileDeliveryCard = ({
+  d, currentTime, allModalDocsComplete, getDocumentsStatus,
+  getPunctualityStatus, recentlyUpdated, RISE_WINDOW, setSelectedDelivery
+}) => {
   const now = Date.now();
   const updatedAt = recentlyUpdated[d._id];
-  const isActive  = updatedAt && (now - updatedAt) < RISE_WINDOW;
+  const isActive = updatedAt && (now - updatedAt) < RISE_WINDOW;
   const docStatus = getDocumentsStatus(d);
   const isComplete = docStatus.includes('COMPLETO');
   const punct = getPunctualityStatus(d, currentTime);
   const dispStatus = d.status === 'FINALIZADO' && allModalDocsComplete(d) ? 'DOCUMENTOS ENTREGUES' : d.status;
 
   return (
-    <div className={`
-      relative rounded-2xl border p-4 space-y-3 transition-all
-      ${isActive ? 'row-rise border-purple-500/60 bg-purple-900/10' : 'border-white/10 bg-white/[0.02]'}
-    `}
+    <div
+      className={`relative rounded-2xl border p-4 space-y-3 transition-all ${isActive ? 'row-rise border-purple-500/60 bg-purple-900/10' : 'border-white/10 bg-white/[0.02]'}`}
       style={isActive ? { '--rise-from': '80px' } : {}}
     >
       <div className="flex items-center justify-between">
@@ -446,6 +739,7 @@ const MobileDeliveryCard = ({ d, currentTime, allModalDocsComplete, getDocuments
             <span className="badge-pop px-1.5 py-0.5 rounded-full bg-purple-600/80 text-white text-[9px] font-black">UP</span>
           )}
         </div>
+
         <div className="flex items-center gap-2">
           <Badge status={dispStatus} />
           <button
@@ -469,13 +763,13 @@ const MobileDeliveryCard = ({ d, currentTime, allModalDocsComplete, getDocuments
         <div>
           <p className="text-gray-600 text-[10px] uppercase font-bold">Agendamento</p>
           <p className="text-gray-300 font-mono text-[11px]">
-            {d.dataAgendamento ? new Date(d.dataAgendamento).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'}
+            {d.dataAgendamento ? new Date(d.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
           </p>
         </div>
         <div>
           <p className="text-gray-600 text-[10px] uppercase font-bold">Chegada</p>
           <p className="text-gray-300 font-mono text-[11px]">
-            {d.horarioChegada ? new Date(d.horarioChegada).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'}
+            {d.horarioChegada ? new Date(d.horarioChegada).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
           </p>
         </div>
       </div>
@@ -484,62 +778,62 @@ const MobileDeliveryCard = ({ d, currentTime, allModalDocsComplete, getDocuments
         <ProgressDots delivery={d} allModalDocsComplete={allModalDocsComplete} />
         <PunctualityCell p={punct} />
         <div className="flex items-center gap-2">
-          {isComplete
-            ? <FaCheckCircle className="text-emerald-400" size={15} />
-            : <FaTimesCircle className="text-red-400/70" size={15} />
-          }
+          {isComplete ? <FaCheckCircle className="text-emerald-400" size={15} /> : <FaTimesCircle className="text-red-400/70" size={15} />}
         </div>
       </div>
     </div>
   );
 };
 
+/* ─────────────────────────────────────────────────────────────
+   MAIN COMPONENT
+───────────────────────────────────────────────────────────── */
 const MonitorEntregas = () => {
   const { user } = useAuth();
   const isGeoMar = () => user?.role === 'geomar';
-  const canEdit  = () => user?.role === 'manager';
+  const canEdit = () => user?.role === 'manager';
+  const navigate = useNavigate();
 
   const [viewingDocument, setViewingDocument] = useState(null);
-  const [modalFotos, setModalFotos]           = useState(null);
-  const navigate = useNavigate();
-  const [deliveries, setDeliveries]           = useState([]);
+  const [modalFotos, setModalFotos] = useState(null);
+  const [deliveries, setDeliveries] = useState([]);
   const [filteredDeliveries, setFilteredDeliveries] = useState([]);
-  const [loading, setLoading]                 = useState(true);
-  const [toast, setToast]                     = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
-  const [autoRefresh, setAutoRefresh]         = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(30);
   const [editingDelivery, setEditingDelivery] = useState(null);
-  const [editForm, setEditForm]               = useState({
-    deliveryNumber:'', userName:'', driverName:'', vehiclePlate:'',
-    recebedor:'', status:'', dataAgendamento:'', horarioChegada:'',
-    horarioInicioDesova:'', horarioFimDesova:'', observations:''
+  const [editForm, setEditForm] = useState({
+    deliveryNumber: '', userName: '', driverName: '', vehiclePlate: '',
+    recebedor: '', status: '', dataAgendamento: '', horarioDevolucaoVazio: '',
+    horarioChegada: '', horarioInicioDesova: '', horarioFimDesova: '', observations: ''
   });
-  const [filters, setFilters]   = useState({ status:'all', searchTerm:'', startDate:'', endDate:'' });
+  const [filters, setFilters] = useState({ status: 'all', searchTerm: '', startDate: '', endDate: '' });
   const [currentTime, setCurrentTime] = useState(new Date());
   const [statsPeriod, setStatsPeriod] = useState('today');
-  const [stats, setStats]       = useState({ total:0, statusCounts:{}, byDriver:0 });
+  const [stats, setStats] = useState({ total: 0, statusCounts: {}, byDriver: 0 });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [colTemplate, setColTemplate] = useState(DEFAULT_COL_TEMPLATE);
 
   const [recentlyUpdated, setRecentlyUpdated] = useState({});
-  const prevStatusRef  = useRef({});
-  const rowRefs        = useRef({});
-  const prevPositions  = useRef({});
-  const RISE_WINDOW    = 8000;
+  const prevStatusRef = useRef({});
+  const rowRefs = useRef({});
+  const prevPositions = useRef({});
+  const RISE_WINDOW = 8000;
 
   const { theme, setTheme } = useTheme();
   const themeConfig = THEMES[theme] || THEMES.dark;
 
   const statusMapToBackend = {
-    OPERACAO_FINALIZADA: ['ENTREGUE','submitted','FINALIZADO'],
-    'A CAMINHO DO CLIENTE': ['pending','PENDING'],
-    AGUARDANDO_DESOVA:   ['AGUARDANDO_DESOVA'],
-    EM_DESOVA:           ['EM_DESOVA'],
-    DESOVA_FINALIZADA:   ['DESOVA_FINALIZADA'],
+    OPERACAO_FINALIZADA: ['ENTREGUE', 'submitted', 'FINALIZADO'],
+    'A CAMINHO DO CLIENTE': ['pending', 'PENDING'],
+    AGUARDANDO_DESOVA: ['AGUARDANDO_DESOVA'],
+    EM_DESOVA: ['EM_DESOVA'],
+    DESOVA_FINALIZADA: ['DESOVA_FINALIZADA'],
     ANEXANDO_DOCUMENTOS_FINAIS: ['ANEXANDO_DOCUMENTOS_FINAIS'],
-    AGENDADO:            ['AGENDADO'],
-    CANCELADO:           ['CANCELADO']
+    AGENDADO: ['AGENDADO'],
+    CANCELADO: ['CANCELADO']
   };
 
   useEffect(() => {
@@ -565,7 +859,7 @@ const MonitorEntregas = () => {
       .theme-light .text-gray-400{color:#6b7280!important}
       .theme-light .bg-white\\/5{background-color:rgba(0,0,0,0.04)!important}
       .theme-light .border-white\\/10{border-color:rgba(0,0,0,0.1)!important}
-      .theme-light select,.theme-light input{background-color:#f3f4f6!important;color:#1a1a1a!important}
+      .theme-light select,.theme-light input,.theme-light textarea{background-color:#f3f4f6!important;color:#1a1a1a!important}
     `;
     document.head.appendChild(el);
     return () => document.head.removeChild(el);
@@ -574,89 +868,99 @@ const MonitorEntregas = () => {
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement) {
       try { await document.documentElement.requestFullscreen(); } catch {}
-    } else { await document.exitFullscreen(); }
+    } else {
+      await document.exitFullscreen();
+    }
   };
+
   useEffect(() => {
     const h = (e) => {
-      if ((e.ctrlKey||e.metaKey) && e.shiftKey && e.key==='F') { e.preventDefault(); toggleFullscreen(); }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+      }
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, []);
 
   const calculateCliTime = (delivery, now = new Date()) => {
-    if (!delivery.horarioChegada) return { tempo:null, isActive:false };
+    if (!delivery.horarioChegada) return { tempo: null, isActive: false };
     const chegada = new Date(delivery.horarioChegada);
     const isActive = !delivery.horarioFimDesova;
     const ref = isActive ? now : new Date(delivery.horarioFimDesova);
     const diffMs = ref - chegada;
-    if (diffMs < 0) return { tempo:null, isActive };
-    const totalMin = Math.floor(diffMs/60000);
-    const h = Math.floor(totalMin/60), m = totalMin%60;
-    return { tempo: h>0 ? `${h}h ${m}m` : `${m}m`, isActive };
+    if (diffMs < 0) return { tempo: null, isActive };
+    const totalMin = Math.floor(diffMs / 60000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return { tempo: h > 0 ? `${h}h ${m}m` : `${m}m`, isActive };
   };
 
   const getFlowHistory = (d) => {
     const ev = [];
-    if (d.containerMontadoAt) ev.push({ label:'Montagem do container', date:d.containerMontadoAt });
-    if (d.horarioChegada)      ev.push({ label:'Chegada',              date:d.horarioChegada });
-    if (d.horarioInicioDesova) ev.push({ label:'Início da desova',     date:d.horarioInicioDesova });
-    if (d.horarioFimDesova)    ev.push({ label:'Fim da desova',        date:d.horarioFimDesova });
-    return ev.sort((a,b) => new Date(a.date)-new Date(b.date));
+    if (d.containerMontadoAt) ev.push({ label: 'Montagem do container', date: d.containerMontadoAt });
+    if (d.horarioChegada) ev.push({ label: 'Chegada', date: d.horarioChegada });
+    if (d.horarioInicioDesova) ev.push({ label: 'Início da desova', date: d.horarioInicioDesova });
+    if (d.horarioFimDesova) ev.push({ label: 'Fim da desova', date: d.horarioFimDesova });
+    return ev.sort((a, b) => new Date(a.date) - new Date(b.date));
   };
 
   const getPunctualityStatus = (d, now = new Date()) => {
-    if (!d) return { label:'-', type:'unknown', eta:null, lateBy:null };
+    if (!d) return { label: '-', type: 'unknown', eta: null, lateBy: null };
     const schedStr = d.dataAgendamento || d.data;
-    if (!schedStr) return { label:'Sem agendamento', type:'unknown', eta:null, lateBy:null };
+    if (!schedStr) return { label: 'Sem agendamento', type: 'unknown', eta: null, lateBy: null };
     const scheduled = new Date(schedStr);
-    const arrival   = d.horarioChegada ? new Date(d.horarioChegada) : null;
-    const start     = d.createdAt      ? new Date(d.createdAt)      : null;
-    const travel    = Number(d.estimatedTravelMinutes || d.minimumTravelMinutes || 40);
+    const arrival = d.horarioChegada ? new Date(d.horarioChegada) : null;
+    const start = d.createdAt ? new Date(d.createdAt) : null;
+    const travel = Number(d.estimatedTravelMinutes || d.minimumTravelMinutes || 40);
 
     const computeEta = () => {
       if (!start) return null;
-      const expected = new Date(start.getTime() + travel*60000);
-      const diff = Math.round((expected-now)/60000);
+      const expected = new Date(start.getTime() + travel * 60000);
+      const diff = Math.round((expected - now) / 60000);
       return diff < 0 ? 0 : diff;
     };
 
     if (arrival) {
-      const lateBy = Math.round((arrival-scheduled)/60000);
+      const lateBy = Math.round((arrival - scheduled) / 60000);
       return {
         label: arrival.getTime() <= scheduled.getTime() ? 'Pontual' : 'Atrasado',
-        type:  arrival.getTime() <= scheduled.getTime() ? 'ok' : 'late',
-        eta:0, lateBy
+        type: arrival.getTime() <= scheduled.getTime() ? 'ok' : 'late',
+        eta: 0, lateBy
       };
     }
+
     const eta = computeEta();
-    if (now.getTime() >= scheduled.getTime())
-      return { label:'Atrasado', type:'late', eta:eta||0, lateBy:null };
-    if (!start)
-      return { label:'Sem início', type:'unknown', eta, lateBy:null };
-    const timeLeft = Math.round((scheduled-now)/60000);
-    if (timeLeft <= travel)
-      return { label:'Possível atraso', type:'possible', eta, lateBy:null };
-    return { label:'No prazo', type:'ok', eta, lateBy:null };
+    if (now.getTime() >= scheduled.getTime()) return { label: 'Atrasado', type: 'late', eta: eta || 0, lateBy: null };
+    if (!start) return { label: 'Sem início', type: 'unknown', eta, lateBy: null };
+    const timeLeft = Math.round((scheduled - now) / 60000);
+    if (timeLeft <= travel) return { label: 'Possível atraso', type: 'possible', eta, lateBy: null };
+    return { label: 'No prazo', type: 'ok', eta, lateBy: null };
   };
 
   const getDocumentUrlsArray = (docData) => {
     if (!docData) return [];
     if (typeof docData === 'string') return [docData];
-    if (Array.isArray(docData)) return docData.map(i => {
-      if (typeof i === 'string') return i;
-      if (typeof i === 'object' && i) return i.url||(i.path&&`/uploads/${i.path}`)||i.link||i.webViewLink||null;
-      return null;
-    }).filter(Boolean);
-    if (typeof docData === 'object') return [docData.url||(docData.path&&`/uploads/${docData.path}`)||docData.link||docData.webViewLink].filter(Boolean);
+    if (Array.isArray(docData)) {
+      return docData.map((i) => {
+        if (typeof i === 'string') return i;
+        if (typeof i === 'object' && i) {
+          return i.url || (i.path && `/uploads/${i.path}`) || i.link || i.webViewLink || null;
+        }
+        return null;
+      }).filter(Boolean);
+    }
+    if (typeof docData === 'object') {
+      return [docData.url || (docData.path && `/uploads/${docData.path}`) || docData.link || docData.webViewLink].filter(Boolean);
+    }
     return [];
   };
 
   const allModalDocsComplete = (d) => {
     if (!d) return false;
-    const keys = ['retiradaCheio','canhotCTE','diarioBordo','canhotNF','devolucaoVazio',
-                  'chegadaCliente','inicioDesova','fimDesova'];
-    return keys.every(k => getDocumentUrlsArray(d.documents?.[k]).length > 0);
+    const keys = ['retiradaCheio', 'canhotCTE', 'diarioBordo', 'canhotNF', 'devolucaoVazio', 'chegadaCliente', 'inicioDesova', 'fimDesova'];
+    return keys.every((k) => getDocumentUrlsArray(d.documents?.[k]).length > 0);
   };
 
   const formatStatus = (s, delivery) => {
@@ -667,31 +971,31 @@ const MonitorEntregas = () => {
       return 'FINALIZADO';
     }
     if (s === 'ENTREGUE' || s === 'submitted') return 'OPERAÇÃO FINALIZADA';
-    if (s === 'pending'  || s === 'PENDING')   return 'A CAMINHO DO CLIENTE';
-    return s.replace(/_/g,' ');
+    if (s === 'pending' || s === 'PENDING') return 'A CAMINHO DO CLIENTE';
+    return String(s).replace(/_/g, ' ');
   };
 
   const getDocumentsStatus = (delivery) => {
     if (!delivery) return 'PENDENTE';
-    const required = ['canhotCTE','diarioBordo','canhotNF','devolucaoVazio'];
+    const required = ['canhotCTE', 'diarioBordo', 'canhotNF', 'devolucaoVazio'];
     const docs = delivery.documents || {};
-    if (required.every(k => docs[k])) return 'COMPLETO';
-    const pending = required.filter(k => !docs[k]).map(k =>
-      ({ canhotCTE:'CTE', canhotNF:'NF', diarioBordo:'DIÁRIO', devolucaoVazio:'RIC' }[k]||k)
+    if (required.every((k) => docs[k])) return 'COMPLETO';
+    const pending = required.filter((k) => !docs[k]).map((k) =>
+      ({ canhotCTE: 'CTE', canhotNF: 'NF', diarioBordo: 'DIÁRIO', devolucaoVazio: 'RIC' }[k] || k)
     ).join(' + ');
     return `PENDENTE ${pending}`;
   };
 
   const defaultDocumentLabels = manaConfig.documents || {
-    canhotNF:'NF', canhotCTE:'CTE', diarioBordo:'Diário', devolucaoVazio:'Vazio', retiradaCheio:'Cheio'
+    canhotNF: 'NF', canhotCTE: 'CTE', diarioBordo: 'Diário', devolucaoVazio: 'Vazio', retiradaCheio: 'Cheio'
   };
 
   const getLabelsForDelivery = (d) => {
     if (!d) return defaultDocumentLabels;
-    return (d.city||'').toLowerCase() === 'itajai' ? itajaiConfig.documents||{} : defaultDocumentLabels;
+    return (d.city || '').toLowerCase() === 'itajai' ? (itajaiConfig.documents || {}) : defaultDocumentLabels;
   };
 
-  const removeProgramacaoInfo = (obs) => obs ? obs.replace(/Criada a partir da Programação [A-Z0-9]+/g,'').trim() : '';
+  const removeProgramacaoInfo = (obs) => obs ? obs.replace(/Criada a partir da Programação [A-Z0-9]+/g, '').trim() : '';
 
   const urlToDataUrl = async (url) => {
     try {
@@ -711,67 +1015,33 @@ const MonitorEntregas = () => {
 
   const hexToRgb = (hex) => {
     if (!hex) return { r: 88, g: 28, b: 135 };
-    const h = hex.replace('#','').trim();
-    const full = h.length === 3 ? h.split('').map(c => c+c).join('') : h;
+    const h = String(hex).replace('#', '').trim();
+    const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
     const n = parseInt(full, 16);
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
   };
 
-  const formatDT = (v) => v ? new Date(v).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' }) : '—';
+  const formatDT = (v) => v ? new Date(v).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 
   const generateDeliveryReceiptPdf = async (delivery) => {
-    const doc = new jsPDF({ unit:'pt', format:'a4' });
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+
     if (typeof doc.autoTable !== 'function') {
       try {
         const atModule = await import('jspdf-autotable');
         const atFunc = atModule && (atModule.default || atModule);
-        if (typeof atFunc === 'function') {
-          atFunc(jsPDF);
-        }
-      } catch (_) {}
+        if (typeof atFunc === 'function') atFunc(jsPDF);
+      } catch {}
     }
-    const pageW = doc.internal.pageSize.getWidth();
-    const pdfMargin = 40;
-    let useFallback = typeof doc.autoTable !== 'function';
-    if (!useFallback) {
-      try {
-        if (typeof doc.autoTable !== 'function') throw new Error('autoTable not a function');
-      } catch (err) {
-        console.error('autoTable availability check failed', err);
-        useFallback = true;
-      }
-    }
-    const safe = (v) => (v == null || v === '') ? '—' : String(v);
-    if (useFallback) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      let y = 100;
-      const infoRows = [
-        ['Contratado', safe(delivery.userName)],
-        ['Motorista', safe(delivery.driverName)],
-        ['Placa', safe(delivery.vehiclePlate)],
-        ['Recebedor', safe(delivery.recebedor)],
-        ['Status', safe(formatStatus(delivery.status, delivery))],
-        ['Agendamento', formatDT(delivery.dataAgendamento)],
-        ['Montagem Container', formatDT(delivery.containerMontadoAt)],
-        ['Chegada', formatDT(delivery.horarioChegada)],
-        ['Início Desova', formatDT(delivery.horarioInicioDesova)],
-        ['Fim Desova', formatDT(delivery.horarioFimDesova)],
-      ];
-      infoRows.forEach(([k,v]) => {
-        doc.text(`${k}: ${v}`, pdfMargin, y);
-        y += 14;
-      });
-      const fileName = `Comprovante_Entrega_${delivery.deliveryNumber || delivery._id || 'sem_numero'}.pdf`;
-      const blob = doc.output('blob');
-      return { blob, fileName };
-    }
-    const pageH = doc.internal.pageSize.getHeight();
 
-    const dispStatus =
-      delivery.status === 'FINALIZADO' && allModalDocsComplete(delivery)
-        ? 'DOCUMENTOS ENTREGUES'
-        : delivery.status;
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const pdfMargin = 40;
+    const safe = (v) => (v == null || v === '' ? '—' : String(v));
+
+    const dispStatus = delivery.status === 'FINALIZADO' && allModalDocsComplete(delivery)
+      ? 'DOCUMENTOS ENTREGUES'
+      : delivery.status;
 
     const cfg = resolveConfig(dispStatus) || resolveConfig(delivery.status);
     const rgb = hexToRgb(cfg?.hex);
@@ -779,13 +1049,7 @@ const MonitorEntregas = () => {
     doc.setFillColor(rgb.r, rgb.g, rgb.b);
     doc.rect(0, 0, pageW, 92, 'F');
 
-    doc.setFillColor(0, 0, 0);
-    doc.setGState?.(new doc.GState({ opacity: 0.12 }));
-    doc.rect(0, 92, pageW, 10, 'F');
-    doc.setGState?.(new doc.GState({ opacity: 1 }));
-
     const logoDataUrl = await urlToDataUrl('/logo.png');
-
     if (logoDataUrl) {
       try {
         const imgProps = doc.getImageProperties(logoDataUrl);
@@ -795,29 +1059,24 @@ const MonitorEntregas = () => {
       } catch {}
     }
 
-    doc.setTextColor(255,255,255);
+    doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
-    doc.text('COMPROVANTE DE ENTREGA', pageW - pdfMargin, 36, { align:'right' });
+    doc.text('COMPROVANTE DE ENTREGA', pageW - pdfMargin, 36, { align: 'right' });
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageW - pdfMargin, 54, { align:'right' });
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageW - pdfMargin, 54, { align: 'right' });
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.text(`Entrega #${delivery.deliveryNumber || '—'}`, pageW - pdfMargin, 74, { align:'right' });
+    doc.text(`Entrega #${delivery.deliveryNumber || '—'}`, pageW - pdfMargin, 74, { align: 'right' });
 
-    doc.setFillColor(255,255,255);
-    doc.roundedRect(pdfMargin, 62, 185, 22, 11, 11, 'F');
-    doc.setTextColor(rgb.r, rgb.g, rgb.b);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text(`STATUS: ${formatStatus(delivery.status, delivery)}`, pdfMargin + 12, 77);
+    doc.setTextColor(20, 20, 20);
+    doc.setFontSize(10);
 
-    doc.setTextColor(20,20,20);
-
-    const infoRows = [
+    let y = 120;
+    [
       ['Contratado', safe(delivery.userName)],
       ['Motorista', safe(delivery.driverName)],
       ['Placa', safe(delivery.vehiclePlate)],
@@ -828,115 +1087,18 @@ const MonitorEntregas = () => {
       ['Chegada', formatDT(delivery.horarioChegada)],
       ['Início Desova', formatDT(delivery.horarioInicioDesova)],
       ['Fim Desova', formatDT(delivery.horarioFimDesova)],
-    ];
-
-    if (!useFallback) {
-      try {
-        doc.autoTable({
-          startY: 115,
-          head: [['Campo', 'Valor']],
-          body: infoRows,
-          theme: 'grid',
-          styles: { font: 'helvetica', fontSize: 10, cellPadding: 6 },
-          headStyles: { fillColor: [rgb.r, rgb.g, rgb.b], textColor: [255,255,255] },
-          columnStyles: { 0: { cellWidth: 160 }, 1: { cellWidth: pageW - pdfMargin*2 - 160 } },
-          margin: { left: pdfMargin, right: pdfMargin },
-        });
-
-        const flow = getFlowHistory(delivery);
-        const flowRows = flow.length > 0
-          ? flow.map(ev => [ev.label, formatDT(ev.date)])
-          : [['Sem eventos registrados', '—']];
-
-        doc.autoTable({
-          startY: doc.lastAutoTable.finalY + 14,
-          head: [['Histórico do Fluxo', 'Data/Hora']],
-          body: flowRows,
-          theme: 'grid',
-          styles: { font: 'helvetica', fontSize: 10, cellPadding: 6 },
-          headStyles: { fillColor: [34, 36, 58], textColor: [255,255,255] },
-          margin: { left: pdfMargin, right: pdfMargin },
-        });
-      } catch (err) {
-        console.error('autoTable render failed, falling back to text PDF', err);
-        useFallback = true;
-      }
-    }
-
-    const labels = getLabelsForDelivery(delivery);
-    const docs = delivery.documents || {};
-
-    const checklistItems = [
-      { key:'retiradaCheio',  label: labels.retiradaCheio || 'Retirada Cheio' },
-      { key:'canhotCTE',      label: labels.canhotCTE || 'CTE' },
-      { key:'diarioBordo',    label: labels.diarioBordo || 'Diário de Bordo' },
-      { key:'canhotNF',       label: labels.canhotNF || 'NF' },
-      { key:'devolucaoVazio', label: labels.devolucaoVazio || 'Devolução Vazio' },
-      { key:'chegadaCliente', label: 'Foto: Chegada no Cliente' },
-      { key:'inicioDesova',   label: 'Foto: Início da Desova' },
-      { key:'fimDesova',      label: 'Foto: Finalização da Desova' },
-    ].map(it => {
-      const files = getDocumentUrlsArray(docs[it.key]);
-      return [
-        it.label,
-        files.length > 0 ? `OK (${files.length})` : 'Pendente'
-      ];
+    ].forEach(([k, v]) => {
+      doc.text(`${k}: ${v}`, pdfMargin, y);
+      y += 16;
     });
-
-    if (!useFallback) {
-      try {
-        doc.autoTable({
-          startY: doc.lastAutoTable.finalY + 14,
-          head: [['Documentos / Fotos', 'Situação']],
-          body: checklistItems,
-          theme: 'grid',
-          styles: { font: 'helvetica', fontSize: 10, cellPadding: 6 },
-          headStyles: { fillColor: [88, 28, 135], textColor: [255,255,255] },
-          margin: { left: pdfMargin, right: pdfMargin },
-          didParseCell: (data) => {
-            if (data.section === 'body' && data.column.index === 1) {
-              const v = String(data.cell.raw || '');
-              if (v.startsWith('OK')) data.cell.styles.textColor = [16,185,129];
-              if (v === 'Pendente') data.cell.styles.textColor = [239,68,68];
-            }
-          }
-        });
-      } catch (err) {
-        console.error('autoTable checklist render failed, falling back to text PDF', err);
-        useFallback = true;
-      }
-    }
-
-    const obs =
-      delivery.observations ||
-      delivery.observacoes ||
-      delivery.documentsJustification ||
-      delivery.submissionObservation ||
-      '';
-
-    const obsText = String(obs || '').trim();
-
-    if (obsText) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      const y = doc.lastAutoTable.finalY + 18;
-      doc.text('Observações', pdfMargin, y);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      const lines = doc.splitTextToSize(obsText, pageW - pdfMargin*2);
-      doc.text(lines, pdfMargin, y + 16);
-    }
 
     const footerY = pageH - 42;
     doc.setDrawColor(230);
     doc.line(pdfMargin, footerY - 14, pageW - pdfMargin, footerY - 14);
-
-    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(90);
     doc.text('Este comprovante foi gerado automaticamente pela Torre de Controle.', pdfMargin, footerY);
-    doc.text(`ID interno: ${delivery._id || '—'}  •  Criado em: ${formatDT(delivery.createdAt)}`, pdfMargin, footerY + 14);
+    doc.text(`ID interno: ${delivery._id || '—'} • Criado em: ${formatDT(delivery.createdAt)}`, pdfMargin, footerY + 14);
 
     const fileName = `Comprovante_Entrega_${delivery.deliveryNumber || delivery._id || 'sem_numero'}.pdf`;
     const blob = doc.output('blob');
@@ -965,47 +1127,56 @@ const MonitorEntregas = () => {
   const loadDeliveries = useCallback(async () => {
     try {
       setLoading(true);
+
       let backendFilters = { ...filters };
       if (filters.status && filters.status !== 'all') {
         const bs = statusMapToBackend[filters.status];
         if (bs) backendFilters.status = bs[0];
       }
+
       let periodDate = '';
       if (statsPeriod && statsPeriod !== 'general') {
-        const today = new Date(); today.setHours(0,0,0,0);
-        if (statsPeriod === 'yesterday') today.setDate(today.getDate()-1);
-        if (statsPeriod === 'tomorrow')  today.setDate(today.getDate()+1);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (statsPeriod === 'yesterday') today.setDate(today.getDate() - 1);
+        if (statsPeriod === 'tomorrow') today.setDate(today.getDate() + 1);
         periodDate = today.toLocaleDateString('pt-BR');
       }
+
       const response = await adminService.getDeliveries(backendFilters, statsPeriod, periodDate);
-      const data = response.data.deliveries || [];
-      const normalized = data.map(d => {
+      const data = response?.data?.deliveries || [];
+
+      const normalized = data.map((d) => {
         if (d.status === 'ENTREGUE_COM_PENDENCIA_CANHOTO') d.status = 'FINALIZADO';
         return d;
       });
+
       setDeliveries(normalized);
 
       const sc = {};
-      normalized.forEach(d => { const s = normalizeKey(d.status)||'UNKNOWN'; sc[s]=(sc[s]||0)+1; });
-      const drivers = new Set(normalized.map(d => d.driverName).filter(Boolean));
-      setStats({ total:normalized.length, statusCounts:sc, byDriver:drivers.size });
+      normalized.forEach((d) => {
+        const s = normalizeKey(d.status) || 'UNKNOWN';
+        sc[s] = (sc[s] || 0) + 1;
+      });
 
-      setToast({ message:`${data.length} entregas carregadas`, type:'success' });
-      setTimeout(() => setToast(null), 3000);
+      const drivers = new Set(normalized.map((d) => d.driverName).filter(Boolean));
+      setStats({ total: normalized.length, statusCounts: sc, byDriver: drivers.size });
     } catch (err) {
       if (err?.response?.status === 401) {
-        setToast({ message:'Sessão expirada. Faça login novamente.', type:'error' });
-        setTimeout(() => { window.location.href='/login'; }, 1200);
+        setToast({ message: 'Sessão expirada. Faça login novamente.', type: 'error' });
+        setTimeout(() => { window.location.href = '/login'; }, 1200);
       } else {
-        setToast({ message:'Erro ao carregar entregas.', type:'error' });
+        setToast({ message: 'Erro ao carregar entregas.', type: 'error' });
       }
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }, [filters, statsPeriod]);
 
   useEffect(() => {
     loadDeliveries();
     if (autoRefresh) {
-      const t = setInterval(loadDeliveries, refreshInterval*1000);
+      const t = setInterval(loadDeliveries, refreshInterval * 1000);
       return () => clearInterval(t);
     }
   }, [loadDeliveries, autoRefresh, refreshInterval]);
@@ -1029,43 +1200,45 @@ const MonitorEntregas = () => {
   useEffect(() => {
     let r = [...deliveries];
 
-    if (statsPeriod==='general' && filters.status!=='all') {
-      r = r.filter(d => {
-        if (filters.status==='OPERACAO_FINALIZADA') return d.status==='ENTREGUE'||d.status==='submitted'||d.status==='FINALIZADO';
-        if (filters.status==='A CAMINHO DO CLIENTE') return d.status==='pending'||d.status==='PENDING';
-        if (filters.status==='DOCUMENTOS_ENTREGUES') return d.status==='FINALIZADO' && allModalDocsComplete(d);
-        if (filters.status==='FINALIZADO') return d.status==='FINALIZADO' && !allModalDocsComplete(d);
-        return d.status===filters.status;
+    if (statsPeriod === 'general' && filters.status !== 'all') {
+      r = r.filter((d) => {
+        if (filters.status === 'OPERACAO_FINALIZADA') return d.status === 'ENTREGUE' || d.status === 'submitted' || d.status === 'FINALIZADO';
+        if (filters.status === 'A CAMINHO DO CLIENTE') return d.status === 'pending' || d.status === 'PENDING';
+        if (filters.status === 'DOCUMENTOS_ENTREGUES') return d.status === 'FINALIZADO' && allModalDocsComplete(d);
+        if (filters.status === 'FINALIZADO') return d.status === 'FINALIZADO' && !allModalDocsComplete(d);
+        return d.status === filters.status;
       });
     }
 
     if (filters.searchTerm.trim()) {
       const q = filters.searchTerm.toLowerCase();
-      r = r.filter(d =>
-        [d.deliveryNumber,d.driverName,d.userName,d.recebedor,d.vehiclePlate]
-          .some(v => (v||'').toLowerCase().includes(q))
+      r = r.filter((d) =>
+        [d.deliveryNumber, d.driverName, d.userName, d.recebedor, d.vehiclePlate]
+          .some((v) => String(v || '').toLowerCase().includes(q))
       );
     }
 
-    const pad = v => String(v).padStart(2,'0');
+    const pad = (v) => String(v).padStart(2, '0');
     if (filters.startDate) {
       const sdStr = filters.startDate;
-      r = r.filter(d => {
+      r = r.filter((d) => {
         if (!d.dataAgendamento) return false;
         const dt = new Date(d.dataAgendamento);
-        const dStr = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+        const dStr = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
         return dStr >= sdStr;
       });
     }
+
     if (filters.endDate) {
       const edStr = filters.endDate;
-      r = r.filter(d => {
+      r = r.filter((d) => {
         if (!d.dataAgendamento) return false;
         const dt = new Date(d.dataAgendamento);
-        const dStr = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+        const dStr = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
         return dStr <= edStr;
       });
     }
+
     setFilteredDeliveries(r);
   }, [deliveries, filters, statsPeriod]);
 
@@ -1073,27 +1246,25 @@ const MonitorEntregas = () => {
     if (filteredDeliveries.length === 0) return;
 
     const capturedPositions = {};
-    filteredDeliveries.forEach(d => {
+    filteredDeliveries.forEach((d) => {
       const el = rowRefs.current[d._id];
       if (el) capturedPositions[d._id] = el.getBoundingClientRect().top;
     });
 
     const updates = {};
-    filteredDeliveries.forEach(d => {
+    filteredDeliveries.forEach((d) => {
       const prev = prevStatusRef.current[d._id];
-      if (prev !== undefined && prev !== d.status) {
-        updates[d._id] = Date.now();
-      }
+      if (prev !== undefined && prev !== d.status) updates[d._id] = Date.now();
       prevStatusRef.current[d._id] = d.status;
     });
 
     if (Object.keys(updates).length > 0) {
       prevPositions.current = capturedPositions;
-      setRecentlyUpdated(prev => ({ ...prev, ...updates }));
+      setRecentlyUpdated((prev) => ({ ...prev, ...updates }));
       setTimeout(() => {
-        setRecentlyUpdated(prev => {
+        setRecentlyUpdated((prev) => {
           const next = { ...prev };
-          Object.keys(updates).forEach(id => delete next[id]);
+          Object.keys(updates).forEach((id) => delete next[id]);
           return next;
         });
       }, RISE_WINDOW + 500);
@@ -1108,15 +1279,15 @@ const MonitorEntregas = () => {
       const aActive = aT && (now - aT) < RISE_WINDOW;
       const bActive = bT && (now - bT) < RISE_WINDOW;
       if (aActive && !bActive) return -1;
-      if (!aActive && bActive) return  1;
-      if (aActive && bActive)  return bT - aT;
+      if (!aActive && bActive) return 1;
+      if (aActive && bActive) return bT - aT;
       return 0;
     });
   }, [filteredDeliveries, recentlyUpdated]);
 
   useLayoutEffect(() => {
     if (!prevPositions.current || Object.keys(prevPositions.current).length === 0) return;
-    displayList.forEach(d => {
+    displayList.forEach((d) => {
       const el = rowRefs.current[d._id];
       if (!el) return;
       const oldTop = prevPositions.current[d._id];
@@ -1131,69 +1302,77 @@ const MonitorEntregas = () => {
 
   const handleDownload = async (id, type) => {
     try {
-      const delivery = deliveries.find(d => d._id === id);
+      const delivery = deliveries.find((d) => d._id === id);
       const docEntry = delivery?.documents?.[type];
       if (docEntry) {
         const urls = getDocumentUrlsArray(docEntry);
         if (urls.length > 0) {
           urls.forEach((url, i) => {
-            const a = document.createElement('a'); a.href = url;
-            a.setAttribute('download', `${delivery.deliveryNumber||'doc'}_${type}_${i+1}`);
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            const a = document.createElement('a');
+            a.href = url;
+            a.setAttribute('download', `${delivery.deliveryNumber || 'doc'}_${type}_${i + 1}`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
           });
-          setToast({ message:'Documento(s) baixado(s)', type:'success' });
+          setToast({ message: 'Documento(s) baixado(s)', type: 'success' });
           return;
         }
       }
+
       const res = await adminService.downloadDocument(id, type);
-      const contentType = res.headers?.['content-type']||'';
-      const ext = contentType.includes('pdf')?'pdf':contentType.includes('jpeg')||contentType.includes('jpg')?'jpg':contentType.includes('png')?'png':'bin';
-      const blob = new Blob([res.data],{type:contentType||'application/octet-stream'});
+      const contentType = res.headers?.['content-type'] || '';
+      const ext = contentType.includes('pdf') ? 'pdf' : contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpg' : contentType.includes('png') ? 'png' : 'bin';
+      const blob = new Blob([res.data], { type: contentType || 'application/octet-stream' });
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href=url;
-      a.setAttribute('download',`${deliveries.find(d=>d._id===id)?.deliveryNumber||'doc'}_${type}.${ext}`);
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      const a = document.createElement('a');
+      a.href = url;
+      a.setAttribute('download', `${deliveries.find((d) => d._id === id)?.deliveryNumber || 'doc'}_${type}.${ext}`);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-      setToast({ message:'Documento baixado', type:'success' });
+      setToast({ message: 'Documento baixado', type: 'success' });
     } catch (e) {
-      setToast({ message:'Erro ao baixar: '+(e.response?.data?.message||e.message), type:'error' });
+      setToast({ message: 'Erro ao baixar: ' + (e.response?.data?.message || e.message), type: 'error' });
     }
   };
 
   const handleDownloadAll = async (id) => {
     try {
       const res = await adminService.downloadAllDocuments(id);
-      const url = window.URL.createObjectURL(new Blob([res.data],{type:'application/zip'}));
-      const a = document.createElement('a'); a.href=url;
-      a.setAttribute('download',`${deliveries.find(d=>d._id===id)?.deliveryNumber||'documents'}.zip`);
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/zip' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.setAttribute('download', `${deliveries.find((d) => d._id === id)?.deliveryNumber || 'documents'}.zip`);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-      setToast({ message:'ZIP baixado', type:'success' });
-    } catch (e) { setToast({ message:'Erro ao baixar ZIP: '+(e.response?.data?.message||e.message), type:'error' }); }
+      setToast({ message: 'ZIP baixado', type: 'success' });
+    } catch (e) {
+      setToast({ message: 'Erro ao baixar ZIP: ' + (e.response?.data?.message || e.message), type: 'error' });
+    }
   };
 
   const handleShareDelivery = async () => {
     if (!selectedDelivery) return;
     try {
-      setToast({ type:'success', message:'Gerando comprovante…' });
-
+      setToast({ type: 'success', message: 'Gerando comprovante…' });
       const { blob, fileName } = await generateDeliveryReceiptPdf(selectedDelivery);
-
       const title = `Comprovante • Entrega #${selectedDelivery.deliveryNumber || ''}`.trim();
       const text = `Segue comprovante da entrega #${selectedDelivery.deliveryNumber || '—'}.`;
-
       const result = await shareOrDownloadPdf({ blob, fileName, title, text });
 
       setToast({
-        type:'success',
+        type: 'success',
         message: result.mode === 'share'
           ? 'Comprovante pronto para compartilhar'
           : 'Comprovante baixado (seu dispositivo não suporta compartilhamento de arquivo)'
       });
       setTimeout(() => setToast(null), 3500);
     } catch (err) {
-      console.error('handleShareDelivery error', err);
-      setToast({ type:'error', message:'Falha ao gerar/compartilhar PDF: ' + (err?.message || 'erro desconhecido') });
+      setToast({ type: 'error', message: 'Falha ao gerar/compartilhar PDF: ' + (err?.message || 'erro desconhecido') });
       setTimeout(() => setToast(null), 4500);
     }
   };
@@ -1202,48 +1381,63 @@ const MonitorEntregas = () => {
     if (!window.confirm('Deletar esta entrega? Ação irreversível.')) return;
     try {
       await adminService.deleteDelivery(id);
-      setToast({ message:'Entrega deletada', type:'success' });
-      setSelectedDelivery(null); loadDeliveries();
-    } catch { setToast({ message:'Erro ao deletar', type:'error' }); }
+      setToast({ message: 'Entrega deletada', type: 'success' });
+      setSelectedDelivery(null);
+      loadDeliveries();
+    } catch {
+      setToast({ message: 'Erro ao deletar', type: 'error' });
+    }
   };
 
   const handleEditStart = (d) => {
-    if (isGeoMar()) { setToast({ type:'error', message:'Modo Visualização: sem permissão de edição' }); return; }
+    if (isGeoMar()) {
+      setToast({ type: 'error', message: 'Modo Visualização: sem permissão de edição' });
+      return;
+    }
+
     setEditingDelivery(d._id);
     setEditForm({
-      deliveryNumber: d.deliveryNumber||'', userName: d.userName||'',
-      driverName: d.driverName||'', vehiclePlate: d.vehiclePlate||'',
-      recebedor: d.recebedor||'', status: d.status||'',
-      dataAgendamento: d.dataAgendamento?.slice(0,16)||'',
-      horarioDevolucaoVazio: d.horarioDevolucaoVazio?.slice(0,16) ||
-        (d.observations && d.observations.includes('(CONTAINER_VAZIO_DEVOLVIDO)')
-          ? (new Date((d.observations.match(/\[(.*?)\]/)||[])[1])).toISOString().slice(0,16)
-          : ''),
-      horarioChegada: d.horarioChegada?.slice(0,16)||'',
-      horarioInicioDesova: d.horarioInicioDesova?.slice(0,16)||'',
-      horarioFimDesova: d.horarioFimDesova?.slice(0,16)||'',
+      deliveryNumber: d.deliveryNumber || '',
+      userName: d.userName || '',
+      driverName: d.driverName || '',
+      vehiclePlate: d.vehiclePlate || '',
+      recebedor: d.recebedor || '',
+      status: d.status || '',
+      dataAgendamento: d.dataAgendamento?.slice(0, 16) || '',
+      horarioDevolucaoVazio: d.horarioDevolucaoVazio?.slice(0, 16) || '',
+      horarioChegada: d.horarioChegada?.slice(0, 16) || '',
+      horarioInicioDesova: d.horarioInicioDesova?.slice(0, 16) || '',
+      horarioFimDesova: d.horarioFimDesova?.slice(0, 16) || '',
       observations: removeProgramacaoInfo(d.observations)
     });
   };
 
   const handleEditSave = async () => {
-    if (!editForm.observations?.trim()) { setToast({ message:'Motivo da edição obrigatório', type:'error' }); return; }
-    const motivo = editForm.observations.replace(/Criada a partir da Programação [A-Z0-9]+/g,'').trim();
-    const prog   = (editForm.observations.match(/Criada a partir da Programação [A-Z0-9]+/)||[]).join(' ');
+    if (!editForm.observations?.trim()) {
+      setToast({ message: 'Motivo da edição obrigatório', type: 'error' });
+      return;
+    }
+
+    const motivo = editForm.observations.replace(/Criada a partir da Programação [A-Z0-9]+/g, '').trim();
+    const prog = (editForm.observations.match(/Criada a partir da Programação [A-Z0-9]+/) || []).join(' ');
     const payload = {
       ...editForm,
       observations: prog ? `${motivo}\n${prog}` : motivo,
-      editedBy: user?.name||user?.username||user?.email||'Desconhecido',
+      editedBy: user?.name || user?.username || user?.email || 'Desconhecido',
       editedAt: new Date().toISOString()
     };
+
     try {
       await adminService.updateDelivery(editingDelivery, payload);
-      setToast({ message:'Entrega atualizada', type:'success' });
+      setToast({ message: 'Entrega atualizada', type: 'success' });
       setEditingDelivery(null);
-      if (selectedDelivery && selectedDelivery._id === editingDelivery)
+      if (selectedDelivery && selectedDelivery._id === editingDelivery) {
         setSelectedDelivery({ ...selectedDelivery, ...editForm });
+      }
       loadDeliveries();
-    } catch { setToast({ message:'Erro ao atualizar', type:'error' }); }
+    } catch {
+      setToast({ message: 'Erro ao atualizar', type: 'error' });
+    }
   };
 
   const activeFilterCount = [
@@ -1254,7 +1448,6 @@ const MonitorEntregas = () => {
   ].filter(Boolean).length;
 
   const flowHistory = selectedDelivery ? getFlowHistory(selectedDelivery) : [];
-
   const HEADERS = [
     'Container', 'Contratado', 'Motorista', 'Recebedor',
     'Status', 'Progresso', 'DT Retirada', 'Agendamento',
@@ -1265,15 +1458,19 @@ const MonitorEntregas = () => {
   return (
     <div
       style={{ backgroundColor: themeConfig.bg, color: themeConfig.text }}
-      className={`min-h-screen font-sans transition-colors duration-300 ${theme==='light' ? 'theme-light' : ''}`}
+      className={`min-h-screen font-sans transition-colors duration-300 ${theme === 'light' ? 'theme-light' : ''}`}
     >
       <SettingsPanel
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        theme={theme} setTheme={setTheme}
-        autoRefresh={autoRefresh} setAutoRefresh={setAutoRefresh}
-        refreshInterval={refreshInterval} setRefreshInterval={setRefreshInterval}
-        filters={filters} setFilters={setFilters}
+        theme={theme}
+        setTheme={setTheme}
+        autoRefresh={autoRefresh}
+        setAutoRefresh={setAutoRefresh}
+        refreshInterval={refreshInterval}
+        setRefreshInterval={setRefreshInterval}
+        filters={filters}
+        setFilters={setFilters}
       />
 
       <header className={`sticky top-0 z-40 ${themeConfig.header} backdrop-blur-md border-b ${themeConfig.border}`}>
@@ -1290,7 +1487,7 @@ const MonitorEntregas = () => {
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-900/40">
               <MdDashboard className="text-white text-base" />
             </div>
-            <h1 className="text-base sm:text-lg font-black tracking-[0.15em] uppercase" style={{ color:themeConfig.text }}>
+            <h1 className="text-base sm:text-lg font-black tracking-[0.15em] uppercase" style={{ color: themeConfig.text }}>
               Torre de Controle
             </h1>
           </div>
@@ -1327,12 +1524,11 @@ const MonitorEntregas = () => {
           </button>
 
           <button
-            onClick={() => setSettingsOpen(v => !v)}
+            onClick={() => setSettingsOpen((v) => !v)}
             title="Configurações, Filtros & Tema"
-            className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition
-              ${settingsOpen ? 'bg-purple-600 text-white' : 'hover:bg-white/10 text-gray-400 hover:text-white'}`}
+            className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition ${settingsOpen ? 'bg-purple-600 text-white' : 'hover:bg-white/10 text-gray-400 hover:text-white'}`}
           >
-            <FaCog size={15} className={settingsOpen ? 'animate-spin' : ''} style={{ animationDuration:'3s' }} />
+            <FaCog size={15} className={settingsOpen ? 'animate-spin' : ''} style={{ animationDuration: '3s' }} />
             {activeFilterCount > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center">
                 {activeFilterCount}
@@ -1344,17 +1540,20 @@ const MonitorEntregas = () => {
 
       <main className="w-full px-3 sm:px-4 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         <div className="flex items-center gap-2 flex-wrap">
-          <Pill active={statsPeriod==='general'}   onClick={() => setStatsPeriod('general')}   color="indigo">
-            <MdDashboard className="text-xs" /> <span className="hidden sm:inline">Geral</span><span className="sm:hidden">Geral</span>
+          <Pill active={statsPeriod === 'general'} onClick={() => setStatsPeriod('general')} color="indigo">
+            <MdDashboard className="text-xs" /> <span>Geral</span>
           </Pill>
-          <Pill active={statsPeriod==='yesterday'} onClick={() => setStatsPeriod('yesterday')} color="gray">
-            <FaCalendarAlt className="text-xs" /> <span className="hidden sm:inline">Ontem</span><span className="sm:hidden">Ontem</span>
+
+          <Pill active={statsPeriod === 'yesterday'} onClick={() => setStatsPeriod('yesterday')} color="gray">
+            <FaCalendarAlt className="text-xs" /> <span>Ontem</span>
           </Pill>
-          <Pill active={statsPeriod==='today'}     onClick={() => setStatsPeriod('today')}     color="purple">
+
+          <Pill active={statsPeriod === 'today'} onClick={() => setStatsPeriod('today')} color="purple">
             <FaClock className="text-xs" /> Hoje
           </Pill>
-          <Pill active={statsPeriod==='tomorrow'}  onClick={() => setStatsPeriod('tomorrow')}  color="blue">
-            <FaCalendarAlt className="text-xs" /> <span className="hidden sm:inline">Amanhã</span><span className="sm:hidden">Amanhã</span>
+
+          <Pill active={statsPeriod === 'tomorrow'} onClick={() => setStatsPeriod('tomorrow')} color="blue">
+            <FaCalendarAlt className="text-xs" /> <span>Amanhã</span>
           </Pill>
 
           {activeFilterCount > 0 && (
@@ -1372,7 +1571,25 @@ const MonitorEntregas = () => {
           </div>
         </div>
 
-        <KanbanProcessosPanel toastSetter={setToast} />
+        {/* KANBAN NO LUGAR DOS CARDS */}
+        <div>
+          <SectionTitle sub={`${STATUS_COLUMNS.length} colunas do processo aplicadas dentro do Monitor de Entregas`}>
+            Board de Processos
+          </SectionTitle>
+
+          <div className="overflow-x-auto pb-4">
+            <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
+              {STATUS_COLUMNS.map((column) => (
+                <DeliveryKanbanColumn
+                  key={column.key}
+                  column={column}
+                  deliveries={displayList.filter(column.filter)}
+                  onOpen={setSelectedDelivery}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
 
         {displayList.length === 0 ? (
           <div className="bg-white/5 rounded-2xl border border-white/10 p-12 sm:p-16 text-center">
@@ -1382,8 +1599,12 @@ const MonitorEntregas = () => {
           </div>
         ) : (
           <div>
+            <SectionTitle sub="Tabela operacional mantida abaixo do Kanban">
+              Monitor Tático
+            </SectionTitle>
+
             <div className="md:hidden space-y-3">
-              {displayList.map(d => (
+              {displayList.map((d) => (
                 <MobileDeliveryCard
                   key={d._id}
                   d={d}
@@ -1408,8 +1629,7 @@ const MonitorEntregas = () => {
                     {HEADERS.map((col, ci) => (
                       <div
                         key={col}
-                        className={`${ci >= 12 ? 'px-1 py-3.5' : 'px-3 py-3.5'} flex items-center min-w-0 select-none
-                          ${ci >= 4 ? 'justify-center' : ''} ${ci === 12 ? 'text-amber-500' : ''}`}
+                        className={`${ci >= 12 ? 'px-1 py-3.5' : 'px-3 py-3.5'} flex items-center min-w-0 select-none ${ci >= 4 ? 'justify-center' : ''} ${ci === 12 ? 'text-amber-500' : ''}`}
                       >
                         {col}
                       </div>
@@ -1418,25 +1638,19 @@ const MonitorEntregas = () => {
 
                   <div className="relative">
                     {displayList.map((d, i) => {
-                      const cliTime    = calculateCliTime(d, currentTime);
-                      const docStatus  = getDocumentsStatus(d);
+                      const cliTime = calculateCliTime(d, currentTime);
+                      const docStatus = getDocumentsStatus(d);
                       const isComplete = docStatus.includes('COMPLETO');
-                      const now        = Date.now();
-                      const updatedAt  = recentlyUpdated[d._id];
-                      const isRising   = updatedAt && (now - updatedAt) < 900;
-                      const isGlowing  = updatedAt && (now - updatedAt) >= 900 && (now - updatedAt) < RISE_WINDOW;
+                      const now = Date.now();
+                      const updatedAt = recentlyUpdated[d._id];
+                      const isRising = updatedAt && (now - updatedAt) < 900;
+                      const isGlowing = updatedAt && (now - updatedAt) >= 900 && (now - updatedAt) < RISE_WINDOW;
 
                       return (
                         <div
                           key={d._id}
-                          ref={el => { rowRefs.current[d._id] = el; }}
-                          className={`
-                            grid text-xs border-b border-white/[0.06] transition-colors
-                            hover:bg-white/[0.04]
-                            ${i % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.015]'}
-                            ${isRising  ? 'row-rise'  : ''}
-                            ${isGlowing ? 'row-glow'  : ''}
-                          `}
+                          ref={(el) => { rowRefs.current[d._id] = el; }}
+                          className={`grid text-xs border-b border-white/[0.06] transition-colors hover:bg-white/[0.04] ${i % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.015]'} ${isRising ? 'row-rise' : ''} ${isGlowing ? 'row-glow' : ''}`}
                           style={{ gridTemplateColumns: colTemplate, '--rise-from': '120px' }}
                         >
                           <div className="px-3 py-3 flex items-center gap-1.5">
@@ -1483,41 +1697,31 @@ const MonitorEntregas = () => {
 
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             <span className="text-sky-400 font-semibold text-[10px] tabular-nums cell-trunc">
-                              {d.containerMontadoAt
-                                ? new Date(d.containerMontadoAt).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
-                                : '—'}
+                              {d.containerMontadoAt ? new Date(d.containerMontadoAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                             </span>
                           </div>
 
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
-                              {d.dataAgendamento
-                                ? new Date(d.dataAgendamento).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
-                                : '—'}
+                              {d.dataAgendamento ? new Date(d.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                             </span>
                           </div>
 
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             <span className="text-gray-300 text-[10px] tabular-nums cell-trunc">
-                              {d.horarioChegada
-                                ? new Date(d.horarioChegada).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
-                                : '—'}
+                              {d.horarioChegada ? new Date(d.horarioChegada).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                             </span>
                           </div>
 
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
-                              {d.horarioInicioDesova
-                                ? new Date(d.horarioInicioDesova).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
-                                : '—'}
+                              {d.horarioInicioDesova ? new Date(d.horarioInicioDesova).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                             </span>
                           </div>
 
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
-                              {d.horarioFimDesova
-                                ? new Date(d.horarioFimDesova).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})
-                                : '—'}
+                              {d.horarioFimDesova ? new Date(d.horarioFimDesova).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                             </span>
                           </div>
 
@@ -1531,13 +1735,15 @@ const MonitorEntregas = () => {
                                 {cliTime.tempo}
                                 {cliTime.isActive && <span className="ml-0.5 animate-pulse">⏱</span>}
                               </span>
-                            ) : <span className="text-gray-600 text-[10px]">—</span>}
+                            ) : (
+                              <span className="text-gray-600 text-[10px]">—</span>
+                            )}
                           </div>
 
                           <div className="px-1 py-3 flex items-center justify-center min-w-0">
                             {isComplete
                               ? <FaCheckCircle className="text-emerald-400" title={docStatus} size={13} />
-                              : <FaTimesCircle className="text-red-400/70"  title={docStatus} size={13} />
+                              : <FaTimesCircle className="text-red-400/70" title={docStatus} size={13} />
                             }
                           </div>
 
@@ -1554,7 +1760,6 @@ const MonitorEntregas = () => {
                       );
                     })}
                   </div>
-
                 </div>
               </div>
             </div>
@@ -1562,7 +1767,15 @@ const MonitorEntregas = () => {
         )}
       </main>
 
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {toast && (
+        <Toast
+          toast={toast}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+          setToast={setToast}
+        />
+      )}
 
       {selectedDelivery && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
@@ -1572,10 +1785,13 @@ const MonitorEntregas = () => {
                 <p className="text-xs text-purple-300 uppercase tracking-widest font-semibold mb-0.5">Entrega</p>
                 <h2 className="text-xl font-black text-white tracking-wide">#{selectedDelivery.deliveryNumber}</h2>
               </div>
+
               <div className="flex items-center gap-2 sm:gap-3">
-                <Badge status={(selectedDelivery.status==='FINALIZADO' && allModalDocsComplete(selectedDelivery)) ? 'DOCUMENTOS ENTREGUES' : selectedDelivery.status} />
-                <button onClick={() => setSelectedDelivery(null)}
-                  className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
+                <Badge status={(selectedDelivery.status === 'FINALIZADO' && allModalDocsComplete(selectedDelivery)) ? 'DOCUMENTOS ENTREGUES' : selectedDelivery.status} />
+                <button
+                  onClick={() => setSelectedDelivery(null)}
+                  className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
+                >
                   <FaTimes />
                 </button>
               </div>
@@ -1585,29 +1801,14 @@ const MonitorEntregas = () => {
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 {[
                   ['Contratado', selectedDelivery.userName],
-                  ['Motorista', selectedDelivery.driverName||'—'],
-                  ['Data Devolução Container Vazio', (() => {
-                  if (selectedDelivery.horarioDevolucaoVazio) {
-                    return new Date(selectedDelivery.horarioDevolucaoVazio)
-                      .toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
-                  }
-                  if (selectedDelivery.observations && selectedDelivery.observations.includes('(CONTAINER_VAZIO_DEVOLVIDO)')) {
-                    const m = selectedDelivery.observations.match(/\[(.*?)\]/);
-                    if (m && m[1]) {
-                      const d = new Date(m[1]);
-                      if (!isNaN(d)) {
-                        return d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
-                      }
-                    }
-                  }
-                  return '—';
-                })()],
-                  ['Recebedor', selectedDelivery.recebedor||'—'],
-                  ['Agendamento', selectedDelivery.dataAgendamento ? new Date(selectedDelivery.dataAgendamento).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'],
-                  ['Montagem Container', selectedDelivery.containerMontadoAt ? new Date(selectedDelivery.containerMontadoAt).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'],
-                  ['Chegada', selectedDelivery.horarioChegada ? new Date(selectedDelivery.horarioChegada).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'],
-                  ['Início Desova', selectedDelivery.horarioInicioDesova ? new Date(selectedDelivery.horarioInicioDesova).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'],
-                  ['Fim Desova', selectedDelivery.horarioFimDesova ? new Date(selectedDelivery.horarioFimDesova).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—'],
+                  ['Motorista', selectedDelivery.driverName || '—'],
+                  ['Data Devolução Container Vazio', selectedDelivery.horarioDevolucaoVazio ? new Date(selectedDelivery.horarioDevolucaoVazio).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'],
+                  ['Recebedor', selectedDelivery.recebedor || '—'],
+                  ['Agendamento', selectedDelivery.dataAgendamento ? new Date(selectedDelivery.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'],
+                  ['Montagem Container', selectedDelivery.containerMontadoAt ? new Date(selectedDelivery.containerMontadoAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'],
+                  ['Chegada', selectedDelivery.horarioChegada ? new Date(selectedDelivery.horarioChegada).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'],
+                  ['Início Desova', selectedDelivery.horarioInicioDesova ? new Date(selectedDelivery.horarioInicioDesova).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'],
+                  ['Fim Desova', selectedDelivery.horarioFimDesova ? new Date(selectedDelivery.horarioFimDesova).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'],
                 ].map(([label, value]) => (
                   <div key={label} className="bg-white/5 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 border border-white/5">
                     <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-0.5">{label}</p>
@@ -1624,20 +1825,20 @@ const MonitorEntregas = () => {
                       <div key={idx} className="flex items-center gap-3">
                         <span className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />
                         <span className="text-sm text-gray-200 flex-1">{ev.label}</span>
-                        <span className="text-xs text-gray-500 font-mono">{new Date(ev.date).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</span>
+                        <span className="text-xs text-gray-500 font-mono">{new Date(ev.date).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {(selectedDelivery.observations||selectedDelivery.observacoes||selectedDelivery.documentsJustification||selectedDelivery.submissionObservation) && (
+              {(selectedDelivery.observations || selectedDelivery.observacoes || selectedDelivery.documentsJustification || selectedDelivery.submissionObservation) && (
                 <div className="space-y-3">
-                  {(selectedDelivery.observations||selectedDelivery.observacoes) && (
+                  {(selectedDelivery.observations || selectedDelivery.observacoes) && (
                     <div className="bg-blue-900/20 border border-blue-500/20 rounded-xl p-4">
                       <p className="text-[10px] text-blue-400 uppercase tracking-widest font-bold mb-2">📝 Observações</p>
                       {selectedDelivery.observations && <p className="text-sm text-gray-300 whitespace-pre-wrap">{selectedDelivery.observations}</p>}
-                      {selectedDelivery.observacoes   && <p className="text-sm text-gray-300 whitespace-pre-wrap mt-1">{selectedDelivery.observacoes}</p>}
+                      {selectedDelivery.observacoes && <p className="text-sm text-gray-300 whitespace-pre-wrap mt-1">{selectedDelivery.observacoes}</p>}
                     </div>
                   )}
                   {selectedDelivery.documentsJustification && (
@@ -1659,12 +1860,17 @@ const MonitorEntregas = () => {
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Documentos e Fotos</p>
                   <div className="flex gap-2">
-                    <button onClick={handleShareDelivery}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 hover:text-emerald-200 text-xs font-semibold rounded-lg transition border border-emerald-500/20">
+                    <button
+                      onClick={handleShareDelivery}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 hover:text-emerald-200 text-xs font-semibold rounded-lg transition border border-emerald-500/20"
+                    >
                       <FaShareAlt /> <span className="hidden sm:inline">Compartilhar</span>
                     </button>
-                    <button onClick={() => handleDownloadAll(selectedDelivery._id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-blue-200 text-xs font-semibold rounded-lg transition border border-blue-500/20">
+
+                    <button
+                      onClick={() => handleDownloadAll(selectedDelivery._id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-blue-200 text-xs font-semibold rounded-lg transition border border-blue-500/20"
+                    >
                       <FaDownload /> <span className="hidden sm:inline">Baixar Tudo</span>
                     </button>
                   </div>
@@ -1673,25 +1879,35 @@ const MonitorEntregas = () => {
                 <div className="space-y-2">
                   {(() => {
                     const labels = getLabelsForDelivery(selectedDelivery);
-                    const docRows = Object.keys(selectedDelivery.documents||{})
-                      .filter(k => !['chegadaCliente','inicioDesova','fimDesova'].includes(k))
-                      .map(k => {
+
+                    const docRows = Object.keys(selectedDelivery.documents || {})
+                      .filter((k) => !['chegadaCliente', 'inicioDesova', 'fimDesova'].includes(k))
+                      .map((k) => {
                         const present = !!selectedDelivery.documents[k];
                         return (
-                          <div key={k} className={`flex items-center justify-between px-3 sm:px-4 py-3 rounded-xl border ${present?'bg-white/5 border-white/10':'bg-white/[0.02] border-white/5 opacity-50'}`}>
+                          <div
+                            key={k}
+                            className={`flex items-center justify-between px-3 sm:px-4 py-3 rounded-xl border ${present ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/5 opacity-50'}`}
+                          >
                             <div className="flex items-center gap-3">
-                              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${present?'bg-emerald-400':'bg-gray-600'}`} />
-                              <span className="text-sm text-gray-300 font-semibold">{labels[k]||k}</span>
+                              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${present ? 'bg-emerald-400' : 'bg-gray-600'}`} />
+                              <span className="text-sm text-gray-300 font-semibold">{labels[k] || k}</span>
                               {!present && <span className="text-xs text-gray-600">Não anexado</span>}
                             </div>
+
                             {present && (
                               <div className="flex gap-2">
-                                <button onClick={() => setViewingDocument({ label:labels[k]||k, urls:getDocumentUrlsArray(selectedDelivery.documents[k]) })}
-                                  className="w-7 h-7 rounded-lg bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 flex items-center justify-center transition">
+                                <button
+                                  onClick={() => setViewingDocument({ label: labels[k] || k, urls: getDocumentUrlsArray(selectedDelivery.documents[k]) })}
+                                  className="w-7 h-7 rounded-lg bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 flex items-center justify-center transition"
+                                >
                                   <FaEye size={11} />
                                 </button>
-                                <button onClick={() => handleDownload(selectedDelivery._id, k)}
-                                  className="w-7 h-7 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 flex items-center justify-center transition">
+
+                                <button
+                                  onClick={() => handleDownload(selectedDelivery._id, k)}
+                                  className="w-7 h-7 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 flex items-center justify-center transition"
+                                >
                                   <FaDownload size={11} />
                                 </button>
                               </div>
@@ -1701,33 +1917,46 @@ const MonitorEntregas = () => {
                       });
 
                     const fotoFields = [
-                      { key:'chegadaCliente', label:'Chegada no Cliente' },
-                      { key:'inicioDesova',   label:'Início da Desova' },
-                      { key:'fimDesova',      label:'Finalização da Desova' }
+                      { key: 'chegadaCliente', label: 'Chegada no Cliente' },
+                      { key: 'inicioDesova', label: 'Início da Desova' },
+                      { key: 'fimDesova', label: 'Finalização da Desova' }
                     ];
-                    const fotosRows = fotoFields.map(f => {
-                      const files   = getDocumentUrlsArray(selectedDelivery.documents?.[f.key]);
+
+                    const fotosRows = fotoFields.map((f) => {
+                      const files = getDocumentUrlsArray(selectedDelivery.documents?.[f.key]);
                       const present = files.length > 0;
                       return (
-                        <div key={f.key} className={`flex items-center justify-between px-3 sm:px-4 py-3 rounded-xl border ${present?'bg-white/5 border-white/10':'bg-white/[0.02] border-white/5 opacity-50'}`}>
+                        <div
+                          key={f.key}
+                          className={`flex items-center justify-between px-3 sm:px-4 py-3 rounded-xl border ${present ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/5 opacity-50'}`}
+                        >
                           <div className="flex items-center gap-3">
-                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${present?'bg-sky-400':'bg-gray-600'}`} />
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${present ? 'bg-sky-400' : 'bg-gray-600'}`} />
                             <span className="text-sm text-gray-300 font-semibold">{f.label}</span>
                             {present && <span className="text-xs text-gray-500">{files.length} foto(s)</span>}
                             {!present && <span className="text-xs text-gray-600">Não anexado</span>}
                           </div>
+
                           {present && (
                             <div className="flex gap-2">
-                              <button onClick={() => setModalFotos({ label:f.label, files })}
-                                className="w-7 h-7 rounded-lg bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 flex items-center justify-center transition">
+                              <button
+                                onClick={() => setModalFotos({ label: f.label, files })}
+                                className="w-7 h-7 rounded-lg bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 flex items-center justify-center transition"
+                              >
                                 <FaEye size={11} />
                               </button>
-                              <button onClick={() => files.forEach((url,i) => {
-                                  const a=document.createElement('a'); a.href=url;
-                                  a.setAttribute('download',`${f.label.replace(/\s+/g,'_')}_${i+1}.jpg`);
-                                  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+
+                              <button
+                                onClick={() => files.forEach((url, i) => {
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.setAttribute('download', `${f.label.replace(/\s+/g, '_')}_${i + 1}.jpg`);
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  document.body.removeChild(a);
                                 })}
-                                className="w-7 h-7 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 flex items-center justify-center transition">
+                                className="w-7 h-7 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 flex items-center justify-center transition"
+                              >
                                 <FaDownload size={11} />
                               </button>
                             </div>
@@ -1742,18 +1971,23 @@ const MonitorEntregas = () => {
               </div>
 
               <p className="text-[10px] text-gray-600 text-right border-t border-white/5 pt-4">
-                Criado em {new Date(selectedDelivery.createdAt).toLocaleString('pt-BR')}
+                Criado em {selectedDelivery.createdAt ? new Date(selectedDelivery.createdAt).toLocaleString('pt-BR') : '—'}
               </p>
             </div>
 
             {canEdit() && (
               <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-t border-white/10 bg-white/[0.02] flex justify-end gap-3">
-                <button onClick={() => handleEditStart(selectedDelivery)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-blue-200 text-sm font-semibold transition border border-blue-500/20">
+                <button
+                  onClick={() => handleEditStart(selectedDelivery)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-blue-200 text-sm font-semibold transition border border-blue-500/20"
+                >
                   <FaEdit /> Editar
                 </button>
-                <button onClick={() => handleDelete(selectedDelivery._id)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-200 text-sm font-semibold transition border border-red-500/20">
+
+                <button
+                  onClick={() => handleDelete(selectedDelivery._id)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-200 text-sm font-semibold transition border border-red-500/20"
+                >
                   <FaTrash /> Excluir
                 </button>
               </div>
@@ -1767,15 +2001,18 @@ const MonitorEntregas = () => {
           <div className="bg-[#1a1a2e] rounded-2xl w-full max-w-lg border border-white/10 shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
               <h2 className="text-base font-bold text-white">{modalFotos.label}</h2>
-              <button onClick={() => setModalFotos(null)}
-                className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
+              <button
+                onClick={() => setModalFotos(null)}
+                className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
+              >
                 <FaTimes />
               </button>
             </div>
+
             <div className="p-5 max-h-[75vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
-                {modalFotos.files.map((url,i) => (
-                  <img key={i} src={url} alt={`Foto ${i+1}`} className="w-full h-44 object-cover rounded-xl shadow-lg" />
+                {modalFotos.files.map((url, i) => (
+                  <img key={i} src={url} alt={`Foto ${i + 1}`} className="w-full h-44 object-cover rounded-xl shadow-lg" />
                 ))}
               </div>
             </div>
@@ -1788,28 +2025,35 @@ const MonitorEntregas = () => {
           <div className="bg-[#1a1a2e] rounded-2xl w-full max-w-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 flex-shrink-0">
               <h2 className="text-base font-bold text-white">{viewingDocument.label}</h2>
-              <button onClick={() => setViewingDocument(null)}
-                className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
+              <button
+                onClick={() => setViewingDocument(null)}
+                className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
+              >
                 <FaTimes />
               </button>
             </div>
+
             <div className="overflow-y-auto flex-1 p-5 bg-gray-950/50">
               {viewingDocument.urls?.length > 0 ? (
                 <div className="space-y-4">
-                  {viewingDocument.urls.map((url,i) => (
+                  {viewingDocument.urls.map((url, i) => (
                     <div key={i} className="rounded-xl overflow-hidden">
-                      {url?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
-                        ? <img src={url} alt={`${viewingDocument.label} ${i+1}`} className="w-full h-auto rounded-xl" />
-                        : (
-                          <div className="p-8 text-center">
-                            <FaFilePdf className="mx-auto text-4xl text-red-400 mb-4" />
-                            <p className="text-gray-400 mb-4 text-sm">{viewingDocument.label}</p>
-                            <a href={url} target="_blank" rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition">
-                              <FaDownload /> Abrir documento
-                            </a>
-                          </div>
-                        )}
+                      {url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                        <img src={url} alt={`${viewingDocument.label} ${i + 1}`} className="w-full h-auto rounded-xl" />
+                      ) : (
+                        <div className="p-8 text-center">
+                          <FaFilePdf className="mx-auto text-4xl text-red-400 mb-4" />
+                          <p className="text-gray-400 mb-4 text-sm">{viewingDocument.label}</p>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition"
+                          >
+                            <FaDownload /> Abrir documento
+                          </a>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1829,8 +2073,10 @@ const MonitorEntregas = () => {
                 <p className="text-xs text-gray-500 uppercase tracking-widest mb-0.5">Edição</p>
                 <h2 className="text-lg font-black text-white">Editar Entrega</h2>
               </div>
-              <button onClick={() => setEditingDelivery(null)}
-                className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
+              <button
+                onClick={() => setEditingDelivery(null)}
+                className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
+              >
                 <FaTimes />
               </button>
             </div>
@@ -1845,27 +2091,34 @@ const MonitorEntregas = () => {
 
             <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
               {[
-                ['Número do Container','deliveryNumber','text',true],
-                ['Contratado','userName','text',false],
-                ['Motorista','driverName','text',false],
-                ['Recebedor','recebedor','text',false],
-              ].map(([label,field,type,upper]) => (
+                ['Número do Container', 'deliveryNumber', 'text', true],
+                ['Contratado', 'userName', 'text', false],
+                ['Motorista', 'driverName', 'text', false],
+                ['Recebedor', 'recebedor', 'text', false],
+              ].map(([label, field, type, upper]) => (
                 <div key={field}>
                   <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">{label}</label>
-                  <input type={type} disabled={isGeoMar()} value={editForm[field]}
-                    onChange={e => setEditForm({...editForm,[field]:upper?e.target.value.toUpperCase():e.target.value})}
-                    className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-40 disabled:cursor-not-allowed" />
+                  <input
+                    type={type}
+                    disabled={isGeoMar()}
+                    value={editForm[field]}
+                    onChange={(e) => setEditForm({ ...editForm, [field]: upper ? e.target.value.toUpperCase() : e.target.value })}
+                    className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                  />
                 </div>
               ))}
 
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">Status</label>
-                <select disabled={isGeoMar()} value={editForm.status}
-                  onChange={e => setEditForm({...editForm,status:e.target.value})}
-                  className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-40 disabled:cursor-not-allowed">
+                <select
+                  disabled={isGeoMar()}
+                  value={editForm.status}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
                   <option value="" className="bg-gray-900">Selecione…</option>
                   <option value="ENTREGUE" className="bg-gray-900">Operação Finalizada</option>
-                  <option value="pending"  className="bg-gray-900">A Caminho do Cliente</option>
+                  <option value="pending" className="bg-gray-900">A Caminho do Cliente</option>
                   <option value="AGUARDANDO_DESOVA" className="bg-gray-900">Aguardando Desova</option>
                   <option value="EM_DESOVA" className="bg-gray-900">Em Desova</option>
                   <option value="DESOVA_FINALIZADA" className="bg-gray-900">Desova Finalizada</option>
@@ -1875,17 +2128,21 @@ const MonitorEntregas = () => {
               </div>
 
               {[
-                ['Data Agendamento','dataAgendamento'],
-                ['Data Devolução Container Vazio','horarioDevolucaoVazio'],
-                ['Horário Chegada','horarioChegada'],
-                ['Início Desova','horarioInicioDesova'],
-                ['Fim Desova','horarioFimDesova'],
-              ].map(([label,field]) => (
+                ['Data Agendamento', 'dataAgendamento'],
+                ['Data Devolução Container Vazio', 'horarioDevolucaoVazio'],
+                ['Horário Chegada', 'horarioChegada'],
+                ['Início Desova', 'horarioInicioDesova'],
+                ['Fim Desova', 'horarioFimDesova'],
+              ].map(([label, field]) => (
                 <div key={field}>
                   <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">{label}</label>
-                  <input type="datetime-local" disabled={isGeoMar()} value={editForm[field]}
-                    onChange={e => setEditForm({...editForm,[field]:e.target.value})}
-                    className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-40 disabled:cursor-not-allowed" />
+                  <input
+                    type="datetime-local"
+                    disabled={isGeoMar()}
+                    value={editForm[field]}
+                    onChange={(e) => setEditForm({ ...editForm, [field]: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                  />
                 </div>
               ))}
 
@@ -1893,21 +2150,30 @@ const MonitorEntregas = () => {
                 <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">
                   Motivo da Edição <span className="text-red-400">*</span>
                 </label>
-                <textarea disabled={isGeoMar()} value={editForm.observations}
-                  onChange={e => setEditForm({...editForm,observations:e.target.value})}
+                <textarea
+                  disabled={isGeoMar()}
+                  value={editForm.observations}
+                  onChange={(e) => setEditForm({ ...editForm, observations: e.target.value })}
                   rows={3}
                   placeholder="Explique o motivo da edição (obrigatório)"
-                  className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none placeholder-gray-600 disabled:opacity-40 disabled:cursor-not-allowed" />
+                  className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none placeholder-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                />
               </div>
             </div>
 
             <div className="flex-shrink-0 px-6 py-4 border-t border-white/10 bg-white/[0.02] flex gap-3">
-              <button onClick={handleEditSave} disabled={isGeoMar()}
-                className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed">
+              <button
+                onClick={handleEditSave}
+                disabled={isGeoMar()}
+                className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
                 Salvar Alterações
               </button>
-              <button onClick={() => setEditingDelivery(null)}
-                className="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 font-bold text-sm transition">
+
+              <button
+                onClick={() => setEditingDelivery(null)}
+                className="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 font-bold text-sm transition"
+              >
                 Cancelar
               </button>
             </div>

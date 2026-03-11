@@ -314,10 +314,12 @@ const DeliveryKanbanCard = ({ delivery, column, onOpen }) => (
     <div className="pl-4 pr-3 pt-3 pb-3">
       <div className="flex items-start justify-between gap-2 mb-2.5">
         <span className="font-bold text-gray-800 text-sm leading-tight truncate">
-          #{delivery.deliveryNumber || '—'}
+          {/* Exibe processo CAB */}
+          {delivery.processoCAB || delivery.deliveryNumber || '—'}
         </span>
         <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${column.badge} border ${column.border}`}>
-          {delivery.vehiclePlate || 'S/ placa'}
+          {/* Exibe placa, buscando da base ycompany se disponível */}
+          {delivery.placaYcompany || delivery.vehiclePlate || 'S/ placa'}
         </span>
       </div>
 

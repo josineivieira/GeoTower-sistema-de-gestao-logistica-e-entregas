@@ -548,8 +548,10 @@ const MinhasEntregas = () => {
     try {
       const res = await deliveryService.getProgramacoesAssigned();
       setAllProgramacoes(res.data.programacoes || []);
+      setToast(null);
     } catch {
       setToast({ message: 'Erro ao carregar entregas programadas', type: 'error' });
+      setTimeout(() => setToast(null), 5000);
       setAllProgramacoes([]);
     } finally {
       setLoading(false);

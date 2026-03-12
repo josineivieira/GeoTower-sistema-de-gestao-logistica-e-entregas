@@ -349,8 +349,10 @@ const ProgramadasEntregas = () => {
         return true;
       });
       setProgramacoes(visibleProgramacoes);
+      setToast(null);
     } catch (err) {
       setToast({ message: 'Erro ao carregar entregas programadas', type: 'error' });
+      setTimeout(() => setToast(null), 5000);
     } finally {
       setLoading(false);
     }

@@ -53,8 +53,10 @@ export default function EntregasEmAndamento() {
         });
       
       setProgramacoes(filtered);
+      setToast(null);
     } catch (err) {
       setToast({ message: 'Erro ao carregar entregas em andamento', type: 'error' });
+      setTimeout(() => setToast(null), 5000);
     } finally {
       setLoading(false);
     }

@@ -1194,12 +1194,14 @@ const MonitorEntregas = () => {
 
       const drivers = new Set(normalized.map((d) => d.driverName).filter(Boolean));
       setStats({ total: normalized.length, statusCounts: sc, byDriver: drivers.size });
+      setToast(null);
     } catch (err) {
       if (err?.response?.status === 401) {
         setToast({ message: 'Sessão expirada. Faça login novamente.', type: 'error' });
         setTimeout(() => { window.location.href = '/login'; }, 1200);
       } else {
         setToast({ message: 'Erro ao carregar entregas.', type: 'error' });
+        setTimeout(() => setToast(null), 5000);
       }
     } finally {
       setLoading(false);
@@ -1507,7 +1509,7 @@ const MonitorEntregas = () => {
       />
 
       <header className={`sticky top-0 z-40 ${themeConfig.header} backdrop-blur-md border-b ${themeConfig.border}`}>
-        <div className="w-full px-4 lg:px-8 h-16 flex items-center gap-3">
+        <div className="w-full px-4 lg:px-8 h-16 flex flex-wrap items-center gap-2 sm:gap-3">
           <button
             onClick={() => navigate('/home')}
             className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-white transition flex-shrink-0"
@@ -1516,11 +1518,11 @@ const MonitorEntregas = () => {
             <span className="hidden sm:inline">Voltar</span>
           </button>
 
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-900/40">
               <MdDashboard className="text-white text-base" />
             </div>
-            <h1 className="text-base sm:text-lg font-black tracking-[0.15em] uppercase" style={{ color: themeConfig.text }}>
+            <h1 className="text-xs sm:text-base md:text-lg font-black tracking-[0.1em] sm:tracking-[0.15em] uppercase truncate" style={{ color: themeConfig.text, maxWidth: '150px' }}>
               Torre de Controle
             </h1>
           </div>

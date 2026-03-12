@@ -1,4 +1,3 @@
-
 import React, {
   useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect
 } from 'react';
@@ -154,7 +153,8 @@ const STATUS_CONFIG = {
     bg: 'bg-indigo-600', light: 'bg-indigo-50', text: 'text-indigo-700',
     border: 'border-indigo-300',
     badge: 'bg-indigo-100 text-indigo-800 border border-indigo-300',
-    icon: <FaCalendarAlt />, gradient: 'from-indigo-500 to-indigo-700',
+    icon: <FaCalendarAlt />,
+    gradient: 'from-indigo-500 to-indigo-700',
     ring: 'ring-indigo-400/30', dot: 'bg-indigo-500', hex: '#6366f1'
   },
   'CONTAINER MONTADO': {
@@ -162,7 +162,8 @@ const STATUS_CONFIG = {
     bg: 'bg-sky-600', light: 'bg-sky-50', text: 'text-sky-700',
     border: 'border-sky-300',
     badge: 'bg-sky-100 text-sky-800 border border-sky-300',
-    icon: <FaBox />, gradient: 'from-sky-500 to-sky-700',
+    icon: <FaBox />,
+    gradient: 'from-sky-500 to-sky-700',
     ring: 'ring-sky-400/30', dot: 'bg-sky-500', hex: '#0ea5e9'
   },
   'A CAMINHO DO CLIENTE': {
@@ -170,7 +171,8 @@ const STATUS_CONFIG = {
     bg: 'bg-amber-500', light: 'bg-amber-50', text: 'text-amber-700',
     border: 'border-amber-300',
     badge: 'bg-amber-100 text-amber-800 border border-amber-300',
-    icon: <FaTruck />, gradient: 'from-amber-400 to-amber-600',
+    icon: <FaTruck />,
+    gradient: 'from-amber-400 to-amber-600',
     ring: 'ring-amber-400/30', dot: 'bg-amber-500', hex: '#f59e0b'
   },
   'AGUARDANDO DESOVA': {
@@ -178,7 +180,8 @@ const STATUS_CONFIG = {
     bg: 'bg-orange-500', light: 'bg-orange-50', text: 'text-orange-700',
     border: 'border-orange-300',
     badge: 'bg-orange-100 text-orange-800 border border-orange-300',
-    icon: <FaExclamationTriangle />, gradient: 'from-orange-400 to-orange-600',
+    icon: <FaExclamationTriangle />,
+    gradient: 'from-orange-400 to-orange-600',
     ring: 'ring-orange-400/30', dot: 'bg-orange-500', hex: '#f97316'
   },
   'EM DESOVA': {
@@ -186,7 +189,8 @@ const STATUS_CONFIG = {
     bg: 'bg-violet-600', light: 'bg-violet-50', text: 'text-violet-700',
     border: 'border-violet-300',
     badge: 'bg-violet-100 text-violet-800 border border-violet-300',
-    icon: <FaDolly />, gradient: 'from-violet-500 to-violet-700',
+    icon: <FaDolly />,
+    gradient: 'from-violet-500 to-violet-700',
     ring: 'ring-violet-400/30', dot: 'bg-violet-500', hex: '#8b5cf6'
   },
   'ANEXANDO DOCUMENTOS FINAIS': {
@@ -194,7 +198,8 @@ const STATUS_CONFIG = {
     bg: 'bg-pink-600', light: 'bg-pink-50', text: 'text-pink-700',
     border: 'border-pink-300',
     badge: 'bg-pink-100 text-pink-800 border border-pink-300',
-    icon: <FaFilePdf />, gradient: 'from-pink-500 to-pink-700',
+    icon: <FaFilePdf />,
+    gradient: 'from-pink-500 to-pink-700',
     ring: 'ring-pink-400/30', dot: 'bg-pink-500', hex: '#ec4899'
   },
   ENTREGUE: {
@@ -202,7 +207,8 @@ const STATUS_CONFIG = {
     bg: 'bg-emerald-600', light: 'bg-emerald-50', text: 'text-emerald-700',
     border: 'border-emerald-300',
     badge: 'bg-emerald-100 text-emerald-800 border border-emerald-300',
-    icon: <FaCheckCircle />, gradient: 'from-emerald-500 to-emerald-700',
+    icon: <FaCheckCircle />,
+    gradient: 'from-emerald-500 to-emerald-700',
     ring: 'ring-emerald-400/30', dot: 'bg-emerald-500', hex: '#10b981'
   },
   CANCELADO: {
@@ -210,7 +216,8 @@ const STATUS_CONFIG = {
     bg: 'bg-gray-500', light: 'bg-gray-50', text: 'text-gray-600',
     border: 'border-gray-300',
     badge: 'bg-gray-100 text-gray-600 border border-gray-300',
-    icon: <FaTimesCircle />, gradient: 'from-gray-400 to-gray-600',
+    icon: <FaTimesCircle />,
+    gradient: 'from-gray-400 to-gray-600',
     ring: 'ring-gray-400/30', dot: 'bg-gray-500', hex: '#6b7280'
   }
 };
@@ -218,7 +225,7 @@ const STATUS_CONFIG = {
 const resolveConfig = (rawStatus) => {
   const key = normalizeKey(rawStatus);
   if (key === 'ENTREGUE' || key === 'SUBMITTED' || key === 'ENTREGUE COM PENDENCIA CANHOTO') {
-    return STATUS_CONFIG['ENTREGUE'];
+    return STATUS_CONFIG.ENTREGUE;
   }
   if (key === 'PENDING' || key === 'A CAMINHO DO CLIENTE') {
     return STATUS_CONFIG['A CAMINHO DO CLIENTE'];
@@ -252,7 +259,17 @@ const GLOBAL_STYLES = `
 .badge-pop { animation: badgePopIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 .monitor-table { grid-auto-rows: minmax(36px, auto); }
 .cell-trunc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.kanban-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.kanban-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.35); border-radius: 999px; }
+.kanban-scroll::-webkit-scrollbar-track { background: transparent; }
+
+@media (max-width: 640px) {
+  .monitor-table { grid-auto-rows: minmax(34px, auto); }
+}
 `;
+
+const KANBAN_GRID_TEMPLATE = 'repeat(auto-fit, minmax(180px, 1fr))';
 
 /* ─────────────────────────────────────────────────────────────
    SMALL COMPONENTS
@@ -261,23 +278,24 @@ const Badge = ({ status }) => {
   const cfg = resolveConfig(status);
   const label = cfg?.label || normalizeKey(status);
   const cls = cfg?.badge || 'bg-gray-100 text-gray-700 border border-gray-300';
+
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap ${cls}`}>
-      {cfg?.icon && <span className="text-[10px]">{cfg.icon}</span>}
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap ${cls}`}>
+      {cfg?.icon && <span className="text-[9px]">{cfg.icon}</span>}
       {label}
     </span>
   );
 };
 
 const SectionTitle = ({ children, sub }) => (
-  <div className="mb-4">
-    <h2 className="text-sm font-extrabold text-gray-400 uppercase tracking-[0.2em]">{children}</h2>
-    {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+  <div className="mb-3 sm:mb-4">
+    <h2 className="text-[11px] sm:text-xs font-extrabold text-gray-400 uppercase tracking-[0.22em]">{children}</h2>
+    {sub && <p className="text-[11px] text-gray-500 mt-1">{sub}</p>}
   </div>
 );
 
 const Pill = ({ active, onClick, children, color = 'purple' }) => {
-  const base = 'px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 border';
+  const base = 'px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-2 border';
   const on = {
     purple: 'bg-purple-600 text-white border-purple-700 shadow-md shadow-purple-200',
     indigo: 'bg-indigo-600 text-white border-indigo-700 shadow-md shadow-indigo-200',
@@ -285,6 +303,7 @@ const Pill = ({ active, onClick, children, color = 'purple' }) => {
     blue: 'bg-blue-600 text-white border-blue-700 shadow-md shadow-blue-200',
   };
   const off = 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20 hover:bg-white/10 hover:text-white';
+
   return (
     <button className={`${base} ${active ? on[color] : off}`} onClick={onClick}>
       {children}
@@ -293,7 +312,7 @@ const Pill = ({ active, onClick, children, color = 'purple' }) => {
 };
 
 /* ─────────────────────────────────────────────────────────────
-   KANBAN UI
+   KANBAN UI - COMPACTO E RESPONSIVO
 ───────────────────────────────────────────────────────────── */
 const formatBoardDate = (value) => {
   if (!value) return '—';
@@ -308,45 +327,45 @@ const DeliveryKanbanCard = ({ delivery, column, onOpen }) => (
   <button
     type="button"
     onClick={() => onOpen(delivery)}
-    className={`group relative w-full text-left bg-white rounded-xl border ${column.border} shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 overflow-hidden`}
+    className={`group relative w-full text-left bg-white rounded-lg border ${column.border} shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 overflow-hidden`}
   >
     <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${column.gradient}`} />
-    <div className="pl-4 pr-3 pt-3 pb-3">
-      <div className="flex items-start justify-between gap-2 mb-2.5">
-        <span className="font-bold text-gray-800 text-sm leading-tight truncate">
-          {/* Exibe processo CAB */}
+
+    <div className="pl-3 pr-2.5 pt-2.5 pb-2.5">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <span className="font-bold text-gray-800 text-[12px] leading-tight truncate">
           {delivery.processoCAB || delivery.deliveryNumber || '—'}
         </span>
-        <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${column.badge} border ${column.border}`}>
-          {/* Exibe placa, buscando da base ycompany se disponível */}
+
+        <span className={`shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${column.badge} border ${column.border} max-w-[72px] truncate text-center`}>
           {delivery.placaYcompany || delivery.vehiclePlate || 'S/ placa'}
         </span>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         {delivery.recebedor && (
-          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-            <FaBuilding className="text-gray-400 shrink-0" />
+          <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
+            <FaBuilding className="text-gray-400 shrink-0 text-[9px]" />
             <span className="truncate">{delivery.recebedor}</span>
           </div>
         )}
 
         {delivery.userName && (
-          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-            <FaBoxOpen className="text-gray-400 shrink-0" />
+          <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
+            <FaBoxOpen className="text-gray-400 shrink-0 text-[9px]" />
             <span className="truncate">{delivery.userName}</span>
           </div>
         )}
 
         {delivery.driverName && delivery.driverName !== '-' && (
-          <div className={`flex items-center gap-1.5 text-[11px] font-medium ${column.text}`}>
-            <FaUser className="shrink-0" />
+          <div className={`flex items-center gap-1.5 text-[10px] font-medium ${column.text}`}>
+            <FaUser className="shrink-0 text-[9px]" />
             <span className="truncate">{delivery.driverName}</span>
           </div>
         )}
 
-        <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
-          <FaCalendarAlt className="shrink-0" />
+        <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
+          <FaCalendarAlt className="shrink-0 text-[9px]" />
           <span className="truncate">{formatBoardDate(delivery.dataAgendamento)}</span>
         </div>
       </div>
@@ -356,19 +375,22 @@ const DeliveryKanbanCard = ({ delivery, column, onOpen }) => (
 
 const KanbanColumnHeader = ({ column, count }) => {
   const Icon = column.icon;
+
   return (
-    <div className={`px-4 py-3 ${column.lightBg} border-b ${column.border}`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${column.gradient} flex items-center justify-center shadow-sm`}>
-            <Icon className="text-white text-sm" />
+    <div className={`px-3 py-2.5 ${column.lightBg} border-b ${column.border}`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${column.gradient} flex items-center justify-center shadow-sm flex-shrink-0`}>
+            <Icon className="text-white text-[12px]" />
           </div>
-          <div>
-            <p className={`text-sm font-bold ${column.text} leading-tight`}>{column.title}</p>
-            <p className="text-[10px] text-gray-500 leading-tight">{column.description}</p>
+
+          <div className="min-w-0">
+            <p className={`text-[12px] font-bold ${column.text} leading-tight truncate`}>{column.title}</p>
+            <p className="text-[9px] text-gray-500 leading-tight truncate">{column.description}</p>
           </div>
         </div>
-        <span className={`min-w-[26px] h-6 px-1.5 rounded-full text-xs font-bold flex items-center justify-center bg-gradient-to-br ${column.gradient} text-white shadow-sm`}>
+
+        <span className={`min-w-[24px] h-5 px-1.5 rounded-full text-[10px] font-bold flex items-center justify-center bg-gradient-to-br ${column.gradient} text-white shadow-sm`}>
           {count}
         </span>
       </div>
@@ -378,17 +400,17 @@ const KanbanColumnHeader = ({ column, count }) => {
 
 const DeliveryKanbanColumn = ({ column, deliveries, onOpen }) => {
   const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? deliveries : deliveries.slice(0, 4);
+  const visible = expanded ? deliveries : deliveries.slice(0, 3);
 
   return (
-    <div className={`flex flex-col rounded-2xl border ${column.border} bg-white shadow-sm overflow-hidden min-w-[220px] max-w-[260px] flex-shrink-0`}>
+    <div className={`flex flex-col rounded-xl border ${column.border} bg-white shadow-sm overflow-hidden min-w-0 h-[310px] sm:h-[330px] lg:h-[345px]`}>
       <KanbanColumnHeader column={column} count={deliveries.length} />
 
-      <div className="flex-1 p-3 space-y-2.5 overflow-y-auto max-h-[430px]">
+      <div className="flex-1 p-2.5 space-y-2 overflow-y-auto kanban-scroll">
         {deliveries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-gray-300">
-            <column.icon className="text-3xl mb-2" />
-            <p className="text-xs font-medium">Nenhuma entrega</p>
+          <div className="flex flex-col items-center justify-center py-8 text-gray-300 h-full">
+            <column.icon className="text-2xl mb-2 opacity-70" />
+            <p className="text-[11px] font-medium">Nenhuma entrega</p>
           </div>
         ) : (
           <>
@@ -401,14 +423,14 @@ const DeliveryKanbanColumn = ({ column, deliveries, onOpen }) => {
               />
             ))}
 
-            {deliveries.length > 4 && (
+            {deliveries.length > 3 && (
               <button
                 type="button"
                 onClick={() => setExpanded(!expanded)}
-                className={`w-full text-xs font-semibold py-2 rounded-lg ${column.lightBg} ${column.text} border ${column.border} hover:opacity-80 transition-opacity flex items-center justify-center gap-1`}
+                className={`w-full text-[11px] font-semibold py-2 rounded-lg ${column.lightBg} ${column.text} border ${column.border} hover:opacity-80 transition-opacity flex items-center justify-center gap-1`}
               >
-                {expanded ? 'Ver menos' : `+${deliveries.length - 4} mais entregas`}
-                <FaChevronRight className={`transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
+                {expanded ? 'Ver menos' : `+${deliveries.length - 3} itens`}
+                <FaChevronRight className={`text-[10px] transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
               </button>
             )}
           </>
@@ -430,8 +452,9 @@ const getProgress = (delivery) => {
   const key = normalizeKey(delivery.status);
   const norm =
     key === 'ENTREGUE' || key === 'SUBMITTED' || key === 'ENTREGUE COM PENDENCIA CANHOTO' ? 'ENTREGUE'
-    : key === 'PENDING' || key === 'A CAMINHO DO CLIENTE' ? 'A CAMINHO DO CLIENTE'
-    : key;
+      : key === 'PENDING' || key === 'A CAMINHO DO CLIENTE' ? 'A CAMINHO DO CLIENTE'
+        : key;
+
   if (norm === 'CANCELADO' || !norm) return 0;
   const idx = progressStatuses.indexOf(norm);
   if (idx === -1) return 0;
@@ -440,16 +463,18 @@ const getProgress = (delivery) => {
 
 const ProgressDots = ({ delivery, allModalDocsComplete }) => {
   let p = getProgress(delivery);
+
   if (normalizeKey(delivery.status) === 'FINALIZADO') {
     p = allModalDocsComplete(delivery) ? 100 : 90;
   }
+
   const total = 7;
   const filled = Math.ceil((p / 100) * total);
   const colorDot =
-    p === 100 ? 'bg-emerald-500 shadow-sm shadow-emerald-400' :
-    p >= 66 ? 'bg-amber-400 shadow-sm shadow-amber-300' :
-    p >= 33 ? 'bg-indigo-500 shadow-sm shadow-indigo-300' :
-    'bg-gray-300';
+    p === 100 ? 'bg-emerald-500 shadow-sm shadow-emerald-400'
+      : p >= 66 ? 'bg-amber-400 shadow-sm shadow-amber-300'
+        : p >= 33 ? 'bg-indigo-500 shadow-sm shadow-indigo-300'
+          : 'bg-gray-300';
 
   return (
     <div className="flex items-center gap-1" title={`${p}%`}>
@@ -472,15 +497,40 @@ const ProgressDots = ({ delivery, allModalDocsComplete }) => {
 
 const PunctualityCell = ({ p }) => {
   const styles = {
-    ok: { bg: 'bg-emerald-500/15', border: 'border-emerald-500/40', text: 'text-emerald-300', dot: 'bg-emerald-400', ring: 'shadow-emerald-500/20' },
-    possible: { bg: 'bg-amber-500/15', border: 'border-amber-500/40', text: 'text-amber-300', dot: 'bg-amber-400', ring: 'shadow-amber-500/20' },
-    late: { bg: 'bg-red-500/15', border: 'border-red-500/40', text: 'text-red-300', dot: 'bg-red-400', ring: 'shadow-red-500/20' },
-    unknown: { bg: 'bg-gray-700/30', border: 'border-gray-600/30', text: 'text-gray-400', dot: 'bg-gray-500', ring: '' },
+    ok: {
+      bg: 'bg-emerald-500/15',
+      border: 'border-emerald-500/40',
+      text: 'text-emerald-300',
+      dot: 'bg-emerald-400',
+      ring: 'shadow-emerald-500/20'
+    },
+    possible: {
+      bg: 'bg-amber-500/15',
+      border: 'border-amber-500/40',
+      text: 'text-amber-300',
+      dot: 'bg-amber-400',
+      ring: 'shadow-amber-500/20'
+    },
+    late: {
+      bg: 'bg-red-500/15',
+      border: 'border-red-500/40',
+      text: 'text-red-300',
+      dot: 'bg-red-400',
+      ring: 'shadow-red-500/20'
+    },
+    unknown: {
+      bg: 'bg-gray-700/30',
+      border: 'border-gray-600/30',
+      text: 'text-gray-400',
+      dot: 'bg-gray-500',
+      ring: ''
+    },
   };
+
   const s = styles[p.type] || styles.unknown;
 
   return (
-    <div className="flex flex-col items-center gap-1 min-w-[100px]">
+    <div className="flex flex-col items-center gap-1 min-w-[96px]">
       <span className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-wide ${s.bg} ${s.border} ${s.text} shadow-md ${s.ring}`}>
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot} ${p.type === 'late' ? 'animate-pulse' : ''}`} />
         {p.label}
@@ -734,9 +784,9 @@ const MobileDeliveryCard = ({
       className={`relative rounded-2xl border p-4 space-y-3 transition-all ${isActive ? 'row-rise border-purple-500/60 bg-purple-900/10' : 'border-white/10 bg-white/[0.02]'}`}
       style={isActive ? { '--rise-from': '80px' } : {}}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="font-black text-purple-300 text-base">#{d.deliveryNumber}</span>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-black text-purple-300 text-base truncate">#{d.deliveryNumber}</span>
           {isActive && (
             <span className="badge-pop px-1.5 py-0.5 rounded-full bg-purple-600/80 text-white text-[9px] font-black">UP</span>
           )}
@@ -776,7 +826,7 @@ const MobileDeliveryCard = ({
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-1 border-t border-white/5">
+      <div className="flex items-center justify-between pt-1 border-t border-white/5 gap-2">
         <ProgressDots delivery={d} allModalDocsComplete={allModalDocsComplete} />
         <PunctualityCell p={punct} />
         <div className="flex items-center gap-2">
@@ -807,9 +857,18 @@ const MonitorEntregas = () => {
   const [refreshInterval, setRefreshInterval] = useState(30);
   const [editingDelivery, setEditingDelivery] = useState(null);
   const [editForm, setEditForm] = useState({
-    deliveryNumber: '', userName: '', driverName: '', vehiclePlate: '',
-    recebedor: '', status: '', dataAgendamento: '', horarioDevolucaoVazio: '',
-    horarioChegada: '', horarioInicioDesova: '', horarioFimDesova: '', observations: ''
+    deliveryNumber: '',
+    userName: '',
+    driverName: '',
+    vehiclePlate: '',
+    recebedor: '',
+    status: '',
+    dataAgendamento: '',
+    horarioDevolucaoVazio: '',
+    horarioChegada: '',
+    horarioInicioDesova: '',
+    horarioFimDesova: '',
+    observations: ''
   });
   const [filters, setFilters] = useState({ status: 'all', searchTerm: '', startDate: '', endDate: '' });
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -912,6 +971,7 @@ const MonitorEntregas = () => {
     if (!d) return { label: '-', type: 'unknown', eta: null, lateBy: null };
     const schedStr = d.dataAgendamento || d.data;
     if (!schedStr) return { label: 'Sem agendamento', type: 'unknown', eta: null, lateBy: null };
+
     const scheduled = new Date(schedStr);
     const arrival = d.horarioChegada ? new Date(d.horarioChegada) : null;
     const start = d.createdAt ? new Date(d.createdAt) : null;
@@ -929,13 +989,21 @@ const MonitorEntregas = () => {
       return {
         label: arrival.getTime() <= scheduled.getTime() ? 'Pontual' : 'Atrasado',
         type: arrival.getTime() <= scheduled.getTime() ? 'ok' : 'late',
-        eta: 0, lateBy
+        eta: 0,
+        lateBy
       };
     }
 
     const eta = computeEta();
-    if (now.getTime() >= scheduled.getTime()) return { label: 'Atrasado', type: 'late', eta: eta || 0, lateBy: null };
-    if (!start) return { label: 'Sem início', type: 'unknown', eta, lateBy: null };
+
+    if (now.getTime() >= scheduled.getTime()) {
+      return { label: 'Atrasado', type: 'late', eta: eta || 0, lateBy: null };
+    }
+
+    if (!start) {
+      return { label: 'Sem início', type: 'unknown', eta, lateBy: null };
+    }
+
     const timeLeft = Math.round((scheduled - now) / 60000);
     if (timeLeft <= travel) return { label: 'Possível atraso', type: 'possible', eta, lateBy: null };
     return { label: 'No prazo', type: 'ok', eta, lateBy: null };
@@ -944,6 +1012,7 @@ const MonitorEntregas = () => {
   const getDocumentUrlsArray = (docData) => {
     if (!docData) return [];
     if (typeof docData === 'string') return [docData];
+
     if (Array.isArray(docData)) {
       return docData.map((i) => {
         if (typeof i === 'string') return i;
@@ -953,9 +1022,11 @@ const MonitorEntregas = () => {
         return null;
       }).filter(Boolean);
     }
+
     if (typeof docData === 'object') {
       return [docData.url || (docData.path && `/uploads/${docData.path}`) || docData.link || docData.webViewLink].filter(Boolean);
     }
+
     return [];
   };
 
@@ -968,10 +1039,12 @@ const MonitorEntregas = () => {
   const formatStatus = (s, delivery) => {
     if (!s) return '-';
     if (s === 'ENTREGUE_COM_PENDENCIA_CANHOTO') s = 'FINALIZADO';
+
     if (s === 'FINALIZADO') {
       if (allModalDocsComplete(delivery)) return 'DOCUMENTOS ENTREGUES';
       return 'FINALIZADO';
     }
+
     if (s === 'ENTREGUE' || s === 'submitted') return 'OPERAÇÃO FINALIZADA';
     if (s === 'pending' || s === 'PENDING') return 'A CAMINHO DO CLIENTE';
     return String(s).replace(/_/g, ' ');
@@ -981,20 +1054,29 @@ const MonitorEntregas = () => {
     if (!delivery) return 'PENDENTE';
     const required = ['canhotCTE', 'diarioBordo', 'canhotNF', 'devolucaoVazio'];
     const docs = delivery.documents || {};
+
     if (required.every((k) => docs[k])) return 'COMPLETO';
+
     const pending = required.filter((k) => !docs[k]).map((k) =>
       ({ canhotCTE: 'CTE', canhotNF: 'NF', diarioBordo: 'DIÁRIO', devolucaoVazio: 'RIC' }[k] || k)
     ).join(' + ');
+
     return `PENDENTE ${pending}`;
   };
 
   const defaultDocumentLabels = manaConfig.documents || {
-    canhotNF: 'NF', canhotCTE: 'CTE', diarioBordo: 'Diário', devolucaoVazio: 'Vazio', retiradaCheio: 'Cheio'
+    canhotNF: 'NF',
+    canhotCTE: 'CTE',
+    diarioBordo: 'Diário',
+    devolucaoVazio: 'Vazio',
+    retiradaCheio: 'Cheio'
   };
 
   const getLabelsForDelivery = (d) => {
     if (!d) return defaultDocumentLabels;
-    return (d.city || '').toLowerCase() === 'itajai' ? (itajaiConfig.documents || {}) : defaultDocumentLabels;
+    return (d.city || '').toLowerCase() === 'itajai'
+      ? (itajaiConfig.documents || {})
+      : defaultDocumentLabels;
   };
 
   const removeProgramacaoInfo = (obs) => obs ? obs.replace(/Criada a partir da Programação [A-Z0-9]+/g, '').trim() : '';
@@ -1004,6 +1086,7 @@ const MonitorEntregas = () => {
       const res = await fetch(url, { cache: 'force-cache' });
       if (!res.ok) return null;
       const blob = await res.blob();
+
       return await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
@@ -1123,9 +1206,9 @@ const MonitorEntregas = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+
     return { mode: 'download' };
   };
-
   const loadDeliveries = useCallback(async () => {
     try {
       setLoading(true);
@@ -1193,6 +1276,7 @@ const MonitorEntregas = () => {
       });
       return cols.join(' ');
     };
+
     const apply = () => setColTemplate(computeTemplate());
     apply();
     window.addEventListener('resize', apply);
@@ -1221,6 +1305,7 @@ const MonitorEntregas = () => {
     }
 
     const pad = (v) => String(v).padStart(2, '0');
+
     if (filters.startDate) {
       const sdStr = filters.startDate;
       r = r.filter((d) => {
@@ -1266,7 +1351,7 @@ const MonitorEntregas = () => {
       setTimeout(() => {
         setRecentlyUpdated((prev) => {
           const next = { ...prev };
-          Object.keys(updates).forEach((id) => delete next[id]);
+ Object.keys(updates).forEach((id) => delete next[id]);
           return next;
         });
       }, RISE_WINDOW + 500);
@@ -1275,11 +1360,13 @@ const MonitorEntregas = () => {
 
   const displayList = useMemo(() => {
     const now = Date.now();
+
     return [...filteredDeliveries].sort((a, b) => {
       const aT = recentlyUpdated[a._id];
       const bT = recentlyUpdated[b._id];
       const aActive = aT && (now - aT) < RISE_WINDOW;
       const bActive = bT && (now - bT) < RISE_WINDOW;
+
       if (aActive && !bActive) return -1;
       if (!aActive && bActive) return 1;
       if (aActive && bActive) return bT - aT;
@@ -1289,16 +1376,21 @@ const MonitorEntregas = () => {
 
   useLayoutEffect(() => {
     if (!prevPositions.current || Object.keys(prevPositions.current).length === 0) return;
+
     displayList.forEach((d) => {
       const el = rowRefs.current[d._id];
       if (!el) return;
+
       const oldTop = prevPositions.current[d._id];
       if (oldTop === undefined) return;
+
       const newTop = el.getBoundingClientRect().top;
       const delta = oldTop - newTop;
       if (Math.abs(delta) < 2) return;
+
       el.style.setProperty('--rise-from', `${delta}px`);
     });
+
     prevPositions.current = {};
   }, [displayList]);
 
@@ -1306,6 +1398,7 @@ const MonitorEntregas = () => {
     try {
       const delivery = deliveries.find((d) => d._id === id);
       const docEntry = delivery?.documents?.[type];
+
       if (docEntry) {
         const urls = getDocumentUrlsArray(docEntry);
         if (urls.length > 0) {
@@ -1324,7 +1417,12 @@ const MonitorEntregas = () => {
 
       const res = await adminService.downloadDocument(id, type);
       const contentType = res.headers?.['content-type'] || '';
-      const ext = contentType.includes('pdf') ? 'pdf' : contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpg' : contentType.includes('png') ? 'png' : 'bin';
+      const ext =
+        contentType.includes('pdf') ? 'pdf'
+          : contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpg'
+            : contentType.includes('png') ? 'png'
+              : 'bin';
+
       const blob = new Blob([res.data], { type: contentType || 'application/octet-stream' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1334,6 +1432,7 @@ const MonitorEntregas = () => {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+
       setToast({ message: 'Documento baixado', type: 'success' });
     } catch (e) {
       setToast({ message: 'Erro ao baixar: ' + (e.response?.data?.message || e.message), type: 'error' });
@@ -1351,6 +1450,7 @@ const MonitorEntregas = () => {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+
       setToast({ message: 'ZIP baixado', type: 'success' });
     } catch (e) {
       setToast({ message: 'Erro ao baixar ZIP: ' + (e.response?.data?.message || e.message), type: 'error' });
@@ -1359,8 +1459,10 @@ const MonitorEntregas = () => {
 
   const handleShareDelivery = async () => {
     if (!selectedDelivery) return;
+
     try {
       setToast({ type: 'success', message: 'Gerando comprovante…' });
+
       const { blob, fileName } = await generateDeliveryReceiptPdf(selectedDelivery);
       const title = `Comprovante • Entrega #${selectedDelivery.deliveryNumber || ''}`.trim();
       const text = `Segue comprovante da entrega #${selectedDelivery.deliveryNumber || '—'}.`;
@@ -1372,6 +1474,7 @@ const MonitorEntregas = () => {
           ? 'Comprovante pronto para compartilhar'
           : 'Comprovante baixado (seu dispositivo não suporta compartilhamento de arquivo)'
       });
+
       setTimeout(() => setToast(null), 3500);
     } catch (err) {
       setToast({ type: 'error', message: 'Falha ao gerar/compartilhar PDF: ' + (err?.message || 'erro desconhecido') });
@@ -1381,6 +1484,7 @@ const MonitorEntregas = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Deletar esta entrega? Ação irreversível.')) return;
+
     try {
       await adminService.deleteDelivery(id);
       setToast({ message: 'Entrega deletada', type: 'success' });
@@ -1422,6 +1526,7 @@ const MonitorEntregas = () => {
 
     const motivo = editForm.observations.replace(/Criada a partir da Programação [A-Z0-9]+/g, '').trim();
     const prog = (editForm.observations.match(/Criada a partir da Programação [A-Z0-9]+/) || []).join(' ');
+
     const payload = {
       ...editForm,
       observations: prog ? `${motivo}\n${prog}` : motivo,
@@ -1433,9 +1538,11 @@ const MonitorEntregas = () => {
       await adminService.updateDelivery(editingDelivery, payload);
       setToast({ message: 'Entrega atualizada', type: 'success' });
       setEditingDelivery(null);
+
       if (selectedDelivery && selectedDelivery._id === editingDelivery) {
         setSelectedDelivery({ ...selectedDelivery, ...editForm });
       }
+
       loadDeliveries();
     } catch {
       setToast({ message: 'Erro ao atualizar', type: 'error' });
@@ -1450,6 +1557,7 @@ const MonitorEntregas = () => {
   ].filter(Boolean).length;
 
   const flowHistory = selectedDelivery ? getFlowHistory(selectedDelivery) : [];
+
   const HEADERS = [
     'Container', 'Contratado', 'Motorista', 'Recebedor',
     'Status', 'Progresso', 'DT Retirada', 'Agendamento',
@@ -1476,20 +1584,20 @@ const MonitorEntregas = () => {
       />
 
       <header className={`sticky top-0 z-40 ${themeConfig.header} backdrop-blur-md border-b ${themeConfig.border}`}>
-        <div className="w-full px-4 lg:px-8 h-16 flex items-center gap-3">
+        <div className="w-full px-3 sm:px-4 lg:px-8 h-14 sm:h-16 flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => navigate('/home')}
-            className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-white transition flex-shrink-0"
+            className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-400 hover:text-white transition flex-shrink-0"
           >
             <FaArrowLeft className="text-purple-400" />
             <span className="hidden sm:inline">Voltar</span>
           </button>
 
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-900/40">
               <MdDashboard className="text-white text-base" />
             </div>
-            <h1 className="text-base sm:text-lg font-black tracking-[0.15em] uppercase" style={{ color: themeConfig.text }}>
+            <h1 className="text-sm sm:text-base lg:text-lg font-black tracking-[0.12em] uppercase truncate" style={{ color: themeConfig.text }}>
               Torre de Controle
             </h1>
           </div>
@@ -1502,7 +1610,7 @@ const MonitorEntregas = () => {
           </span>
 
           {autoRefresh && (
-            <span className="hidden sm:flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
+            <span className="hidden sm:flex items-center gap-1.5 text-[11px] text-emerald-400 font-bold">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               LIVE · {refreshInterval}s
             </span>
@@ -1511,26 +1619,28 @@ const MonitorEntregas = () => {
           <button
             onClick={toggleFullscreen}
             title="Fullscreen (Ctrl+Shift+F)"
-            className="w-9 h-9 rounded-xl flex items-center justify-center transition hover:bg-white/10 text-gray-400 hover:text-white"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition hover:bg-white/10 text-gray-400 hover:text-white"
           >
-            <FaExpand size={14} />
+            <FaExpand size={13} />
           </button>
 
           <button
             onClick={loadDeliveries}
             disabled={loading}
             title="Atualizar"
-            className="w-9 h-9 rounded-xl bg-purple-600/80 hover:bg-purple-600 text-white flex items-center justify-center transition disabled:opacity-40"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-purple-600/80 hover:bg-purple-600 text-white flex items-center justify-center transition disabled:opacity-40"
           >
-            <FaSync size={13} className={loading ? 'animate-spin' : ''} />
+            <FaSync size={12} className={loading ? 'animate-spin' : ''} />
           </button>
 
           <button
             onClick={() => setSettingsOpen((v) => !v)}
             title="Configurações, Filtros & Tema"
-            className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition ${settingsOpen ? 'bg-purple-600 text-white' : 'hover:bg-white/10 text-gray-400 hover:text-white'}`}
+            className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition ${
+              settingsOpen ? 'bg-purple-600 text-white' : 'hover:bg-white/10 text-gray-400 hover:text-white'
+            }`}
           >
-            <FaCog size={15} className={settingsOpen ? 'animate-spin' : ''} style={{ animationDuration: '3s' }} />
+            <FaCog size={14} className={settingsOpen ? 'animate-spin' : ''} style={{ animationDuration: '3s' }} />
             {activeFilterCount > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center">
                 {activeFilterCount}
@@ -1540,7 +1650,7 @@ const MonitorEntregas = () => {
         </div>
       </header>
 
-      <main className="w-full px-3 sm:px-4 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+      <main className="w-full px-3 sm:px-4 lg:px-8 py-5 sm:py-6 lg:py-8 space-y-6">
         <div className="flex items-center gap-2 flex-wrap">
           <Pill active={statsPeriod === 'general'} onClick={() => setStatsPeriod('general')} color="indigo">
             <MdDashboard className="text-xs" /> <span>Geral</span>
@@ -1573,14 +1683,13 @@ const MonitorEntregas = () => {
           </div>
         </div>
 
-        {/* KANBAN NO LUGAR DOS CARDS */}
         <div>
           <SectionTitle sub={`${STATUS_COLUMNS.length} colunas do processo aplicadas dentro do Monitor de Entregas`}>
             Board de Processos
           </SectionTitle>
 
-          <div className="overflow-x-auto pb-4">
-            <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-2 sm:p-3 lg:p-4">
+            <div className="grid gap-3 sm:gap-4" style={{ gridTemplateColumns: KANBAN_GRID_TEMPLATE }}>
               {STATUS_COLUMNS.map((column) => (
                 <DeliveryKanbanColumn
                   key={column.key}
@@ -1631,7 +1740,9 @@ const MonitorEntregas = () => {
                     {HEADERS.map((col, ci) => (
                       <div
                         key={col}
-                        className={`${ci >= 12 ? 'px-1 py-3.5' : 'px-3 py-3.5'} flex items-center min-w-0 select-none ${ci >= 4 ? 'justify-center' : ''} ${ci === 12 ? 'text-amber-500' : ''}`}
+                        className={`${ci >= 12 ? 'px-1 py-3' : 'px-2.5 py-3'} flex items-center min-w-0 select-none ${
+                          ci >= 4 ? 'justify-center' : ''
+                        } ${ci === 12 ? 'text-amber-500' : ''}`}
                       >
                         {col}
                       </div>
@@ -1652,13 +1763,16 @@ const MonitorEntregas = () => {
                         <div
                           key={d._id}
                           ref={(el) => { rowRefs.current[d._id] = el; }}
-                          className={`grid text-xs border-b border-white/[0.06] transition-colors hover:bg-white/[0.04] ${i % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.015]'} ${isRising ? 'row-rise' : ''} ${isGlowing ? 'row-glow' : ''}`}
+                          className={`grid text-[11px] border-b border-white/[0.06] transition-colors hover:bg-white/[0.04] ${
+                            i % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.015]'
+                          } ${isRising ? 'row-rise' : ''} ${isGlowing ? 'row-glow' : ''}`}
                           style={{ gridTemplateColumns: colTemplate, '--rise-from': '120px' }}
                         >
-                          <div className="px-3 py-3 flex items-center gap-1.5">
-                            <span className="font-black text-purple-300 text-[12px] leading-tight whitespace-nowrap">
+                          <div className="px-2.5 py-2.5 flex items-center gap-1.5">
+                            <span className="font-black text-purple-300 text-[11px] leading-tight whitespace-nowrap">
                               {d.deliveryNumber}
                             </span>
+
                             {updatedAt && (now - updatedAt) < RISE_WINDOW && (
                               <span className="badge-pop flex-shrink-0 px-1.5 py-0.5 rounded-full bg-purple-600/80 text-white text-[8px] font-black">
                                 UP
@@ -1666,25 +1780,25 @@ const MonitorEntregas = () => {
                             )}
                           </div>
 
-                          <div className="px-3 py-3 flex items-center overflow-hidden min-w-0">
+                          <div className="px-2.5 py-2.5 flex items-center overflow-hidden min-w-0">
                             <span className="text-gray-300 truncate text-[10px] cell-trunc" title={d.userName}>
                               {d.userName || '—'}
                             </span>
                           </div>
 
-                          <div className="px-3 py-3 flex items-center overflow-hidden min-w-0">
+                          <div className="px-2.5 py-2.5 flex items-center overflow-hidden min-w-0">
                             <span className="text-gray-300 truncate text-[10px] cell-trunc" title={d.driverName}>
                               {d.driverName || '—'}
                             </span>
                           </div>
 
-                          <div className="px-3 py-3 flex items-center overflow-hidden min-w-0">
+                          <div className="px-2.5 py-2.5 flex items-center overflow-hidden min-w-0">
                             <span className="text-gray-400 truncate text-[10px] cell-trunc" title={d.recebedor}>
                               {d.recebedor || '—'}
                             </span>
                           </div>
 
-                          <div className="px-2 py-3 flex items-center justify-center">
+                          <div className="px-2 py-2.5 flex items-center justify-center">
                             {(() => {
                               const disp = d.status === 'FINALIZADO' && allModalDocsComplete(d)
                                 ? 'DOCUMENTOS ENTREGUES'
@@ -1693,45 +1807,45 @@ const MonitorEntregas = () => {
                             })()}
                           </div>
 
-                          <div className="px-2 py-3 flex items-center justify-center">
+                          <div className="px-2 py-2.5 flex items-center justify-center">
                             <ProgressDots delivery={d} allModalDocsComplete={allModalDocsComplete} />
                           </div>
 
-                          <div className="px-2 py-3 flex items-center justify-center min-w-0">
+                          <div className="px-2 py-2.5 flex items-center justify-center min-w-0">
                             <span className="text-sky-400 font-semibold text-[10px] tabular-nums cell-trunc">
                               {d.containerMontadoAt ? new Date(d.containerMontadoAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                             </span>
                           </div>
 
-                          <div className="px-2 py-3 flex items-center justify-center min-w-0">
+                          <div className="px-2 py-2.5 flex items-center justify-center min-w-0">
                             <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
                               {d.dataAgendamento ? new Date(d.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                             </span>
                           </div>
 
-                          <div className="px-2 py-3 flex items-center justify-center min-w-0">
+                          <div className="px-2 py-2.5 flex items-center justify-center min-w-0">
                             <span className="text-gray-300 text-[10px] tabular-nums cell-trunc">
                               {d.horarioChegada ? new Date(d.horarioChegada).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                             </span>
                           </div>
 
-                          <div className="px-2 py-3 flex items-center justify-center min-w-0">
+                          <div className="px-2 py-2.5 flex items-center justify-center min-w-0">
                             <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
                               {d.horarioInicioDesova ? new Date(d.horarioInicioDesova).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                             </span>
                           </div>
 
-                          <div className="px-2 py-3 flex items-center justify-center min-w-0">
+                          <div className="px-2 py-2.5 flex items-center justify-center min-w-0">
                             <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
                               {d.horarioFimDesova ? new Date(d.horarioFimDesova).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                             </span>
                           </div>
 
-                          <div className="px-1 py-3 flex items-center justify-center">
+                          <div className="px-1 py-2.5 flex items-center justify-center">
                             <PunctualityCell p={getPunctualityStatus(d, currentTime)} />
                           </div>
 
-                          <div className="px-1 py-3 flex items-center justify-center bg-amber-900/10 min-w-0">
+                          <div className="px-1 py-2.5 flex items-center justify-center bg-amber-900/10 min-w-0">
                             {cliTime.tempo ? (
                               <span className={`font-black tabular-nums text-[10px] ${cliTime.isActive ? 'text-amber-400' : 'text-amber-600'}`}>
                                 {cliTime.tempo}
@@ -1742,14 +1856,14 @@ const MonitorEntregas = () => {
                             )}
                           </div>
 
-                          <div className="px-1 py-3 flex items-center justify-center min-w-0">
+                          <div className="px-1 py-2.5 flex items-center justify-center min-w-0">
                             {isComplete
                               ? <FaCheckCircle className="text-emerald-400" title={docStatus} size={13} />
                               : <FaTimesCircle className="text-red-400/70" title={docStatus} size={13} />
                             }
                           </div>
 
-                          <div className="px-1 py-3 flex items-center justify-center min-w-0">
+                          <div className="px-1 py-2.5 flex items-center justify-center min-w-0">
                             <button
                               onClick={() => setSelectedDelivery(d)}
                               title="Visualizar"
@@ -1789,7 +1903,11 @@ const MonitorEntregas = () => {
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
-                <Badge status={(selectedDelivery.status === 'FINALIZADO' && allModalDocsComplete(selectedDelivery)) ? 'DOCUMENTOS ENTREGUES' : selectedDelivery.status} />
+                <Badge
+                  status={(selectedDelivery.status === 'FINALIZADO' && allModalDocsComplete(selectedDelivery))
+                    ? 'DOCUMENTOS ENTREGUES'
+                    : selectedDelivery.status}
+                />
                 <button
                   onClick={() => setSelectedDelivery(null)}
                   className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
@@ -1800,7 +1918,7 @@ const MonitorEntregas = () => {
             </div>
 
             <div className="overflow-y-auto flex-1 p-4 sm:p-6 space-y-5">
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                 {[
                   ['Contratado', selectedDelivery.userName],
                   ['Motorista', selectedDelivery.driverName || '—'],
@@ -1814,7 +1932,7 @@ const MonitorEntregas = () => {
                 ].map(([label, value]) => (
                   <div key={label} className="bg-white/5 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 border border-white/5">
                     <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-0.5">{label}</p>
-                    <p className="text-sm text-gray-100 font-semibold">{value}</p>
+                    <p className="text-sm text-gray-100 font-semibold break-words">{value}</p>
                   </div>
                 ))}
               </div>
@@ -1843,12 +1961,14 @@ const MonitorEntregas = () => {
                       {selectedDelivery.observacoes && <p className="text-sm text-gray-300 whitespace-pre-wrap mt-1">{selectedDelivery.observacoes}</p>}
                     </div>
                   )}
+
                   {selectedDelivery.documentsJustification && (
                     <div className="bg-amber-900/20 border border-amber-500/20 rounded-xl p-4">
                       <p className="text-[10px] text-amber-400 uppercase tracking-widest font-bold mb-2">⚠️ Justificativa de Documentos</p>
                       <p className="text-sm text-gray-300 whitespace-pre-wrap">{selectedDelivery.documentsJustification}</p>
                     </div>
                   )}
+
                   {selectedDelivery.submissionObservation && (
                     <div className="bg-indigo-900/20 border border-indigo-500/20 rounded-xl p-4">
                       <p className="text-[10px] text-indigo-400 uppercase tracking-widest font-bold mb-2">ℹ️ Observação de Submissão</p>
@@ -1859,8 +1979,9 @@ const MonitorEntregas = () => {
               )}
 
               <div>
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Documentos e Fotos</p>
+
                   <div className="flex gap-2">
                     <button
                       onClick={handleShareDelivery}
@@ -1886,14 +2007,17 @@ const MonitorEntregas = () => {
                       .filter((k) => !['chegadaCliente', 'inicioDesova', 'fimDesova'].includes(k))
                       .map((k) => {
                         const present = !!selectedDelivery.documents[k];
+
                         return (
                           <div
                             key={k}
-                            className={`flex items-center justify-between px-3 sm:px-4 py-3 rounded-xl border ${present ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/5 opacity-50'}`}
+                            className={`flex items-center justify-between px-3 sm:px-4 py-3 rounded-xl border ${
+                              present ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/5 opacity-50'
+                            }`}
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
                               <span className={`w-2 h-2 rounded-full flex-shrink-0 ${present ? 'bg-emerald-400' : 'bg-gray-600'}`} />
-                              <span className="text-sm text-gray-300 font-semibold">{labels[k] || k}</span>
+                              <span className="text-sm text-gray-300 font-semibold truncate">{labels[k] || k}</span>
                               {!present && <span className="text-xs text-gray-600">Não anexado</span>}
                             </div>
 
@@ -1927,14 +2051,17 @@ const MonitorEntregas = () => {
                     const fotosRows = fotoFields.map((f) => {
                       const files = getDocumentUrlsArray(selectedDelivery.documents?.[f.key]);
                       const present = files.length > 0;
+
                       return (
                         <div
                           key={f.key}
-                          className={`flex items-center justify-between px-3 sm:px-4 py-3 rounded-xl border ${present ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/5 opacity-50'}`}
+                          className={`flex items-center justify-between px-3 sm:px-4 py-3 rounded-xl border ${
+                            present ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/5 opacity-50'
+                          }`}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
                             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${present ? 'bg-sky-400' : 'bg-gray-600'}`} />
-                            <span className="text-sm text-gray-300 font-semibold">{f.label}</span>
+                            <span className="text-sm text-gray-300 font-semibold truncate">{f.label}</span>
                             {present && <span className="text-xs text-gray-500">{files.length} foto(s)</span>}
                             {!present && <span className="text-xs text-gray-600">Não anexado</span>}
                           </div>
@@ -2075,6 +2202,7 @@ const MonitorEntregas = () => {
                 <p className="text-xs text-gray-500 uppercase tracking-widest mb-0.5">Edição</p>
                 <h2 className="text-lg font-black text-white">Editar Entrega</h2>
               </div>
+
               <button
                 onClick={() => setEditingDelivery(null)}
                 className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"

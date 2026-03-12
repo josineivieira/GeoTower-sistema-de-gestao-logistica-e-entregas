@@ -77,6 +77,9 @@ export const THEMES = {
     header: 'bg-gradient-to-r from-pink-500 to-orange-500',
     card: 'bg-pink-50',
     cardHover: 'hover:bg-pink-100',
+    tableRow: 'bg-pink-50',
+    tableRowAlt: 'bg-pink-100',
+    tableRowHover: 'hover:bg-pink-200',
   },
   ocean: {
     name: '🌊 Oceano',
@@ -88,6 +91,9 @@ export const THEMES = {
     header: 'bg-gradient-to-r from-teal-400 to-blue-500',
     card: 'bg-teal-50',
     cardHover: 'hover:bg-teal-100',
+    tableRow: 'bg-teal-50',
+    tableRowAlt: 'bg-teal-100',
+    tableRowHover: 'hover:bg-teal-200',
   },
 };
 

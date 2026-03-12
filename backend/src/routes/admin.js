@@ -148,15 +148,35 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       }
     });
 
+    // antes de cruzar, carregar dados do Ycompany para termos placas (tracao)
+    const Ycompany = require('../models/Ycompany');
+    const ycompanyRecords = await Ycompany.find({}).lean();
+    const ycByProcess = new Map();
+    const ycByContainer = new Map();
+    ycompanyRecords.forEach(y => {
+      const proc = String(y.processo || '').trim().toUpperCase();
+      if (proc) ycByProcess.set(proc, y);
+      // container pode estar em `numero` ou `containerNumero`
+      const cont = String(y.numero || y.containerNumero || '').trim().toUpperCase();
+      if (cont) ycByContainer.set(cont, y);
+    });
+
     // Cruzar dados de programação (por container) e construir lista combinada
     let deliveriesWithProgramacao = normalizedDeliveries.map(delivery => {
       const prog = programacoes.find(p => 
         (p.container || '').toUpperCase() === (delivery.deliveryNumber || '').toUpperCase()
       );
+      // buscar registro Ycompany correspondente (processo primeiro, depois container)
+      const keyProc = (delivery.processoCAB || '').toUpperCase();
+      const keyCont = (delivery.deliveryNumber || '').toUpperCase();
+      const yrec = ycByProcess.get(keyProc) || ycByContainer.get(keyCont);
+      const placaY = yrec ? (yrec.tracao || '') : '';
+
       return {
         ...delivery,
         // incluir número de processo CAB quando houver programação
         processoCAB: prog ? prog.processo || '' : delivery.processoCAB || '',
+        placaYcompany: placaY,
         recebedor: prog ? prog.recebedor : '',
         dataAgendamento: prog ? prog.dataAgendamento : '',
         horarioChegada: delivery.arrivedAt || '',
@@ -172,10 +192,17 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       const key = (prog.container || '').toUpperCase();
       const exists = normalizedDeliveries.find(d => (d.deliveryNumber || '').toUpperCase() === key);
       if (!exists) {
+        // também incluir placaYcompany se existir
+        const keyProc = (prog.processo || '').toUpperCase();
+        const keyCont = (prog.container || '').toUpperCase();
+        const yrec2 = ycByProcess.get(keyProc) || ycByContainer.get(keyCont);
+        const placaY2 = yrec2 ? (yrec2.tracao || '') : '';
+
         deliveriesWithProgramacao.push({
           _id: prog._id,
           deliveryNumber: prog.container || prog.processo,
           processoCAB: prog.processo || '',
+          placaYcompany: placaY2,
           userName: prog.contratado || '',
           driverName: prog.motorista || '-',
           recebedor: prog.recebedor || '',

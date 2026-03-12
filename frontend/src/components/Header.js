@@ -312,7 +312,7 @@ const Header = () => {
               <img
                 src="/logo.png"
                 alt="GeoTower"
-                className="h-16 sm:h-20 w-auto group-hover:scale-105
+                className="h-13 sm:h-14 w-auto group-hover:scale-105
                   transition-transform duration-300 drop-shadow-md"
                 onError={(e) => {
                   e.target.onerror = null;

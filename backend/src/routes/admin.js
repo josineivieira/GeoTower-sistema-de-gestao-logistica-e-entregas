@@ -155,6 +155,8 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       );
       return {
         ...delivery,
+        // incluir número de processo CAB quando houver programação
+        processoCAB: prog ? prog.processo || '' : delivery.processoCAB || '',
         recebedor: prog ? prog.recebedor : '',
         dataAgendamento: prog ? prog.dataAgendamento : '',
         horarioChegada: delivery.arrivedAt || '',
@@ -173,6 +175,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
         deliveriesWithProgramacao.push({
           _id: prog._id,
           deliveryNumber: prog.container || prog.processo,
+          processoCAB: prog.processo || '',
           userName: prog.contratado || '',
           driverName: prog.motorista || '-',
           recebedor: prog.recebedor || '',

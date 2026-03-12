@@ -880,6 +880,24 @@ const MonitorEntregas = () => {
     return () => document.head.removeChild(el2);
   }, []);
 
+  // dynamic overrides for gray text utilities based on theme
+  useEffect(() => {
+    const el3 = document.createElement('style');
+    el3.id = 'theme-text-overrides';
+    const primary = themeConfig.text || '#000';
+    const secondary = themeConfig.textSecondary || primary;
+    el3.textContent = `
+      .theme-light .text-gray-300, .theme-dark .text-gray-300, .theme-company .text-gray-300, .theme-sunset .text-gray-300, .theme-ocean .text-gray-300,
+      .theme-light .text-gray-400, .theme-dark .text-gray-400, .theme-company .text-gray-400, .theme-sunset .text-gray-400, .theme-ocean .text-gray-400,
+      .theme-light .text-gray-500, .theme-dark .text-gray-500, .theme-company .text-gray-500, .theme-sunset .text-gray-500, .theme-ocean .text-gray-500,
+      .theme-light .text-gray-600, .theme-dark .text-gray-600, .theme-company .text-gray-600, .theme-sunset .text-gray-600, .theme-ocean .text-gray-600 {
+        color: ${secondary}!important;
+      }
+    `;
+    document.head.appendChild(el3);
+    return () => document.head.removeChild(el3);
+  }, [themeConfig]);
+
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement) {
       try { await document.documentElement.requestFullscreen(); } catch {}
@@ -1638,8 +1656,8 @@ const MonitorEntregas = () => {
               <div className="overflow-x-auto">
                 <div style={{ width: '100%' }} className="monitor-table">
                   <div
-                    className="grid text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-white/[0.04] border-b border-white/10"
-                    style={{ gridTemplateColumns: colTemplate }}
+                    className="grid text-[10px] font-bold uppercase tracking-wider bg-white/[0.04] border-b border-white/10"
+                    style={{ gridTemplateColumns: colTemplate, color: themeConfig.textSecondary }}
                   >
                     {HEADERS.map((col, ci) => (
                       <div

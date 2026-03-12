@@ -382,7 +382,7 @@ const DeliveryKanbanColumn = ({ column, deliveries, onOpen }) => {
   const visible = expanded ? deliveries : deliveries.slice(0, 4);
 
   return (
-    <div className={`flex flex-col rounded-lg border ${column.border} bg-white shadow-sm overflow-hidden min-w-[160px] max-w-[200px] flex-shrink-0`}>
+    <div className={`flex flex-col rounded-lg border ${column.border} bg-white shadow-sm overflow-hidden flex-1 min-w-[140px] max-w-[220px]`}>
       <KanbanColumnHeader column={column} count={deliveries.length} />
 
       <div className="flex-1 p-2 space-y-1.5 overflow-y-auto max-h-[430px]">
@@ -1580,8 +1580,8 @@ const MonitorEntregas = () => {
             Fluxo de Entregas
           </SectionTitle>
 
-          <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-purple-400 scrollbar-track-gray-200">
-            <div className="flex gap-2" style={{ minWidth: 'max-content' }}>
+          <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-purple-400 scrollbar-track-gray-200 w-full">
+            <div className="flex gap-2 w-full">
               {STATUS_COLUMNS.map((column) => (
                 <DeliveryKanbanColumn
                   key={column.key}

@@ -1283,25 +1283,6 @@ const MonitorEntregas = () => {
     return { blob, fileName };
   };
 
-  const shareOrDownloadPdf = async ({ blob, fileName, title, text }) => {
-    const file = new File([blob], fileName, { type: 'application/pdf' });
-
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title, text });
-      return { mode: 'share' };
-    }
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.setAttribute('download', fileName);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    return { mode: 'download' };
-  };
-
   const loadDeliveries = useCallback(async () => {
     try {
       setLoading(true);
@@ -1524,19 +1505,24 @@ const MonitorEntregas = () => {
     try {
       setToast({ type: 'success', message: 'Gerando comprovante…' });
       const { blob, fileName } = await generateDeliveryReceiptPdf(selectedDelivery);
-      const title = `Comprovante • Entrega #${selectedDelivery.deliveryNumber || ''}`.trim();
-      const text = `Segue comprovante da entrega #${selectedDelivery.deliveryNumber || '—'}.`;
-      const result = await shareOrDownloadPdf({ blob, fileName, title, text });
+
+      // Download direto do PDF
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.setAttribute('download', fileName);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
       setToast({
         type: 'success',
-        message: result.mode === 'share'
-          ? 'Comprovante pronto para compartilhar'
-          : 'Comprovante baixado (seu dispositivo não suporta compartilhamento de arquivo)'
+        message: 'Comprovante baixado com sucesso!'
       });
       setTimeout(() => setToast(null), 3500);
     } catch (err) {
-      setToast({ type: 'error', message: 'Falha ao gerar/compartilhar PDF: ' + (err?.message || 'erro desconhecido') });
+      setToast({ type: 'error', message: 'Falha ao gerar comprovante: ' + (err?.message || 'erro desconhecido') });
       setTimeout(() => setToast(null), 4500);
     }
   };

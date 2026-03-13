@@ -165,7 +165,7 @@ const STATUS_CONFIG = {
     ring: 'ring-sky-400/30', dot: 'bg-sky-500', hex: '#0ea5e9'
   },
   'A CAMINHO DO CLIENTE': {
-    label: 'A Caminho',
+    label: 'A Caminho do Cliente',
     bg: 'bg-amber-500', light: 'bg-amber-50', text: 'text-amber-700',
     border: 'border-amber-300',
     badge: 'bg-amber-100 text-amber-800 border border-amber-300',

@@ -1477,19 +1477,19 @@ const MonitorEntregas = () => {
   ];
 
   const computeTemplate = () => {
-    // Ajuste para expandir a tabela conforme a tela, mantendo docs/ações menores
+    // Espaçamento máximo para melhor visibilidade
     return [
-      'minmax(140px, 2fr)',   // Processo
-      'minmax(120px, 1.5fr)', // Container
-      'minmax(140px, 2fr)',   // Recebedor
-      'minmax(120px, 1.2fr)', // Status
-      'minmax(110px, 1fr)',   // Hora Status
-      'minmax(110px, 1fr)',   // Tempo Status
-      'minmax(120px, 1.2fr)', // Progresso
-      'minmax(140px, 1.5fr)', // Agendamento
-      'minmax(150px, 1.5fr)', // Pontualidade
-      'minmax(56px, 0.45fr)', // Docs
-      'minmax(48px, 0.35fr)'  // Ações
+      'minmax(180px, 2.5fr)',   // Processo
+      'minmax(180px, 2.5fr)',   // Container
+      'minmax(180px, 2.5fr)',   // Recebedor
+      'minmax(140px, 1.5fr)',   // Status
+      'minmax(120px, 1fr)',     // Hora Status
+      'minmax(120px, 1fr)',     // Tempo Status
+      'minmax(140px, 1.2fr)',   // Progresso
+      'minmax(160px, 1.5fr)',   // Agendamento
+      'minmax(160px, 1.5fr)',   // Pontualidade
+      'minmax(70px, 0.5fr)',    // Docs
+      'minmax(60px, 0.4fr)'     // Ações
     ].join(' ');
   };
 
@@ -1701,10 +1701,10 @@ const MonitorEntregas = () => {
 
                           {/* CONTAINER */}
                           <div className="px-3 py-3 flex items-center overflow-hidden min-w-0">
-                            <span className="text-gray-300 truncate text-[10px] cell-trunc" title={d.containerNumero || d.container}>
+                            <span className="text-gray-300 truncate text-[10px] cell-trunc" title={d.containerNumero || d.container || d.deliveryNumber}>
                               {Array.isArray(d.containerNumero)
                                 ? d.containerNumero.join(', ')
-                                : (d.containerNumero || d.container || '—')}
+                                : (d.containerNumero || d.container || d.deliveryNumber || '—')}
                             </span>
                           </div>
 

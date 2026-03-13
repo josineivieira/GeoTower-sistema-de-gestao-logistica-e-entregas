@@ -1689,20 +1689,29 @@ const MonitorEntregas = () => {
                           className={`grid text-xs border-b border-white/[0.06] transition-colors ${i % 2 === 0 ? themeConfig.tableRow : themeConfig.tableRowAlt} ${themeConfig.tableRowHover} ${isRising ? 'row-rise' : ''} ${isGlowing ? 'row-glow' : ''}`}
                           style={{ gridTemplateColumns: colTemplate, '--rise-from': '120px' }}
                         >
+
+                          {/* PROCESSO */}
                           <div className="px-3 py-3 flex items-center gap-1.5">
                             <span className="font-black text-blue-300 text-[12px] leading-tight whitespace-nowrap">
-                              {Array.isArray(d.processoCAB)
-                                ? d.processoCAB.filter(p => p.startsWith('CAB')).join(', ') || '—'
-                                : (d.processoCAB && String(d.processoCAB).startsWith('CAB') ? d.processoCAB : '—')}
+                              {d.processoCAB || '—'}
                             </span>
                           </div>
 
+                          {/* CONTAINER */}
+                          <div className="px-3 py-3 flex items-center overflow-hidden min-w-0">
+                            <span className="text-gray-300 truncate text-[10px] cell-trunc" title={d.containerNumero || d.container}>
+                              {d.containerNumero || d.container || '—'}
+                            </span>
+                          </div>
+
+                          {/* RECEBEDOR */}
                           <div className="px-3 py-3 flex items-center overflow-hidden min-w-0">
                             <span className="text-gray-300 truncate text-[10px] cell-trunc" title={d.recebedor}>
                               {d.recebedor || '—'}
                             </span>
                           </div>
 
+                          {/* STATUS */}
                           <div className="px-2 py-3 flex items-center justify-center">
                             {(() => {
                               const disp = d.status === 'FINALIZADO' && allModalDocsComplete(d)

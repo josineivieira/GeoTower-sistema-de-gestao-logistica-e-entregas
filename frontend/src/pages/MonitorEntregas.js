@@ -1129,35 +1129,35 @@ const MonitorEntregas = () => {
     const rgb = hexToRgb(cfg?.hex);
 
     doc.setFillColor(rgb.r, rgb.g, rgb.b);
-    doc.rect(0, 0, pageW, 92, 'F');
+    doc.rect(0, 0, pageW, 100, 'F'); // Aumentado de 92 para 100 para acomodar logo maior
 
     const logoDataUrl = await urlToDataUrl('/logo.png');
     if (logoDataUrl) {
       try {
         const imgProps = doc.getImageProperties(logoDataUrl);
-        const targetH = 34;
+        const targetH = 50; // Aumentado de 34 para 50 para destacar mais
         const targetW = (imgProps.width * targetH) / imgProps.height;
-        doc.addImage(logoDataUrl, 'PNG', pdfMargin, 26, targetW, targetH);
+        doc.addImage(logoDataUrl, 'PNG', pdfMargin, 21, targetW, targetH); // Ajustado posição Y de 26 para 21
       } catch {}
     }
 
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
-    doc.text('COMPROVANTE DE ENTREGA', pageW - pdfMargin, 36, { align: 'right' });
+    doc.text('COMPROVANTE DE ENTREGA', pageW - pdfMargin, 42, { align: 'right' }); // Ajustado de 36 para 42
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageW - pdfMargin, 54, { align: 'right' });
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageW - pdfMargin, 60, { align: 'right' }); // Ajustado de 54 para 60
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.text(`Entrega #${delivery.deliveryNumber || '—'}`, pageW - pdfMargin, 74, { align: 'right' });
+    doc.text(`Entrega #${delivery.deliveryNumber || '—'}`, pageW - pdfMargin, 80, { align: 'right' }); // Ajustado de 74 para 80
 
     doc.setTextColor(20, 20, 20);
     doc.setFontSize(10);
 
-    let y = 120;
+    let y = 130; // Ajustado de 120 para 130 para compensar cabeçalho maior
 
     // Basic Information
     doc.setFont('helvetica', 'bold');
@@ -1203,46 +1203,6 @@ const MonitorEntregas = () => {
       y += 10;
     }
 
-    // Observations
-    const hasObservations = delivery.observations || delivery.observacoes || delivery.documentsJustification || delivery.submissionObservation;
-    if (hasObservations) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.text('OBSERVAÇÕES', pdfMargin, y);
-      y += 20;
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      if (delivery.observations) {
-        doc.text('Observações:', pdfMargin, y);
-        y += 14;
-        const obsLines = doc.splitTextToSize(delivery.observations, pageW - 2 * pdfMargin);
-        doc.text(obsLines, pdfMargin, y);
-        y += obsLines.length * 12 + 10;
-      }
-      if (delivery.observacoes) {
-        doc.text('Observações (adicional):', pdfMargin, y);
-        y += 14;
-        const obsLines = doc.splitTextToSize(delivery.observacoes, pageW - 2 * pdfMargin);
-        doc.text(obsLines, pdfMargin, y);
-        y += obsLines.length * 12 + 10;
-      }
-      if (delivery.documentsJustification) {
-        doc.text('Justificativa de Documentos:', pdfMargin, y);
-        y += 14;
-        const justLines = doc.splitTextToSize(delivery.documentsJustification, pageW - 2 * pdfMargin);
-        doc.text(justLines, pdfMargin, y);
-        y += justLines.length * 12 + 10;
-      }
-      if (delivery.submissionObservation) {
-        doc.text('Observação de Submissão:', pdfMargin, y);
-        y += 14;
-        const subLines = doc.splitTextToSize(delivery.submissionObservation, pageW - 2 * pdfMargin);
-        doc.text(subLines, pdfMargin, y);
-        y += subLines.length * 12 + 10;
-      }
-    }
-
     // Documents
     const labels = getLabelsForDelivery(delivery);
     const docKeys = Object.keys(delivery.documents || {}).filter(k => !['chegadaCliente', 'inicioDesova', 'fimDesova'].includes(k));
@@ -1263,10 +1223,27 @@ const MonitorEntregas = () => {
       doc.setFontSize(10);
       allDocKeys.forEach((k) => {
         const urls = getDocumentUrlsArray(delivery.documents?.[k]);
-        const present = urls.length > 0;
         const label = labels[k] || fotoFields.find(f => f.key === k)?.label || k;
-        doc.text(`${label}: ${present ? `${urls.length} arquivo(s) anexado(s)` : 'Não anexado'}`, pdfMargin, y);
-        y += 16;
+
+        if (urls.length > 0) {
+          // Para fotos, mostrar as URLs
+          if (['chegadaCliente', 'inicioDesova', 'fimDesova'].includes(k)) {
+            doc.text(`${label}:`, pdfMargin, y);
+            y += 14;
+            urls.forEach((url) => {
+              const urlText = url.length > 60 ? url.substring(0, 60) + '...' : url;
+              doc.text(urlText, pdfMargin + 10, y);
+              y += 14;
+            });
+          } else {
+            // Para documentos, manter o formato anterior
+            doc.text(`${label}: ${urls.length} arquivo(s) anexado(s)`, pdfMargin, y);
+            y += 16;
+          }
+        } else {
+          doc.text(`${label}: Não anexado`, pdfMargin, y);
+          y += 16;
+        }
       });
     }
 

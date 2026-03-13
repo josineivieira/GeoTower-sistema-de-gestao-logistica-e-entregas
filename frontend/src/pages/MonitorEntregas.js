@@ -303,7 +303,40 @@ const formatBoardDate = (value) => {
   }
 };
 
-const DeliveryKanbanCard = ({ delivery, column, onOpen }) => (
+const getPunctualityStatus = (d, now = new Date()) => {
+  if (!d) return { label: '-', type: 'unknown', eta: null, lateBy: null };
+  const schedStr = d.dataAgendamento || d.data;
+  if (!schedStr) return { label: 'Sem agendamento', type: 'unknown', eta: null, lateBy: null };
+  const scheduled = new Date(schedStr);
+  const arrival = d.horarioChegada ? new Date(d.horarioChegada) : null;
+  const start = d.createdAt ? new Date(d.createdAt) : null;
+  const travel = Number(d.estimatedTravelMinutes || d.minimumTravelMinutes || 40);
+
+  const computeEta = () => {
+    if (!start) return null;
+    const expected = new Date(start.getTime() + travel * 60000);
+    const diff = Math.round((expected - now) / 60000);
+    return diff < 0 ? 0 : diff;
+  };
+
+  if (arrival) {
+    const lateBy = Math.round((arrival - scheduled) / 60000);
+    return {
+      label: arrival.getTime() <= scheduled.getTime() ? 'Pontual' : 'Atrasado',
+      type: arrival.getTime() <= scheduled.getTime() ? 'ok' : 'late',
+      eta: 0, lateBy
+    };
+  }
+
+  const eta = computeEta();
+  if (now.getTime() >= scheduled.getTime()) return { label: 'Atrasado', type: 'late', eta: eta || 0, lateBy: null };
+  if (!start) return { label: 'Sem início', type: 'unknown', eta, lateBy: null };
+  const timeLeft = Math.round((scheduled - now) / 60000);
+  if (timeLeft <= travel) return { label: 'Possível atraso', type: 'possible', eta, lateBy: null };
+  return { label: 'No prazo', type: 'ok', eta, lateBy: null };
+};
+
+const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime }) => (
   <button
     type="button"
     onClick={() => onOpen(delivery)}
@@ -381,7 +414,7 @@ const KanbanColumnHeader = ({ column, count }) => {
   );
 };
 
-const DeliveryKanbanColumn = ({ column, deliveries, onOpen }) => {
+const DeliveryKanbanColumn = ({ column, deliveries, onOpen, currentTime }) => {
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? deliveries : deliveries.slice(0, 4);
 
@@ -403,6 +436,7 @@ const DeliveryKanbanColumn = ({ column, deliveries, onOpen }) => {
                 delivery={delivery}
                 column={column}
                 onOpen={onOpen}
+                currentTime={currentTime}
               />
             ))}
 
@@ -971,39 +1005,6 @@ const MonitorEntregas = () => {
     if (d.horarioInicioDesova) ev.push({ label: 'Início da desova', date: d.horarioInicioDesova });
     if (d.horarioFimDesova) ev.push({ label: 'Fim da desova', date: d.horarioFimDesova });
     return ev.sort((a, b) => new Date(a.date) - new Date(b.date));
-  };
-
-  const getPunctualityStatus = (d, now = new Date()) => {
-    if (!d) return { label: '-', type: 'unknown', eta: null, lateBy: null };
-    const schedStr = d.dataAgendamento || d.data;
-    if (!schedStr) return { label: 'Sem agendamento', type: 'unknown', eta: null, lateBy: null };
-    const scheduled = new Date(schedStr);
-    const arrival = d.horarioChegada ? new Date(d.horarioChegada) : null;
-    const start = d.createdAt ? new Date(d.createdAt) : null;
-    const travel = Number(d.estimatedTravelMinutes || d.minimumTravelMinutes || 40);
-
-    const computeEta = () => {
-      if (!start) return null;
-      const expected = new Date(start.getTime() + travel * 60000);
-      const diff = Math.round((expected - now) / 60000);
-      return diff < 0 ? 0 : diff;
-    };
-
-    if (arrival) {
-      const lateBy = Math.round((arrival - scheduled) / 60000);
-      return {
-        label: arrival.getTime() <= scheduled.getTime() ? 'Pontual' : 'Atrasado',
-        type: arrival.getTime() <= scheduled.getTime() ? 'ok' : 'late',
-        eta: 0, lateBy
-      };
-    }
-
-    const eta = computeEta();
-    if (now.getTime() >= scheduled.getTime()) return { label: 'Atrasado', type: 'late', eta: eta || 0, lateBy: null };
-    if (!start) return { label: 'Sem início', type: 'unknown', eta, lateBy: null };
-    const timeLeft = Math.round((scheduled - now) / 60000);
-    if (timeLeft <= travel) return { label: 'Possível atraso', type: 'possible', eta, lateBy: null };
-    return { label: 'No prazo', type: 'ok', eta, lateBy: null };
   };
 
   const getDocumentUrlsArray = (docData) => {
@@ -1658,6 +1659,7 @@ const MonitorEntregas = () => {
                   column={column}
                   deliveries={displayList.filter(column.filter)}
                   onOpen={setSelectedDelivery}
+                  currentTime={currentTime}
                 />
               ))}
             </div>

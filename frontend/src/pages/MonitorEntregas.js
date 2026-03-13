@@ -340,11 +340,18 @@ const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime }) => (
   <button
     type="button"
     onClick={() => onOpen(delivery)}
-    className={`group relative w-full text-left bg-white rounded-lg border ${column.border} shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 overflow-hidden ${(() => {
+    className={`group relative w-full text-left rounded-lg border ${column.border} shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 overflow-hidden ${(() => {
       const punct = getPunctualityStatus(delivery, currentTime);
-      if (punct.label === 'Atrasado') return 'shadow-red-500/50';
-      if (punct.label === 'Pontual' || punct.label === 'No prazo') return 'shadow-green-500/50';
-      return '';
+      let bgClass = 'bg-white';
+      let shadowClass = '';
+      if (punct.label === 'Atrasado') {
+        bgClass = 'bg-red-50';
+        shadowClass = 'shadow-red-500/50';
+      } else if (punct.label === 'Pontual' || punct.label === 'No prazo') {
+        bgClass = 'bg-green-50';
+        shadowClass = 'shadow-green-500/50';
+      }
+      return `${bgClass} ${shadowClass}`;
     })()}`}
   >
     <div className={`absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b ${column.gradient}`} />

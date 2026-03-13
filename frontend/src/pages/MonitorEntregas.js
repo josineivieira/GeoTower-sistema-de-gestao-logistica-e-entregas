@@ -794,7 +794,7 @@ const getStatusEntryTime = (delivery) => {
   const status = normalizeKey(delivery.status);
   if (status === 'AGENDADO') return delivery.scheduledAt || delivery.dataAgendamento || delivery.createdAt;
   if (status === 'CONTAINER MONTADO') return delivery.containerMontadoAt;
-  if (status === 'A CAMINHO DO CLIENTE' || status === 'PENDING') return delivery.tripStartedAt;
+  if (status === 'A CAMINHO DO CLIENTE' || status === 'PENDING') return delivery.tripStartedAt || delivery.createdAt; // fallback para createdAt se tripStartedAt não existir
   if (status === 'AGUARDANDO DESOVA') return delivery.arrivedAt || delivery.horarioChegada;
   if (status === 'EM DESOVA') return delivery.desovaStartedAt || delivery.horarioInicioDesova;
   if (status === 'ANEXANDO DOCUMENTOS FINAIS') return delivery.docsStartedAt || delivery.horarioFimDesova;

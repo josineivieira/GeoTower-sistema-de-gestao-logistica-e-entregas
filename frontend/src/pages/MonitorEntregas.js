@@ -1691,7 +1691,9 @@ const MonitorEntregas = () => {
                         >
                           <div className="px-3 py-3 flex items-center gap-1.5">
                             <span className="font-black text-blue-300 text-[12px] leading-tight whitespace-nowrap">
-                              {Array.isArray(d.processo) ? d.processo.find(p => p.startsWith('CAB')) || '—' : (d.processo && String(d.processo).startsWith('CAB') ? d.processo : '—')}
+                              {Array.isArray(d.processo)
+                                ? d.processo.filter(p => p.startsWith('CAB')).join(', ') || '—'
+                                : (d.processo && String(d.processo).startsWith('CAB') ? d.processo : '—')}
                             </span>
                           </div>
 
@@ -1713,7 +1715,15 @@ const MonitorEntregas = () => {
                           {/* HORA STATUS */}
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
-                              {d.horarioChegada ? new Date(d.horarioChegada).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
+                              {(() => {
+                                if (d.status === 'CONTAINER MONTADO' && d.containerMontadoAt)
+                                  return new Date(d.containerMontadoAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+                                if ((d.status === 'A CAMINHO DO CLIENTE' || d.status === 'PENDING') && d.horarioInicioDesova)
+                                  return new Date(d.horarioInicioDesova).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+                                if (d.horarioChegada)
+                                  return new Date(d.horarioChegada).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+                                return '—';
+                              })()}
                             </span>
                           </div>
 
@@ -1787,7 +1797,7 @@ const MonitorEntregas = () => {
 
       {selectedDelivery && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
-          <div className="bg-[#1a1a2e] rounded-3xl w-full max-w-2xl max-h-[92vh] overflow-hidden shadow-2xl border border-white/10 flex flex-col">
+          <div className="bg-[#1a1a2e] rounded-3xl w-full max-w-2xl max-h-[92vh] overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[92vh]">
             <div className="flex items-center justify-between px-5 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-purple-700/60 to-indigo-700/60 border-b border-white/10 flex-shrink-0">
               <div>
                 <p className="text-xs text-purple-300 uppercase tracking-widest font-semibold mb-0.5">Entrega</p>

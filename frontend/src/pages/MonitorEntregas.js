@@ -1681,7 +1681,7 @@ const MonitorEntregas = () => {
           </div>
         ) : (
           <div>
-            <SectionTitle sub="Tabela operacional mantida abaixo do Kanban">
+            <SectionTitle>
               Monitor Tático
             </SectionTitle>
 

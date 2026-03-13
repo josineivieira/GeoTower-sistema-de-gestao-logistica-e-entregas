@@ -1218,10 +1218,11 @@ const MonitorEntregas = () => {
 
   useEffect(() => {
     const computeTemplate = () => {
-      const cols = Array.from({ length: 15 }).map((_, idx) => {
-        if (idx === 12) return 'minmax(64px, 0.7fr)';
-        if (idx === 13) return 'minmax(56px, 0.45fr)';
-        if (idx === 14) return 'minmax(48px, 0.35fr)';
+      // eight columns after removing several fields
+      const cols = Array.from({ length: 8 }).map((_, idx) => {
+        // last two columns (Docs and Ações) should be narrower
+        if (idx === 6) return 'minmax(56px, 0.45fr)';
+        if (idx === 7) return 'minmax(48px, 0.35fr)';
         return 'minmax(0, 1fr)';
       });
       return cols.join(' ');
@@ -1484,10 +1485,9 @@ const MonitorEntregas = () => {
 
   const flowHistory = selectedDelivery ? getFlowHistory(selectedDelivery) : [];
   const HEADERS = [
-    'Container', 'Contratado', 'Motorista', 'Recebedor',
-    'Status', 'Progresso', 'DT Retirada', 'Agendamento',
-    'Chegada', 'Início', 'Fim', 'Pontualidade',
-    '⏱ Tempo', 'Docs', 'Ações'
+    'Container', 'Recebedor',
+    'Status', 'Progresso', 'Agendamento',
+    'Pontualidade', 'Docs', 'Ações'
   ];
 
   return (
@@ -1664,7 +1664,7 @@ const MonitorEntregas = () => {
                     {HEADERS.map((col, ci) => (
                       <div
                         key={col}
-                        className={`${ci >= 12 ? 'px-1 py-3.5' : 'px-3 py-3.5'} flex items-center min-w-0 select-none ${ci >= 4 ? 'justify-center' : ''} ${ci === 12 ? 'text-amber-500' : ''}`}
+                        className={`${ci >= 6 ? 'px-1 py-3.5' : 'px-3 py-3.5'} flex items-center min-w-0 select-none ${ci >= 2 ? 'justify-center' : ''}`}
                       >
                         {col}
                       </div>
@@ -1700,19 +1700,7 @@ const MonitorEntregas = () => {
                           </div>
 
                           <div className="px-3 py-3 flex items-center overflow-hidden min-w-0">
-                            <span className="text-gray-300 truncate text-[10px] cell-trunc" title={d.userName}>
-                              {d.userName || '—'}
-                            </span>
-                          </div>
-
-                          <div className="px-3 py-3 flex items-center overflow-hidden min-w-0">
-                            <span className="text-gray-300 truncate text-[10px] cell-trunc" title={d.driverName}>
-                              {d.driverName || '—'}
-                            </span>
-                          </div>
-
-                          <div className="px-3 py-3 flex items-center overflow-hidden min-w-0">
-                            <span className="text-gray-400 truncate text-[10px] cell-trunc" title={d.recebedor}>
+                            <span className="text-gray-300 truncate text-[10px] cell-trunc" title={d.recebedor}>
                               {d.recebedor || '—'}
                             </span>
                           </div>
@@ -1731,48 +1719,13 @@ const MonitorEntregas = () => {
                           </div>
 
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
-                            <span className="text-sky-400 font-semibold text-[10px] tabular-nums cell-trunc">
-                              {d.containerMontadoAt ? new Date(d.containerMontadoAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
-                            </span>
-                          </div>
-
-                          <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
                               {d.dataAgendamento ? new Date(d.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                             </span>
                           </div>
 
-                          <div className="px-2 py-3 flex items-center justify-center min-w-0">
-                            <span className="text-gray-300 text-[10px] tabular-nums cell-trunc">
-                              {d.horarioChegada ? new Date(d.horarioChegada).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
-                            </span>
-                          </div>
-
-                          <div className="px-2 py-3 flex items-center justify-center min-w-0">
-                            <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
-                              {d.horarioInicioDesova ? new Date(d.horarioInicioDesova).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
-                            </span>
-                          </div>
-
-                          <div className="px-2 py-3 flex items-center justify-center min-w-0">
-                            <span className="text-gray-400 text-[10px] tabular-nums cell-trunc">
-                              {d.horarioFimDesova ? new Date(d.horarioFimDesova).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
-                            </span>
-                          </div>
-
                           <div className="px-1 py-3 flex items-center justify-center">
                             <PunctualityCell p={getPunctualityStatus(d, currentTime)} />
-                          </div>
-
-                          <div className="px-1 py-3 flex items-center justify-center bg-amber-900/10 min-w-0">
-                            {cliTime.tempo ? (
-                              <span className={`font-black tabular-nums text-[10px] ${cliTime.isActive ? 'text-amber-400' : 'text-amber-600'}`}>
-                                {cliTime.tempo}
-                                {cliTime.isActive && <span className="ml-0.5 animate-pulse">⏱</span>}
-                              </span>
-                            ) : (
-                              <span className="text-gray-600 text-[10px]">—</span>
-                            )}
                           </div>
 
                           <div className="px-1 py-3 flex items-center justify-center min-w-0">

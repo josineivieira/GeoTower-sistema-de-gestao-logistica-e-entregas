@@ -1023,19 +1023,25 @@ const MonitorEntregas = () => {
 
   const getDocumentUrlsArray = (docData) => {
     if (!docData) return [];
-    if (typeof docData === 'string') return [docData];
+    const normalizeItem = (i) => {
+      if (typeof i === 'string') return i;
+      if (typeof i === 'object' && i) {
+        // Prefer stored path over potentially shortened/obfuscated URL
+        const pathUrl = i.path ? `/uploads/${i.path}` : null;
+        const url = (typeof i.url === 'string' && i.url.includes('...') && pathUrl) ? pathUrl : i.url;
+        return url || pathUrl || i.link || i.webViewLink || null;
+      }
+      return null;
+    };
+
     if (Array.isArray(docData)) {
-      return docData.map((i) => {
-        if (typeof i === 'string') return i;
-        if (typeof i === 'object' && i) {
-          return i.url || (i.path && `/uploads/${i.path}`) || i.link || i.webViewLink || null;
-        }
-        return null;
-      }).filter(Boolean);
+      return docData.map(normalizeItem).filter(Boolean);
     }
+
     if (typeof docData === 'object') {
-      return [docData.url || (docData.path && `/uploads/${docData.path}`) || docData.link || docData.webViewLink].filter(Boolean);
+      return [normalizeItem(docData)].filter(Boolean);
     }
+
     return [];
   };
 
@@ -1127,6 +1133,11 @@ const MonitorEntregas = () => {
       if (u.startsWith('//')) return window.location.protocol + u;
       if (u.startsWith('/')) return `${window.location.origin}${u}`;
       return u;
+    };
+
+    const cleanLabel = (label) => {
+      // Keep only printable ASCII (no emojis, no weird chars)
+      return String(label || '').replace(/[^ -]/g, '').trim();
     };
 
     const dispStatus = delivery.status === 'FINALIZADO' && allModalDocsComplete(delivery)
@@ -1231,16 +1242,19 @@ const MonitorEntregas = () => {
       doc.setFontSize(10);
       allDocKeys.forEach((k) => {
         const urls = getDocumentUrlsArray(delivery.documents?.[k]);
-        const label = labels[k] || fotoFields.find(f => f.key === k)?.label || k;
+        const label = cleanLabel(labels[k] || fotoFields.find(f => f.key === k)?.label || k);
 
         if (urls.length > 0) {
           doc.text(`${label}:`, pdfMargin, y);
-          y += 14;
+          y += 16;
+
           urls.forEach((url) => {
             const fullUrl = normalizeUrl(url);
-            doc.text(fullUrl, pdfMargin + 10, y);
-            y += 14;
+            const urlLines = doc.splitTextToSize(fullUrl, pageW - pdfMargin * 2 - 20);
+            doc.text(urlLines, pdfMargin + 10, y);
+            y += urlLines.length * 12;
           });
+          y += 4;
         } else {
           doc.text(`${label}: Não anexado`, pdfMargin, y);
           y += 16;

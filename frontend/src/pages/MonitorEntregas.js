@@ -1158,6 +1158,15 @@ const MonitorEntregas = () => {
     doc.setFontSize(10);
 
     let y = 120;
+
+    // Basic Information
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('INFORMAÇÕES GERAIS', pdfMargin, y);
+    y += 20;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
     [
       ['Contratado', safe(delivery.userName)],
       ['Motorista', safe(delivery.driverName)],
@@ -1169,10 +1178,97 @@ const MonitorEntregas = () => {
       ['Chegada', formatDT(delivery.horarioChegada)],
       ['Início Desova', formatDT(delivery.horarioInicioDesova)],
       ['Fim Desova', formatDT(delivery.horarioFimDesova)],
+      ['Devolução Container Vazio', formatDT(delivery.horarioDevolucaoVazio)],
     ].forEach(([k, v]) => {
       doc.text(`${k}: ${v}`, pdfMargin, y);
       y += 16;
     });
+
+    y += 10;
+
+    // Flow History
+    const flowHistory = getFlowHistory(delivery);
+    if (flowHistory.length > 0) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('HISTÓRICO DO FLUXO', pdfMargin, y);
+      y += 20;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      flowHistory.forEach((ev) => {
+        doc.text(`• ${ev.label}: ${new Date(ev.date).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}`, pdfMargin, y);
+        y += 16;
+      });
+      y += 10;
+    }
+
+    // Observations
+    const hasObservations = delivery.observations || delivery.observacoes || delivery.documentsJustification || delivery.submissionObservation;
+    if (hasObservations) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('OBSERVAÇÕES', pdfMargin, y);
+      y += 20;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      if (delivery.observations) {
+        doc.text('Observações:', pdfMargin, y);
+        y += 14;
+        const obsLines = doc.splitTextToSize(delivery.observations, pageW - 2 * pdfMargin);
+        doc.text(obsLines, pdfMargin, y);
+        y += obsLines.length * 12 + 10;
+      }
+      if (delivery.observacoes) {
+        doc.text('Observações (adicional):', pdfMargin, y);
+        y += 14;
+        const obsLines = doc.splitTextToSize(delivery.observacoes, pageW - 2 * pdfMargin);
+        doc.text(obsLines, pdfMargin, y);
+        y += obsLines.length * 12 + 10;
+      }
+      if (delivery.documentsJustification) {
+        doc.text('Justificativa de Documentos:', pdfMargin, y);
+        y += 14;
+        const justLines = doc.splitTextToSize(delivery.documentsJustification, pageW - 2 * pdfMargin);
+        doc.text(justLines, pdfMargin, y);
+        y += justLines.length * 12 + 10;
+      }
+      if (delivery.submissionObservation) {
+        doc.text('Observação de Submissão:', pdfMargin, y);
+        y += 14;
+        const subLines = doc.splitTextToSize(delivery.submissionObservation, pageW - 2 * pdfMargin);
+        doc.text(subLines, pdfMargin, y);
+        y += subLines.length * 12 + 10;
+      }
+    }
+
+    // Documents
+    const labels = getLabelsForDelivery(delivery);
+    const docKeys = Object.keys(delivery.documents || {}).filter(k => !['chegadaCliente', 'inicioDesova', 'fimDesova'].includes(k));
+    const fotoFields = [
+      { key: 'chegadaCliente', label: 'Chegada no Cliente' },
+      { key: 'inicioDesova', label: 'Início da Desova' },
+      { key: 'fimDesova', label: 'Finalização da Desova' }
+    ];
+    const allDocKeys = [...docKeys, ...fotoFields.map(f => f.key)];
+
+    if (allDocKeys.length > 0) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('DOCUMENTOS E FOTOS', pdfMargin, y);
+      y += 20;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      allDocKeys.forEach((k) => {
+        const urls = getDocumentUrlsArray(delivery.documents?.[k]);
+        const present = urls.length > 0;
+        const label = labels[k] || fotoFields.find(f => f.key === k)?.label || k;
+        doc.text(`${label}: ${present ? `${urls.length} arquivo(s) anexado(s)` : 'Não anexado'}`, pdfMargin, y);
+        y += 16;
+      });
+    }
 
     const footerY = pageH - 42;
     doc.setDrawColor(230);

@@ -125,7 +125,10 @@ const STATUS_COLUMNS = [
     border: 'border-cyan-200',
     text: 'text-cyan-700',
     badge: 'bg-cyan-100 text-cyan-700',
-    filter: (p) => normalizeKey(p.status) === 'FINALIZADO' && p.containerReturned !== true,
+    filter: (p) => {
+      const s = normalizeKey(p.status);
+      return s === 'PEND. DEVOLUCAO' || s === 'PEND. DEVOLUÇÃO';
+    },
   },
   {
     key: 'CNTR_ENTREGUE',
@@ -138,8 +141,11 @@ const STATUS_COLUMNS = [
     text: 'text-green-700',
     badge: 'bg-green-100 text-green-700',
     filter: (p) => {
+      // Vai para CNTR entregue se já tem comprovante (foto) e horarioDevolucaoVazio preenchido
       const s = normalizeKey(p.status);
-      return p.containerReturned === true || s === 'ENTREGUE COM PENDENCIA CANHOTO';
+      return (
+        (s === 'PEND. DEVOLUCAO' || s === 'PEND. DEVOLUÇÃO') && p.horarioDevolucaoVazio
+      ) || p.containerReturned === true || s === 'ENTREGUE COM PENDENCIA CANHOTO';
     },
   },
 ];

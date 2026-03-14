@@ -350,6 +350,9 @@ const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime }) => (
       } else if (punct.label === 'Pontual' || punct.label === 'No prazo') {
         bgClass = 'bg-green-50';
         shadowClass = 'shadow-green-500/50';
+      } else if (punct.label === 'Possível atraso') {
+        bgClass = 'bg-yellow-50';
+        shadowClass = 'shadow-yellow-500/50';
       }
       return `${bgClass} ${shadowClass}`;
     })()}`}
@@ -359,6 +362,7 @@ const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime }) => (
         const punct = getPunctualityStatus(delivery, currentTime);
         if (punct.label === 'Atrasado') return 'from-red-400 to-red-600';
         if (punct.label === 'Pontual' || punct.label === 'No prazo') return 'from-green-400 to-green-600';
+        if (punct.label === 'Possível atraso') return 'from-yellow-400 to-yellow-600';
         return column.gradient;
       })()}`}
     />

@@ -1262,7 +1262,7 @@ const ProgramadasEntregas = () => {
           ════════════════════════════════════════════ */}
       {showModal && currentDelivery && currentProgramacao && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-white w-full sm:max-w-xl sm:rounded-3xl rounded-t-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+          <div className="bg-white w-full h-full sm:max-w-xl sm:rounded-3xl sm:h-auto rounded-none shadow-2xl overflow-hidden flex flex-col">
 
             {/* Modal header */}
             <div className="bg-gradient-to-r from-emerald-600 to-teal-700 p-5 flex-shrink-0">

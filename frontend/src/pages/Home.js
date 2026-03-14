@@ -923,26 +923,46 @@ const Home = () => {
       ══════════════════════════════════════════════════════ */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 pb-28">
 
-        {/* ─── DRIVER: Seleção de Motorista ─── */}
+        {/* ─── DRIVER: Ações rápidas e atalho do motorista logado ─── */}
         {role === 'driver' && (
           <>
             <SectionHeader
-              icon={<FaTruck style={{ color: B.m, fontSize: '0.95rem' }} />}
-              title="Selecione o motorista para ver as entregas"
-              subtitle="Clique no nome para visualizar as entregas programadas"
+              icon={<FaBullseye style={{ color: B.v, fontSize: '0.85rem' }} />}
+              title="Ações Rápidas"
+              subtitle="Acesse as funcionalidades mais utilizadas"
+              delay={80}
             />
-            <div className="flex flex-wrap gap-3 mb-8">
-              {/* Exemplo de nomes, troque por sua lógica de motoristas se necessário */}
-              {['João', 'Maria', 'Carlos', 'Ana'].map((nome) => (
-                <button
-                  key={nome}
-                  onClick={() => navigate(`/entregas-programadas?motorista=${encodeURIComponent(nome)}`)}
-                  className="px-5 py-2 rounded-xl font-bold text-sm bg-white text-emerald-700 border shadow-sm border-emerald-200 transition"
-                  style={{ minWidth: 120 }}
-                >
-                  {nome}
-                </button>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-14">
+              <DriverCard
+                onClick={() => navigate(`/entregas-programadas?motorista=${encodeURIComponent(user?.name || user?.username || '')}`)}
+                accentColor={B.v}
+                accentDark={B.vD}
+                icon={<FaCalendarAlt />}
+                title="Entregas Programadas"
+                description="Visualize todas as entregas agendadas vinculadas ao seu perfil."
+                tag="Agendamento"
+                delay={0}
+              />
+              <DriverCard
+                onClick={() => navigate('/minhas-entregas')}
+                accentColor={B.m}
+                accentDark={B.mD}
+                icon={<FaBoxes />}
+                title="Minhas Entregas"
+                description="Acompanhe todas as suas entregas em tempo real, histórico e status atualizado."
+                tag="Operacional"
+                delay={80}
+              />
+              <DriverCard
+                onClick={() => navigate('/entregas-canhotos-pendentes')}
+                accentColor="#EC4899"
+                accentDark="#BE185D"
+                icon={<FaFileAlt />}
+                title="Canhotos Pendentes"
+                description="Anexe os canhotos das entregas abertas para manter toda documentação em dia."
+                tag="Documentação"
+                delay={160}
+              />
             </div>
           </>
         )}

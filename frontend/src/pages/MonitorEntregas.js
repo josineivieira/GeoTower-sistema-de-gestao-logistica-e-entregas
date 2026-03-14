@@ -141,10 +141,11 @@ const STATUS_COLUMNS = [
     text: 'text-green-700',
     badge: 'bg-green-100 text-green-700',
     filter: (p) => {
-      // Vai para CNTR entregue se já tem comprovante (foto) e horarioDevolucaoVazio preenchido
+      // Vai para CNTR entregue se já tem comprovante (foto) e horarioDevolucaoVazio ou dtDevolucaoCNTR preenchido
       const s = normalizeKey(p.status);
+      const hasDevolucao = p.horarioDevolucaoVazio || p.dtDevolucaoCNTR;
       return (
-        (s === 'PEND. DEVOLUCAO' || s === 'PEND. DEVOLUÇÃO') && p.horarioDevolucaoVazio
+        (s === 'PEND. DEVOLUCAO' || s === 'PEND. DEVOLUÇÃO') && hasDevolucao
       ) || p.containerReturned === true || s === 'ENTREGUE COM PENDENCIA CANHOTO';
     },
   },

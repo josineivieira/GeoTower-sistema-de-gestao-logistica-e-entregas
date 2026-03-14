@@ -795,7 +795,10 @@ const ProgramadasEntregas = () => {
       <PhotoGrid photos={photos} onRemove={removePhoto} />
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleCameraCapture} className="hidden" />
       <button
-        onClick={() => cameraInputRef.current?.click()}
+        onClick={() => {
+          if (cameraInputRef.current) cameraInputRef.current.value = null;
+          cameraInputRef.current?.click();
+        }}
         className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-base shadow-lg hover:shadow-xl active:scale-95 transition"
       >
         <FaCamera size={18} />
@@ -1154,7 +1157,7 @@ const ProgramadasEntregas = () => {
                 >
                   <FaCamera size={14} /> {montagemComprovante ? 'Trocar Foto' : 'Tirar Foto'}
                 </button>
-                <input ref={montagemComprovanteRef} type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) setMontagemComprovante(f); }} className="hidden" />
+                <input ref={montagemComprovanteRef} type="file" accept="image/*" capture="environment" onChange={e => { const f = e.target.files?.[0]; if (f) setMontagemComprovante(f); }} className="hidden" />
               </div>
 
               {montagemSubmitting && (

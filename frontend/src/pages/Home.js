@@ -1002,18 +1002,6 @@ const Home = () => {
                 viewOnly={isViewOnly()}
                 delay={120}
               />
-              <MonitorCard
-                onClick={() => navigate('/monitor-processos')}
-                disabled={isViewOnly()}
-                accentColor="#059669"
-                accentDark="#047857"
-                icon={<FaTasks />}
-                titleIcon={<FaClipboardList />}
-                title="Monitor de Processos"
-                description="Acompanhe o fluxo completo dos processos de entrega por status, desde agendamento até finalização."
-                viewOnly={isViewOnly()}
-                delay={180}
-              />
             </div>
 
             {/* Management grid */}

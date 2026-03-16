@@ -21,7 +21,6 @@ import NovaEntrega from './pages/NovaEntrega';
 import MinhasEntregas from './pages/MinhasEntregas';
 import AdminDashboard from './pages/AdminDashboard';
 import MonitorEntregas from './pages/MonitorEntregas';
-import MonitorProcessos from './pages/MonitorProcessos';
 import UserManagement from './pages/UserManagement';
 import MotoristaManagement from './pages/MotoristaManagement';
 import ProgramacaoManagement from './pages/ProgramacaoManagement';
@@ -162,16 +161,6 @@ function AppContent() {
         }
       />
 
-      <Route
-        path="/monitor-processos"
-        element={
-          <PrivateRoute allowedRoles={[ 'admin', 'manager', 'geomar' ]}>
-            <AppLayout>
-              <MonitorProcessos />
-            </AppLayout>
-          </PrivateRoute>
-        }
-      />
 
       <Route
         path="/usuarios"

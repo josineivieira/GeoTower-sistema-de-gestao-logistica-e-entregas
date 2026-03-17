@@ -746,23 +746,33 @@ const ProgramadasEntregas = () => {
   });
 
   // Para cada grupo, mostra apenas uma montagem/devolução, mas lista todos os recebedores/processos
-  const filteredProgramacoes = Object.values(groupedByContainer).map(group => {
-    // Seleciona a programação com status prioritário para ação (montagem/devolução)
-    // Prioridade: CONTAINER_MONTADO > ENTREGUE > DEVOLVENDO_CONTAINER > FINALIZADO > AGENDADO > outros
+  // Função para determinar o status mais avançado
+  function getMostAdvancedStatus(group) {
     const statusOrder = [
-      'CONTAINER_MONTADO',
-      'ENTREGUE',
-      'DEVOLVENDO_CONTAINER',
       'FINALIZADO',
+      'DEVOLVENDO_CONTAINER',
+      'ENTREGUE',
+      'ANEXANDO_DOCUMENTOS_FINAIS',
+      'AGUARDANDO_AGENDAMENTO_DEVOLUCAO',
+      'DESOVA_FINALIZADA',
+      'EM_DESOVA',
+      'AGUARDANDO_DESOVA',
+      'A_CAMINHO_DO_CLIENTE',
+      'CONTAINER_MONTADO',
       'AGENDADO',
       'PENDING',
       'pending'
     ];
-    let main = group[0];
     for (const status of statusOrder) {
       const found = group.find(p => (p.status || '').toUpperCase() === status);
-      if (found) { main = found; break; }
+      if (found) return found;
     }
+    return group[0];
+  }
+
+  const filteredProgramacoes = Object.values(groupedByContainer).map(group => {
+    // Seleciona a programação com status mais avançado
+    const main = getMostAdvancedStatus(group);
     // Adiciona todos os recebedores/processos ao card
     main.fracionadas = group;
     return main;

@@ -202,4 +202,105 @@ router.patch("/entregas/:processo/atribuir-motorista", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/ycompany/relatorio-contratado
+ * Retorna relatório de entregas por contratado com filtro de datas e valores
+ * Query params:
+ *  - contratado: nome ou vazio para todos
+ *  - dataInicio: YYYY-MM-DD
+ *  - dataFim: YYYY-MM-DD
+ *  - vlFreteMIN: valor mínimo de frete
+ *  - vlFreteMAX: valor máximo de frete
+ */
+router.get("/relatorio-contratado", async (req, res) => {
+  try {
+    const c = await col();
+    const { contratado, dataInicio, dataFim, vlFreteMIN, vlFreteMAX } = req.query;
+
+    const filter = {};
+
+    // Filtro de contratado
+    if (contratado && contratado.trim()) {
+      filter.contratado = { $regex: `^${contratado.trim()}$`, $options: 'i' };
+    }
+
+    // Filtro de datas (usando dtInicioRota ou dtChegada)
+    if (dataInicio || dataFim) {
+      filter.dtInicioRota = {};
+      if (dataInicio) {
+        const start = new Date(dataInicio);
+        filter.dtInicioRota.$gte = start;
+      }
+      if (dataFim) {
+        const end = new Date(dataFim);
+        end.setHours(23, 59, 59, 999);
+        filter.dtInicioRota.$lte = end;
+      }
+    }
+
+    // Filtro de valor de frete
+    if (vlFreteMIN || vlFreteMAX) {
+      filter.vlFreteProcesso = {};
+      if (vlFreteMIN) {
+        filter.vlFreteProcesso.$gte = parseFloat(vlFreteMIN);
+      }
+      if (vlFreteMAX) {
+        filter.vlFreteProcesso.$lte = parseFloat(vlFreteMAX);
+      }
+    }
+
+    // Buscar dados
+    const dados = await c
+      .find(filter)
+      .sort({ dtInicioRota: -1, _id: -1 })
+      .toArray();
+
+    // Calcular sumário
+    const totalEntregas = dados.length;
+    const totalFrete = dados.reduce((sum, d) => sum + (d.vlFreteProcesso || 0), 0);
+    const mediaFrete = totalEntregas > 0 ? totalFrete / totalEntregas : 0;
+
+    // Agrupar por contratado para sumário
+    const resumoPorContratado = {};
+    dados.forEach(d => {
+      const c = d.contratado || 'SEM CONTRATADO';
+      if (!resumoPorContratado[c]) {
+        resumoPorContratado[c] = { quantidade: 0, totalFrete: 0 };
+      }
+      resumoPorContratado[c].quantidade += 1;
+      resumoPorContratado[c].totalFrete += d.vlFreteProcesso || 0;
+    });
+
+    res.json({
+      ok: true,
+      filtros: { contratado, dataInicio, dataFim, vlFreteMIN, vlFreteMAX },
+      resumo: {
+        totalEntregas,
+        totalFrete,
+        mediaFrete: parseFloat(mediaFrete.toFixed(2))
+      },
+      resumoPorContratado,
+      dados
+    });
+  } catch (e) {
+    console.error("YCompany relatório error:", e);
+    res.status(500).json({ ok: false, error: "Erro ao gerar relatório" });
+  }
+});
+
+/**
+ * GET /api/ycompany/contratados-unicos
+ * Retorna lista de contratados únicos para o filtro
+ */
+router.get("/contratados-unicos", async (req, res) => {
+  try {
+    const c = await col();
+    const contratados = await c.distinct("contratado", { contratado: { $ne: null, $ne: "" } });
+    res.json({ ok: true, contratados: contratados.sort() });
+  } catch (e) {
+    console.error("YCompany contratados error:", e);
+    res.status(500).json({ ok: false, error: "Erro ao buscar contratados" });
+  }
+});
+
 module.exports = router;

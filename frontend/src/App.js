@@ -12,6 +12,7 @@ import TermosUso from './pages/TermosUso';
 import Suporte from './pages/Suporte';
 import BaseDadosGeral from './pages/BaseDadosGeral';
 import Ycompany from './pages/Ycompany';
+import RelatorioContratado from './pages/RelatorioContratado';
 
 // Pages
 import Login from './pages/Login';
@@ -234,6 +235,17 @@ function AppContent() {
           <PrivateRoute allowedRoles={['admin', 'manager', 'geomar']}>
             <AppLayout>
               <Ycompany />
+            </AppLayout>
+          </PrivateRoute>
+        }
+      />
+
+      <Route
+        path="/relatorio-contratado"
+        element={
+          <PrivateRoute allowedRoles={['admin', 'manager', 'geomar']}>
+            <AppLayout>
+              <RelatorioContratado />
             </AppLayout>
           </PrivateRoute>
         }

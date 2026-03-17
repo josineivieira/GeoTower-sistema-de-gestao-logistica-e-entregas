@@ -1074,6 +1074,18 @@ const Home = () => {
                       delay={320}
                     />
                   )}
+                  {hasAccess(['manager','admin']) && (
+                    <ManageCard
+                      onClick={() => navigate('/relatorio-contratado')}
+                      accentColor="#F59E0B"
+                      accentDark="#D97706"
+                      icon={<FaChartBar />}
+                      titleIcon={<FaChartLine />}
+                      title="Relatório Contratado"
+                      description="Consulte entregas por contratado com filtros de datas e valores de frete."
+                      delay={400}
+                    />
+                  )}
                 </div>
               </>
             )}

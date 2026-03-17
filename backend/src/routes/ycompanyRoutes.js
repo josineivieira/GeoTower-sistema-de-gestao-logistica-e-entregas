@@ -217,6 +217,13 @@ router.get("/relatorio-contratado", async (req, res) => {
     const c = await col();
     const { contratado, dataInicio, dataFim, vlFreteMIN, vlFreteMAX } = req.query;
 
+    console.log('=== FILTRO RECEBIDO ===');
+    console.log('contratado:', contratado);
+    console.log('dataInicio:', dataInicio);
+    console.log('dataFim:', dataFim);
+    console.log('vlFreteMIN:', vlFreteMIN);
+    console.log('vlFreteMAX:', vlFreteMAX);
+
     const filter = {};
 
     // Filtro de contratado
@@ -235,13 +242,17 @@ router.get("/relatorio-contratado", async (req, res) => {
           const parts = dataInicio.split('-');
           if (parts.length === 3) {
             const startDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 0, 0, 0);
+            console.log('Start Date:', startDate);
             filter.dtAgendamentoDescarga.$gte = startDate;
           } else {
             const start = new Date(dataInicio);
+            console.log('Start Date (parse):', start);
             filter.dtAgendamentoDescarga.$gte = start;
           }
         } catch (e) {
+          console.error('Erro ao parsear dataInicio:', e);
           const start = new Date(dataInicio);
+          console.log('Start Date (fallback):', start);
           filter.dtAgendamentoDescarga.$gte = start;
         }
       }
@@ -251,15 +262,19 @@ router.get("/relatorio-contratado", async (req, res) => {
           const parts = dataFim.split('-');
           if (parts.length === 3) {
             const endDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 23, 59, 59, 999);
+            console.log('End Date:', endDate);
             filter.dtAgendamentoDescarga.$lte = endDate;
           } else {
             const end = new Date(dataFim);
             end.setHours(23, 59, 59, 999);
+            console.log('End Date (parse):', end);
             filter.dtAgendamentoDescarga.$lte = end;
           }
         } catch (e) {
+          console.error('Erro ao parsear dataFim:', e);
           const end = new Date(dataFim);
           end.setHours(23, 59, 59, 999);
+          console.log('End Date (fallback):', end);
           filter.dtAgendamentoDescarga.$lte = end;
         }
       }
@@ -276,11 +291,17 @@ router.get("/relatorio-contratado", async (req, res) => {
       }
     }
 
+    console.log('=== FILTRO CONSTRUÍDO ===');
+    console.log(JSON.stringify(filter, null, 2));
+
     // Buscar dados
     const dados = await c
       .find(filter)
       .sort({ dtAgendamentoDescarga: -1, _id: -1 })
       .toArray();
+
+    console.log('=== RESULTADO ===');
+    console.log('Total encontrado:', dados.length);
 
     // Calcular sumário
     const totalEntregas = dados.length;
@@ -311,7 +332,7 @@ router.get("/relatorio-contratado", async (req, res) => {
     });
   } catch (e) {
     console.error("YCompany relatório error:", e);
-    res.status(500).json({ ok: false, error: "Erro ao gerar relatório" });
+    res.status(500).json({ ok: false, error: "Erro ao gerar relatório", details: e.message });
   }
 });
 

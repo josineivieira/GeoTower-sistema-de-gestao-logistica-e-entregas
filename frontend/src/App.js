@@ -220,7 +220,13 @@ function AppContent() {
       />
       <Route
         path="/base-dados-geral"
-        element={<AppLayout><BaseDadosGeral /></AppLayout>}
+        element={
+          <PrivateRoute allowedRoles={['admin', 'manager', 'geomar']}>
+            <AppLayout>
+              <BaseDadosGeral />
+            </AppLayout>
+          </PrivateRoute>
+        }
       />
       <Route
         path="/ycompany"

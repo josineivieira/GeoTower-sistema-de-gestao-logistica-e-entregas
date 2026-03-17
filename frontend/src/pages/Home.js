@@ -1004,76 +1004,79 @@ const Home = () => {
               />
             </div>
 
-            {/* Management grid */}
-            <SectionHeader
-              icon={<FaCog style={{ color: B.v, fontSize: '0.85rem' }} />}
-              title="Gerenciamento & Configurações"
-              subtitle="Controle total sobre usuários, motoristas e programações"
-              delay={60}
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
-              {hasAccess(['manager']) && (
-                <ManageCard
-                  onClick={() => navigate('/usuarios')}
-                  accentColor="#8B5CF6"
-                  accentDark="#6D28D9"
-                  icon={<FaUsers />}
-                  titleIcon={<FaUsers />}
-                  title="Usuários"
-                  description="Criar, editar e controlar perfis de todos os usuários do sistema."
-                  delay={0}
+            {/* Management grid: Oculto para geomar */}
+            {role !== 'geomar' && (
+              <>
+                <SectionHeader
+                  icon={<FaCog style={{ color: B.v, fontSize: '0.85rem' }} />}
+                  title="Gerenciamento & Configurações"
+                  subtitle="Controle total sobre usuários, motoristas e programações"
+                  delay={60}
                 />
-              )}
-              <ManageCard
-                onClick={() => navigate('/motoristas')}
-                disabled={false}
-                accentColor={B.m}
-                accentDark={B.mD}
-                icon={<FaIdCard />}
-                titleIcon={<FaTruck />}
-                title="Motoristas"
-                description="Gerenciar motoristas, dados, rastreadores e contatos da frota."
-                viewOnly={false}
-                delay={80}
-              />
-              <ManageCard
-                onClick={() => navigate('/programacoes')}
-                disabled={false}
-                accentColor="#0891B2"
-                accentDark="#0E7490"
-                icon={<FaLayerGroup />}
-                titleIcon={<FaBoxes />}
-                title="Programações"
-                description="Gerenciar programações de entregas com todos os detalhes e vínculos."
-                viewOnly={false}
-                delay={160}
-              />
-              {hasAccess(['manager']) && (
-                <ManageCard
-                  onClick={() => navigate('/base-dados-geral')}
-                  accentColor="#059669"
-                  accentDark="#047857"
-                  icon={<FaTable />}
-                  titleIcon={<FaDatabase />}
-                  title="Base de Dados"
-                  description="Visualizar todos os dados das programações em formato de tabela completa."
-                  delay={240}
-                />
-              )}
-              {hasAccess(['manager']) && (
-                <ManageCard
-                  onClick={() => navigate('/ycompany')}
-                  accentColor="#DC2626"
-                  accentDark="#991B1B"
-                  icon={<FaTable />}
-                  titleIcon={<FaDatabase />}
-                  title="Icompany"
-                  description="Base de dados com operações marítimas, rastreamento e documentação logística."
-                  delay={320}
-                />
-              )}
-            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
+                  {hasAccess(['manager']) && (
+                    <ManageCard
+                      onClick={() => navigate('/usuarios')}
+                      accentColor="#8B5CF6"
+                      accentDark="#6D28D9"
+                      icon={<FaUsers />}
+                      titleIcon={<FaUsers />}
+                      title="Usuários"
+                      description="Criar, editar e controlar perfis de todos os usuários do sistema."
+                      delay={0}
+                    />
+                  )}
+                  <ManageCard
+                    onClick={() => navigate('/motoristas')}
+                    disabled={false}
+                    accentColor={B.m}
+                    accentDark={B.mD}
+                    icon={<FaIdCard />}
+                    titleIcon={<FaTruck />}
+                    title="Motoristas"
+                    description="Gerenciar motoristas, dados, rastreadores e contatos da frota."
+                    viewOnly={false}
+                    delay={80}
+                  />
+                  <ManageCard
+                    onClick={() => navigate('/programacoes')}
+                    disabled={false}
+                    accentColor="#0891B2"
+                    accentDark="#0E7490"
+                    icon={<FaLayerGroup />}
+                    titleIcon={<FaBoxes />}
+                    title="Programações"
+                    description="Gerenciar programações de entregas com todos os detalhes e vínculos."
+                    viewOnly={false}
+                    delay={160}
+                  />
+                  {hasAccess(['manager']) && (
+                    <ManageCard
+                      onClick={() => navigate('/base-dados-geral')}
+                      accentColor="#059669"
+                      accentDark="#047857"
+                      icon={<FaTable />}
+                      titleIcon={<FaDatabase />}
+                      title="Base de Dados"
+                      description="Visualizar todos os dados das programações em formato de tabela completa."
+                      delay={240}
+                    />
+                  )}
+                  {hasAccess(['manager']) && (
+                    <ManageCard
+                      onClick={() => navigate('/ycompany')}
+                      accentColor="#DC2626"
+                      accentDark="#991B1B"
+                      icon={<FaTable />}
+                      titleIcon={<FaDatabase />}
+                      title="Icompany"
+                      description="Base de dados com operações marítimas, rastreamento e documentação logística."
+                      delay={320}
+                    />
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Status strip */}
             <div

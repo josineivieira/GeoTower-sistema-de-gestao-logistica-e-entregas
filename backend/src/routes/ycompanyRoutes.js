@@ -225,16 +225,43 @@ router.get("/relatorio-contratado", async (req, res) => {
     }
 
     // Filtro de datas (usando dtAgendamentoDescarga)
+    // Aceita strings no formato YYYY-MM-DD e converte para Date
     if (dataInicio || dataFim) {
       filter.dtAgendamentoDescarga = {};
+      
       if (dataInicio) {
-        const start = new Date(dataInicio);
-        filter.dtAgendamentoDescarga.$gte = start;
+        // "2026-03-09" → Date ou usar $gte com string
+        try {
+          const parts = dataInicio.split('-');
+          if (parts.length === 3) {
+            const startDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 0, 0, 0);
+            filter.dtAgendamentoDescarga.$gte = startDate;
+          } else {
+            const start = new Date(dataInicio);
+            filter.dtAgendamentoDescarga.$gte = start;
+          }
+        } catch (e) {
+          const start = new Date(dataInicio);
+          filter.dtAgendamentoDescarga.$gte = start;
+        }
       }
+      
       if (dataFim) {
-        const end = new Date(dataFim);
-        end.setHours(23, 59, 59, 999);
-        filter.dtAgendamentoDescarga.$lte = end;
+        try {
+          const parts = dataFim.split('-');
+          if (parts.length === 3) {
+            const endDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 23, 59, 59, 999);
+            filter.dtAgendamentoDescarga.$lte = endDate;
+          } else {
+            const end = new Date(dataFim);
+            end.setHours(23, 59, 59, 999);
+            filter.dtAgendamentoDescarga.$lte = end;
+          }
+        } catch (e) {
+          const end = new Date(dataFim);
+          end.setHours(23, 59, 59, 999);
+          filter.dtAgendamentoDescarga.$lte = end;
+        }
       }
     }
 

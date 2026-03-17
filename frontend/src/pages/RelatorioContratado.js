@@ -112,11 +112,9 @@ const RelatorioContratado = () => {
       'Destinatário': d.destinatario,
       'Container': d.containerNumero || '—',
       'Data Agendamento Descarga': d.dtAgendamentoDescarga ? new Date(d.dtAgendamentoDescarga).toLocaleDateString('pt-BR') : '—',
-      'Data Chegada': d.dtChegada ? new Date(d.dtChegada).toLocaleDateString('pt-BR') : '—',
       'Motorista': d.motorista,
       'Vl. Frete Processo': d.vlFreteProcesso ? `R$ ${d.vlFreteProcesso.toFixed(2).replace('.', ',')}` : 'R$ 0,00',
       'Vl. Pedágio': d.vlPedagio ? `R$ ${d.vlPedagio.toFixed(2).replace('.', ',')}` : 'R$ 0,00',
-      'Situação': d.situacao
     }));
 
     exportToExcel(exportDados, 'Relatorio_Contratado');
@@ -188,12 +186,11 @@ const RelatorioContratado = () => {
       d.dtAgendamentoDescarga ? new Date(d.dtAgendamentoDescarga).toLocaleDateString('pt-BR') : '—',
       d.motorista || '—',
       `R$ ${(d.vlFreteProcesso || 0).toFixed(2)}`,
-      d.situacao || '—',
     ]);
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Código', 'Contratado', 'Destinatário', 'Container', 'Data Agendamento', 'Motorista', 'Vl. Frete', 'Situação']],
+      head: [['Código', 'Contratado', 'Destinatário', 'Container', 'Data Agendamento', 'Motorista', 'Vl. Frete']],
       body: tableData,
       margin: margin,
       styles: { fontSize: 8 },
@@ -459,7 +456,6 @@ const RelatorioContratado = () => {
                     <th className="px-4 py-3 text-left font-semibold text-slate-600">Data Agendamento</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-600">Motorista</th>
                     <th className="px-4 py-3 text-right font-semibold text-slate-600">Vl. Frete</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-600">Situação</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -472,11 +468,6 @@ const RelatorioContratado = () => {
                       <td className="px-4 py-3 text-slate-700">{formatDate(d.dtAgendamentoDescarga)}</td>
                       <td className="px-4 py-3 text-slate-700">{d.motorista || '—'}</td>
                       <td className="px-4 py-3 text-right font-semibold text-green-600">{formatCurrency(d.vlFreteProcesso)}</td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
-                          {d.situacao || '—'}
-                        </span>
-                      </td>
                     </tr>
                   ))}
                 </tbody>

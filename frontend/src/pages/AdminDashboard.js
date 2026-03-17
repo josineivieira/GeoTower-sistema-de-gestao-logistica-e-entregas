@@ -157,14 +157,9 @@ const AdminDashboard = () => {
   const [exporting,   setExporting]   = useState({ pdf: false, excel: false });
   const [toast,       setToast]       = useState(null);
   const [activeBar,   setActiveBar]   = useState(null);
-  // filters sent to the backend. We keep searchTerm separate so we can
-  // debounce the request while the user is typing, otherwise every keystroke
-  // refires the effect and the whole dashboard reloads (annoying for
-  // long reports).
-  const [filters, setFilters] = useState({ searchTerm: '', startDate: '', endDate: '' });
-  const [searchInput, setSearchInput] = useState('');
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [searchTerm,  setSearchTerm]  = useState('');
 
+  const searchTimerRef = React.useRef(null);
   const chartRefs = {
     area:        useRef(null),
     barDriver:   useRef(null),
@@ -172,12 +167,19 @@ const AdminDashboard = () => {
     barCli:      useRef(null),
   };
 
+  // Cleanup search timer on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, [searchTerm]);
+
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
       const [delivRes, statsRes] = await Promise.all([
-        adminService.getDeliveries(filters),
+        adminService.getDeliveries({ searchTerm }),
         adminService.getStatistics({ period }),
       ]);
       setDeliveries(delivRes.data.deliveries);
@@ -195,20 +197,22 @@ const AdminDashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [period, filters]);
+  }, [period, searchTerm]);
 
-  // update filters when the debounced search input changes
-  // explicit debounce using a ref timer so updates happen only after
-  // the user pauses typing (700ms) or presses Enter (handled onKeyDown).
-  const searchTimerRef = React.useRef(null);
-  useEffect(() => {
-    return () => {
-      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    };
-  }, []);
+  // Debounced search input
+  const handleSearchChange = (value) => {
+    const trimmed = value.trim();
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setSearchTerm(trimmed);
+      searchTimerRef.current = null;
+    }, 700);
+  };
 
-  // whenever filters or period change we reload data
-  useEffect(() => { loadData(); }, [loadData]);
+  // whenever searchTerm or period change we reload data
+  useEffect(() => { 
+    loadData(); 
+  }, [loadData]);
 
   const getCliMinutes = (d) => {
     if (!d.horarioChegada) return null;
@@ -304,76 +308,6 @@ const AdminDashboard = () => {
     }
   };
 
-  /* ── SETTINGS DRAWER (for filters + export) ── */
-  const SettingsDrawer = ({ open, onClose }) => {
-    const [visible, setVisible] = useState(false);
-    useEffect(() => {
-      if (open) setVisible(true);
-      else {
-        const t = setTimeout(() => setVisible(false), 260);
-        return () => clearTimeout(t);
-      }
-    }, [open]);
-    if (!visible) return null;
-    return (
-      <>
-        <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
-        <div className={`fixed right-0 top-0 h-full w-full max-w-md z-50 p-4 ${open ? 'panel-enter' : 'panel-exit'}`}>
-          <div className="h-full rounded-2xl bg-[#0b1220] border border-white/10 shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-indigo-600/20 flex items-center justify-center">
-                  <FiFilter className="text-indigo-300" />
-                </div>
-                <h3 className="text-sm font-bold text-white">Configurações</h3>
-              </div>
-              <button onClick={onClose} className="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 text-white">Fechar</button>
-            </div>
-
-            <div className="p-4 overflow-y-auto flex-1 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-2">Buscar</label>
-                <div className="relative">
-                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                  <input type="text" placeholder="Buscar entrega ou motorista..." value={searchInput}
-                    onChange={e => { const v = e.target.value; setSearchInput(v); if (searchTimerRef.current) clearTimeout(searchTimerRef.current); searchTimerRef.current = setTimeout(() => { setFilters(f => ({ ...f, searchTerm: v.trim() })); searchTimerRef.current = null; }, 700); }}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (searchTimerRef.current) { clearTimeout(searchTimerRef.current); searchTimerRef.current = null; } setFilters(f => ({ ...f, searchTerm: searchInput.trim() })); } }}
-                    className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-white/[0.09] bg-white/[0.04] text-slate-100 placeholder-slate-600" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Data início</label>
-                  <input type="date" value={filters.startDate} onChange={e => setFilters({ ...filters, startDate: e.target.value })} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-100" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Data fim</label>
-                  <input type="date" value={filters.endDate} onChange={e => setFilters({ ...filters, endDate: e.target.value })} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-100" />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button onClick={() => { setFilters({ searchTerm:'', startDate:'', endDate:'' }); setSearchInput(''); }} className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-semibold">Limpar filtros</button>
-                <button onClick={() => { loadData(true); onClose(); }} className="flex-1 py-2 rounded-xl bg-indigo-600 text-white font-bold">Aplicar</button>
-              </div>
-
-              <div className="pt-2 border-t border-white/6" />
-
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-slate-400">Exportar</p>
-                <div className="flex gap-2">
-                  <button onClick={handleExportPDF} disabled={!statistics} className="flex-1 py-2 rounded-xl bg-rose-500 text-white font-bold">Exportar PDF</button>
-                  <button onClick={handleExportExcel} disabled={!statistics} className="flex-1 py-2 rounded-xl bg-emerald-500 text-white font-bold">Exportar Excel</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  };
-
   /* ── Skeleton loading ── */
   if (loading) {
     return (
@@ -458,12 +392,15 @@ const AdminDashboard = () => {
 
               <div className="w-px h-6 bg-white/20" />
 
-              <button
-                onClick={() => setSettingsOpen(v => !v)}
-                title="Configurações"
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition ${settingsOpen ? 'bg-indigo-500 text-white' : 'hover:bg-white/10 text-slate-200'}`}
-              >
-                <FiSettings size={16} />
+              <div className="relative flex items-center">
+                <FiSearch className="absolute left-3 text-slate-500" size={14} />
+                <input
+                  type="text"
+                  placeholder="Buscar entrega ou motorista..."
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="pl-9 pr-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs text-slate-100 placeholder-slate-500 transition"
+                />
+              </div>
               </button>
             </div>
           </div>

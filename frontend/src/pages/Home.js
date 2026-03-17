@@ -1068,7 +1068,7 @@ const Home = () => {
                   accentDark="#991B1B"
                   icon={<FaTable />}
                   titleIcon={<FaDatabase />}
-                  title="Ycompany"
+                  title="Icompany"
                   description="Base de dados com operações marítimas, rastreamento e documentação logística."
                   delay={320}
                 />

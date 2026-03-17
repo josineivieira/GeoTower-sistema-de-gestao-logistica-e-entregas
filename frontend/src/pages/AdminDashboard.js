@@ -401,7 +401,6 @@ const AdminDashboard = () => {
                   className="pl-9 pr-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs text-slate-100 placeholder-slate-500 transition"
                 />
               </div>
-              </button>
             </div>
           </div>
         </div>

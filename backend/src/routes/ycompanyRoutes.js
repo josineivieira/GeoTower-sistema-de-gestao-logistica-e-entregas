@@ -204,108 +204,20 @@ router.patch("/entregas/:processo/atribuir-motorista", async (req, res) => {
 
 /**
  * GET /api/ycompany/relatorio-contratado
- * Retorna relatório de entregas por contratado com filtro de datas e valores
- * Query params:
- *  - contratado: nome ou vazio para todos
- *  - dataInicio: YYYY-MM-DD
- *  - dataFim: YYYY-MM-DD
- *  - vlFreteMIN: valor mínimo de frete
- *  - vlFreteMAX: valor máximo de frete
+ * Retorna TODOS os dados de ycompany (sem filtro de data no backend)
+ * O filtro será feito no FRONTEND
  */
 router.get("/relatorio-contratado", async (req, res) => {
   try {
     const c = await col();
-    const { contratado, dataInicio, dataFim, vlFreteMIN, vlFreteMAX } = req.query;
-
-    console.log('=== FILTRO RECEBIDO ===');
-    console.log('contratado:', contratado);
-    console.log('dataInicio:', dataInicio);
-    console.log('dataFim:', dataFim);
-
-    const filter = {};
-
-    // Filtro de contratado
-    if (contratado && contratado.trim()) {
-      filter.contratado = { $regex: `^${contratado.trim()}$`, $options: 'i' };
-    }
-
-    // Filtro de datas - tenta qtd diferente de campos possíveis
-    let dateRange = null;
-    if (dataInicio || dataFim) {
-      dateRange = {};
-      
-      if (dataInicio) {
-        try {
-          const parts = dataInicio.split('-');
-          if (parts.length === 3) {
-            const startDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 0, 0, 0);
-            dateRange.$gte = startDate;
-          } else {
-            dateRange.$gte = new Date(dataInicio);
-          }
-        } catch (e) {
-          dateRange.$gte = new Date(dataInicio);
-        }
-      }
-      
-      if (dataFim) {
-        try {
-          const parts = dataFim.split('-');
-          if (parts.length === 3) {
-            const endDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 23, 59, 59, 999);
-            dateRange.$lte = endDate;
-          } else {
-            const end = new Date(dataFim);
-            end.setHours(23, 59, 59, 999);
-            dateRange.$lte = end;
-          }
-        } catch (e) {
-          const end = new Date(dataFim);
-          end.setHours(23, 59, 59, 999);
-          dateRange.$lte = end;
-        }
-      }
-    }
-
-    // Aplicar range de datas em múltiplos campos possíveis
-    if (dateRange) {
-      filter.$or = [
-        { dtAgendamentoDescarga: dateRange },
-        { dataAgendamento: dateRange },
-        { dtInicio: dateRange },
-        { createdAt: dateRange }
-      ];
-    }
-
-    // Filtro de valor de frete
-    if (vlFreteMIN || vlFreteMAX) {
-      filter.vlFreteProcesso = {};
-      if (vlFreteMIN) {
-        filter.vlFreteProcesso.$gte = parseFloat(vlFreteMIN);
-      }
-      if (vlFreteMAX) {
-        filter.vlFreteProcesso.$lte = parseFloat(vlFreteMAX);
-      }
-    }
-
-    console.log('=== FILTRO CONSTRUÍDO ===');
-    console.log(JSON.stringify(filter, null, 2));
-
-    // Buscar dados
+    
+    // Buscar TODOS os dados sem filtro (filtragem será no frontend)
     const dados = await c
-      .find(filter)
-      .sort({ dtAgendamentoDescarga: -1, dataAgendamento: -1, _id: -1 })
+      .find({})
+      .sort({ dtAgendamentoDescarga: -1, dataAgendamento: -1, createdAt: -1, _id: -1 })
       .toArray();
 
-    console.log('=== RESULTADO ===');
-    console.log('Total encontrado:', dados.length);
-    if (dados.length > 0) {
-      console.log('Primeiro resultado:');
-      console.log('- Contratado:', dados[0].contratado);
-      console.log('- Processo:', dados[0].processo);
-      console.log('- dtAgendamentoDescarga:', dados[0].dtAgendamentoDescarga);
-      console.log('- dataAgendamento:', dados[0].dataAgendamento);
-    }
+    console.log('Total de registros encontrados:', dados.length);
 
     // Calcular sumário
     const totalEntregas = dados.length;
@@ -325,7 +237,6 @@ router.get("/relatorio-contratado", async (req, res) => {
 
     res.json({
       ok: true,
-      filtros: { contratado, dataInicio, dataFim, vlFreteMIN, vlFreteMAX },
       resumo: {
         totalEntregas,
         totalFrete,

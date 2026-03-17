@@ -60,24 +60,92 @@ const RelatorioContratado = () => {
     setFiltros(prev => ({ ...prev, [field]: value }));
   };
 
+  // Função para aplicar filtros aos dados
+  const aplicarFiltros = (dadosCompletos) => {
+    let dadosFiltrados = [...dadosCompletos];
+
+    // Filtro por contratado
+    if (filtros.contratado && filtros.contratado.trim()) {
+      dadosFiltrados = dadosFiltrados.filter(d => 
+        d.contratado && d.contratado.toLowerCase() === filtros.contratado.toLowerCase()
+      );
+    }
+
+    // Filtro por data início
+    if (filtros.dataInicio) {
+      const dataInicio = new Date(filtros.dataInicio);
+      dataInicio.setHours(0, 0, 0, 0);
+      dadosFiltrados = dadosFiltrados.filter(d => {
+        const dataEntrega = new Date(d.dtAgendamentoDescarga || d.dataAgendamento || d.createdAt);
+        return dataEntrega >= dataInicio;
+      });
+    }
+
+    // Filtro por data fim
+    if (filtros.dataFim) {
+      const dataFim = new Date(filtros.dataFim);
+      dataFim.setHours(23, 59, 59, 999);
+      dadosFiltrados = dadosFiltrados.filter(d => {
+        const dataEntrega = new Date(d.dtAgendamentoDescarga || d.dataAgendamento || d.createdAt);
+        return dataEntrega <= dataFim;
+      });
+    }
+
+    // Filtro por valor mínimo
+    if (filtros.vlFreteMIN && filtros.vlFreteMIN !== '') {
+      const vlMin = parseFloat(filtros.vlFreteMIN);
+      dadosFiltrados = dadosFiltrados.filter(d => (d.vlFreteProcesso || 0) >= vlMin);
+    }
+
+    // Filtro por valor máximo
+    if (filtros.vlFreteMAX && filtros.vlFreteMAX !== '') {
+      const vlMax = parseFloat(filtros.vlFreteMAX);
+      dadosFiltrados = dadosFiltrados.filter(d => (d.vlFreteProcesso || 0) <= vlMax);
+    }
+
+    return dadosFiltrados;
+  };
+
   const loadRelatorio = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
 
-      if (filtros.contratado) params.append('contratado', filtros.contratado);
-      if (filtros.dataInicio) params.append('dataInicio', filtros.dataInicio);
-      if (filtros.dataFim) params.append('dataFim', filtros.dataFim);
-      if (filtros.vlFreteMIN) params.append('vlFreteMIN', filtros.vlFreteMIN);
-      if (filtros.vlFreteMAX) params.append('vlFreteMAX', filtros.vlFreteMAX);
-
-      const response = await api.get(`/ycompany/relatorio-contratado?${params.toString()}`);
+      // Busca TODOS os dados do backend (sem filtrar)
+      const response = await api.get(`/ycompany/relatorio-contratado`);
 
       if (response.data.ok) {
-        setDados(response.data.dados || []);
-        setResumo(response.data.resumo);
-        setResumoPorContratado(response.data.resumoPorContratado || {});
-        showToast(`${response.data.resumo.totalEntregas} entrega(s) encontrada(s)`);
+        const todosOsDados = response.data.dados || [];
+        // Aplica filtros no frontend
+        const dadosFiltrados = aplicarFiltros(todosOsDados);
+
+        // Calcula resumo com dados filtrados
+        const totalEntregas = dadosFiltrados.length;
+        const totalFrete = dadosFiltrados.reduce((sum, d) => sum + (d.vlFreteProcesso || 0), 0);
+        const mediaFrete = totalEntregas > 0 ? totalFrete / totalEntregas : 0;
+
+        const resumoPorContratado = {};
+        dadosFiltrados.forEach(d => {
+          const c = d.contratado || 'SEM CONTRATADO';
+          if (!resumoPorContratado[c]) {
+            resumoPorContratado[c] = { quantidade: 0, totalFrete: 0 };
+          }
+          resumoPorContratado[c].quantidade += 1;
+          resumoPorContratado[c].totalFrete += d.vlFreteProcesso || 0;
+        });
+
+        setDados(dadosFiltrados);
+        setResumo({
+          totalEntregas,
+          totalFrete,
+          mediaFrete: parseFloat(mediaFrete.toFixed(2))
+        });
+        setResumoPorContratado(resumoPorContratado);
+        
+        if (dadosFiltrados.length === 0 && (filtros.dataInicio || filtros.dataFim || filtros.contratado)) {
+          showToast('Nenhum resultado encontrado com os filtros aplicados', 'warning');
+        } else {
+          showToast(`${totalEntregas} entrega(s) encontrada(s)`);
+        }
       }
     } catch (err) {
       console.error('Erro ao carregar relatório:', err);

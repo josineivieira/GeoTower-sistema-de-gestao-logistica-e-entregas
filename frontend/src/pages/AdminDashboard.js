@@ -254,7 +254,7 @@ const AdminDashboard = () => {
 
   const exportPayload = () => ({
     statistics, deliveries, topRecebedores, avgCliByRecebedor,
-    recebedorCountData, recebedorAvgData, period, fmtMin,
+    recebedorCountData, recebedorAvgData, fmtMin,
   });
 
   const handleExportPDF = async () => {
@@ -412,7 +412,7 @@ const AdminDashboard = () => {
                 >
                   <ChartHeader
                     title="Evolução Diária de Entregas"
-                    subtitle={`Distribuição no período: ${periodLbl}`}
+                    subtitle="Distribuição por dia"
                     dotColor="#818cf8"
                   />
                   <ResponsiveContainer width="100%" height={300}>

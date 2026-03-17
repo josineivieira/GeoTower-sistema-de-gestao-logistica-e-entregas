@@ -735,7 +735,38 @@ const ProgramadasEntregas = () => {
     return result;
   };
 
-  const filteredProgramacoes = getFilteredAndSorted();
+  // Agrupamento por container para entregas fracionadas
+  const filteredProgramacoesRaw = getFilteredAndSorted();
+  // Agrupa programacoes por container
+  const groupedByContainer = {};
+  filteredProgramacoesRaw.forEach(p => {
+    const key = (p.container || p.processo || '').toUpperCase();
+    if (!groupedByContainer[key]) groupedByContainer[key] = [];
+    groupedByContainer[key].push(p);
+  });
+
+  // Para cada grupo, mostra apenas uma montagem/devolução, mas lista todos os recebedores/processos
+  const filteredProgramacoes = Object.values(groupedByContainer).map(group => {
+    // Seleciona a programação com status prioritário para ação (montagem/devolução)
+    // Prioridade: CONTAINER_MONTADO > ENTREGUE > DEVOLVENDO_CONTAINER > FINALIZADO > AGENDADO > outros
+    const statusOrder = [
+      'CONTAINER_MONTADO',
+      'ENTREGUE',
+      'DEVOLVENDO_CONTAINER',
+      'FINALIZADO',
+      'AGENDADO',
+      'PENDING',
+      'pending'
+    ];
+    let main = group[0];
+    for (const status of statusOrder) {
+      const found = group.find(p => (p.status || '').toUpperCase() === status);
+      if (found) { main = found; break; }
+    }
+    // Adiciona todos os recebedores/processos ao card
+    main.fracionadas = group;
+    return main;
+  });
 
   // Botão de ação principal para cada programação
   const renderActionButton = (p) => {
@@ -947,7 +978,6 @@ const ProgramadasEntregas = () => {
                   p.status === 'EM_DESOVA' ? 'bg-gradient-to-r from-orange-400 to-red-500' :
                   p.status === 'ENTREGUE' ? 'bg-gradient-to-r from-yellow-400 to-amber-500' :
                   p.status === 'DEVOLVENDO_CONTAINER' ? 'bg-gradient-to-r from-yellow-400 to-amber-500' :
-                  // When a finalizado programacao is still awaiting container return, treat it like ENTREGUE for the bar color
                   p.status === 'FINALIZADO' ? 'bg-gradient-to-r from-yellow-400 to-amber-500' :
                   'bg-gradient-to-r from-gray-300 to-gray-400'
                 }`} />
@@ -957,44 +987,47 @@ const ProgramadasEntregas = () => {
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Processo</span>
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Container</span>
                       </div>
-                      <h3 className="text-lg font-extrabold text-gray-900 leading-tight">{p.processo || '-'}</h3>
+                      <h3 className="text-lg font-extrabold text-gray-900 leading-tight">{p.container || p.processo || '-'}</h3>
                     </div>
                     <StatusBadge status={p.status} containerReturned={p.containerReturned} />
                   </div>
 
-                  {/* Info grid */}
+                  {/* Info grid: mostra todos os recebedores/processos do grupo */}
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <div className="bg-gray-50 rounded-xl p-3">
                       <div className="flex items-center gap-1.5 mb-1">
                         <FaUser size={10} className="text-purple-500" />
-                        <span className="text-[11px] font-semibold text-gray-400 uppercase">Recebedor</span>
+                        <span className="text-[11px] font-semibold text-gray-400 uppercase">Recebedores</span>
                       </div>
-                      <p className="font-bold text-purple-700 text-sm leading-tight">{p.recebedor || '-'}</p>
-                    </div>
-                    <div className="bg-gray-50 rounded-xl p-3">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <FaBox size={10} className="text-blue-500" />
-                        <span className="text-[11px] font-semibold text-gray-400 uppercase">Container</span>
-                      </div>
-                      <p className="font-bold text-gray-800 text-sm leading-tight">{p.container || '-'}</p>
+                      <ul className="font-bold text-purple-700 text-sm leading-tight">
+                        {p.fracionadas && p.fracionadas.map(f => (
+                          <li key={f._id}>{f.recebedor || '-'}</li>
+                        ))}
+                      </ul>
                     </div>
                     <div className="bg-gray-50 rounded-xl p-3">
                       <div className="flex items-center gap-1.5 mb-1">
                         <FaCalendarAlt size={10} className="text-emerald-500" />
-                        <span className="text-[11px] font-semibold text-gray-400 uppercase">Agendamento</span>
+                        <span className="text-[11px] font-semibold text-gray-400 uppercase">Agendamentos</span>
                       </div>
-                      <p className="font-bold text-gray-800 text-sm leading-tight">
-                        {p.dataAgendamento ? new Date(p.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}
-                      </p>
+                      <ul className="font-bold text-gray-800 text-sm leading-tight">
+                        {p.fracionadas && p.fracionadas.map(f => (
+                          <li key={f._id}>{f.dataAgendamento ? new Date(f.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</li>
+                        ))}
+                      </ul>
                     </div>
-                    <div className="bg-gray-50 rounded-xl p-3">
+                    <div className="bg-gray-50 rounded-xl p-3 col-span-2">
                       <div className="flex items-center gap-1.5 mb-1">
                         <FaTruck size={10} className="text-emerald-500" />
-                        <span className="text-[11px] font-semibold text-gray-400 uppercase">Motorista</span>
+                        <span className="text-[11px] font-semibold text-gray-400 uppercase">Motoristas</span>
                       </div>
-                      <p className="font-bold text-emerald-700 text-sm leading-tight">{p.motorista || '-'}</p>
+                      <ul className="font-bold text-emerald-700 text-sm leading-tight">
+                        {p.fracionadas && p.fracionadas.map(f => (
+                          <li key={f._id}>{f.motorista || '-'}</li>
+                        ))}
+                      </ul>
                     </div>
                   </div>
 

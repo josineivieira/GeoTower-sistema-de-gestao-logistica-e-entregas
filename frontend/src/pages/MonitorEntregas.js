@@ -873,8 +873,8 @@ const getStatusEntryTime = (delivery) => {
 ───────────────────────────────────────────────────────────── */
 const MonitorEntregas = () => {
   const { user } = useAuth();
-  const isGeoMar = () => user?.role === 'geomar';
-  const canEdit = () => user?.role === 'manager';
+  const isGeoMar = () => false; // Libera edição para geomar
+  const canEdit = () => user?.role === 'manager' || user?.role === 'geomar';
   const navigate = useNavigate();
 
   const [viewingDocument, setViewingDocument] = useState(null);
@@ -1551,10 +1551,7 @@ const MonitorEntregas = () => {
   };
 
   const handleEditStart = (d) => {
-    if (isGeoMar()) {
-      setToast({ type: 'error', message: 'Modo Visualização: sem permissão de edição' });
-      return;
-    }
+    // Libera edição para geomar
 
     // Some data sources may not include an _id field; try fallback to deliveryNumber/id.
     const editId = d._id || d.id || d.deliveryNumber;
@@ -2275,13 +2272,7 @@ const MonitorEntregas = () => {
               </button>
             </div>
 
-            {isGeoMar() && (
-              <div className="mx-6 mt-4 p-3 bg-amber-900/30 border border-amber-500/20 rounded-xl">
-                <p className="text-sm text-amber-300 font-semibold flex items-center gap-2">
-                  <FaEye /> Modo Visualização – sem permissão de edição
-                </p>
-              </div>
-            )}
+            {/* Remove banner de visualização para geomar */}
 
             <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
               {[

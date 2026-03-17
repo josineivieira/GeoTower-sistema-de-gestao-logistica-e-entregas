@@ -14,8 +14,8 @@ const ProgramacaoManagement = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const isGeoMar = () => user?.role === 'geomar';
-  const canEdit = () => !isGeoMar();
+  const isGeoMar = () => false; // Libera edição para geomar
+  const canEdit = () => true;
 
   const [programacoes, setProgramacoes] = useState([]);
   const [filteredProgramacoes, setFilteredProgramacoes] = useState([]);
@@ -145,7 +145,7 @@ const ProgramacaoManagement = () => {
 
   const handleOpen = (programacao = null) => {
     if (programacao) {
-      if (isGeoMar()) { setToast({ message: 'Modo Visualização: edição não permitida.', type: 'error' }); return; }
+      // Libera edição para geomar
       setEditingId(programacao._id);
       let dataAgendamento = programacao.dataAgendamento || '';
       if (dataAgendamento && dataAgendamento.includes('T')) {
@@ -163,7 +163,7 @@ const ProgramacaoManagement = () => {
   };
 
   const handleSave = async () => {
-    if (isGeoMar()) { setToast({ message: 'Modo Visualização: operação não permitida.', type: 'error' }); return; }
+    // Libera operação para geomar
     if (!formData.processo || !formData.recebedor || !formData.dataAgendamento || !formData.contratado) {
       showToast('Preencha todos os campos obrigatórios', 'error'); return;
     }
@@ -178,7 +178,7 @@ const ProgramacaoManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (isGeoMar()) { setToast({ message: 'Modo Visualização: exclusão não permitida.', type: 'error' }); return; }
+    // Libera exclusão para geomar
     if (window.confirm('Confirmar exclusão desta programação?')) {
       try { await adminService.deleteProgramacao(id); showToast('Programação excluída'); loadProgramacoes(); }
       catch (err) { showToast('Erro ao excluir', 'error'); }
@@ -623,8 +623,8 @@ const ProgramacaoManagement = () => {
                           <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                             <button
                               onClick={() => handleOpen(prog)}
-                              disabled={isGeoMar()}
-                              title={isGeoMar() ? 'Sem permissão' : 'Editar'}
+                              disabled={false}
+                              title={'Editar'}
                               style={{
                                 width: 34, height: 34, borderRadius: 8, border: '1.5px solid #e5e7eb',
                                 background: '#fff', color: isGeoMar() ? '#d1d5db' : '#6366f1',
@@ -637,8 +637,8 @@ const ProgramacaoManagement = () => {
                             </button>
                             <button
                               onClick={() => handleDelete(prog._id)}
-                              disabled={isGeoMar()}
-                              title={isGeoMar() ? 'Sem permissão' : 'Excluir'}
+                              disabled={false}
+                              title={'Excluir'}
                               style={{
                                 width: 34, height: 34, borderRadius: 8, border: '1.5px solid #e5e7eb',
                                 background: '#fff', color: isGeoMar() ? '#d1d5db' : '#ef4444',
@@ -707,20 +707,7 @@ const ProgramacaoManagement = () => {
             </div>
 
             {/* View-only banner */}
-            {isGeoMar() && (
-              <div style={{
-                margin: '16px 28px 0', padding: '12px 16px',
-                background: '#fffbeb', border: '1px solid #fcd34d',
-                borderLeft: '4px solid #f59e0b', borderRadius: 8
-              }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#92400e' }}>
-                  <FaEye style={{ marginRight: 6 }} /> Modo Visualização
-                </p>
-                <p style={{ margin: '4px 0 0', fontSize: 12, color: '#b45309' }}>
-                  Este formulário está bloqueado para edição.
-                </p>
-              </div>
-            )}
+            {/* Remove banner de visualização para geomar */}
 
             {/* Modal Body */}
             <div style={{ padding: '24px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -728,13 +715,13 @@ const ProgramacaoManagement = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={labelStyle}>Processo <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input type="text" disabled={isGeoMar()} value={formData.processo}
+                  <input type="text" disabled={false} value={formData.processo}
                     onChange={e => setFormData({...formData, processo: e.target.value})}
                     placeholder="CAB42196" style={inputStyle(isGeoMar())} />
                 </div>
                 <div>
                   <label style={labelStyle}>Container</label>
-                  <input type="text" disabled={isGeoMar()} value={formData.container}
+                  <input type="text" disabled={false} value={formData.container}
                     onChange={e => setFormData({...formData, container: e.target.value})}
                     placeholder="UETU6510024" style={inputStyle(isGeoMar())} />
                 </div>
@@ -742,14 +729,14 @@ const ProgramacaoManagement = () => {
 
               <div>
                 <label style={labelStyle}>Recebedor <span style={{ color: '#ef4444' }}>*</span></label>
-                <input type="text" disabled={isGeoMar()} value={formData.recebedor}
+                <input type="text" disabled={false} value={formData.recebedor}
                   onChange={e => setFormData({...formData, recebedor: e.target.value})}
                   placeholder="Nome do recebedor" style={inputStyle(isGeoMar())} />
               </div>
 
               <div>
                 <label style={labelStyle}>Data de Agendamento <span style={{ color: '#ef4444' }}>*</span></label>
-                <input type="datetime-local" disabled={isGeoMar()} value={formData.dataAgendamento}
+                <input type="datetime-local" disabled={false} value={formData.dataAgendamento}
                   onChange={e => setFormData({...formData, dataAgendamento: e.target.value})}
                   style={inputStyle(isGeoMar())} />
               </div>
@@ -757,7 +744,7 @@ const ProgramacaoManagement = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={labelStyle}>Contratado <span style={{ color: '#ef4444' }}>*</span></label>
-                  <select disabled={isGeoMar()} value={formData.contratado}
+                  <select disabled={false} value={formData.contratado}
                     onChange={e => setFormData({...formData, contratado: e.target.value, motorista: ''})}
                     style={{ ...inputStyle(isGeoMar()), cursor: isGeoMar() ? 'not-allowed' : 'pointer' }}>
                     {getContratadosOptions().map(c => <option key={c} value={c}>{c}</option>)}
@@ -765,7 +752,7 @@ const ProgramacaoManagement = () => {
                 </div>
                 <div>
                   <label style={labelStyle}>Status</label>
-                  <select disabled={isGeoMar()} value={formData.status}
+                  <select disabled={false} value={formData.status}
                     onChange={e => setFormData({...formData, status: e.target.value})}
                     style={{ ...inputStyle(isGeoMar()), cursor: isGeoMar() ? 'not-allowed' : 'pointer' }}>
                     <option value="AGENDADO">Agendado</option>
@@ -778,7 +765,7 @@ const ProgramacaoManagement = () => {
 
               <div>
                 <label style={labelStyle}>Motorista</label>
-                <select disabled={isGeoMar()} value={formData.motorista}
+                <select disabled={false} value={formData.motorista}
                   onChange={e => setFormData({...formData, motorista: e.target.value})}
                   style={{ ...inputStyle(isGeoMar()), cursor: isGeoMar() ? 'not-allowed' : 'pointer' }}>
                   <option value="">— Selecionar motorista —</option>
@@ -799,7 +786,7 @@ const ProgramacaoManagement = () => {
 
               <div>
                 <label style={labelStyle}>Observações</label>
-                <textarea disabled={isGeoMar()} value={formData.observacoes}
+                <textarea disabled={false} value={formData.observacoes}
                   onChange={e => setFormData({...formData, observacoes: e.target.value})}
                   placeholder="Anotações adicionais..."
                   rows={3}

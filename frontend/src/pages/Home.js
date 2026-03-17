@@ -1014,7 +1014,7 @@ const Home = () => {
                   delay={60}
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
-                  {hasAccess(['manager','admin']) && (
+                  {hasAccess(['manager']) && (
                     <ManageCard
                       onClick={() => navigate('/usuarios')}
                       accentColor="#8B5CF6"

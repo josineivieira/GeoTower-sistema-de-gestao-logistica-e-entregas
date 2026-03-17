@@ -120,6 +120,29 @@ const Skeleton = ({ className }) => (
   <div className={`animate-pulse bg-gradient-to-r from-slate-800 via-slate-700/50 to-slate-800 rounded-xl ${className}`} />
 );
 
+/* ─── Export Button ─── */
+const ExportButton = ({ onClick, loading, icon: Icon, label, colorClass, disabled }) => (
+  <button
+    onClick={onClick}
+    disabled={loading || disabled}
+    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 border 
+      ${loading || disabled
+        ? 'opacity-50 cursor-not-allowed bg-white/5 border-white/10 text-slate-500'
+        : colorClass
+      }`}
+  >
+    {loading ? (
+      <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+      </svg>
+    ) : (
+      <Icon size={13} />
+    )}
+    {loading ? 'Gerando...' : label}
+  </button>
+);
+
 /* ════════════════════════════════════════
    COMPONENTE PRINCIPAL
 ════════════════════════════════════════ */
@@ -355,6 +378,24 @@ const AdminDashboard = () => {
                   className="pl-9 pr-3 py-2 rounded-xl bg-white/10 border border-white/10 text-xs text-slate-400 placeholder-slate-500 cursor-not-allowed"
                 />
               </div>
+
+              <ExportButton
+                onClick={handleExportPDF}
+                loading={exporting.pdf}
+                icon={FiDownload}
+                label="PDF"
+                colorClass="bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30"
+                disabled={!statistics}
+              />
+
+              <ExportButton
+                onClick={handleExportExcel}
+                loading={exporting.excel}
+                icon={FiFileText}
+                label="Excel"
+                colorClass="bg-emerald-500/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
+                disabled={!statistics}
+              />
             </div>
           </div>
         </div>

@@ -5,7 +5,7 @@ import { adminService } from '../services/authService';
 import { exportToPDF, exportToExcel, formatMinutes as fmtMin } from '../services/exportService';
 import {
   FiArrowLeft, FiPackage, FiTruck, FiAward, FiClock,
-  FiTrendingUp, FiRefreshCw, FiBarChart2, FiDownload, FiFileText, FiSearch
+  FiTrendingUp, FiBarChart2, FiDownload, FiFileText
 } from 'react-icons/fi';
 import {
   AreaChart, Area, BarChart, Bar,
@@ -150,7 +150,6 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [deliveries,  setDeliveries]  = useState([]);
   const [statistics,  setStatistics]  = useState(null);
-  const [period,      setPeriod]      = useState('month');
   const [loading,     setLoading]     = useState(true);
   const [refreshing,  setRefreshing]  = useState(false);
   const [exporting,   setExporting]   = useState({ pdf: false, excel: false });
@@ -170,7 +169,7 @@ const AdminDashboard = () => {
     try {
       const [delivRes, statsRes] = await Promise.all([
         adminService.getDeliveries({}),
-        adminService.getStatistics({ period }),
+        adminService.getStatistics({}),
       ]);
       setDeliveries(delivRes.data.deliveries);
       setStatistics(statsRes.data.statistics);
@@ -185,7 +184,7 @@ const AdminDashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [period, navigate]);
+  }, [navigate]);
 
   useEffect(() => { 
     loadData(); 
@@ -199,8 +198,7 @@ const AdminDashboard = () => {
     return diff < 0 ? null : diff / 60000;
   };
 
-  const periodLbl = { day: 'Hoje', week: 'Esta semana', month: 'Este mês' }[period];
-  const fmtDate   = (date) => {
+  const fmtDate = (date) => {
     const p = String(date).split('-');
     if (p.length === 3) {
       const d = new Date(+p[0], +p[1] - 1, +p[2]);
@@ -338,47 +336,6 @@ const AdminDashboard = () => {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-1 bg-white/10 rounded-xl p-1 border border-white/10">
-                {[
-                  { val: 'day',   label: 'Hoje' },
-                  { val: 'week',  label: 'Semana' },
-                  { val: 'month', label: 'Mês' },
-                ].map(({ val, label }) => (
-                  <button
-                    key={val}
-                    onClick={() => setPeriod(val)}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                      period === val
-                        ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30'
-                        : 'text-slate-400 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={() => loadData(true)}
-                disabled={refreshing}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-semibold transition-all disabled:opacity-50"
-              >
-                <FiRefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
-                Atualizar
-              </button>
-
-              <div className="w-px h-6 bg-white/20" />
-
-              <div className="relative flex items-center">
-                <FiSearch className="absolute left-3 text-slate-500" size={14} />
-                <input
-                  type="text"
-                  placeholder="Buscar entrega ou motorista..."
-                  disabled
-                  className="pl-9 pr-3 py-2 rounded-xl bg-white/10 border border-white/10 text-xs text-slate-400 placeholder-slate-500 cursor-not-allowed"
-                />
-              </div>
-
               <ExportButton
                 onClick={handleExportPDF}
                 loading={exporting.pdf}
@@ -411,7 +368,7 @@ const AdminDashboard = () => {
               <KpiCard
                 title="Total de Entregas"
                 value={statistics.totalDeliveries}
-                subtitle={periodLbl}
+                subtitle="Total no período"
                 icon={FiPackage}
                 color="indigo"
                 sparkData={statistics.dailyDeliveries}

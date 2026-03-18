@@ -195,6 +195,7 @@ const Icompany = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [showSyncPanel, setShowSyncPanel] = useState(false);
   const [syncFilter, setSyncFilter] = useState('all'); // 'all', 'problems', 'partial', 'empty'
+  const [excelComparison, setExcelComparison] = useState({});
 
   const fetchAll = useCallback(async () => {
     setLoading(true); setError(null);
@@ -207,7 +208,24 @@ const Icompany = () => {
     } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  // Fetch Excel vs System comparison data
+  const fetchComparison = useCallback(async () => {
+    try {
+      const res = await api.get('/ycompany/compare');
+      const compMap = {};
+      res.data?.data?.forEach(comp => {
+        compMap[comp.processo] = comp.analysis;
+      });
+      setExcelComparison(compMap);
+    } catch (e) {
+      console.error('Erro ao buscar comparação Excel vs Sistema:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAll();
+    fetchComparison();
+  }, [fetchAll, fetchComparison]);
 
   const onScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -263,19 +281,37 @@ const Icompany = () => {
   const emExecucao  = data.filter(r => String(r.situacao||'').toUpperCase().includes('OPERAÇÃO')).length;
 
   /* ── Análise de sincronização ── */
-  const syncAnalysi = data.map(record => ({
-    ...record,
-    syncStatus: calculateSyncStatus(record)
-  }));
+  const syncAnalysi = data.map(record => {
+    const syncStatus = calculateSyncStatus(record);
+    const excelData = excelComparison[record.geomaritima] || {};
+    
+    // Check for DESYNC: data exists in GEO TOWER but missing from latest Excel
+    let hasDesync = false;
+    let desyncFields = [];
+    Object.entries(excelData).forEach(([field, comparison]) => {
+      if (comparison.status === 'DESYNC') {
+        hasDesync = true;
+        desyncFields.push(field);
+      }
+    });
+    
+    return {
+      ...record,
+      syncStatus,
+      excelSync: { hasDesync, desyncFields, excelData }
+    };
+  });
 
   const problemRecords = syncAnalysi.filter(r => r.syncStatus.severity !== 'success');
   const partialRecords = syncAnalysi.filter(r => r.syncStatus.severity === 'warning');
   const emptyRecords   = syncAnalysi.filter(r => r.syncStatus.severity === 'error');
+  const desyncRecords  = syncAnalysi.filter(r => r.excelSync?.hasDesync);
 
   const filteredData = 
     syncFilter === 'problems' ? problemRecords :
     syncFilter === 'partial' ? partialRecords :
     syncFilter === 'empty' ? emptyRecords :
+    syncFilter === 'desync' ? desyncRecords :
     syncAnalysi;
 
   return (
@@ -1140,41 +1176,48 @@ const Icompany = () => {
               </button>
             </div>
 
-            <div style={{ padding: '12px', display: 'flex', gap: '8px' }}>
+            <div style={{ padding: '12px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               <button onClick={() => setSyncFilter('all')} style={{
-                flex: 1, padding: '8px 12px', border: syncFilter === 'all' ? '2px solid #4f46e5' : '1px solid #e2e8f0',
+                flex: 1, minWidth: '70px', padding: '8px 12px', border: syncFilter === 'all' ? '2px solid #4f46e5' : '1px solid #e2e8f0',
                 background: syncFilter === 'all' ? '#ecf0ff' : '#fff', borderRadius: '6px', cursor: 'pointer',
-                fontSize: '0.8rem', fontWeight: syncFilter === 'all' ? 'bold' : 'normal'
+                fontSize: '0.75rem', fontWeight: syncFilter === 'all' ? 'bold' : 'normal'
               }}>
                 Todos ({syncAnalysi.length})
               </button>
+              <button onClick={() => setSyncFilter('desync')} style={{
+                flex: 1, minWidth: '70px', padding: '8px 12px', border: syncFilter === 'desync' ? '2px solid #ef4444' : '1px solid #e2e8f0',
+                background: syncFilter === 'desync' ? '#fef2f2' : '#fff', borderRadius: '6px', cursor: 'pointer',
+                fontSize: '0.75rem', fontWeight: syncFilter === 'desync' ? 'bold' : 'normal'
+              }}>
+                DESYNC ({desyncRecords.length})
+              </button>
               <button onClick={() => setSyncFilter('partial')} style={{
-                flex: 1, padding: '8px 12px', border: syncFilter === 'partial' ? '2px solid #f59e0b' : '1px solid #e2e8f0',
+                flex: 1, minWidth: '70px', padding: '8px 12px', border: syncFilter === 'partial' ? '2px solid #f59e0b' : '1px solid #e2e8f0',
                 background: syncFilter === 'partial' ? '#fffbeb' : '#fff', borderRadius: '6px', cursor: 'pointer',
-                fontSize: '0.8rem', fontWeight: syncFilter === 'partial' ? 'bold' : 'normal'
+                fontSize: '0.75rem', fontWeight: syncFilter === 'partial' ? 'bold' : 'normal'
               }}>
                 Parcial ({partialRecords.length})
               </button>
               <button onClick={() => setSyncFilter('empty')} style={{
-                flex: 1, padding: '8px 12px', border: syncFilter === 'empty' ? '2px solid #ef4444' : '1px solid #e2e8f0',
+                flex: 1, minWidth: '70px', padding: '8px 12px', border: syncFilter === 'empty' ? '2px solid #ef4444' : '1px solid #e2e8f0',
                 background: syncFilter === 'empty' ? '#fef2f2' : '#fff', borderRadius: '6px', cursor: 'pointer',
-                fontSize: '0.8rem', fontWeight: syncFilter === 'empty' ? 'bold' : 'normal'
+                fontSize: '0.75rem', fontWeight: syncFilter === 'empty' ? 'bold' : 'normal'
               }}>
                 Vazio ({emptyRecords.length})
               </button>
             </div>
 
             <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
-              {problemRecords.length === 0 ? (
+              {filteredData.length === 0 ? (
                 <div style={{ textAlign: 'center', color: '#64748b', padding: '32px 16px' }}>
                   <div style={{ fontSize: '2rem', marginBottom: '8px' }}>✓</div>
-                  <div>Todos os registros estão sincronizados!</div>
+                  <div>Nenhum registro encontrado nesta categoria!</div>
                 </div>
               ) : (
-                problemRecords.map((rec, i) => (
+                filteredData.map((rec, i) => (
                   <div key={i} style={{
-                    background: rec.syncStatus.color + '11',
-                    border: `1px solid ${rec.syncStatus.color}44`,
+                    background: rec.excelSync?.hasDesync ? '#fef2f2' : (rec.syncStatus.color + '11'),
+                    border: `1px solid ${rec.excelSync?.hasDesync ? '#ef444488' : (rec.syncStatus.color + '44')}`,
                     borderRadius: '8px', padding: '12px',
                     cursor: 'pointer'
                   }}>
@@ -1182,33 +1225,66 @@ const Icompany = () => {
                       <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#0f172a' }}>
                         {rec.codigo || rec.processo || 'N/A'}
                       </div>
-                      <span style={{
-                        fontSize: '1.2rem', background: rec.syncStatus.color + '22',
-                        color: rec.syncStatus.color, padding: '2px 8px', borderRadius: '4px'
-                      }}>
-                        {rec.syncStatus.icon}
-                      </span>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        {rec.excelSync?.hasDesync && (
+                          <span style={{
+                            fontSize: '1rem', background: '#ef444422',
+                            color: '#ef4444', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold'
+                          }}>
+                            ⚠ DESYNC
+                          </span>
+                        )}
+                        <span style={{
+                          fontSize: '1.2rem', background: rec.syncStatus.color + '22',
+                          color: rec.syncStatus.color, padding: '2px 8px', borderRadius: '4px'
+                        }}>
+                          {rec.syncStatus.icon}
+                        </span>
+                      </div>
                     </div>
+                    
+                    {rec.excelSync?.hasDesync && (
+                      <div style={{ fontSize: '0.7rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px', padding: '8px', marginBottom: '8px', color: '#991b1b' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>📊 STATUS EXCEL vs SISTEMA:</div>
+                        <ul style={{ margin: 0, paddingLeft: '16px' }}>
+                          {rec.excelSync.desyncFields.slice(0, 3).map((field, j) => (
+                            <li key={j} style={{ fontSize: '0.65rem', marginBottom: '2px' }}>
+                              <span style={{ fontWeight: 'bold' }}>{field.replace(/([A-Z])/g, ' $1').trim()}</span>
+                              <span style={{ color: '#a16207' }}> ✓ GEO TOWER | ✕ ICOMPANY</span>
+                            </li>
+                          ))}
+                          {rec.excelSync.desyncFields.length > 3 && (
+                            <li style={{ fontSize: '0.65rem', fontStyle: 'italic' }}>
+                              +{rec.excelSync.desyncFields.length - 3} mais campos faltando no Excel
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                    
                     <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '8px' }}>
                       Status: <span style={{ fontWeight: 'bold', color: rec.syncStatus.color }}>
                         {rec.syncStatus.status}
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: '1.5' }}>
-                      <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Campos vazios:</div>
-                      <ul style={{ margin: 0, paddingLeft: '16px' }}>
-                        {rec.syncStatus.issues.slice(0, 5).map((field, j) => (
-                          <li key={j} style={{ fontSize: '0.7rem' }}>
-                            {field.replace(/([A-Z])/g, ' $1').trim()}
-                          </li>
-                        ))}
-                        {rec.syncStatus.issues.length > 5 && (
-                          <li style={{ fontSize: '0.7rem', fontStyle: 'italic' }}>
-                            +{rec.syncStatus.issues.length - 5} mais
-                          </li>
-                        )}
-                      </ul>
-                    </div>
+                    
+                    {rec.syncStatus.issues.length > 0 && (
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: '1.5' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Campos vazios no Sistema:</div>
+                        <ul style={{ margin: 0, paddingLeft: '16px' }}>
+                          {rec.syncStatus.issues.slice(0, 3).map((field, j) => (
+                            <li key={j} style={{ fontSize: '0.7rem' }}>
+                              {field.replace(/([A-Z])/g, ' $1').trim()}
+                            </li>
+                          ))}
+                          {rec.syncStatus.issues.length > 3 && (
+                            <li style={{ fontSize: '0.7rem', fontStyle: 'italic' }}>
+                              +{rec.syncStatus.issues.length - 3} mais
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 ))
               )}

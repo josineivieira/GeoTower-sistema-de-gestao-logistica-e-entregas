@@ -47,6 +47,80 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Compare Ycompany (GEO TOWER) vs programacaoentregas (ICOMPANY - Excel)
+router.get('/compare', async (req, res) => {
+  try {
+    const client = new MongoClient(MONGODB_URI);
+    await client.connect();
+    const db = client.db(DB_NAME);
+    
+    const ycompanyCol = db.collection('ycompany');
+    const excelCol = db.collection('programacaoentregas');
+    
+    // Fields to compare between Excel and System
+    const COMPARE_FIELDS = ['dtChegada', 'dtAgendamentoDescarga', 'dtInicioDescarga', 'hrInicioDescarga', 'dtFimDescarga'];
+    
+    // Get all ycompany records
+    const ycompanyRecords = await ycompanyCol.find({}).toArray();
+    
+    const comparison = [];
+    
+    for (const yRecord of ycompanyRecords) {
+      // Find corresponding Excel record by processo
+      const excelRecord = await excelCol.findOne({ processo: yRecord.geomaritima });
+      
+      const record = {
+        processo: yRecord.geomaritima,
+        cliente: yRecord.cliente,
+        containerNumero: yRecord.containerNumero,
+        analysis: {}
+      };
+      
+      // Check each field: exists in GEO TOWER? exists in ICOMPANY?
+      COMPARE_FIELDS.forEach(field => {
+        const hasInGeoTower = !isEmpty(yRecord[field]);
+        const hasInIcompany = excelRecord && !isEmpty(excelRecord[field]);
+        
+        // Determine status
+        let status, severity;
+        if (hasInGeoTower && !hasInIcompany) {
+          status = 'DESYNC';
+          severity = 'high';  // Data OK in System but missing from latest Excel update
+        } else if (hasInGeoTower && hasInIcompany) {
+          status = 'SYNCED';
+          severity = 'none';
+        } else if (!hasInGeoTower && hasInIcompany) {
+          status = 'PENDING';
+          severity = 'medium';  // Excel has it but System hasn't confirmed yet
+        } else {
+          status = 'EMPTY';
+          severity = 'low';
+        }
+        
+        record.analysis[field] = {
+          geoTower: yRecord[field] || null,
+          icompany: excelRecord ? excelRecord[field] || null : null,
+          status,
+          severity
+        };
+      });
+      
+      comparison.push(record);
+    }
+    
+    await client.close();
+    
+    res.json({
+      ok: true,
+      count: comparison.length,
+      data: comparison
+    });
+  } catch (e) {
+    console.error('Ycompany compare error:', e);
+    res.status(500).json({ ok: false, error: 'Erro ao comparar dados' });
+  }
+});
+
 router.get('/search', async (req, res) => {
   try {
     const c = await col();

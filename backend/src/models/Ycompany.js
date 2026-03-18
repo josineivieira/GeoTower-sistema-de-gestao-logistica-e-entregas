@@ -56,6 +56,9 @@ const ycompanySchema = new mongoose.Schema({
   arrivedAt: {
     type: Date,
   },
+  desovaStartAt: {
+    type: Date,
+  },
 
   // Situação
   situacao: {

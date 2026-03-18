@@ -39,7 +39,7 @@ const FIELD_MAP = {
   'Vl. pedágio':              'vlPedagio',
   'Vl. frete lista':          'vlFreteLista',
   'Vl. abastecimento':        'vlAbastecimento',
-  'Hr. início descarga':      'hrInicioDescarga',
+  'Hr. início descarga':      'desovaStartAt',
   'Dt. descida CNTR/Carga':   'dtDescidaCNTRCarga',
   'Dt. devolução CNTR':       'dtDevolucaoCNTR',
   'Terminal':                 'terminal',
@@ -94,7 +94,7 @@ const getSituacaoConfig = (value) => {
 const CURRENCY_FIELDS = new Set(['vlFreteProcesso','vlPedagio','vlFreteLista','vlAbastecimento']);
 const DATE_FIELDS = new Set([
   'dtInicioRota','dtInicioDescarga','dtFimDescarga','dtRetiraPD','dtDevolucaoCNTR',
-  'dtInicio','dtSM','dtAgendamentoDescarga','dtDescidaCNTRCarga','dtAverbacaoMDFE','arrivedAt',
+  'dtInicio','dtSM','dtAgendamentoDescarga','dtDescidaCNTRCarga','dtAverbacaoMDFE','arrivedAt','desovaStartAt',
 ]);
 
 const formatCurrency = (val) => {

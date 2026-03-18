@@ -91,6 +91,37 @@ const getSituacaoConfig = (value) => {
   return { bg: 'rgba(100,116,139,.1)', text: '#475569', dot: '#94a3b8', glow: 'none' };
 };
 
+// Campos de data para análise de sincronização
+const SYNC_DATE_FIELDS = [
+  'dtInicioRota', 'dtAgendamentoDescarga', 'arrivedAt', 
+  'dtInicioDescarga', 'dtFimDescarga', 'dtRetiraPD', 
+  'dtDevolucaoCNTR', 'dtAverbacaoMDFE', 'dtDescidaCNTRCarga'
+];
+
+// Função para calcular status de sincronização
+const calculateSyncStatus = (record) => {
+  const issues = [];
+  let syncCount = 0;
+  let missingCount = 0;
+
+  SYNC_DATE_FIELDS.forEach(field => {
+    if (record[field]) {
+      syncCount++;
+    } else {
+      missingCount++;
+      issues.push(field);
+    }
+  });
+
+  if (missingCount === 0 && syncCount > 0) {
+    return { status: 'SINCRONIZADO', color: '#10b981', icon: '✓', severity: 'success', issues };
+  } else if (syncCount > 0 && missingCount > 0) {
+    return { status: 'PARCIAL', color: '#f59e0b', icon: '⚠', severity: 'warning', issues };
+  } else {
+    return { status: 'VAZIO', color: '#ef4444', icon: '✕', severity: 'error', issues };
+  }
+};
+
 const CURRENCY_FIELDS = new Set(['vlFreteProcesso','vlPedagio','vlFreteLista','vlAbastecimento']);
 const DATE_FIELDS = new Set([
   'dtInicioRota','dtInicioDescarga','dtFimDescarga','dtRetiraPD','dtDevolucaoCNTR',
@@ -162,6 +193,8 @@ const Icompany = () => {
   const [canScrollL, setCanScrollL] = useState(false);
   const [canScrollR, setCanScrollR] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showSyncPanel, setShowSyncPanel] = useState(false);
+  const [syncFilter, setSyncFilter] = useState('all'); // 'all', 'problems', 'partial', 'empty'
 
   const fetchAll = useCallback(async () => {
     setLoading(true); setError(null);
@@ -228,6 +261,22 @@ const Icompany = () => {
   const agendados   = data.filter(r => String(r.status||'').toUpperCase().includes('AGENDADO')).length;
   const finalizados = data.filter(r => String(r.situacao||'').toUpperCase().includes('FINALIZADO')).length;
   const emExecucao  = data.filter(r => String(r.situacao||'').toUpperCase().includes('OPERAÇÃO')).length;
+
+  /* ── Análise de sincronização ── */
+  const syncAnalysi = data.map(record => ({
+    ...record,
+    syncStatus: calculateSyncStatus(record)
+  }));
+
+  const problemRecords = syncAnalysi.filter(r => r.syncStatus.severity !== 'success');
+  const partialRecords = syncAnalysi.filter(r => r.syncStatus.severity === 'warning');
+  const emptyRecords   = syncAnalysi.filter(r => r.syncStatus.severity === 'error');
+
+  const filteredData = 
+    syncFilter === 'problems' ? problemRecords :
+    syncFilter === 'partial' ? partialRecords :
+    syncFilter === 'empty' ? emptyRecords :
+    syncAnalysi;
 
   return (
     <>

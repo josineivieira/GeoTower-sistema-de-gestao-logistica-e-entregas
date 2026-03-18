@@ -317,7 +317,9 @@ const Icompany = () => {
           --ic-sh-sm:      0 2px 8px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.04);
           --ic-sh-md:      0 8px 24px rgba(15,20,40,.08), 0 2px 6px rgba(0,0,0,.05);
           --ic-sh-lg:      0 24px 64px rgba(15,20,40,.12), 0 8px 24px rgba(0,0,0,.07);
-          --ic-panel:      320px;
+
+          /* ✅ painel responsivo */
+          --ic-panel:      clamp(320px, 34vw, 620px);
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -854,124 +856,238 @@ const Icompany = () => {
         @keyframes ic-spin { to { transform: rotate(360deg); } }
 
         /* ════════════════════════════════
-           SIDE PANEL — Sync Inspector
+           SIDE PANEL — Sync Inspector (RESPONSIVO + SEM CORTE)
         ════════════════════════════════ */
-        .ic-panel {
+        .ic-panel{
           position: fixed; right: 0; top: 0; bottom: 0;
-          width: var(--ic-panel); z-index: 500;
+          width: min(var(--ic-panel), 100vw);
+          z-index: 500;
+
           background: #fff;
           border-left: 1px solid var(--ic-border);
           box-shadow: -8px 0 40px rgba(0,0,0,.1);
-          display: flex; flex-direction: column;
+
+          display: flex;
+          flex-direction: column;
+
+          /* IMPORTANTÍSSIMO: altura real do viewport + evita corte no rodapé */
+          height: 100dvh;
+          max-height: 100dvh;
+          padding-bottom: env(safe-area-inset-bottom);
+
           animation: ic-slide-in .28s cubic-bezier(.16,1,.3,1) both;
         }
-        @keyframes ic-slide-in { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes ic-slide-in {
+          from { transform: translateX(100%); opacity: 0; }
+          to   { transform: translateX(0); opacity: 1; }
+        }
 
-        .ic-panel-head {
+        .ic-panel-head{
           padding: 18px 18px 14px;
           background: linear-gradient(135deg, #0f0c29, #302b63);
           flex-shrink: 0;
         }
-        .ic-panel-head-row { display: flex; justify-content: space-between; align-items: flex-start; }
-        .ic-panel-title { font-size: 1rem; font-weight: 800; color: #fff; }
-        .ic-panel-sub   { font-size: .74rem; color: rgba(255,255,255,.45); margin-top: 3px; }
-        .ic-panel-close {
+
+        .ic-panel-head-row{
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 10px;
+        }
+
+        .ic-panel-title{ font-size: 1rem; font-weight: 800; color: #fff; }
+        .ic-panel-sub{ font-size: .74rem; color: rgba(255,255,255,.45); margin-top: 3px; }
+
+        .ic-panel-close{
           width: 30px; height: 30px; border-radius: 8px;
-          background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15);
-          color: rgba(255,255,255,.7); cursor: pointer; flex-shrink: 0;
-          display: flex; align-items: center; justify-content: center; font-size: .88rem;
-          transition: all .15s; font-family: inherit;
+          background: rgba(255,255,255,.1);
+          border: 1px solid rgba(255,255,255,.15);
+          color: rgba(255,255,255,.7);
+          cursor: pointer;
+          flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center;
+          font-size: .88rem;
+          transition: all .15s;
+          font-family: inherit;
         }
-        .ic-panel-close:hover { background: rgba(255,255,255,.2); color: #fff; }
+        .ic-panel-close:hover{ background: rgba(255,255,255,.2); color: #fff; }
 
-        /* Panel filter tabs */
-        .ic-panel-filters {
-          display: flex; gap: 4px; flex-wrap: wrap; margin-top: 12px;
+        /* Tabs responsivas: quebram linha e não estouram largura */
+        .ic-panel-filters{
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+          margin-top: 12px;
         }
-        .ic-pf-tab {
-          flex: 1; min-width: 60px; padding: 6px 6px; border-radius: 7px;
-          font-size: .68rem; font-weight: 700; cursor: pointer;
-          border: 1px solid transparent; transition: all .15s; font-family: inherit;
-          text-align: center; white-space: nowrap;
+        .ic-pf-tab{
+          flex: 1 1 120px;
+          min-width: 120px;
+          padding: 7px 10px;
+          border-radius: 8px;
+          font-size: .68rem;
+          font-weight: 800;
+          cursor: pointer;
+          border: 1px solid transparent;
+          transition: all .15s;
+          font-family: inherit;
+          text-align: center;
+          white-space: nowrap;
         }
-        .ic-pf-tab-default { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.12); color: rgba(255,255,255,.6); }
-        .ic-pf-tab-default:hover { background: rgba(255,255,255,.14); color: rgba(255,255,255,.9); }
-        .ic-pf-tab-active-all    { background: #4f46e5; color: #fff; box-shadow: 0 2px 8px rgba(79,70,229,.4); }
-        .ic-pf-tab-active-desync { background: #dc2626; color: #fff; box-shadow: 0 2px 8px rgba(220,38,38,.4); }
+        .ic-pf-tab-default{
+          background: rgba(255,255,255,.08);
+          border-color: rgba(255,255,255,.12);
+          color: rgba(255,255,255,.65);
+        }
+        .ic-pf-tab-default:hover{
+          background: rgba(255,255,255,.14);
+          color: rgba(255,255,255,.92);
+        }
+        .ic-pf-tab-active-all{ background: #4f46e5; color: #fff; box-shadow: 0 2px 8px rgba(79,70,229,.4); }
+        .ic-pf-tab-active-desync{ background: #dc2626; color: #fff; box-shadow: 0 2px 8px rgba(220,38,38,.4); }
         .ic-pf-tab-active-partial{ background: #d97706; color: #fff; box-shadow: 0 2px 8px rgba(217,119,6,.4); }
-        .ic-pf-tab-active-empty  { background: #dc2626; color: #fff; box-shadow: 0 2px 8px rgba(220,38,38,.4); }
+        .ic-pf-tab-active-empty{ background: #dc2626; color: #fff; box-shadow: 0 2px 8px rgba(220,38,38,.4); }
 
-        /* Panel list */
-        .ic-panel-list {
-          flex: 1; overflow-y: auto; padding: 14px 14px 14px;
-          display: flex; flex-direction: column; gap: 10px;
-          scrollbar-width: thin; scrollbar-color: #e0e7ff #fafbff;
+        /* ✅ ESSENCIAL: scroll funcionar dentro de flex column (sem “corte”) */
+        .ic-panel-list{
+          flex: 1 1 auto;
+          min-height: 0;                 /* <- isso resolve o truncamento */
+          overflow-y: auto;
+          overflow-x: hidden;
+
+          padding: 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+
+          scrollbar-width: thin;
+          scrollbar-color: #e0e7ff #fafbff;
         }
-        .ic-panel-list::-webkit-scrollbar { width: 4px; }
-        .ic-panel-list::-webkit-scrollbar-track { background: #fafbff; }
-        .ic-panel-list::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 99px; }
+        .ic-panel-list::-webkit-scrollbar{ width: 4px; }
+        .ic-panel-list::-webkit-scrollbar-track{ background: #fafbff; }
+        .ic-panel-list::-webkit-scrollbar-thumb{ background: #c7d2fe; border-radius: 99px; }
 
-        /* Panel record card */
-        .ic-prec {
-          border-radius: 10px; overflow: hidden;
+        /* Cards */
+        .ic-prec{
+          border-radius: 10px;
+          overflow: hidden;
           border: 1px solid var(--ic-border);
           background: var(--ic-surface);
           transition: box-shadow .15s;
         }
-        .ic-prec:hover { box-shadow: var(--ic-sh-sm); }
+        .ic-prec:hover{ box-shadow: var(--ic-sh-sm); }
 
-        .ic-prec-head {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 10px 12px; gap: 8px;
+        .ic-prec-head{
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 12px;
+          gap: 10px;
         }
-        .ic-prec-id { font-size: .84rem; font-weight: 700; color: var(--ic-ink-2); }
-        .ic-prec-badges { display: flex; align-items: center; gap: 5px; }
+        .ic-prec-id{
+          font-size: .84rem;
+          font-weight: 800;
+          color: var(--ic-ink-2);
 
-        .ic-prec-badge {
-          display: inline-flex; align-items: center; gap: 4px;
-          padding: 3px 8px; border-radius: 6px;
-          font-size: .68rem; font-weight: 800; letter-spacing: .3px; text-transform: uppercase;
+          /* evita quebrar layout em ids grandes */
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .ic-prec-badges{
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-shrink: 0;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+        .ic-prec-badge{
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 3px 8px;
+          border-radius: 7px;
+          font-size: .68rem;
+          font-weight: 900;
+          letter-spacing: .3px;
+          text-transform: uppercase;
         }
 
-        /* Comparison table */
-        .ic-comp {
-          margin: 0 12px 10px; border-radius: 7px; overflow: hidden;
+        /* Comparação: sempre visível */
+        .ic-comp{
+          margin: 0 12px 12px;
+          border-radius: 8px;
+          overflow-x: auto;                 /* <- permite ver tudo em telas pequenas */
           border: 1px solid var(--ic-border-2);
+          -webkit-overflow-scrolling: touch;
         }
-        .ic-comp-head {
-          padding: 6px 10px;
+        .ic-comp-head{
+          padding: 7px 10px;
           background: #f7f8fc;
           border-bottom: 1px solid var(--ic-border-2);
-          font-size: .68rem; font-weight: 700; color: var(--ic-muted);
-          letter-spacing: .5px; text-transform: uppercase;
-          display: flex; align-items: center; gap: 6px;
+          font-size: .68rem;
+          font-weight: 800;
+          color: var(--ic-muted);
+          letter-spacing: .5px;
+          text-transform: uppercase;
+          display: flex;
+          align-items: center;
+          gap: 6px;
         }
-        .ic-comp-table { width: 100%; border-collapse: collapse; font-size: .7rem; }
-        .ic-comp-table th {
-          padding: 5px 8px; text-align: center;
-          background: #f7f8fc; font-size: .65rem; font-weight: 700;
-          color: var(--ic-muted); letter-spacing: .4px; text-transform: uppercase;
+
+        /* tabela não “espreme” conteúdo */
+        .ic-comp-table{
+          width: max-content;
+          min-width: 100%;
+          border-collapse: collapse;
+          font-size: .72rem;
+        }
+        .ic-comp-table th{
+          padding: 6px 8px;
+          text-align: center;
+          background: #f7f8fc;
+          font-size: .64rem;
+          font-weight: 900;
+          color: var(--ic-muted);
+          letter-spacing: .4px;
+          text-transform: uppercase;
           border-bottom: 1px solid var(--ic-border-2);
         }
-        .ic-comp-table th:first-child { text-align: left; }
-        .ic-comp-table td {
-          padding: 4px 8px; border-bottom: 1px solid #f5f3ff;
-          color: var(--ic-ink-3);
-        }
-        .ic-comp-table tr:last-child td { border-bottom: none; }
-        .ic-comp-v { color: #059669; font-weight: 800; }
-        .ic-comp-x { color: #dc2626; font-weight: 800; }
-        .ic-comp-row-err { background: rgba(239,68,68,.03); }
+        .ic-comp-table th:first-child{ text-align: left; }
 
-        /* Panel empty */
-        .ic-panel-empty {
-          display: flex; flex-direction: column; align-items: center;
-          justify-content: center; padding: 40px 16px; gap: 8px;
-          color: var(--ic-muted); text-align: center;
+        .ic-comp-table td{
+          padding: 6px 8px;
+          border-bottom: 1px solid #f5f3ff;
+          color: var(--ic-ink-3);
+          vertical-align: top;
         }
-        .ic-panel-empty-icon { font-size: 2rem; margin-bottom: 4px; }
-        .ic-panel-empty-title { font-size: .9rem; font-weight: 700; color: var(--ic-ink-2); }
-        .ic-panel-empty-sub   { font-size: .78rem; }
+        .ic-comp-table tr:last-child td{ border-bottom: none; }
+
+        .ic-comp-table td:first-child{
+          white-space: normal;              /* <- “Campo” quebra linha */
+          word-break: break-word;
+          max-width: 240px;
+        }
+
+        .ic-comp-v{ color: #059669; font-weight: 900; }
+        .ic-comp-x{ color: #dc2626; font-weight: 900; }
+        .ic-comp-row-err{ background: rgba(239,68,68,.03); }
+
+        /* Empty state do painel */
+        .ic-panel-empty{
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 40px 16px;
+          gap: 8px;
+          color: var(--ic-muted);
+          text-align: center;
+        }
+        .ic-panel-empty-icon{ font-size: 2rem; margin-bottom: 4px; }
+        .ic-panel-empty-title{ font-size: .9rem; font-weight: 800; color: var(--ic-ink-2); }
+        .ic-panel-empty-sub{ font-size: .78rem; }
 
         /* ════ RESPONSIVE ════ */
         @media (max-width: 900px) {
@@ -979,11 +1095,29 @@ const Icompany = () => {
           .ic-strip-inner { padding: 0 18px; }
           .ic-body        { padding: 16px 18px; gap: 14px; }
           .ic-header-meta { display: none; }
-          --ic-panel: 280px;
+
+          /* ✅ override correto da variável em breakpoint */
+          :root { --ic-panel: clamp(280px, 70vw, 520px); }
         }
         @media (max-width: 600px) {
           .ic-brand-name { font-size: 1.1rem; }
           .ic-toolbar    { flex-wrap: wrap; }
+        }
+
+        /* ✅ Mobile pequeno: painel ocupa a tela inteira */
+        @media (max-width: 520px){
+          .ic-panel{
+            width: 100vw;
+            border-left: none;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,.25);
+          }
+          .ic-pf-tab{
+            flex: 1 1 calc(50% - 6px);
+            min-width: 0;
+          }
+          .ic-comp-table td:first-child{
+            max-width: 180px;
+          }
         }
       `}</style>
 

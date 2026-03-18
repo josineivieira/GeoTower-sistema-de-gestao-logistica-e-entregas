@@ -69,6 +69,11 @@ const programacaoEntregaSchema = new mongoose.Schema({
     default: '',
     trim: true
   },
+  origem: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   ativo: {
     type: Boolean,
     default: true
@@ -101,6 +106,7 @@ programacaoEntregaSchema.pre('save', function(next) {
 programacaoEntregaSchema.index({ processo: 1 });
 programacaoEntregaSchema.index({ dataAgendamento: 1 });
 programacaoEntregaSchema.index({ status: 1 });
+programacaoEntregaSchema.index({ origem: 1 });
 
 const ProgramacaoEntrega = mongoose.model('ProgramacaoEntrega', programacaoEntregaSchema);
 

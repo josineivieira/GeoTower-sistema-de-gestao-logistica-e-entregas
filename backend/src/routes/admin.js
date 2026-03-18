@@ -1412,7 +1412,20 @@ router.get("/programacoes", auth, async (req, res) => {
     console.log('[PROGRAMACAO] Listando programações de entrega');
 
     const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
-    const programacoes = await ProgramacaoEntrega.find().sort({ dataAgendamento: -1 });
+    
+    // Construir filtro de cidade baseado na origem
+    let cityFilter = {};
+    const city = req.city || 'manaus';
+    
+    if (city === 'manaus') {
+      // Manaus: apenas dados de MANAUS e MANAUS - COELTA BALY
+      cityFilter.origem = { $in: ['MANAUS', 'MANAUS - COELTA BALY'] };
+    } else if (city === 'itajai') {
+      // Itajaí: todos os outros dados
+      cityFilter.origem = { $nin: ['MANAUS', 'MANAUS - COELTA BALY'] };
+    }
+    
+    const programacoes = await ProgramacaoEntrega.find(cityFilter).sort({ dataAgendamento: -1 });
 
     // também trazemos entregas para permitir associação com motoristas
     const db = await getDb(req);
@@ -1456,7 +1469,8 @@ router.get("/programacoes", auth, async (req, res) => {
 
     return res.json({
       success: true,
-      programacoes: enriched
+      programacoes: enriched,
+      city: city
     });
   } catch (err) {
     console.error('[PROGRAMACAO] ❌ Erro ao listar:', err);
@@ -1757,6 +1771,7 @@ router.get("/programacoes/sync/ycompany", auth, managerOnly, async (req, res) =>
           dataAgendamento: dataAgendamento,
           contratado: String(y.contratado || '').trim() || 'OUTRO',
           motorista: String(y.motorista || '').trim() || '',
+          origem: String(y.origem || '').trim() || '',
           // Mapear situação do Ycompany para AGENDADO (como solicitado)
           status: 'AGENDADO',
           observacoes: `Sincronizado do Ycompany - ${y.situacao || 'N/A'}`

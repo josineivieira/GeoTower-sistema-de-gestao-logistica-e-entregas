@@ -1685,6 +1685,7 @@ router.post("/programacoes/import", auth, managerOnly, async (req, res) => {
  * GET /api/admin/programacoes/sync/ycompany
  * Sincronizar dados do Ycompany para Programação de Entregas
  * Mapeia: Processo←processo, RECEBEDOR←destinatario, CONTAINER←containerNumero, STATUS=AGENDADO
+ * Filtra dados baseado na cidade do usuário (Manaus vs Itajaí)
  */
 router.get("/programacoes/sync/ycompany", auth, managerOnly, async (req, res) => {
   try {
@@ -1696,8 +1697,22 @@ router.get("/programacoes/sync/ycompany", auth, managerOnly, async (req, res) =>
     const Ycompany = require("../models/Ycompany");
     const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
 
-    // Buscar todos os registros do Ycompany
-    const ycompanyRecords = await Ycompany.find({}).lean();
+    // Construir filtro de cidade
+    let cityFilter = {};
+    const city = req.city || 'manaus';
+    
+    if (city === 'manaus') {
+      // Manaus: apenas dados de MANAUS e MANAUS - COELTA BALY
+      cityFilter.origem = { $in: ['MANAUS', 'MANAUS - COELTA BALY'] };
+    } else if (city === 'itajai') {
+      // Itajaí: todos os outros dados
+      cityFilter.origem = { $nin: ['MANAUS', 'MANAUS - COELTA BALY'] };
+    }
+    
+    console.log(`[SYNC YCOMPANY] Filtrando por cidade: ${city}`, cityFilter);
+
+    // Buscar registros do Ycompany filtrados por cidade
+    const ycompanyRecords = await Ycompany.find(cityFilter).lean();
     console.log(`[SYNC YCOMPANY] Encontrados ${ycompanyRecords.length} registros no Ycompany`);
 
     // Buscar todos os processos já existentes para evitar duplicação

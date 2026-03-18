@@ -150,6 +150,8 @@ function mapToEntrega(row) {
     dtInicioDescarga: toLocalDateTimeString(row["Dt.Início Descarga"]),
     hrInicioDescarga: row["Hr.Inicio Descarga"] ?? null,
     dtFimDescarga: toLocalDateTimeString(row["Dt. fim descarga"]),
+    isValidDtInicioDescarga: !isEmpty(row["Dt.Início Descarga"]) ? "V" : "X",
+    isValidDtFimDescarga: !isEmpty(row["Dt. fim descarga"]) ? "V" : "X",
 
     containerNumero: row["Número"] ?? null,
     tara: row["Tara"] ?? null,
@@ -163,6 +165,8 @@ function mapToEntrega(row) {
 
     dtRetiraPD: !isEmpty(row["Dt. retirada P.D."]) ? toLocalDateTimeString(row["Dt. retirada P.D."]) : null,
     dtDevolucaoCNTR: !isEmpty(row["Dt. devolução CNTR"]) ? toLocalDateTimeString(row["Dt. devolução CNTR"]) : null,
+    isValidDtRetiraPD: !isEmpty(row["Dt. retirada P.D."]) ? "V" : "X",
+    isValidDtDevolucaoCNTR: !isEmpty(row["Dt. devolução CNTR"]) ? "V" : "X",
 
   };
 }

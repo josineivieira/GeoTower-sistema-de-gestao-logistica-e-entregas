@@ -18,7 +18,10 @@ async function col() {
 }
 
 function isEmpty(v) {
-  return v === null || v === undefined || (typeof v === "string" && v.trim() === "");
+  if (v === null || v === undefined) return true;
+  if (typeof v === "string" && v.trim() === "") return true;
+  if (v instanceof Date) return false; // Datas preenchidas são válidas
+  return false;
 }
 
 // --- new endpoints for the React Ycompany page ------------------------------------------------
@@ -75,12 +78,13 @@ router.get('/compare', async (req, res) => {
       let excelRecord = null;
       const processoProcurar = yRecord.geomaritima || yRecord.processo || yRecord.codigo;
       
-      if (processoProcurar) {
+      if (processoProcurar && processoProcurar.trim() !== '') {
+        const cleanedProc = processoProcurar.trim().toUpperCase();
         excelRecord = await excelCol.findOne({ 
           $or: [
-            { processo: processoProcurar },
-            { codigo: processoProcurar },
-            { geomaritima: processoProcurar }
+            { processo: { $regex: `^${cleanedProc}$`, $options: 'i' } },
+            { codigo: { $regex: `^${cleanedProc}$`, $options: 'i' } },
+            { geomaritima: { $regex: `^${cleanedProc}$`, $options: 'i' } }
           ]
         });
       }
@@ -110,7 +114,13 @@ router.get('/compare', async (req, res) => {
           hasInGeoTower,
           hasInIcompany,
           geoTowerValue: geoTowerValue || null,
-          icompanyValue: icompanyValue || null
+          icompanyValue: icompanyValue || null,
+          debug: {
+            geoTowerType: typeof geoTowerValue,
+            icompanyType: icompanyValue ? typeof icompanyValue : 'null',
+            geoTowerIsDate: geoTowerValue instanceof Date,
+            icompanyIsDate: icompanyValue instanceof Date
+          }
         };
       });
       
@@ -140,54 +150,75 @@ router.get('/debug-comparison', async (req, res) => {
     const ycompanyCol = db.collection('ycompany');
     const excelCol = db.collection('programacaoentregas');
     
-    // Get one record from each collection
-    const ycomp = await ycompanyCol.findOne({});
-    const excel = await excelCol.findOne({});
+    // Get 3 records from each collection for detailed analysis
+    const ycompanyRecords = await ycompanyCol.find({}).limit(5).toArray();
+    const excelRecords = await excelCol.find({}).limit(5).toArray();
     
-    console.log('=== GEO TOWER (Ycompany) ===');
-    console.log('Keys:', ycomp ? Object.keys(ycomp).slice(0, 20) : 'nenhum');
-    console.log('Exemplo:', {
-      processo: ycomp?.processo,
-      codigo: ycomp?.codigo,
-      geomaritima: ycomp?.geomaritima,
-      dtRetiraPD: ycomp?.dtRetiraPD,
-      dtInicioDescarga: ycomp?.dtInicioDescarga,
-      dtFimDescarga: ycomp?.dtFimDescarga,
-      dtDevolucaoCNTR: ycomp?.dtDevolucaoCNTR
-    });
+    // Map to compare side by side
+    const COMPARE_FIELDS = [
+      ['dtRetiraPD', 'dtRetiraPD', 'Dt. Retirada P.D.'],
+      ['dtInicioDescarga', 'dtInicioDescarga', 'Dt. Início Descarga'],
+      ['dtFimDescarga', 'dtFimDescarga', 'Dt. Fim Descarga'],
+      ['dtDevolucaoCNTR', 'dtDevolucaoCNTR', 'Dt. Devolução CNTR']
+    ];
     
-    console.log('\n=== ICOMPANY (Excel) ===');
-    console.log('Keys:', excel ? Object.keys(excel).slice(0, 20) : 'nenhum');
-    console.log('Exemplo:', {
-      processo: excel?.processo,
-      dtRetiraPD: excel?.dtRetiraPD,
-      dtInicioDescarga: excel?.dtInicioDescarga,
-      dtFimDescarga: excel?.dtFimDescarga,
-      dtDevolucaoCNTR: excel?.dtDevolucaoCNTR
+    const detailedComparison = ycompanyRecords.map(yRecord => {
+      const processoProcurar = yRecord.geomaritima || yRecord.processo || yRecord.codigo;
+      
+      // Find matching excel record
+      let excelRecord = null;
+      if (processoProcurar && processoProcurar.trim() !== '') {
+        const cleanedProc = processoProcurar.trim().toUpperCase();
+        excelRecord = excelRecords.find(e => {
+          const eProc = (e.processo || e.codigo || e.geomaritima || '').trim().toUpperCase();
+          return eProc === cleanedProc;
+        });
+      }
+      
+      const fields = {};
+      COMPARE_FIELDS.forEach(([geoField, excelField, displayName]) => {
+        const geoValue = yRecord[geoField];
+        const excelValue = excelRecord ? excelRecord[excelField] : undefined;
+        
+        fields[displayName] = {
+          geoTower: {
+            value: geoValue,
+            type: typeof geoValue,
+            isDate: geoValue instanceof Date,
+            isEmpty: isEmpty(geoValue)
+          },
+          icompany: {
+            value: excelValue,
+            type: typeof excelValue,
+            isDate: excelValue instanceof Date,
+            isEmpty: isEmpty(excelValue)
+          }
+        };
+      });
+      
+      return {
+        processo: processoProcurar,
+        geoTowerId: yRecord._id,
+        excelRecordFound: !!excelRecord,
+        excelId: excelRecord?._id,
+        fields
+      };
     });
     
     await client.close();
     
     res.json({
       ok: true,
-      ycompanyExample: ycomp ? {
-        processo: ycomp.processo,
-        codigo: ycomp.codigo,
-        geomaritima: ycomp.geomaritima,
-        dtRetiraPD: ycomp.dtRetiraPD,
-        dtInicioDescarga: ycomp.dtInicioDescarga
-      } : null,
-      excelExample: excel ? {
-        processo: excel.processo,
-        dtRetiraPD: excel.dtRetiraPD,
-        dtInicioDescarga: excel.dtInicioDescarga
-      } : null
+      totalGeoTower: ycompanyRecords.length,
+      totalExcel: excelRecords.length,
+      detailedComparison
     });
   } catch (e) {
-    console.error('Debug error:', e);
+    console.error('Debug comparison error:', e);
     res.status(500).json({ ok: false, error: e.message });
   }
 });
+
 
 router.get('/search', async (req, res) => {
   try {

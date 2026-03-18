@@ -11,7 +11,7 @@ dotenv.config({ path: path.join(__dirname, "../../.env") });
 // das variáveis de ambiente, caso existam. Isso roda mesmo se o comando de
 // start do ambiente não usar o script de setup.
 try {
-  require('../scripts/write-google-creds');
+  require('./scripts/write-google-creds');
 } catch (e) {
   console.warn('[CRED] Aviso: falha ao executar write-google-creds:', e && e.message ? e.message : e);
 }

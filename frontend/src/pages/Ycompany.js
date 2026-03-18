@@ -203,7 +203,9 @@ const Icompany = () => {
       const res = await api.get('/ycompany/compare');
       const compMap = {};
       res.data?.data?.forEach(comp => {
-        if (comp.processo) compMap[comp.processo] = comp.analysis;
+        // Tenta várias chaves possíveis para mapear
+        const key = comp.processo || comp.geomaritima || comp.codigo;
+        if (key) compMap[key] = comp.analysis;
       });
       setExcelComparison(compMap);
     } catch (e) { console.error(e); }

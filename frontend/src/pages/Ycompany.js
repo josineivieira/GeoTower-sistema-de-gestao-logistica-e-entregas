@@ -1244,44 +1244,32 @@ const Icompany = () => {
                     </div>
                     
                     {rec.excelSync?.hasDesync && (
-                      <div style={{ fontSize: '0.7rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px', padding: '8px', marginBottom: '8px', color: '#991b1b' }}>
-                        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>📊 STATUS EXCEL vs SISTEMA:</div>
+                      <div style={{ fontSize: '0.7rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px', padding: '8px', color: '#991b1b' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>📊 STATUS EXCEL vs SISTEMA:</div>
                         <ul style={{ margin: 0, paddingLeft: '16px' }}>
-                          {rec.excelSync.desyncFields.slice(0, 3).map((field, j) => (
-                            <li key={j} style={{ fontSize: '0.65rem', marginBottom: '2px' }}>
-                              <span style={{ fontWeight: 'bold' }}>{field.replace(/([A-Z])/g, ' $1').trim()}</span>
-                              <span style={{ color: '#a16207' }}> ✓ GEO TOWER | ✕ ICOMPANY</span>
-                            </li>
-                          ))}
-                          {rec.excelSync.desyncFields.length > 3 && (
-                            <li style={{ fontSize: '0.65rem', fontStyle: 'italic' }}>
-                              +{rec.excelSync.desyncFields.length - 3} mais campos faltando no Excel
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-                    )}
-                    
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '8px' }}>
-                      Status: <span style={{ fontWeight: 'bold', color: rec.syncStatus.color }}>
-                        {rec.syncStatus.status}
-                      </span>
-                    </div>
-                    
-                    {rec.syncStatus.issues.length > 0 && (
-                      <div style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: '1.5' }}>
-                        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Campos vazios no Sistema:</div>
-                        <ul style={{ margin: 0, paddingLeft: '16px' }}>
-                          {rec.syncStatus.issues.slice(0, 3).map((field, j) => (
-                            <li key={j} style={{ fontSize: '0.7rem' }}>
-                              {field.replace(/([A-Z])/g, ' $1').trim()}
-                            </li>
-                          ))}
-                          {rec.syncStatus.issues.length > 3 && (
-                            <li style={{ fontSize: '0.7rem', fontStyle: 'italic' }}>
-                              +{rec.syncStatus.issues.length - 3} mais
-                            </li>
-                          )}
+                          {Object.entries(rec.excelSync.excelData).map(([field, comparison], j) => {
+                            const hasGeoTower = !isEmpty(comparison.geoTower);
+                            const hasIcompany = !isEmpty(comparison.icompany);
+                            let icon = '';
+                            let text = '';
+                            
+                            if (hasGeoTower && !hasIcompany) {
+                              icon = '✓ GEO TOWER | ✕ ICOMPANY';
+                            } else if (!hasGeoTower && hasIcompany) {
+                              icon = '✕ GEO TOWER | ✓ ICOMPANY';
+                            } else if (hasGeoTower && hasIcompany) {
+                              icon = '✓ GEO TOWER | ✓ ICOMPANY';
+                            } else {
+                              return null;
+                            }
+                            
+                            return (
+                              <li key={j} style={{ fontSize: '0.65rem', marginBottom: '3px' }}>
+                                <span style={{ fontWeight: 'bold' }}>{field.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                <span style={{ color: '#a16207' }}> {icon}</span>
+                              </li>
+                            );
+                          })}
                         </ul>
                       </div>
                     )}

@@ -48,6 +48,7 @@ router.get('/', async (req, res) => {
 });
 
 // Compare Ycompany (GEO TOWER) vs programacaoentregas (ICOMPANY - Excel)
+// 4 colunas específicas: dtRetiraPD, dtInicioDescarga, dtFimDescarga, dtDevolucaoCNTR
 router.get('/compare', async (req, res) => {
   try {
     const client = new MongoClient(MONGODB_URI);
@@ -57,16 +58,19 @@ router.get('/compare', async (req, res) => {
     const ycompanyCol = db.collection('ycompany');
     const excelCol = db.collection('programacaoentregas');
     
-    // Fields to compare between Excel and System
-    const COMPARE_FIELDS = ['dtChegada', 'dtAgendamentoDescarga', 'dtInicioDescarga', 'hrInicioDescarga', 'dtFimDescarga'];
+    // Mapeamento dos 4 campos para comparação
+    // [fieldNameInGeoTower, fieldNameInIcompany, displayName]
+    const COMPARE_FIELDS = [
+      ['dtRetiraPD', 'dtRetiraPD', 'Dt. Retirada P.D.'],
+      ['dtInicioDescarga', 'dtInicioDescarga', 'Dt. Início Descarga'],
+      ['dtFimDescarga', 'dtFimDescarga', 'Dt. Fim Descarga'],
+      ['dtDevolucaoCNTR', 'dtDevolucaoCNTR', 'Dt. Devolução CNTR']
+    ];
     
-    // Get all ycompany records
     const ycompanyRecords = await ycompanyCol.find({}).toArray();
-    
     const comparison = [];
     
     for (const yRecord of ycompanyRecords) {
-      // Find corresponding Excel record by processo
       const excelRecord = await excelCol.findOne({ processo: yRecord.geomaritima });
       
       const record = {
@@ -76,32 +80,16 @@ router.get('/compare', async (req, res) => {
         analysis: {}
       };
       
-      // Check each field: exists in GEO TOWER? exists in ICOMPANY?
-      COMPARE_FIELDS.forEach(field => {
-        const hasInGeoTower = !isEmpty(yRecord[field]);
-        const hasInIcompany = excelRecord && !isEmpty(excelRecord[field]);
+      // Comparar os 4 campos específicos
+      COMPARE_FIELDS.forEach(([geoTowerField, icompanyField, displayName]) => {
+        const hasInGeoTower = !isEmpty(yRecord[geoTowerField]);
+        const hasInIcompany = excelRecord && !isEmpty(excelRecord[icompanyField]);
         
-        // Determine status
-        let status, severity;
-        if (hasInGeoTower && !hasInIcompany) {
-          status = 'DESYNC';
-          severity = 'high';  // Data OK in System but missing from latest Excel update
-        } else if (hasInGeoTower && hasInIcompany) {
-          status = 'SYNCED';
-          severity = 'none';
-        } else if (!hasInGeoTower && hasInIcompany) {
-          status = 'PENDING';
-          severity = 'medium';  // Excel has it but System hasn't confirmed yet
-        } else {
-          status = 'EMPTY';
-          severity = 'low';
-        }
-        
-        record.analysis[field] = {
-          geoTower: yRecord[field] || null,
-          icompany: excelRecord ? excelRecord[field] || null : null,
-          status,
-          severity
+        record.analysis[displayName] = {
+          geoTower: hasInGeoTower ? 'V' : 'X',
+          icompany: hasInIcompany ? 'V' : 'X',
+          hasInGeoTower,
+          hasInIcompany
         };
       });
       

@@ -290,13 +290,15 @@ const Icompany = () => {
     const syncStatus = calculateSyncStatus(record);
     const excelData = excelComparison[record.geomaritima] || {};
     
-    // Check for DESYNC: data exists in GEO TOWER but missing from latest Excel
+    // Detectar DESYNC: quando uma coluna tem V em um lado e X no outro (discrepância)
     let hasDesync = false;
     let desyncFields = [];
-    Object.entries(excelData).forEach(([field, comparison]) => {
-      if (comparison.status === 'DESYNC') {
+    Object.entries(excelData).forEach(([colName, comparison]) => {
+      // DESYNC = um lado tem preenchido (V) e outro não (X)
+      if ((comparison.geoTower === 'V' && comparison.icompany === 'X') ||
+          (comparison.geoTower === 'X' && comparison.icompany === 'V')) {
         hasDesync = true;
-        desyncFields.push(field);
+        desyncFields.push(colName);
       }
     });
     
@@ -1250,32 +1252,31 @@ const Icompany = () => {
                     
                     {rec.excelSync?.hasDesync && (
                       <div style={{ fontSize: '0.7rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px', padding: '8px', color: '#991b1b' }}>
-                        <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>📊 STATUS EXCEL vs SISTEMA:</div>
-                        <ul style={{ margin: 0, paddingLeft: '16px' }}>
-                          {Object.entries(rec.excelSync.excelData).map(([field, comparison], j) => {
-                            const hasGeoTower = !isEmpty(comparison.geoTower);
-                            const hasIcompany = !isEmpty(comparison.icompany);
-                            let icon = '';
-                            let text = '';
-                            
-                            if (hasGeoTower && !hasIcompany) {
-                              icon = '✓ GEO TOWER | ✕ ICOMPANY';
-                            } else if (!hasGeoTower && hasIcompany) {
-                              icon = '✕ GEO TOWER | ✓ ICOMPANY';
-                            } else if (hasGeoTower && hasIcompany) {
-                              icon = '✓ GEO TOWER | ✓ ICOMPANY';
-                            } else {
-                              return null;
-                            }
-                            
-                            return (
-                              <li key={j} style={{ fontSize: '0.65rem', marginBottom: '3px' }}>
-                                <span style={{ fontWeight: 'bold' }}>{field.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                <span style={{ color: '#a16207' }}> {icon}</span>
-                              </li>
-                            );
-                          })}
-                        </ul>
+                        <div style={{ fontWeight: 'bold', marginBottom: '6px', fontSize: '0.75rem' }}>📊 STATUS EXCEL vs SISTEMA:</div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.65rem' }}>
+                          <thead>
+                            <tr>
+                              <th style={{ textAlign: 'left', padding: '3px 0', fontWeight: 'bold', borderBottom: '1px solid #fecaca' }}>Coluna</th>
+                              <th style={{ textAlign: 'center', padding: '3px 0', fontWeight: 'bold', borderBottom: '1px solid #fecaca', width: '50px' }}>GEO TOWER</th>
+                              <th style={{ textAlign: 'center', padding: '3px 0', fontWeight: 'bold', borderBottom: '1px solid #fecaca', width: '50px' }}>ICOMPANY</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.entries(rec.excelSync.excelData).map(([colName, comparison], j) => (
+                              <tr key={j} style={{ borderBottom: '1px solid #fef2f2' }}>
+                                <td style={{ padding: '3px 0', textAlign: 'left' }}>
+                                  <span style={{ fontWeight: 'bold' }}>{colName}</span>
+                                </td>
+                                <td style={{ padding: '3px 0', textAlign: 'center', color: comparison.geoTower === 'V' ? '#059669' : '#dc2626', fontWeight: 'bold' }}>
+                                  {comparison.geoTower}
+                                </td>
+                                <td style={{ padding: '3px 0', textAlign: 'center', color: comparison.icompany === 'V' ? '#059669' : '#dc2626', fontWeight: 'bold' }}>
+                                  {comparison.icompany}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     )}
                   </div>

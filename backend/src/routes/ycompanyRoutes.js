@@ -71,20 +71,29 @@ router.get('/compare', async (req, res) => {
     const comparison = [];
     
     for (const yRecord of ycompanyRecords) {
-      // Procurar por processo, codigo ou geomaritima
-      let excelRecord = await excelCol.findOne({ processo: yRecord.processo });
-      if (!excelRecord) {
-        excelRecord = await excelCol.findOne({ processo: yRecord.codigo });
-      }
-      if (!excelRecord) {
-        excelRecord = await excelCol.findOne({ processo: yRecord.geomaritima });
+      // Procurar por processo usando múltiplos campos possíveis
+      let excelRecord = null;
+      const processoProcurar = yRecord.geomaritima || yRecord.processo || yRecord.codigo;
+      
+      if (processoProcurar) {
+        excelRecord = await excelCol.findOne({ 
+          $or: [
+            { processo: processoProcurar },
+            { codigo: processoProcurar },
+            { geomaritima: processoProcurar }
+          ]
+        });
       }
       
       const record = {
-        processo: yRecord.processo || yRecord.codigo || yRecord.geomaritima,
+        processo: yRecord.geomaritima || yRecord.processo || yRecord.codigo,
         cliente: yRecord.cliente,
         containerNumero: yRecord.containerNumero,
-        analysis: {}
+        analysis: {},
+        _debug: {
+          processoBuscado: processoProcurar,
+          encontrado: !!excelRecord
+        }
       };
       
       // Comparar os 4 campos específicos - retornar os valores reais também
@@ -100,8 +109,8 @@ router.get('/compare', async (req, res) => {
           icompany: hasInIcompany ? 'V' : 'X',
           hasInGeoTower,
           hasInIcompany,
-          geoTowerValue,
-          icompanyValue
+          geoTowerValue: geoTowerValue || null,
+          icompanyValue: icompanyValue || null
         };
       });
       

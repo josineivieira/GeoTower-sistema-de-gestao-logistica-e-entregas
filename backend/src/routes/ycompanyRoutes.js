@@ -71,25 +71,37 @@ router.get('/compare', async (req, res) => {
     const comparison = [];
     
     for (const yRecord of ycompanyRecords) {
-      const excelRecord = await excelCol.findOne({ processo: yRecord.geomaritima });
+      // Procurar por processo, codigo ou geomaritima
+      let excelRecord = await excelCol.findOne({ processo: yRecord.processo });
+      if (!excelRecord) {
+        excelRecord = await excelCol.findOne({ processo: yRecord.codigo });
+      }
+      if (!excelRecord) {
+        excelRecord = await excelCol.findOne({ processo: yRecord.geomaritima });
+      }
       
       const record = {
-        processo: yRecord.geomaritima,
+        processo: yRecord.processo || yRecord.codigo || yRecord.geomaritima,
         cliente: yRecord.cliente,
         containerNumero: yRecord.containerNumero,
         analysis: {}
       };
       
-      // Comparar os 4 campos específicos
+      // Comparar os 4 campos específicos - retornar os valores reais também
       COMPARE_FIELDS.forEach(([geoTowerField, icompanyField, displayName]) => {
-        const hasInGeoTower = !isEmpty(yRecord[geoTowerField]);
-        const hasInIcompany = excelRecord && !isEmpty(excelRecord[icompanyField]);
+        const geoTowerValue = yRecord[geoTowerField];
+        const icompanyValue = excelRecord ? excelRecord[icompanyField] : null;
+        
+        const hasInGeoTower = !isEmpty(geoTowerValue);
+        const hasInIcompany = !isEmpty(icompanyValue);
         
         record.analysis[displayName] = {
           geoTower: hasInGeoTower ? 'V' : 'X',
           icompany: hasInIcompany ? 'V' : 'X',
           hasInGeoTower,
-          hasInIcompany
+          hasInIcompany,
+          geoTowerValue,
+          icompanyValue
         };
       });
       
@@ -106,6 +118,65 @@ router.get('/compare', async (req, res) => {
   } catch (e) {
     console.error('Ycompany compare error:', e);
     res.status(500).json({ ok: false, error: 'Erro ao comparar dados' });
+  }
+});
+
+// Debug endpoint: mostra exemplo de registros de ambas as coleções
+router.get('/debug-comparison', async (req, res) => {
+  try {
+    const client = new MongoClient(MONGODB_URI);
+    await client.connect();
+    const db = client.db(DB_NAME);
+    
+    const ycompanyCol = db.collection('ycompany');
+    const excelCol = db.collection('programacaoentregas');
+    
+    // Get one record from each collection
+    const ycomp = await ycompanyCol.findOne({});
+    const excel = await excelCol.findOne({});
+    
+    console.log('=== GEO TOWER (Ycompany) ===');
+    console.log('Keys:', ycomp ? Object.keys(ycomp).slice(0, 20) : 'nenhum');
+    console.log('Exemplo:', {
+      processo: ycomp?.processo,
+      codigo: ycomp?.codigo,
+      geomaritima: ycomp?.geomaritima,
+      dtRetiraPD: ycomp?.dtRetiraPD,
+      dtInicioDescarga: ycomp?.dtInicioDescarga,
+      dtFimDescarga: ycomp?.dtFimDescarga,
+      dtDevolucaoCNTR: ycomp?.dtDevolucaoCNTR
+    });
+    
+    console.log('\n=== ICOMPANY (Excel) ===');
+    console.log('Keys:', excel ? Object.keys(excel).slice(0, 20) : 'nenhum');
+    console.log('Exemplo:', {
+      processo: excel?.processo,
+      dtRetiraPD: excel?.dtRetiraPD,
+      dtInicioDescarga: excel?.dtInicioDescarga,
+      dtFimDescarga: excel?.dtFimDescarga,
+      dtDevolucaoCNTR: excel?.dtDevolucaoCNTR
+    });
+    
+    await client.close();
+    
+    res.json({
+      ok: true,
+      ycompanyExample: ycomp ? {
+        processo: ycomp.processo,
+        codigo: ycomp.codigo,
+        geomaritima: ycomp.geomaritima,
+        dtRetiraPD: ycomp.dtRetiraPD,
+        dtInicioDescarga: ycomp.dtInicioDescarga
+      } : null,
+      excelExample: excel ? {
+        processo: excel.processo,
+        dtRetiraPD: excel.dtRetiraPD,
+        dtInicioDescarga: excel.dtInicioDescarga
+      } : null
+    });
+  } catch (e) {
+    console.error('Debug error:', e);
+    res.status(500).json({ ok: false, error: e.message });
   }
 });
 

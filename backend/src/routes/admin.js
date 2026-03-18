@@ -1421,8 +1421,12 @@ router.get("/programacoes", auth, async (req, res) => {
       // Manaus: apenas dados de MANAUS e MANAUS - COELTA BALY
       cityFilter.origem = { $in: ['MANAUS', 'MANAUS - COELTA BALY'] };
     } else if (city === 'itajai') {
-      // Itajaí: todos os outros dados
-      cityFilter.origem = { $nin: ['MANAUS', 'MANAUS - COELTA BALY'] };
+      // Itajaí: todos os outros dados (origem vazio ou diferente)
+      cityFilter.$or = [
+        { origem: { $exists: false } },
+        { origem: '' },
+        { origem: { $nin: ['MANAUS', 'MANAUS - COELTA BALY'] } }
+      ];
     }
     
     const programacoes = await ProgramacaoEntrega.find(cityFilter).sort({ dataAgendamento: -1 });

@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { adminService, deliveryService } from '../services/authService';
 import { FaArrowLeft, FaFilter, FaSync, FaEdit, FaTrash, FaTimes } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import { useCity } from '../contexts/CityContext';
+import { getProgramacaoDate } from '../utils/programacaoDate';
 import Toast from '../components/Toast';
 
 const BaseDadosGeral = () => {
   const navigate = useNavigate();
+  const { city } = useCity();
   const [dados, setDados] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -391,7 +394,7 @@ const BaseDadosGeral = () => {
                       <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item.processo}</td>
                       <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item.recebedor}</td>
                       <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item.container || '-'}</td>
-                      <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item.dataAgendamento ? new Date(item.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td>
+                      <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{getProgramacaoDate(item, city) ? new Date(getProgramacaoDate(item, city)).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td>
                       <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item.contratado}</td>
                       <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">{item.motorista || item._entrega?.driverName || '-'}</td>
                       <td className="px-4 py-3 border border-gray-200 text-xs whitespace-nowrap">

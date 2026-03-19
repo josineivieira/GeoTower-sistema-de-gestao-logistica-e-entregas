@@ -1812,31 +1812,37 @@ router.get("/programacoes/sync/ycompany", auth, managerOnly, async (req, res) =>
       })
       .map(y => {
         // Converter data mantendo o horário original (sem timezone conversion)
-        let dataAgendamento = '';
-        if (y.dtAgendamentoDescarga) {
-          const dtStr = String(y.dtAgendamentoDescarga).trim();
-          // Se é string formato "YYYY-MM-DD HH:MM:SS", converter para "YYYY-MM-DDTHH:MM"
+        const formatSyncDate = (raw) => {
+          if (!raw) return '';
+          const dtStr = String(raw).trim();
+          if (!dtStr) return '';
+
           if (dtStr.includes(' ')) {
             const parts = dtStr.split(' ');
-            dataAgendamento = parts[0] + 'T' + parts[1].substring(0, 5);
-          } else if (dtStr.includes('T')) {
-            // Se já é ISO string, manter formato
-            dataAgendamento = dtStr.substring(0, 16);
-          } else if (dtStr.includes('-')) {
-            // Se é só data, adicionar hora padrão
-            dataAgendamento = dtStr.substring(0, 10) + 'T00:00';
+            return parts[0] + 'T' + parts[1].substring(0, 5);
           }
-        }
-        
+          if (dtStr.includes('T')) {
+            return dtStr.substring(0, 16);
+          }
+          if (dtStr.includes('-')) {
+            return dtStr.substring(0, 10) + 'T00:00';
+          }
+          return '';
+        };
+
+        let dataAgendamento = formatSyncDate(y.dtAgendamentoDescarga);
         if (!dataAgendamento) {
           dataAgendamento = new Date().toISOString().slice(0, 16);
         }
-        
+
+        const dtColeta = formatSyncDate(y.dtColeta);
+
         return {
           processo: String(y.processo || '').trim(),
           recebedor: String(y.destinatario || '').trim() || 'N/A',
           container: String(y.containerNumero || '').trim() || '',
           dataAgendamento: dataAgendamento,
+          dtColeta,
           contratado: String(y.contratado || '').trim() || 'OUTRO',
           motorista: String(y.motorista || '').trim() || '',
           origem: String(y.origem || '').trim() || '',

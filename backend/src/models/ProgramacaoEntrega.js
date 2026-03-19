@@ -23,6 +23,11 @@ const programacaoEntregaSchema = new mongoose.Schema({
     required: [true, 'Data de agendamento é obrigatória'],
     trim: true
   },
+  dtColeta: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   contratado: {
     type: String,
     required: [true, 'Contratado é obrigatório'],

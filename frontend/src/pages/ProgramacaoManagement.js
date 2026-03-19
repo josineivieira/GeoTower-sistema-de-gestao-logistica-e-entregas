@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminService } from '../services/authService';
 import { useAuth } from '../services/authContext';
+import { useCity } from '../contexts/CityContext';
 import {
   FaArrowLeft, FaPlus, FaEdit, FaTrash, FaFileDownload,
   FaFileExcel, FaSort, FaSortUp, FaSortDown, FaFilter,
@@ -13,6 +14,7 @@ import '../styles/MotoristaManagement.css';
 const ProgramacaoManagement = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { city } = useCity();
 
   const isGeoMar = () => false; // Libera edição para geomar
   const canEdit = () => true;
@@ -94,6 +96,12 @@ const ProgramacaoManagement = () => {
     }
   };
 
+  const getProgramacaoDate = (prog) => {
+    // Itajaí should use dtColeta when available; otherwise fall back to the agendamento field
+    if (city === 'itajai' && prog.dtColeta) return prog.dtColeta;
+    return prog.dataAgendamento;
+  };
+
   useEffect(() => {
     let data = [...programacoes];
     if (filters.search) {
@@ -109,15 +117,24 @@ const ProgramacaoManagement = () => {
       data = data.filter(p => p.status === filters.status);
     if (filters.startDate) {
       const sd = new Date(filters.startDate);
-      data = data.filter(p => p.dataAgendamento && new Date(p.dataAgendamento) >= sd);
+      data = data.filter(p => {
+        const dateVal = getProgramacaoDate(p);
+        return dateVal && new Date(dateVal) >= sd;
+      });
     }
     if (filters.endDate) {
       const ed = new Date(filters.endDate);
-      data = data.filter(p => p.dataAgendamento && new Date(p.dataAgendamento) <= ed);
+      data = data.filter(p => {
+        const dateVal = getProgramacaoDate(p);
+        return dateVal && new Date(dateVal) <= ed;
+      });
     }
     if (sortBy) {
       data.sort((a, b) => {
-        let va = a[sortBy] || '', vb = b[sortBy] || '';
+        let va = sortBy === 'dataAgendamento' ? getProgramacaoDate(a) : a[sortBy];
+        let vb = sortBy === 'dataAgendamento' ? getProgramacaoDate(b) : b[sortBy];
+        va = va || '';
+        vb = vb || '';
         if (typeof va === 'string') va = va.toLowerCase();
         if (typeof vb === 'string') vb = vb.toLowerCase();
         if (va < vb) return sortDir === 'asc' ? -1 : 1;
@@ -585,16 +602,21 @@ const ProgramacaoManagement = () => {
                           {prog.container}
                         </td>
                         <td style={{ padding: '14px 16px', fontSize: 13, color: '#374151', whiteSpace: 'nowrap' }}>
-                          {prog.dataAgendamento ? (() => {
-                            const [date, time] = prog.dataAgendamento.split('T');
+                          {(() => {
+                            const dateString = getProgramacaoDate(prog);
+                            if (!dateString) return '—';
+
+                            const [date, time] = dateString.split(/[T ]/);
                             const [y, m, d] = date.split('-');
+                            if (!y || !m || !d) return dateString;
+
                             return (
                               <span>
                                 <span style={{ fontWeight: 600 }}>{d}/{m}/{y}</span>
                                 {time && <span style={{ color: '#9ca3af', marginLeft: 6, fontSize: 12 }}>{time}</span>}
                               </span>
                             );
-                          })() : '—'}
+                          })()}
                         </td>
                         <td style={{ padding: '14px 16px' }}>
                           <span style={{

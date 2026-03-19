@@ -346,79 +346,84 @@ const getPunctualityStatus = (d, now = new Date(), city = 'manaus') => {
   return { label: 'No prazo', type: 'ok', eta, lateBy: null };
 };
 
-const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime, city = 'manaus' }) => (
-  <button
-    type="button"
-    onClick={() => onOpen(delivery)}
-    className={`group relative w-full text-left rounded-lg border ${column.border} shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 overflow-hidden ${(() => {
-      const punct = getPunctualityStatus(delivery, currentTime, city);
-      let bgClass = 'bg-white';
-      let shadowClass = '';
-      if (punct.label === 'Atrasado') {
-        bgClass = 'bg-red-50';
-        shadowClass = 'shadow-red-500/50';
-      } else if (punct.label === 'Pontual' || punct.label === 'No prazo') {
-        bgClass = 'bg-green-50';
-        shadowClass = 'shadow-green-500/50';
-      } else if (punct.label === 'Possível atraso') {
-        bgClass = 'bg-yellow-50';
-        shadowClass = 'shadow-yellow-500/50';
-      }
-      return `${bgClass} ${shadowClass}`;
-    })()}`}
-  >
-    <div
-      className={`absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b ${(() => {
+const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime, city = 'manaus' }) => {
+  if (city === 'itajai') {
+    console.log('[DeliveryKanbanCard] cidade=itajai, delivery:', delivery.processo, 'dtColeta:', delivery.dtColeta, 'dataAgendamento:', delivery.dataAgendamento);
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(delivery)}
+      className={`group relative w-full text-left rounded-lg border ${column.border} shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 overflow-hidden ${(() => {
         const punct = getPunctualityStatus(delivery, currentTime, city);
-        if (punct.label === 'Atrasado') return 'from-red-400 to-red-600';
-        if (punct.label === 'Pontual' || punct.label === 'No prazo') return 'from-green-400 to-green-600';
-        if (punct.label === 'Possível atraso') return 'from-yellow-400 to-yellow-600';
-        return column.gradient;
+        let bgClass = 'bg-white';
+        let shadowClass = '';
+        if (punct.label === 'Atrasado') {
+          bgClass = 'bg-red-50';
+          shadowClass = 'shadow-red-500/50';
+        } else if (punct.label === 'Pontual' || punct.label === 'No prazo') {
+          bgClass = 'bg-green-50';
+          shadowClass = 'shadow-green-500/50';
+        } else if (punct.label === 'Possível atraso') {
+          bgClass = 'bg-yellow-50';
+          shadowClass = 'shadow-yellow-500/50';
+        }
+        return `${bgClass} ${shadowClass}`;
       })()}`}
-    />
-    <div className="pl-2.5 pr-2 pt-2 pb-2">
-      <div className="flex items-start justify-between gap-1.5 mb-1.5">
-        <span className="font-bold text-gray-800 text-xs leading-tight truncate">
-          {/* sempre mostrar o processo CAB, não o número do container */}
-          {delivery.processoCAB || '—'}
-        </span>
-        <span className={`shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${column.badge} border ${column.border}`}>
-          {/* Exibe placa, buscando da base ycompany se disponível */}
-          {delivery.placaYcompany || delivery.vehiclePlate || 'Placa'}
-        </span>
-      </div>
+    >
+      <div
+        className={`absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b ${(() => {
+          const punct = getPunctualityStatus(delivery, currentTime, city);
+          if (punct.label === 'Atrasado') return 'from-red-400 to-red-600';
+          if (punct.label === 'Pontual' || punct.label === 'No prazo') return 'from-green-400 to-green-600';
+          if (punct.label === 'Possível atraso') return 'from-yellow-400 to-yellow-600';
+          return column.gradient;
+        })()}`}
+      />
+      <div className="pl-2.5 pr-2 pt-2 pb-2">
+        <div className="flex items-start justify-between gap-1.5 mb-1.5">
+          <span className="font-bold text-gray-800 text-xs leading-tight truncate">
+            {/* sempre mostrar o processo CAB, não o número do container */}
+            {delivery.processoCAB || '—'}
+          </span>
+          <span className={`shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${column.badge} border ${column.border}`}>
+            {/* Exibe placa, buscando da base ycompany se disponível */}
+            {delivery.placaYcompany || delivery.vehiclePlate || 'Placa'}
+          </span>
+        </div>
 
-      <div className="space-y-0.5">
-        {delivery.recebedor && (
-          <div className="flex items-center gap-1 text-[9px] text-gray-500">
-            <FaBuilding className="text-gray-400 shrink-0 text-[8px]" />
-            <span className="truncate">{delivery.recebedor}</span>
+        <div className="space-y-0.5">
+          {delivery.recebedor && (
+            <div className="flex items-center gap-1 text-[9px] text-gray-500">
+              <FaBuilding className="text-gray-400 shrink-0 text-[8px]" />
+              <span className="truncate">{delivery.recebedor}</span>
+            </div>
+          )}
+
+          {delivery.userName && (
+            <div className="flex items-center gap-1 text-[9px] text-gray-500">
+              <FaBoxOpen className="text-gray-400 shrink-0 text-[8px]" />
+              <span className="truncate">{delivery.userName}</span>
+            </div>
+          )}
+
+          {/* mostramos número do container no lugar do motorista */}
+          {delivery.containerNumero && (
+            <div className={`flex items-center gap-1 text-[9px] font-medium ${column.text}`}>
+              <FaBoxOpen className="shrink-0 text-[8px]" />
+              <span className="truncate">{delivery.containerNumero}</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-1 text-[9px] text-gray-400">
+            <FaCalendarAlt className="shrink-0 text-[8px]" />
+            <span className="truncate">{formatBoardDate(getProgramacaoDate(delivery, city))}</span>
           </div>
-        )}
-
-        {delivery.userName && (
-          <div className="flex items-center gap-1 text-[9px] text-gray-500">
-            <FaBoxOpen className="text-gray-400 shrink-0 text-[8px]" />
-            <span className="truncate">{delivery.userName}</span>
-          </div>
-        )}
-
-        {/* mostramos número do container no lugar do motorista */}
-        {delivery.containerNumero && (
-          <div className={`flex items-center gap-1 text-[9px] font-medium ${column.text}`}>
-            <FaBoxOpen className="shrink-0 text-[8px]" />
-            <span className="truncate">{delivery.containerNumero}</span>
-          </div>
-        )}
-
-        <div className="flex items-center gap-1 text-[9px] text-gray-400">
-          <FaCalendarAlt className="shrink-0 text-[8px]" />
-          <span className="truncate">{formatBoardDate(getProgramacaoDate(delivery, city))}</span>
         </div>
       </div>
-    </div>
-  </button>
-);
+    </button>
+  );
+};
 
 const KanbanColumnHeader = ({ column, count }) => {
   const Icon = column.icon;

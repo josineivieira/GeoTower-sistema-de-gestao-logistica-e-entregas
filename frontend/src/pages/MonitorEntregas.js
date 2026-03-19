@@ -924,6 +924,7 @@ const MonitorEntregas = () => {
   const RISE_WINDOW = 8000;
 
   const { theme, setTheme } = useTheme();
+  const { city } = useCity();
   const themeConfig = THEMES[theme] || THEMES.dark;
 
   const statusMapToBackend = {

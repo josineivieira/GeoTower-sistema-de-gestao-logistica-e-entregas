@@ -113,6 +113,17 @@ function isEmpty(v) {
 
 function mapToEntrega(row) {
 
+  // Colunas de data podem vir com nomes diferentes dependendo da exportação.
+  const dtRetiraPDVal = toLocalDateTimeString(row["Dt. retirada P.D."] ?? row["Dt. Retirada porto"]);
+  const dtColetaVal = toLocalDateTimeString(row["Dt. coleta"] ?? row["Data agendamento"] ?? row["Data Agendamento"]);
+  const dtChegadaVal = toLocalDateTimeString(row["Dt. chegada planta"] ?? row["Dt. chegada cliente"]);
+  const dtEntradaVal = toLocalDateTimeString(
+    row["Dt. entrada planta"] ??
+    row["Dt. devolução CNTR"] ??
+    row["Dt. devolução container"] ??
+    row["Dt devolução container"]
+  );
+
   return {
 
     codigo: row["Código"] ?? null,
@@ -154,12 +165,12 @@ function mapToEntrega(row) {
     isValidDtFimDescarga: !isEmpty(row["Dt. fim descarga"]) ? "V" : "X",
     
     // Novos campos de data
-    dtColeta: toLocalDateTimeString(row["Dt. coleta"]),
-    dtChegadaPlanta: toLocalDateTimeString(row["Dt. chegada planta"]),
+    dtColeta: dtColetaVal,
+    dtChegadaPlanta: dtChegadaVal,
     dtInicioCarregamento: toLocalDateTimeString(row["Dt início carregamento"]),
     dtFimCarregamento: toLocalDateTimeString(row["Dt fim carregamento"]),
     dtSaidaPlanta: toLocalDateTimeString(row["Dt saida planta"]),
-    dtEntradaPlanta: toLocalDateTimeString(row["Dt entrada planta"]),
+    dtEntradaPlanta: dtEntradaVal,
 
     containerNumero: row["Número"] ?? null,
     tara: row["Tara"] ?? null,
@@ -171,10 +182,10 @@ function mapToEntrega(row) {
     nMDFE: row["N° MDFE"] ?? null,
     situacaoMDFE: row["Situação MDFE"] ?? null,
 
-    dtRetiraPD: !isEmpty(row["Dt. retirada P.D."]) ? toLocalDateTimeString(row["Dt. retirada P.D."]) : null,
-    dtDevolucaoCNTR: !isEmpty(row["Dt. devolução CNTR"]) ? toLocalDateTimeString(row["Dt. devolução CNTR"]) : null,
-    isValidDtRetiraPD: !isEmpty(row["Dt. retirada P.D."]) ? "V" : "X",
-    isValidDtDevolucaoCNTR: !isEmpty(row["Dt. devolução CNTR"]) ? "V" : "X",
+    dtRetiraPD: dtRetiraPDVal,
+    dtDevolucaoCNTR: dtEntradaVal,
+    isValidDtRetiraPD: dtRetiraPDVal ? "V" : "X",
+    isValidDtDevolucaoCNTR: dtEntradaVal ? "V" : "X",
 
   };
 }

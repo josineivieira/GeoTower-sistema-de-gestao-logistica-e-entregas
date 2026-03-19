@@ -5,26 +5,11 @@
 export function getProgramacaoDate(programacao = {}, city = 'manaus') {
   if (!programacao) return null;
 
-  // Debug log
-  if (city === 'itajai' && !programacao.dtColeta) {
-    console.warn('[getProgramacaoDate] Itajaí selecionado mas dtColeta não encontrado:', {
-      city,
-      dtColeta: programacao.dtColeta,
-      dataAgendamento: programacao.dataAgendamento,
-      processo: programacao.processo
-    });
-  }
-
   // Prefer dtColeta in Itajaí when present
   if (city === 'itajai' && programacao.dtColeta) {
-    console.log('[getProgramacaoDate] Usando dtColeta para Itajaí:', programacao.dtColeta);
     return programacao.dtColeta;
   }
 
   // Fallbacks
-  const result = programacao.dataAgendamento || programacao.dtColeta || programacao.data || null;
-  if (city === 'itajai') {
-    console.log('[getProgramacaoDate] Fallback para Itajaí - retornando:', result);
-  }
-  return result;
+  return programacao.dataAgendamento || programacao.dtColeta || programacao.data || null;
 }

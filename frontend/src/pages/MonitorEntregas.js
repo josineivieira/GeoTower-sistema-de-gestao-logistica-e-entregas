@@ -346,11 +346,7 @@ const getPunctualityStatus = (d, now = new Date(), city = 'manaus') => {
   return { label: 'No prazo', type: 'ok', eta, lateBy: null };
 };
 
-const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime, city = 'manaus' }) => {
-  if (city === 'itajai') {
-    console.log('[DeliveryKanbanCard] cidade=itajai, delivery:', delivery.processo, 'dtColeta:', delivery.dtColeta, 'dataAgendamento:', delivery.dataAgendamento);
-  }
-  return (
+const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime, city = 'manaus' }) => (
     <button
       type="button"
       onClick={() => onOpen(delivery)}

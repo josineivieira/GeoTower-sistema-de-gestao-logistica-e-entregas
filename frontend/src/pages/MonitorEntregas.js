@@ -877,11 +877,6 @@ const getStatusEntryTime = (delivery) => {
 const MonitorEntregas = () => {
   const { user } = useAuth();
   const { city } = useCity();
-  
-  useEffect(() => {
-    console.log(`[MonitorEntregas] City context:`, city);
-  }, [city]);
-  
   const isGeoMar = () => false; // Libera edição para geomar
   const canEdit = () => user?.role === 'manager' || user?.role === 'geomar';
   const navigate = useNavigate();

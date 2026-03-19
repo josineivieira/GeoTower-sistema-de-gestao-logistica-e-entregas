@@ -2,10 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import { deliveryService } from '../services/authService';
+import { useCity } from '../contexts/CityContext';
+import { getProgramacaoDate } from '../utils/programacaoDate';
 
 const EntregaEmRota = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { city } = useCity();
+
   const [delivery, setDelivery] = useState(null);
   const [programacao, setProgramacao] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,7 +38,7 @@ const EntregaEmRota = () => {
         if (matched) {
           setProgramacao(matched);
           if (d.arrivedAt) {
-            const scheduled = new Date(matched.dataAgendamento);
+            const scheduled = new Date(getProgramacaoDate(matched, city));
             const arrived = new Date(d.arrivedAt);
             setAtrasoMinutes(Math.round((arrived - scheduled) / 60000));
           }
@@ -86,7 +90,7 @@ const EntregaEmRota = () => {
       <h1 className="text-2xl font-bold mb-4">Entrega em andamento</h1>
       <div className="bg-white shadow rounded-lg p-6 mb-6">
         <p><strong>Container / Número:</strong> {delivery.deliveryNumber}</p>
-        {programacao && <p><strong>Agendado para:</strong> {new Date(programacao.dataAgendamento).toLocaleString()}</p>}
+        {programacao && <p><strong>Agendado para:</strong> {new Date(getProgramacaoDate(programacao, city)).toLocaleString()}</p>}
         <p><strong>Observações:</strong> {delivery.observations || '-'}</p>
         {delivery.arrivedAt && (
           <p><strong>Chegada registrada:</strong> {new Date(delivery.arrivedAt).toLocaleString()}</p>

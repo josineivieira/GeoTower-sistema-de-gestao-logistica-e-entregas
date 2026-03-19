@@ -11,6 +11,8 @@ import {
 } from 'react-icons/fa';
 import { MdLocalShipping, MdAssignment } from 'react-icons/md';
 import { useAuth } from '../services/authContext';
+import { useCity } from '../contexts/CityContext';
+import { getProgramacaoDate } from '../utils/programacaoDate';
 import { useTheme, THEMES } from '../contexts/ThemeContext';
 
 // ─────────────────────────────────────────────
@@ -233,6 +235,7 @@ const ProgramadasEntregas = () => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const { user } = useAuth();
+  const { city } = useCity();
 
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showModal, setShowModal] = useState(false);
@@ -728,8 +731,8 @@ const ProgramadasEntregas = () => {
     if (statusFilter !== 'all') result = result.filter(p => (p.status || 'pending').toUpperCase() === statusFilter.toUpperCase());
     if (driverFilter !== 'all') result = result.filter(p => String(p.motorista || '').trim().toUpperCase() === driverFilter.toUpperCase());
     result = [...result].sort((a, b) => {
-      let aVal = sortBy === 'data' ? new Date(a.dataAgendamento || 0).getTime() : String(a.container || '').length;
-      let bVal = sortBy === 'data' ? new Date(b.dataAgendamento || 0).getTime() : String(b.container || '').length;
+      let aVal = sortBy === 'data' ? new Date(getProgramacaoDate(a, city) || 0).getTime() : String(a.container || '').length;
+      let bVal = sortBy === 'data' ? new Date(getProgramacaoDate(b, city) || 0).getTime() : String(b.container || '').length;
       return sortOrder === 'desc' ? (bVal - aVal || String(bVal).localeCompare(String(aVal))) : (aVal - bVal || String(aVal).localeCompare(String(bVal)));
     });
     return result;
@@ -1024,7 +1027,7 @@ const ProgramadasEntregas = () => {
                       </div>
                       <ul className="font-bold text-gray-800 text-sm leading-tight">
                         {p.fracionadas && p.fracionadas.map(f => (
-                          <li key={f._id}>{f.dataAgendamento ? new Date(f.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</li>
+                          <li key={f._id}>{getProgramacaoDate(f, city) ? new Date(getProgramacaoDate(f, city)).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</li>
                         ))}
                       </ul>
                     </div>
@@ -1364,7 +1367,7 @@ const ProgramadasEntregas = () => {
                       <div>
                         <p className="text-sm text-gray-500">Data agendada</p>
                         <p className="font-bold text-blue-700 text-base">
-                          {new Date(currentProgramacao?.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}
+                          {new Date(getProgramacaoDate(currentProgramacao, city) || '').toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}
                         </p>
                       </div>
                     </div>
@@ -1380,7 +1383,7 @@ const ProgramadasEntregas = () => {
                         </div>
                       </div>
                     )}
-                    <StepTimer start={currentDelivery?.createdAt || currentProgramacao?.dataAgendamento} label="Tempo total" />
+                    <StepTimer start={currentDelivery?.createdAt || getProgramacaoDate(currentProgramacao, city)} label="Tempo total" />
                   </div>
                   <div className="flex gap-3">
                     <button onClick={() => goToStep('arrival')}

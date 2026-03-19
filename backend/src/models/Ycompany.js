@@ -45,6 +45,24 @@ const ycompanySchema = new mongoose.Schema({
   dtFimDescarga: {
     type: Date,
   },
+  dtColeta: {
+    type: Date,
+  },
+  dtChegadaPlanta: {
+    type: Date,
+  },
+  dtInicioCarregamento: {
+    type: Date,
+  },
+  dtFimCarregamento: {
+    type: Date,
+  },
+  dtSaidaPlanta: {
+    type: Date,
+  },
+  dtEntradaPlanta: {
+    type: Date,
+  },
   dtDevolucaoCNTR: {
     type: Date,
   },

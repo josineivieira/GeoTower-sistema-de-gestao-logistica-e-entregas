@@ -152,6 +152,14 @@ function mapToEntrega(row) {
     dtFimDescarga: toLocalDateTimeString(row["Dt. fim descarga"]),
     isValidDtInicioDescarga: !isEmpty(row["Dt.Início Descarga"]) ? "V" : "X",
     isValidDtFimDescarga: !isEmpty(row["Dt. fim descarga"]) ? "V" : "X",
+    
+    // Novos campos de data
+    dtColeta: toLocalDateTimeString(row["Dt. coleta"]),
+    dtChegadaPlanta: toLocalDateTimeString(row["Dt. chegada planta"]),
+    dtInicioCarregamento: toLocalDateTimeString(row["Dt início carregamento"]),
+    dtFimCarregamento: toLocalDateTimeString(row["Dt fim carregamento"]),
+    dtSaidaPlanta: toLocalDateTimeString(row["Dt saida planta"]),
+    dtEntradaPlanta: toLocalDateTimeString(row["Dt entrada planta"]),
 
     containerNumero: row["Número"] ?? null,
     tara: row["Tara"] ?? null,

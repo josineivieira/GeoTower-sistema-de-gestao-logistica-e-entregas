@@ -7,9 +7,14 @@ export function getProgramacaoDate(programacao = {}, city = 'manaus') {
 
   // Prefer dtColeta in Itajaí when present
   if (city === 'itajai' && programacao.dtColeta) {
+    console.log(`[getProgramacaoDate] city=${city} - Retornando dtColeta:`, programacao.dtColeta, `(dataAgendamento: ${programacao.dataAgendamento})`);
     return programacao.dtColeta;
   }
 
   // Fallbacks
-  return programacao.dataAgendamento || programacao.dtColeta || programacao.data || null;
+  const result = programacao.dataAgendamento || programacao.dtColeta || programacao.data || null;
+  if (city === 'itajai') {
+    console.log(`[getProgramacaoDate] city=${city} - dtColeta não encontrado, retornando fallback:`, result);
+  }
+  return result;
 }

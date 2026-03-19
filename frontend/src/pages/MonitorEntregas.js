@@ -1310,14 +1310,40 @@ const MonitorEntregas = () => {
         periodDate = today.toLocaleDateString('pt-BR');
       }
 
-      const response = await adminService.getDeliveries(backendFilters, statsPeriod, periodDate);
-      const data = response?.data?.deliveries || [];
+      // Carregar programações E entregas, depois fazer merge
+      const [progRes, delivRes] = await Promise.all([
+        adminService.getProgramacoes(),
+        adminService.getDeliveries(backendFilters, statsPeriod, periodDate)
+      ]);
 
-      const normalized = data.map((d) => {
-        if (d.status === 'ENTREGUE_COM_PENDENCIA_CANHOTO') d.status = 'FINALIZADO';
+      const programacoes = progRes?.data?.programacoes || [];
+      const deliveries = delivRes?.data?.deliveries || [];
+
+      // Criar mapa de programações por número/container
+      const mapProgramacoes = {};
+      programacoes.forEach(prog => {
+        const chaveProc = (prog.processo || '').toUpperCase().trim();
+        const chaveCont = (prog.container || '').toUpperCase().trim();
+        if (chaveProc) mapProgramacoes[chaveProc] = prog;
+        if (chaveCont) mapProgramacoes[chaveCont] = prog;
+      });
+
+      // Enriquecer entregas com dados de programações (especialmente dtColeta)
+      const enrichedDeliveries = deliveries.map(d => {
+        const chaveDeliv = (d.deliveryNumber || '').toUpperCase().trim();
+        const programacao = mapProgramacoes[chaveDeliv];
+        
+        // Se encontrou programação, adiciona dtColeta
+        if (programacao && programacao.dtColeta) {
+          return { ...d, dtColeta: programacao.dtColeta };
+        }
         return d;
       });
 
+      const normalized = enrichedDeliveries.map((d) => {
+        if (d.status === 'ENTREGUE_COM_PENDENCIA_CANHOTO') d.status = 'FINALIZADO';
+        return d;
+      });
 
       // DEBUG: log entrega CAB43503
       const cab43503 = normalized.find(d => d.deliveryNumber === 'CAB43503' || d.processoCAB === 'CAB43503');

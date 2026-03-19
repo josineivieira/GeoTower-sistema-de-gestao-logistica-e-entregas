@@ -1208,7 +1208,7 @@ const MonitorEntregas = () => {
       ['Placa', safe(delivery.placaYcompany || delivery.vehiclePlate)],
       ['Recebedor', safe(delivery.recebedor)],
       ['Status', safe(formatStatus(delivery.status, delivery))],
-      ['Agendamento', formatDT(delivery.dataAgendamento)],
+      ['Agendamento', formatDT(getProgramacaoDate(delivery, city))],
       ['Montagem Container', formatDT(delivery.containerMontadoAt)],
       ['Chegada', formatDT(delivery.horarioChegada)],
       ['Início Desova', formatDT(delivery.horarioInicioDesova)],
@@ -1382,8 +1382,9 @@ const MonitorEntregas = () => {
     if (filters.startDate) {
       const sdStr = filters.startDate;
       r = r.filter((d) => {
-        if (!d.dataAgendamento) return false;
-        const dt = new Date(d.dataAgendamento);
+        const agendDate = getProgramacaoDate(d, city);
+        if (!agendDate) return false;
+        const dt = new Date(agendDate);
         const dStr = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
         return dStr >= sdStr;
       });
@@ -1392,8 +1393,9 @@ const MonitorEntregas = () => {
     if (filters.endDate) {
       const edStr = filters.endDate;
       r = r.filter((d) => {
-        if (!d.dataAgendamento) return false;
-        const dt = new Date(d.dataAgendamento);
+        const agendDate = getProgramacaoDate(d, city);
+        if (!agendDate) return false;
+        const dt = new Date(agendDate);
         const dStr = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
         return dStr <= edStr;
       });
@@ -1945,7 +1947,7 @@ const MonitorEntregas = () => {
 
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             <span className="text-gray-400 text-[11px] tabular-nums" style={{ whiteSpace: 'normal', wordBreak: 'break-all' }}>
-                              {d.dataAgendamento ? new Date(d.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
+                              {getProgramacaoDate(d, city) ? new Date(getProgramacaoDate(d, city)).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                             </span>
                           </div>
 

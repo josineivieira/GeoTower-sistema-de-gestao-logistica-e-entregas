@@ -40,3 +40,7 @@ export function getDesovaStatusLabel(status, city = 'manaus') {
 
   return null;
 }
+
+export function getDesovaStepLabel(city = 'manaus') {
+  return city === 'itajai' ? 'Ovação' : 'Desova';
+}

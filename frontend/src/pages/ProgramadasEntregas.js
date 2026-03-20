@@ -131,22 +131,28 @@ const CityStatusBadge = ({ status, containerReturned }) => {
   return <StatusBadge status={status} containerReturned={containerReturned} overrideLabel={cityLabel} />;
 };
 
-// Step indicator for modal flows
-const FLOW_STEPS = [
-  { key: 'welcome',         label: 'Início' },
-  { key: 'arrival',         label: 'Chegada' },
-  { key: 'confirmDesova',   label: 'Desova' },
-  { key: 'desovaProgress',  label: 'Progresso' },
-  { key: 'askSchedule',     label: 'Devolução' },
-  { key: 'finalDocs',       label: 'Docs' },
+// Step indicator for modal flows (static keys, labels made dynamic per city)
+const FLOW_STEPS_BASE = [
+  { key: 'welcome',         labelKey: 'Início' },
+  { key: 'arrival',         labelKey: 'Chegada' },
+  { key: 'confirmDesova',   labelKey: 'desova' }, // Dynamic label based on city
+  { key: 'desovaProgress',  labelKey: 'Progresso' },
+  { key: 'askSchedule',     labelKey: 'Devolução' },
+  { key: 'finalDocs',       labelKey: 'Docs' },
 ];
-const STEP_INDEX = Object.fromEntries(FLOW_STEPS.map((s, i) => [s.key, i]));
+const STEP_INDEX = Object.fromEntries(FLOW_STEPS_BASE.map((s, i) => [s.key, i]));
 
-const FlowStepBar = ({ currentStep }) => {
+const FlowStepBar = ({ currentStep, city = 'manaus' }) => {
   const idx = STEP_INDEX[currentStep] ?? 0;
+  const getStepLabel = (step) => {
+    if (step.labelKey === 'desova') {
+      return city === 'itajai' ? 'Ovação' : 'Desova';
+    }
+    return step.labelKey;
+  };
   return (
     <div className="flex items-center justify-between mb-6 px-1">
-      {FLOW_STEPS.map((s, i) => (
+      {FLOW_STEPS_BASE.map((s, i) => (
         <React.Fragment key={s.key}>
           <div className="flex flex-col items-center gap-1 flex-shrink-0">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
@@ -157,10 +163,10 @@ const FlowStepBar = ({ currentStep }) => {
               {i < idx ? '✓' : i + 1}
             </div>
             <span className={`text-[9px] font-semibold ${i === idx ? 'text-emerald-600' : 'text-gray-400'}`}>
-              {s.label}
+              {getStepLabel(s)}
             </span>
           </div>
-          {i < FLOW_STEPS.length - 1 && (
+          {i < FLOW_STEPS_BASE.length - 1 && (
             <div className={`flex-1 h-0.5 mx-1 rounded transition-all ${i < idx ? 'bg-emerald-400' : 'bg-gray-200'}`} />
           )}
         </React.Fragment>
@@ -1340,7 +1346,7 @@ const ProgramadasEntregas = () => {
                   <FaTimes size={14} />
                 </button>
               </div>
-              <FlowStepBar currentStep={currentStep} />
+              <FlowStepBar currentStep={currentStep} city={city} />
             </div>
 
             {/* Modal body */}
@@ -1465,17 +1471,17 @@ const ProgramadasEntregas = () => {
                     <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center">
                       <FaWarehouse className="text-orange-600" size={14} />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Confirme a Desova</h3>
+                    <h3 className="text-lg font-bold text-gray-900">Confirme a {city === 'itajai' ? 'Ovação' : 'Desova'}</h3>
                   </div>
-                  <StepTimer start={currentDelivery?.arrivedAt || currentDelivery?.createdAt} label="Aguardando desova" />
+                  <StepTimer start={currentDelivery?.arrivedAt || currentDelivery?.createdAt} label={`Aguardando ${city === 'itajai' ? 'ovação' : 'desova'}`} />
                   <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-                    <p className="text-amber-800 font-semibold text-sm mb-1">📦 Desova iniciada?</p>
+                    <p className="text-amber-800 font-semibold text-sm mb-1">📦 {city === 'itajai' ? 'Ovação' : 'Desova'} iniciada?</p>
                     <p className="text-gray-600 text-sm">Indique se a descarga do container foi iniciada ou não</p>
                   </div>
                   <div className="flex gap-3">
                     <button onClick={() => goToStep('desovaStart')}
                       className="flex-1 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-bold text-base shadow-md active:scale-95 transition flex items-center justify-center gap-2">
-                      ✓ Desova iniciada
+                      ✓ {city === 'itajai' ? 'Ovação' : 'Desova'} iniciada
                     </button>
                     <button onClick={() => goToStep('desovaJustify')}
                       className="flex-1 py-4 bg-gradient-to-r from-red-400 to-rose-500 text-white rounded-2xl font-bold text-base shadow-md active:scale-95 transition flex items-center justify-center gap-2">
@@ -1496,7 +1502,7 @@ const ProgramadasEntregas = () => {
                   </div>
                   <StepTimer start={currentDelivery?.arrivedAt || currentDelivery?.createdAt} label="Tempo aguardando" />
                   <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-                    <p className="text-red-800 text-sm font-medium">Por que a desova não foi iniciada?</p>
+                    <p className="text-red-800 text-sm font-medium">Por que a {city === 'itajai' ? 'ovação' : 'desova'} não foi iniciada?</p>
                   </div>
                   <textarea
                     value={justification}
@@ -1525,14 +1531,14 @@ const ProgramadasEntregas = () => {
                     <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center">
                       <FaCamera className="text-orange-600" size={14} />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Início da Desova</h3>
+                    <h3 className="text-lg font-bold text-gray-900">Início da {city === 'itajai' ? 'Ovação' : 'Desova'}</h3>
                   </div>
                   <StepTimer start={currentDelivery?.arrivedAt || currentDelivery?.createdAt} label="Tempo no cliente" />
-                  <p className="text-gray-500 text-sm">Tire fotos do início da desova para registro</p>
+                  <p className="text-gray-500 text-sm">Tire fotos do início da {city === 'itajai' ? 'ovação' : 'desova'} para registro</p>
                   <PhotoSection
                     onConfirm={() => compressAndUpload('inicioDesova', 'EM_DESOVA', 'desovaProgress', { desovaStartAt: new Date().toISOString() })}
                     onBack={() => goToStep('confirmDesova')}
-                    buttonLabel="✓ Confirmar desova"
+                    buttonLabel={`✓ Confirmar ${city === 'itajai' ? 'ovação' : 'desova'}`}
                     buttonColor="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700"
                   />
                 </div>
@@ -1570,7 +1576,7 @@ const ProgramadasEntregas = () => {
                 <div className="space-y-4">
                   <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
                     <p className="text-yellow-800 font-bold text-base mb-1">⏳ Aguardando...</p>
-                    <p className="text-gray-600 text-sm">Deseja relatar algum problema?</p>
+                      <p className="text-gray-600 text-sm">Deseja relatar algum problema?</p>
                   </div>
                   <div className="flex gap-3">
                     <button onClick={() => goToStep('desovaNotYetObs')}
@@ -1614,7 +1620,7 @@ const ProgramadasEntregas = () => {
                 <div className="space-y-4 text-center py-4">
                   <div className="text-5xl">👍</div>
                   <h3 className="text-xl font-bold text-emerald-700">Perfeito!</h3>
-                  <p className="text-gray-600">Quando a desova finalizar, nos informe!</p>
+                  <p className="text-gray-600">Quando a {city === 'itajai' ? 'ovação' : 'desova'} finalizar, nos informe!</p>
                   <button onClick={() => goToStep('desovaProgress')}
                     className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-base active:scale-95 transition mt-4">
                     Verificar novamente

@@ -164,7 +164,7 @@ const ProgramacaoManagement = () => {
     if (programacao) {
       // Libera edição para geomar
       setEditingId(programacao._id);
-      let dataAgendamento = programacao.dataAgendamento || '';
+      let dataAgendamento = city === 'itajai' ? (programacao.dtColeta || programacao.dataAgendamento || '') : (programacao.dataAgendamento || '');
       if (dataAgendamento && dataAgendamento.includes('T')) {
         dataAgendamento = dataAgendamento.split('.')[0];
         if (dataAgendamento.length > 16) dataAgendamento = dataAgendamento.slice(0, 16);
@@ -187,7 +187,20 @@ const ProgramacaoManagement = () => {
     try {
       let dataAgendamento = formData.dataAgendamento;
       if (dataAgendamento && dataAgendamento.length > 16) dataAgendamento = dataAgendamento.slice(0, 16);
-      const payload = { ...formData, dataAgendamento };
+
+      const payload = {
+        ...formData,
+        origem: city === 'itajai' ? 'ITAJAÍ' : formData.origem,
+        motorista: formData.motorista || ''
+      };
+
+      if (city === 'itajai') {
+        payload.dtColeta = dataAgendamento;
+        payload.dataAgendamento = payload.dataAgendamento || '';
+      } else {
+        payload.dataAgendamento = dataAgendamento;
+      }
+
       if (editingId) { await adminService.updateProgramacao(editingId, payload); showToast('Programação atualizada com sucesso'); }
       else { await adminService.createProgramacao(payload); showToast('Programação criada com sucesso'); }
       setShowModal(false); resetForm(); loadProgramacoes();

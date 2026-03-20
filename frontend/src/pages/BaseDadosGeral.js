@@ -164,7 +164,7 @@ const BaseDadosGeral = () => {
       processo: item.processo,
       recebedor: item.recebedor,
       container: item.container,
-      dataAgendamento: item.dataAgendamento || '',
+      dataAgendamento: city === 'itajai' ? (item.dtColeta || item.dataAgendamento || '') : (item.dataAgendamento || ''),
       contratado: item.contratado,
       motorista: item.motorista || '',
       status: item._entrega?.status || item.status,
@@ -197,14 +197,21 @@ const BaseDadosGeral = () => {
       const item = dados.find(d => d._id === editingId);
 
       // Atualizar programação (sem status — status é da entrega)
-      await adminService.updateProgramacao(editingId, {
+      const programacaoPayload = {
         processo: editForm.processo,
         recebedor: editForm.recebedor,
         container: editForm.container,
-        dataAgendamento: toISOIfDate(editForm.dataAgendamento),
         contratado: editForm.contratado,
         motorista: editForm.motorista
-      });
+      };
+      if (city === 'itajai') {
+        programacaoPayload.dtColeta = toISOIfDate(editForm.dataAgendamento);
+        // manter dataAgendamento se estiver presente para compatibilidade
+        programacaoPayload.dataAgendamento = toISOIfDate(editForm.dataAgendamento);
+      } else {
+        programacaoPayload.dataAgendamento = toISOIfDate(editForm.dataAgendamento);
+      }
+      await adminService.updateProgramacao(editingId, programacaoPayload);
 
       // Payload de entrega (normaliza datas)
       const deliveryPayload = {

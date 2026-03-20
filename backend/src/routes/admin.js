@@ -1444,11 +1444,13 @@ router.delete("/motoristas/:id", auth, managerOnly, async (req, res) => {
 
 /**
  * GET /api/admin/programacoes
- * Listar todas as programações de entrega
+ * Listar programações de entrega
+ * Suporta filtro de período: ?period=today|yesterday|tomorrow&periodDate=DD/MM/YYYY
  */
 router.get("/programacoes", auth, async (req, res) => {
   try {
-    console.log('[PROGRAMACAO] Listando programações de entrega');
+    const { period, periodDate } = req.query;
+    console.log('[PROGRAMACAO] Listando programações de entrega, filtros:', { period, periodDate });
 
     const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
     
@@ -1470,12 +1472,62 @@ router.get("/programacoes", auth, async (req, res) => {
     
     const programacoes = await ProgramacaoEntrega.find(cityFilter).sort({ dataAgendamento: -1 });
 
+    // Aplicar filtro de período se fornecido
+    let effectiveDate = '';
+    if (periodDate && String(periodDate).trim()) {
+      effectiveDate = String(periodDate).trim();
+      console.log('🗓️  Usando periodDate do cliente:', effectiveDate);
+    } else if (period && period !== 'general') {
+      console.log('🗓️  Aplicando filtro de período:', period);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (period === 'yesterday') {
+        today.setDate(today.getDate() - 1);
+      } else if (period === 'tomorrow') {
+        today.setDate(today.getDate() + 1);
+      }
+      effectiveDate = today.toLocaleDateString('pt-BR');
+      console.log('   convertido para data efetiva:', effectiveDate);
+    }
+
+    let filtered = programacoes;
+    
+    // Filtrar por período se fornecido
+    if (effectiveDate) {
+      console.log('📅 Aplicando filtro de período sobre programações para data:', effectiveDate, '(cidade:', city, ')');
+      const [edDay, edMonth, edYear] = effectiveDate.split('/').map(Number);
+      filtered = filtered.filter(d => {
+        // Para Itajaí, usar dtColeta; para Manaus, usar dataAgendamento
+        const dateField = city === 'itajai' && d.dtColeta ? d.dtColeta : d.dataAgendamento;
+        if (!dateField) return false;
+        const progDateStr = String(dateField).trim();
+        let pd;
+        if (/\d{2}\/\d{2}\/\d{4}/.test(progDateStr)) {
+          const parts = progDateStr.split(' ')[0].split('/');
+          pd = { day: Number(parts[0]), month: Number(parts[1]), year: Number(parts[2]) };
+        } else if (/\d{4}-\d{2}-\d{2}/.test(progDateStr)) {
+          const parts = progDateStr.split('T')[0].split('-');
+          pd = { day: Number(parts[2]), month: Number(parts[1]), year: Number(parts[0]) };
+        } else {
+          const tmp = new Date(progDateStr);
+          if (!isNaN(tmp)) {
+            pd = { day: tmp.getDate(), month: tmp.getMonth()+1, year: tmp.getFullYear() };
+          }
+        }
+        if (!pd) return false;
+        const match = pd.day === edDay && pd.month === edMonth && pd.year === edYear;
+        if (match) console.log(`   ✓ "${progDateStr}" corresponde a ${effectiveDate}`);
+        return match;
+      });
+      console.log(`  ✓ ${filtered.length} programações após filtro de data`);
+    }
+
     // também trazemos entregas para permitir associação com motoristas (apenas da mesma cidade)
     const db = await getDb(req);
     const allDeliveries = await db.find("deliveries", { cityCode: city });
 
     // vincular id de entrega correspondente (se existir)
-    const enriched = (programacoes || []).map(p => {
+    const enriched = (filtered || []).map(p => {
       const obj = p.toObject ? p.toObject() : { ...p };
       // se já temos um vínculo gravado, mantenha
       if (obj.linkedDeliveryId) {

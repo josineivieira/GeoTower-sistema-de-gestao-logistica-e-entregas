@@ -1316,7 +1316,7 @@ const MonitorEntregas = () => {
 
       // Carregar programações E entregas, depois fazer merge
       const [progRes, delivRes] = await Promise.all([
-        adminService.getProgramacoes(),
+        adminService.getProgramacoes(statsPeriod, periodDate),
         adminService.getDeliveries(backendFilters, statsPeriod, periodDate)
       ]);
 

@@ -422,7 +422,7 @@ const DashboardView = ({ data }) => {
 /* ═══════════════════════════════════════════════════════
    LIST VIEW (unchanged logic, new style)
 ═══════════════════════════════════════════════════════ */
-const ListView = ({ data, navigate }) => (
+const ListView = ({ data, navigate, city }) => (
   data.length === 0 ? (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center py-20 text-center">
       <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center mb-5">
@@ -679,7 +679,7 @@ const MinhasEntregas = () => {
         ) : activeView === 'dashboard' ? (
           <DashboardView data={allProgramacoes} />
         ) : (
-          <ListView data={displayedProgramacoes} navigate={navigate} />
+          <ListView data={displayedProgramacoes} navigate={navigate} city={city} />
         )}
       </div>
 

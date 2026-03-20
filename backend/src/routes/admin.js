@@ -162,14 +162,20 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     // antes de cruzar, carregar dados do Ycompany para termos placas (tracao)
     const Ycompany = require('../models/Ycompany');
     const ycompanyRecords = await Ycompany.find({}).lean();
-    const ycByProcess = new Map();
-    const ycByContainer = new Map();
+    const ycByProcess = new Map();  // processo -> [array de registros yc]
+    const ycByContainer = new Map(); // container -> [array de registros yc]
     ycompanyRecords.forEach(y => {
       const proc = String(y.processo || '').trim().toUpperCase();
-      if (proc) ycByProcess.set(proc, y);
+      if (proc) {
+        if (!ycByProcess.has(proc)) ycByProcess.set(proc, []);
+        ycByProcess.get(proc).push(y);
+      }
       // container pode estar em `numero` ou `containerNumero`
       const cont = String(y.numero || y.containerNumero || '').trim().toUpperCase();
-      if (cont) ycByContainer.set(cont, y);
+      if (cont) {
+        if (!ycByContainer.has(cont)) ycByContainer.set(cont, []);
+        ycByContainer.get(cont).push(y);
+      }
     });
 
     // Cruzar dados de programação (por container) e construir lista combinada
@@ -177,17 +183,24 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       const prog = programacoes.find(p => 
         (p.container || '').toUpperCase() === (delivery.deliveryNumber || '').toUpperCase()
       );
-      // buscar registro Ycompany correspondente (processo primeiro, depois container)
+      // buscar registro(s) Ycompany correspondente (processo primeiro, depois container)
       const keyProc = (delivery.processoCAB || '').toUpperCase();
       const keyCont = (delivery.deliveryNumber || '').toUpperCase();
-      const yrec = ycByProcess.get(keyProc) || ycByContainer.get(keyCont);
+      const yrecArray = ycByProcess.get(keyProc) || ycByContainer.get(keyCont) || [];
+      const yrec = Array.isArray(yrecArray) ? yrecArray[0] : yrecArray;  // pega o primeiro para placa
       const placaY = yrec ? (yrec.tracao || '') : '';
+      
+      // Extrair todos os containers únicos do array Ycompany
+      const containerNumeros = Array.isArray(yrecArray) 
+        ? [...new Set(yrecArray.map(y => y.numero || y.containerNumero).filter(Boolean))]
+        : [];
 
       return {
         ...delivery,
         // incluir número de processo CAB quando houver programação
         processoCAB: prog ? prog.processo || '' : delivery.processoCAB || '',
         placaYcompany: placaY,
+        containerNumero: containerNumeros.length > 0 ? containerNumeros : undefined,  // Array de containers
         recebedor: prog ? prog.recebedor : '',
         dataAgendamento: prog ? prog.dataAgendamento : '',
         dtColeta: prog ? prog.dtColeta : '',  // Itajaí: data de coleta
@@ -207,14 +220,21 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
         // também incluir placaYcompany se existir
         const keyProc = (prog.processo || '').toUpperCase();
         const keyCont = (prog.container || '').toUpperCase();
-        const yrec2 = ycByProcess.get(keyProc) || ycByContainer.get(keyCont);
+        const yrecArray2 = ycByProcess.get(keyProc) || ycByContainer.get(keyCont) || [];
+        const yrec2 = Array.isArray(yrecArray2) ? yrecArray2[0] : yrecArray2;
         const placaY2 = yrec2 ? (yrec2.tracao || '') : '';
+        
+        // Extrair todos os containers únicos
+        const containerNumeros2 = Array.isArray(yrecArray2) 
+          ? [...new Set(yrecArray2.map(y => y.numero || y.containerNumero).filter(Boolean))]
+          : [];
 
         deliveriesWithProgramacao.push({
           _id: prog._id,
           deliveryNumber: prog.container || prog.processo,
           processoCAB: prog.processo || '',
           placaYcompany: placaY2,
+          containerNumero: containerNumeros2.length > 0 ? containerNumeros2 : undefined,  // Array de containers
           userName: prog.contratado || '',
           driverName: prog.motorista || '-',
           recebedor: prog.recebedor || '',

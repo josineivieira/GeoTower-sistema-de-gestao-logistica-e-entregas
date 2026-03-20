@@ -221,11 +221,9 @@ const BaseDadosGeral = () => {
       if (item?._entrega?._id) {
         await adminService.updateDelivery(item._entrega._id, deliveryPayload);
       } else {
-        // Se não existir entrega, cria uma vinculada ao deliveryNumber (container ou processo)
-        const deliveryNumber = (editForm.container || editForm.processo || '').toString().trim();
-        if (deliveryNumber) {
-          await deliveryService.createDelivery({ deliveryNumber, ...deliveryPayload });
-        }
+        // Para programações sem entrega (synthetic entries), não criar entrega nova ao editar
+        // Apenas atualizar a programação (já feito acima)
+        console.log('Atualizando apenas programação (sem entrega vinculada)');
       }
 
       setToast({ message: 'Atualizado com sucesso', type: 'success' });

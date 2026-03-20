@@ -190,6 +190,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
         placaYcompany: placaY,
         recebedor: prog ? prog.recebedor : '',
         dataAgendamento: prog ? prog.dataAgendamento : '',
+        dtColeta: prog ? prog.dtColeta : '',  // Itajaí: data de coleta
         horarioChegada: delivery.arrivedAt || '',
         horarioDevolucaoVazio: delivery.horarioDevolucaoVazio || '',
         horarioInicioDesova: delivery.desovaStartAt || '',
@@ -218,6 +219,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
           driverName: prog.motorista || '-',
           recebedor: prog.recebedor || '',
           dataAgendamento: prog.dataAgendamento || '',
+          dtColeta: prog.dtColeta || '',  // Itajaí: data de coleta
           status: prog.status || 'AGENDADO',
           documents: {},
           uploadedFiles: [],
@@ -230,13 +232,15 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
 
     console.log(`  ✓ Combinação total após incluir agendadas: ${deliveriesWithProgramacao.length}`);
 
-    // se tem effectiveDate, filtramos a lista combinada por dataAgendamento
+    // se tem effectiveDate, filtramos a lista combinada por dtColeta (Itajaí) ou dataAgendamento (Manaus)
     if (effectiveDate) {
-      console.log('📅 Aplicando filtro de período sobre lista combinada para data:', effectiveDate);
+      console.log('📅 Aplicando filtro de período sobre lista combinada para data:', effectiveDate, '(cidade:', city, ')');
       const [edDay, edMonth, edYear] = effectiveDate.split('/').map(Number);
       deliveriesWithProgramacao = deliveriesWithProgramacao.filter(d => {
-        if (!d.dataAgendamento) return false;
-        const progDateStr = String(d.dataAgendamento).trim();
+        // Para Itajaí, usar dtColeta; para Manaus, usar dataAgendamento
+        const dateField = city === 'itajai' && d.dtColeta ? d.dtColeta : d.dataAgendamento;
+        if (!dateField) return false;
+        const progDateStr = String(dateField).trim();
         let pd;
         if (/\d{2}\/\d{2}\/\d{4}/.test(progDateStr)) {
           const parts = progDateStr.split(' ')[0].split('/');

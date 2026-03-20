@@ -90,6 +90,7 @@ const EntregasCanhotosPendentes = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { city } = useCity();
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);

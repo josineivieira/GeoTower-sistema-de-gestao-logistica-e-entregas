@@ -494,6 +494,7 @@ const ListView = ({ data, navigate }) => (
 const MinhasEntregas = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { city } = useCity();
 
   const [allProgramacoes,       setAllProgramacoes]       = useState([]);
   const [displayedProgramacoes, setDisplayedProgramacoes] = useState([]);

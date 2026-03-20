@@ -15,6 +15,8 @@ import {
   FaCalendarAlt, FaArrowUp, FaArrowDown,
 } from 'react-icons/fa';
 import { MdLocalShipping, MdInventory2, MdTrendingUp } from 'react-icons/md';
+import { useCity } from '../contexts/CityContext';
+import { getRecebedorLabel } from '../utils/cityLabels';
 
 /* ═══════════════════════════════════════════════════════
    CONSTANTS & HELPERS
@@ -465,7 +467,7 @@ const ListView = ({ data, navigate }) => (
                 <Field label="Data Agendamento" value={fmtDate(prog.dataAgendamento)} />
                 {prog.container  && <Field label="Container"  value={prog.container} />}
                 {prog.motorista && prog.motorista !== '-' && <Field label="Motorista" value={prog.motorista} />}
-                {prog.recebedor  && <Field label="Recebedor"  value={prog.recebedor} small />}
+                {prog.recebedor  && <Field label={getRecebedorLabel(city)}  value={prog.recebedor} small />}
                 {prog.contratado && <Field label="Contratado" value={prog.contratado} />}
               </div>
             </div>
@@ -632,7 +634,7 @@ const MinhasEntregas = () => {
               <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
               <input
                 type="text"
-                placeholder="Buscar por processo, container, recebedor ou motorista…"
+                placeholder={`Buscar por processo, container, ${city === 'itajai' ? 'remetente' : 'recebedor'} ou motorista…`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-9 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent bg-gray-50 placeholder-gray-400 text-gray-700 transition-all"

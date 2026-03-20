@@ -9,6 +9,8 @@ import {
 import { MdPendingActions } from 'react-icons/md';
 import { adminService, deliveryService } from '../services/authService';
 import { useAuth } from '../services/authContext';
+import { useCity } from '../contexts/CityContext';
+import { getRecebedorLabel } from '../utils/cityLabels';
 
 /* ─── Skeleton Loader ─────────────────────────────────────── */
 const SkeletonCard = () => (
@@ -307,7 +309,7 @@ const EntregasCanhotosPendentes = () => {
                       {/* Detalhes */}
                       <div className="space-y-1">
                         <InfoRow icon={FaBoxOpen}   label="Container" value={p.container} />
-                        <InfoRow icon={FaUser}       label="Recebedor" value={p.recebedor} />
+                        <InfoRow icon={FaUser}       label={getRecebedorLabel(city)} value={p.recebedor} />
                         <InfoRow icon={FaHashtag}    label="Contratado" value={p.contratado} />
                       </div>
 

@@ -23,3 +23,20 @@ export function getSearchPlaceholder(city = 'manaus') {
   const fieldName = city === 'itajai' ? 'remetente' : 'recebedor';
   return `Buscar processo, container, ${fieldName}...`;
 }
+
+export function getDesovaStatusLabel(status, city = 'manaus') {
+  if (!status) return '';
+  const key = String(status).toUpperCase();
+
+  if (key === 'EM_DESOVA') {
+    return city === 'itajai' ? 'EM OVAÇÃO' : 'EM DESOVA';
+  }
+  if (key === 'DESOVA_FINALIZADA') {
+    return city === 'itajai' ? 'OVAÇÃO FINALIZADA' : 'DESOVA FINALIZADA';
+  }
+  if (key === 'AGUARDANDO_DESOVA') {
+    return city === 'itajai' ? 'AGUARD. OVAÇÃO' : 'AGUARD. DESOVA';
+  }
+
+  return null;
+}

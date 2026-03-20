@@ -13,7 +13,7 @@ import { MdLocalShipping, MdAssignment } from 'react-icons/md';
 import { useAuth } from '../services/authContext';
 import { useCity } from '../contexts/CityContext';
 import { getProgramacaoDate } from '../utils/programacaoDate';
-import { getRecebedoresLabel } from '../utils/cityLabels';
+import { getRecebedoresLabel, getDesovaStatusLabel } from '../utils/cityLabels';
 import { useTheme, THEMES } from '../contexts/ThemeContext';
 
 // ─────────────────────────────────────────────
@@ -106,11 +106,11 @@ const STATUS_CONFIG = {
   CANCELADO: { label: 'CANCELADO', color: 'bg-gray-200 text-gray-600 border-gray-300', dot: 'bg-gray-400', icon: FaTimes },
 };
 
-const StatusBadge = ({ status, containerReturned }) => {
+const StatusBadge = ({ status, containerReturned, overrideLabel: externalOverride }) => {
   let key = status || 'pending';
-  let overrideLabel = null;
+  let overrideLabel = externalOverride;
   // show special message when finalizado but still waiting for empty return
-  if (key === 'FINALIZADO' && !containerReturned) {
+  if (key === 'FINALIZADO' && !containerReturned && !overrideLabel) {
     overrideLabel = 'PEND. DEVOLUÇÃO';
     // reuse color/style from ENTREGUE since it's intermediate
     key = 'ENTREGUE';
@@ -122,6 +122,13 @@ const StatusBadge = ({ status, containerReturned }) => {
       {overrideLabel || cfg.label}
     </span>
   );
+};
+
+// City-aware status badge wrapper (only changes display text)
+const CityStatusBadge = ({ status, containerReturned }) => {
+  const { city } = useCity();
+  const cityLabel = getDesovaStatusLabel(status, city);
+  return <StatusBadge status={status} containerReturned={containerReturned} overrideLabel={cityLabel} />;
 };
 
 // Step indicator for modal flows
@@ -570,7 +577,7 @@ const ProgramadasEntregas = () => {
   const handleJustificationSubmit = async () => {
     if (!justification.trim()) { setToast({ message: 'Informe a justificativa', type: 'error' }); return; }
     try {
-      await deliveryService.updateDelivery(currentDelivery._id, { observations: `(DESOVA NÃO INICIADA) ${justification}` });
+      await deliveryService.updateDelivery(currentDelivery._id, { observations: `(${city === 'itajai' ? 'OVAÇÃO' : 'DESOVA'} NÃO INICIADA) ${justification}` });
       setToast({ message: 'Justificativa enviada', type: 'success' });
       goToStep('confirmDesova');
     } catch (_) { setToast({ message: 'Erro ao enviar justificativa', type: 'error' }); }
@@ -1005,7 +1012,7 @@ const ProgramadasEntregas = () => {
                       </div>
                       <h3 className="text-lg font-extrabold text-gray-900 leading-tight">{p.container || p.processo || '-'}</h3>
                     </div>
-                    <StatusBadge status={p.status} containerReturned={p.containerReturned} />
+                    <CityStatusBadge status={p.status} containerReturned={p.containerReturned} />
                   </div>
 
                   {/* Info grid: mostra todos os recebedores/processos do grupo */}
@@ -1538,11 +1545,11 @@ const ProgramadasEntregas = () => {
                     <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
                       <FaWarehouse className="text-blue-600" size={14} />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Desova em Andamento</h3>
+                    <h3 className="text-lg font-bold text-gray-900">{city === 'itajai' ? 'Ovação' : 'Desova'} em Andamento</h3>
                   </div>
-                  <StepTimer start={currentDelivery?.desovaStartAt || currentDelivery?.arrivedAt} label="Tempo em desova" />
+                  <StepTimer start={currentDelivery?.desovaStartAt || currentDelivery?.arrivedAt} label={`Tempo em ${city === 'itajai' ? 'ovação' : 'desova'}`} />
                   <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
-                    <p className="text-blue-800 font-semibold text-sm">A desova já finalizou?</p>
+                    <p className="text-blue-800 font-semibold text-sm">A {city === 'itajai' ? 'ovação' : 'desova'} já finalizou?</p>
                     <p className="text-gray-600 text-sm mt-1">Indique se a descarga foi completada</p>
                   </div>
                   <div className="flex gap-3">
@@ -1622,14 +1629,14 @@ const ProgramadasEntregas = () => {
                     <div className="w-8 h-8 rounded-xl bg-teal-100 flex items-center justify-center">
                       <FaCamera className="text-teal-600" size={14} />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Finalização da Desova</h3>
+                    <h3 className="text-lg font-bold text-gray-900">Finalização da {city === 'itajai' ? 'Ovação' : 'Desova'}</h3>
                   </div>
-                  <StepTimer start={currentDelivery?.desovaStartAt || currentDelivery?.arrivedAt} label="Tempo em desova" />
-                  <p className="text-gray-500 text-sm">Registre com foto a finalização da desova</p>
+                  <StepTimer start={currentDelivery?.desovaStartAt || currentDelivery?.arrivedAt} label={`Tempo em ${city === 'itajai' ? 'ovação' : 'desova'}`} />
+                  <p className="text-gray-500 text-sm">Registre com foto a finalização da {city === 'itajai' ? 'ovação' : 'desova'}</p>
                   <PhotoSection
                     onConfirm={() => compressAndUpload('fimDesova', 'DESOVA_FINALIZADA', 'askSchedule', { desovaEndAt: new Date().toISOString() })}
                     onBack={() => goToStep('desovaProgress')}
-                    buttonLabel="✓ Desova concluída"
+                    buttonLabel={`✓ ${city === 'itajai' ? 'Ovação' : 'Desova'} concluída`}
                     buttonColor="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700"
                   />
                 </div>

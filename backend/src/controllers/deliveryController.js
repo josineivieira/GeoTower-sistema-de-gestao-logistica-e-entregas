@@ -6,7 +6,8 @@ const path = require('path');
 function getDocsForCity(city = 'manaus') {
   city = String(city || 'manaus').toLowerCase();
   if (city === 'itajai') {
-    return ['ricAbastecimento', 'diarioBordo', 'ricBaixa', 'ricColeta', 'discoTacografo'];
+    // Itajaí: fazer submissão independente do conjunto de documentos (não obrigatórios)
+    return [];
   }
   return ['canhotNF', 'canhotCTE', 'diarioBordo', 'devolucaoVazio', 'retiradaCheio'];
 } 

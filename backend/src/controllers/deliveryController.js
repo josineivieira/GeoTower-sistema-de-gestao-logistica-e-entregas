@@ -5,10 +5,7 @@ const path = require('path');
 
 function getDocsForCity(city = 'manaus') {
   city = String(city || 'manaus').toLowerCase();
-  if (city === 'itajai') {
-    // Itajaí: fazer submissão independente do conjunto de documentos (não obrigatórios)
-    return [];
-  }
+  // Itajaí: não bloqueia submissão por conta de docs, mas ainda registra pendências
   return ['canhotNF', 'canhotCTE', 'diarioBordo', 'devolucaoVazio', 'retiradaCheio'];
 } 
 
@@ -231,21 +228,27 @@ exports.submitDelivery = async (req, res) => {
     const { force, observation } = req.body || {};
 
     if (missingDocs.length > 0) {
-      if (!force) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Documentos obrigatórios faltando: ' + missingDocs.join(', ')
-        });
+      if (city !== 'itajai') {
+        if (!force) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'Documentos obrigatórios faltando: ' + missingDocs.join(', ')
+          });
+        }
+
+        if (!observation || !String(observation || '').trim()) {
+          return res.status(400).json({ success: false, message: 'Observação obrigatória para finalizar com documentos faltando' });
+        }
       }
 
-      if (!observation || !String(observation || '').trim()) {
-        return res.status(400).json({ success: false, message: 'Observação obrigatória para finalizar com documentos faltando' });
-      }
-
-      // Record that submit was forced
-      delivery.submissionObservation = String(observation).trim();
+      delivery.submissionObservation = observation ? String(observation).trim() : '';
       delivery.submissionForce = true;
       delivery.missingDocumentsAtSubmit = missingDocs;
+    } else {
+      // Limpar possível pendência anterior
+      delivery.missingDocumentsAtSubmit = [];
+      delivery.submissionForce = false;
+      delivery.submissionObservation = '';
     }
 
     delivery.status = 'submitted';

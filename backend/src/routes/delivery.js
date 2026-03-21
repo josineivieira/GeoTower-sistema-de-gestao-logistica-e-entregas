@@ -794,9 +794,7 @@ router.post("/:id/submit", auth, async (req, res) => {
     };
 
     // Determine required docs for city
-    const requiredDocs = city === 'itajai'
-      ? [] // Itajai does not require mandatory docs for submit
-      : ['canhotNF', 'canhotCTE', 'diarioBordo'];
+    const requiredDocs = ['canhotNF', 'canhotCTE', 'diarioBordo', 'devolucaoVazio', 'retiradaCheio'];
 
     const missingDocs = requiredDocs.filter(doc => !docHasFiles(delivery.documents && delivery.documents[doc]));
 
@@ -804,23 +802,32 @@ router.post("/:id/submit", auth, async (req, res) => {
     console.log('  -> missingDocs:', missingDocs, 'force:', force, 'observation:', observation);
 
     if (missingDocs.length > 0) {
-      if (!force) {
-        return res.status(400).json({ message: 'Documentos obrigatórios faltando: ' + missingDocs.join(', ') });
-      }
-      if (!observation || !String(observation || '').trim()) {
-        return res.status(400).json({ message: 'Observação obrigatória para finalizar com documentos faltando' });
+      // Manaus ainda exige força/observação para docs faltantes
+      if (city !== 'itajai') {
+        if (!force) {
+          return res.status(400).json({ message: 'Documentos obrigatórios faltando: ' + missingDocs.join(', ') });
+        }
+        if (!observation || !String(observation || '').trim()) {
+          return res.status(400).json({ message: 'Observação obrigatória para finalizar com documentos faltando' });
+        }
       }
 
-      // Record that submit was forced
-      const updates = { status: 'submitted', submittedAt: new Date(), submissionObservation: String(observation).trim(), submissionForce: true, missingDocumentsAtSubmit: missingDocs };
+      // For Itajaí aceita, mas registra pendência para o fluxo de canhotos pendentes
+      const updates = {
+        status: 'submitted',
+        submittedAt: new Date(),
+        missingDocumentsAtSubmit: missingDocs,
+        submissionForce: true,
+        submissionObservation: observation ? String(observation).trim() : ''
+      };
       await db.updateOne('deliveries', { _id: req.params.id }, updates);
 
       const deliveryAfterUpdate = await db.findById('deliveries', req.params.id);
-      return res.json({ message: 'Entrega enviada com sucesso (forçada)', delivery: deliveryAfterUpdate });
+      return res.json({ message: 'Entrega enviada com sucesso (com pendências)', delivery: deliveryAfterUpdate });
     }
 
-    // No missing docs, mark as submitted
-    await db.updateOne('deliveries', { _id: req.params.id }, { status: 'submitted', submittedAt: new Date() });
+    // No missing docs, mark as submitted and limpar pendências
+    await db.updateOne('deliveries', { _id: req.params.id }, { status: 'submitted', submittedAt: new Date(), missingDocumentsAtSubmit: [] });
     const deliveryAfterUpdate = await db.findById('deliveries', req.params.id);
     return res.json({ success: true, message: 'Entrega enviada com sucesso', delivery: deliveryAfterUpdate });
   } catch (err) {

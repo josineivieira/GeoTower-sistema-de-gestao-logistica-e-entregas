@@ -736,12 +736,9 @@ const SettingsPanel = ({
                   <option value="FINALIZADO" className="bg-gray-900">Finalizado (sem docs)</option>
                   <option value="A CAMINHO DO CLIENTE" className="bg-gray-900">A Caminho do Cliente</option>
                   <option value="AGENDADO" className="bg-gray-900">Agendado</option>
-                  {/* eslint-disable-next-line no-undef */}
-                  <option value="AGUARDANDO_DESOVA" className="bg-gray-900">Aguardando {getDesovaStepLabel(city)}</option>
-                  {/* eslint-disable-next-line no-undef */}
-                  <option value="EM_DESOVA" className="bg-gray-900">Em {getDesovaStepLabel(city)}</option>
-                  {/* eslint-disable-next-line no-undef */}
-                  <option value="DESOVA_FINALIZADA" className="bg-gray-900">{getDesovaStepLabel(city)} Finalizada</option>
+                  <option value="AGUARDANDO_DESOVA" className="bg-gray-900">Aguardando Desova/Ovação</option>
+                  <option value="EM_DESOVA" className="bg-gray-900">Em Desova/Ovação</option>
+                  <option value="DESOVA_FINALIZADA" className="bg-gray-900">Desova/Ovação Finalizada</option>
                   <option value="ANEXANDO_DOCUMENTOS_FINAIS" className="bg-gray-900">Anexando Docs Finais</option>
                   <option value="CANCELADO" className="bg-gray-900">Cancelado</option>
                 </select>
@@ -2367,9 +2364,9 @@ const MonitorEntregas = () => {
                   <option value="" className="bg-gray-900">Selecione…</option>
                   <option value="ENTREGUE" className="bg-gray-900">Operação Finalizada</option>
                   <option value="pending" className="bg-gray-900">A Caminho do Cliente</option>
-                  <option value="AGUARDANDO_DESOVA" className="bg-gray-900">Aguardando {getDesovaStepLabel(city)}</option>
-                  <option value="EM_DESOVA" className="bg-gray-900">Em {getDesovaStepLabel(city)}</option>
-                  <option value="DESOVA_FINALIZADA" className="bg-gray-900">{getDesovaStepLabel(city)} Finalizada</option>
+                  <option value="AGUARDANDO_DESOVA" className="bg-gray-900">Aguardando Desova/Ovação</option>
+                  <option value="EM_DESOVA" className="bg-gray-900">Em Desova/Ovação</option>
+                  <option value="DESOVA_FINALIZADA" className="bg-gray-900">Desova/Ovação Finalizada</option>
                   <option value="ANEXANDO_DOCUMENTOS_FINAIS" className="bg-gray-900">Anexando Docs Finais</option>
                   <option value="CANCELADO" className="bg-gray-900">Cancelado</option>
                 </select>

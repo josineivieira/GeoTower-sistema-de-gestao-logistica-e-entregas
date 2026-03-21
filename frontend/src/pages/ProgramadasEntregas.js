@@ -269,7 +269,7 @@ const ProgramadasEntregas = () => {
   const [showMontagemModal, setShowMontagemModal] = useState(false);
   const [montagemProgramacao, setMontagemProgramacao] = useState(null);
   const [montagemSubmitting, setMontagemSubmitting] = useState(false);
-  const [montagemComprovante, setMontagemComprovante] = useState(null);
+  const [montagemComprovas, setMontagemComprovas] = useState([]);
   const montagemComprovanteRef = useRef(null);
 
   const [showReturnModal, setShowReturnModal] = useState(false);
@@ -475,7 +475,7 @@ const ProgramadasEntregas = () => {
 
   const handleMontagemFinished = async (finished) => {
     if (!finished) return;
-    if (!montagemComprovante) { setToast({ message: 'Anexe o comprovante da montagem', type: 'error' }); return; }
+    if (!montagemComprovas || montagemComprovas.length === 0) { setToast({ message: 'Anexe pelo menos um comprovante da montagem', type: 'error' }); return; }
     try {
       setMontagemSubmitting(true);
       const deliveryNumber = (montagemProgramacao.container && montagemProgramacao.container.trim()) ||
@@ -490,10 +490,13 @@ const ProgramadasEntregas = () => {
       };
       const res = await deliveryService.createDelivery(payload);
       const delivery = res.data.delivery;
-      try { await deliveryService.uploadDocument(delivery._id, 'retiradaCheio', montagemComprovante); } catch (_) {}
+      // Enviar múltiplas fotos
+      for (const file of montagemComprovas) {
+        try { await deliveryService.uploadDocument(delivery._id, 'retiradaCheio', file); } catch (_) {}
+      }
       await deliveryService.updateDelivery(delivery._id, { status: 'CONTAINER_MONTADO' });
       setToast({ message: 'Container montado com sucesso!', type: 'success' });
-      setShowMontagemModal(false); setMontagemProgramacao(null); setMontagemComprovante(null);
+      setShowMontagemModal(false); setMontagemProgramacao(null); setMontagemComprovas([]);
       loadProgramacoes();
     } catch (err) {
       setToast({ message: err?.response?.data?.message || 'Erro ao marcar montagem', type: 'error' });
@@ -502,7 +505,7 @@ const ProgramadasEntregas = () => {
     }
   };
 
-  const closeMontagemModal = () => { setShowMontagemModal(false); setMontagemProgramacao(null); };
+  const closeMontagemModal = () => { setShowMontagemModal(false); setMontagemProgramacao(null); setMontagemComprovas([]); };
 
   const goToStep = async (step) => {
     setPhotos([]);
@@ -1192,21 +1195,26 @@ const ProgramadasEntregas = () => {
                 ))}
               </div>
 
-              {/* Comprovante upload */}
-              <div className={`rounded-2xl border-2 p-4 transition-all ${montagemComprovante ? 'border-blue-400 bg-blue-50' : 'border-dashed border-gray-300 bg-gray-50'}`}>
+              {/* Comprovante upload - múltiplas fotos */}
+              <div className={`rounded-2xl border-2 p-4 transition-all ${montagemComprovas.length > 0 ? 'border-blue-400 bg-blue-50' : 'border-dashed border-gray-300 bg-gray-50'}`}>
                 <div className="flex items-center gap-2 mb-3">
                   <FaImage className="text-blue-500" size={18} />
-                  <p className="font-bold text-gray-800 text-sm">Comprovante de Montagem</p>
+                  <p className="font-bold text-gray-800 text-sm">Comprovantes de Montagem</p>
+                  {montagemComprovas.length > 0 && <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full font-bold">{montagemComprovas.length}</span>}
                 </div>
-                {montagemComprovante ? (
-                  <div className="flex items-center justify-between bg-blue-100 rounded-xl px-3 py-2 mb-3">
-                    <div className="flex items-center gap-2">
-                      <FaCheckCircle className="text-blue-500" size={14} />
-                      <span className="text-xs font-bold text-blue-700 truncate max-w-[180px]">{montagemComprovante.name}</span>
-                    </div>
-                    <button onClick={() => setMontagemComprovante(null)} className="text-red-500 hover:text-red-700">
-                      <FaTimes size={12} />
-                    </button>
+                {montagemComprovas.length > 0 ? (
+                  <div className="space-y-2 mb-3 max-h-[200px] overflow-y-auto">
+                    {montagemComprovas.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-blue-100 rounded-xl px-3 py-2">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <FaCheckCircle className="text-blue-500 shrink-0" size={14} />
+                          <span className="text-xs font-bold text-blue-700 truncate">{file.name}</span>
+                        </div>
+                        <button onClick={() => setMontagemComprovas(prev => prev.filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-700 shrink-0">
+                          <FaTimes size={12} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <p className="text-xs text-gray-400 italic mb-3 text-center">Nenhuma foto selecionada</p>
@@ -1215,9 +1223,9 @@ const ProgramadasEntregas = () => {
                   onClick={() => montagemComprovanteRef.current?.click()}
                   className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm flex items-center justify-center gap-2 transition"
                 >
-                  <FaCamera size={14} /> {montagemComprovante ? 'Trocar Foto' : 'Tirar Foto'}
+                  <FaCamera size={14} /> Adicionar Fotos
                 </button>
-                <input ref={montagemComprovanteRef} type="file" accept="image/*" capture="environment" onChange={e => { const f = e.target.files?.[0]; if (f) setMontagemComprovante(f); }} className="hidden" />
+                <input ref={montagemComprovanteRef} type="file" accept="image/*" capture="environment" multiple onChange={e => { const files = Array.from(e.target.files || []); if (files.length > 0) setMontagemComprovas(prev => [...prev, ...files]); }} className="hidden" />
               </div>
 
               {montagemSubmitting && (
@@ -1232,7 +1240,7 @@ const ProgramadasEntregas = () => {
 
               <button
                 onClick={() => handleMontagemFinished(true)}
-                disabled={montagemSubmitting || !montagemComprovante}
+                disabled={montagemSubmitting || montagemComprovas.length === 0}
                 className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold text-lg shadow-lg active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 ✅ Confirmar Container Montado

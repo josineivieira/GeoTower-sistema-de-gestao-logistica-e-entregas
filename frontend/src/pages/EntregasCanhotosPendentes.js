@@ -114,13 +114,22 @@ const EntregasCanhotosPendentes = () => {
   const loadPendentes = async () => {
     setLoading(true);
     try {
-      const res = await adminService.getProgramacoes();
-      const todas = res.data.programacoes || [];
-      const nomeFiltro = (user?.username || user?.name || '').trim().toUpperCase();
-      const minhas = todas.filter(
-        p => String(p.contratado).trim().toUpperCase() === nomeFiltro
-      );
-      const pendentes = minhas.filter(
+      // Para motorista, usar o endpoint específico que retorna programações vinculadas ao usuário
+      let allProgramacoes = [];
+      try {
+        const res = await deliveryService.getProgramacoesAssigned();
+        allProgramacoes = res.data.programacoes || [];
+      } catch (err) {
+        console.warn('Falha em getProgramacoesAssigned, usando fallback adminService:', err && err.message);
+        const res = await adminService.getProgramacoes();
+        const todas = res.data.programacoes || [];
+        const nomeFiltro = (user?.username || user?.name || '').trim().toUpperCase();
+        allProgramacoes = todas.filter(
+          p => String(p.contratado).trim().toUpperCase() === nomeFiltro
+        );
+      }
+
+      const pendentes = (allProgramacoes || []).filter(
         p => Array.isArray(p.missingDocumentsAtSubmit) && p.missingDocumentsAtSubmit.length > 0
       );
       setItems(pendentes);

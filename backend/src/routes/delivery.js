@@ -454,7 +454,43 @@ router.get('/programacoes/mine', auth, async (req, res) => {
     }).sort({ dataAgendamento: -1 });
     console.log('[PROGRAMACAO] Lista completa (cidade:', city, '):', programacoes.map(p => ({ id: p._id, status: p.status, ativo: p.ativo })));
     console.log('[PROGRAMACAO] Encontradas', programacoes.length, 'programações para contratado', contratado);
-    return res.json({ success: true, programacoes: programacoes || [] });
+
+    // Enriquecer com dados da entrega vinculada (incluindo pending docs)
+    const allDeliveries = await db.find('deliveries', { cityCode: city });
+
+    const enrichedProgramacoes = (programacoes || []).map((p) => {
+      const obj = p.toObject ? p.toObject() : { ...p };
+
+      if (obj.linkedDeliveryId) {
+        const existing = allDeliveries.find(d => String(d._id) === String(obj.linkedDeliveryId));
+        if (existing) {
+          obj.missingDocumentsAtSubmit = existing.missingDocumentsAtSubmit || [];
+          if (existing.horarioDevolucaoVazio) {
+            obj.horarioDevolucaoVazio = existing.horarioDevolucaoVazio;
+          }
+        }
+        return obj;
+      }
+
+      const match = allDeliveries.find(d => {
+        const num = String(d.deliveryNumber || '').trim().toUpperCase();
+        const proc = String(obj.processo || '').trim().toUpperCase();
+        const cont = String(obj.container || '').trim().toUpperCase();
+        return (num && (num === proc || num === cont));
+      });
+
+      obj.linkedDeliveryId = match ? match._id : null;
+      if (match) {
+        obj.missingDocumentsAtSubmit = match.missingDocumentsAtSubmit || [];
+        if (match.horarioDevolucaoVazio) {
+          obj.horarioDevolucaoVazio = match.horarioDevolucaoVazio;
+        }
+      }
+
+      return obj;
+    });
+
+    return res.json({ success: true, programacoes: enrichedProgramacoes || [] });
   } catch (err) {
     console.error('[PROGRAMACAO] Erro ao buscar programações do usuário', err);
     return res.status(500).json({ message: 'Erro ao listar programações do usuário', error: err.message });

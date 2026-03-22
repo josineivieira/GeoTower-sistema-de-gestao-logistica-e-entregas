@@ -74,6 +74,11 @@ const KPIAnalytics = ({ onToggle }) => {
     }
   };
 
+  // Busca número do processo (CAB...)
+  const getProcessNumber = (delivery) => {
+    return delivery.processo || delivery.numeroProcesso || delivery.CAB || delivery.cab || delivery.processNumber || 'N/A';
+  };
+
   // Função de export para CSV
   const exportToCSV = (data, filename = 'performance-data.csv') => {
     const headers = Object.keys(data[0] || {});
@@ -133,7 +138,7 @@ const KPIAnalytics = ({ onToggle }) => {
         ...performanceByParty.map(p => [p.name, p.total, `${p.onTimePercentage}%`, `${p.latePercentage}%`, p.avgDelayMinutes])
       ];
       const partySheet = XLSX.utils.aoa_to_sheet(partyData);
-      XLSX.utils.book_append_sheet(workbook, partySheet, 'Performance Remetente/Destinatário');
+      XLSX.utils.book_append_sheet(workbook, partySheet, 'Performance Partes');
     }
 
     // Aba 4: Distribuição por Status
@@ -159,6 +164,7 @@ const KPIAnalytics = ({ onToggle }) => {
       .map(d => ({
         'Motorista': d.driverName || 'Não informado',
         [city === 'itajai' ? 'Remetente' : 'Destinatário']: getPartyName(d),
+        'Processo': getProcessNumber(d),
         'Data Agendada': getScheduledDate(d) ? new Date(getScheduledDate(d)).toLocaleDateString('pt-BR') : 'N/A',
         'Data Entrega': getArrivalDate(d) ? new Date(getArrivalDate(d)).toLocaleDateString('pt-BR') : 'N/A',
         'Atraso (dias)': getScheduledDate(d) && getArrivalDate(d) ?
@@ -169,10 +175,11 @@ const KPIAnalytics = ({ onToggle }) => {
 
     if (lateDeliveriesData.length > 0) {
       const lateData = [
-        ['Motorista', city === 'itajai' ? 'Remetente' : 'Destinatário', 'Data Agendada', 'Data Entrega', 'Atraso (dias)', 'Status', 'Região'],
+        ['Motorista', city === 'itajai' ? 'Remetente' : 'Destinatário', 'Processo', 'Data Agendada', 'Data Entrega', 'Atraso (dias)', 'Status', 'Região'],
         ...lateDeliveriesData.map(d => [
           d['Motorista'],
           d[city === 'itajai' ? 'Remetente' : 'Destinatário'],
+          d['Processo'],
           d['Data Agendada'],
           d['Data Entrega'],
           d['Atraso (dias)'],
@@ -183,6 +190,9 @@ const KPIAnalytics = ({ onToggle }) => {
       const lateSheet = XLSX.utils.aoa_to_sheet(lateData);
       XLSX.utils.book_append_sheet(workbook, lateSheet, 'Entregas Atrasadas');
     }
+
+    XLSX.writeFile(workbook, `kpi-analytics-${city}-${dateStr}.xlsx`);
+    setToast({ message: 'Extrato Excel exportado com sucesso!', type: 'success' });
   };
 
   // Função de export para PDF
@@ -835,6 +845,7 @@ const KPIAnalytics = ({ onToggle }) => {
                     .map(d => ({
                       'Motorista': d.driverName || 'Não informado',
                       [city === 'itajai' ? 'Remetente' : 'Destinatário']: getPartyName(d),
+                      'Processo': getProcessNumber(d),
                       'Data Agendada': getScheduledDate(d) ? new Date(getScheduledDate(d)).toLocaleDateString('pt-BR') : 'N/A',
                       'Data Entrega': getArrivalDate(d) ? new Date(getArrivalDate(d)).toLocaleDateString('pt-BR') : 'N/A',
                       'Atraso (dias)': getScheduledDate(d) && getArrivalDate(d) ?
@@ -856,6 +867,7 @@ const KPIAnalytics = ({ onToggle }) => {
                   <tr className="text-slate-400 text-xs uppercase">
                     <th className="text-left py-3 px-4">Motorista</th>
                     <th className="text-left py-3 px-4">{city === 'itajai' ? 'Remetente' : 'Destinatário'}</th>
+                    <th className="text-left py-3 px-4">Processo</th>
                     <th className="text-center py-3 px-4">Data Agendada</th>
                     <th className="text-center py-3 px-4">Data Entrega</th>
                     <th className="text-center py-3 px-4">Atraso (dias)</th>
@@ -884,6 +896,7 @@ const KPIAnalytics = ({ onToggle }) => {
                         <tr key={i} className="border-b border-white/5 hover:bg-red-500/5 transition">
                           <td className="py-3 px-4 text-slate-300">{delivery.driverName || 'Não informado'}</td>
                           <td className="py-3 px-4 text-slate-300">{getPartyName(delivery)}</td>
+                          <td className="py-3 px-4 text-slate-300">{getProcessNumber(delivery)}</td>
                           <td className="text-center py-3 px-4 text-slate-300">
                             {scheduled ? new Date(scheduled).toLocaleDateString('pt-BR') : 'N/A'}
                           </td>
@@ -915,6 +928,20 @@ const KPIAnalytics = ({ onToggle }) => {
           </div>
 
           {/* Insights Automáticos */}
+          {(onTimeRate < 80 || lateDeliveries.percentage > 20) && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-5 mt-4">
+              <h3 className="font-semibold text-red-400 mb-3 flex items-center gap-2">
+                <FiAlertTriangle /> Alertas
+              </h3>
+              <ul className="space-y-2 text-sm text-slate-300">
+                {onTimeRate < 80 && <li>⚠️ Taxa de entregas no prazo ({onTimeRate}%) abaixo do ideal (95%).</li>}
+                {lateDeliveries.percentage > 20 && <li>⚠️ {lateDeliveries.percentage}% das entregas estão atrasadas ({lateDeliveries.count}).</li>}
+                {performanceByParty.some(p => p.latePercentage > 30) && (
+                  <li>⚠️ {city === 'itajai' ? 'Remetentes críticos' : 'Destinatários críticos'}: {performanceByParty.filter(p => p.latePercentage > 30).map(p => p.name).join(', ')}.</li>
+                )}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 

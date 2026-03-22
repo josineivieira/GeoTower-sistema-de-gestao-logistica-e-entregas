@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
+import KPIAnalytics from './KPIAnalytics';
 import { adminService } from '../services/authService';
 import { useCity } from '../contexts/CityContext';
 import { getProgramacaoDate } from '../utils/programacaoDate';
@@ -8,7 +9,7 @@ import { getRecebedorLabel } from '../utils/cityLabels';
 import { exportToPDF, exportToExcel, formatMinutes as fmtMin } from '../services/exportService';
 import {
   FiArrowLeft, FiPackage, FiTruck, FiAward, FiClock,
-  FiTrendingUp, FiBarChart2, FiDownload, FiFileText
+  FiTrendingUp, FiBarChart2, FiDownload, FiFileText, FiActivity
 } from 'react-icons/fi';
 import {
   AreaChart, Area, BarChart, Bar,
@@ -159,6 +160,7 @@ const AdminDashboard = () => {
   const [exporting,   setExporting]   = useState({ pdf: false, excel: false });
   const [toast,       setToast]       = useState(null);
   const [activeBar,   setActiveBar]   = useState(null);
+  const [viewMode,    setViewMode]    = useState('dashboard'); // 'dashboard' ou 'kpi'
   // Filtros de data
   const [filters, setFilters] = useState({ startDate: '', endDate: '' });
 
@@ -309,6 +311,11 @@ const AdminDashboard = () => {
     }
   };
 
+  // Se modo KPI está ativo, renderizar componente KPI
+  if (viewMode === 'kpi') {
+    return <KPIAnalytics onToggle={() => setViewMode('dashboard')} />;
+  }
+
   /* ── Skeleton loading ── */
   if (loading) {
     return (
@@ -389,6 +396,15 @@ const AdminDashboard = () => {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setViewMode('kpi')}
+                className="inline-flex items-center gap-2 rounded-lg border border-indigo-500/30 bg-indigo-500/20 px-3 py-2 text-sm font-medium text-indigo-300 hover:bg-indigo-500/30 transition-all"
+                title="Análise de KPIs"
+              >
+                <FiActivity size={16} />
+                <span className="hidden sm:inline">KPI</span>
+              </button>
+
               <ExportButton
                 onClick={handleExportPDF}
                 loading={exporting.pdf}

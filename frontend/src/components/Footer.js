@@ -1,8 +1,41 @@
 import React from 'react';
 import { FaMapMarkerAlt, FaWhatsapp, FaInstagram, FaPhone, FaEnvelope } from 'react-icons/fa';
+import { useCity } from '../context/CityContext';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const { city } = useCity();
+
+  const getGerenciaInfo = () => {
+    if (city === 'itajai') {
+      return {
+        name: 'Leandro',
+        whatsapp: '5547968825522',
+        display: '(47) 9682-5522'
+      };
+    }
+    return {
+      name: 'Igo Ferro',
+      whatsapp: '5592982760023',
+      display: '(92) 98276-0023'
+    };
+  };
+
+  const getOperacionalInfo = () => {
+    if (city === 'itajai') {
+      return [
+        { name: 'Lian', whatsapp: '5547975400775', display: '(47) 9754-0075' },
+        { name: 'Adlar', whatsapp: '5547966249992', display: '(47) 9662-4992' }
+      ];
+    }
+    return [
+      { name: 'Daniela Pontes', whatsapp: '5592982410180', display: '(92) 98241-0180' },
+      { name: 'Lia Lima', whatsapp: '5592982410138', display: '(92) 98241-0138' }
+    ];
+  };
+
+  const gerenciaInfo = getGerenciaInfo();
+  const operacionalInfo = getOperacionalInfo();
 
   return (
     <footer className="mt-16 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
@@ -75,16 +108,16 @@ const Footer = () => {
             </h4>
             <div className="space-y-4">
               <a 
-                href="https://wa.me/5592982760023" 
+                href={`https://wa.me/${gerenciaInfo.whatsapp}`}
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="block hover:translate-x-1 transition-transform duration-300"
               >
                 <p className="font-semibold text-white mb-1 flex items-center gap-2">
                   <FaWhatsapp className="text-green-400 text-sm" />
-                  Igo Ferro
+                  {gerenciaInfo.name}
                 </p>
-                <p className="text-gray-400 text-sm ml-6">(92) 98276-0023</p>
+                <p className="text-gray-400 text-sm ml-6">{gerenciaInfo.display}</p>
               </a>
             </div>
           </div>
@@ -96,30 +129,21 @@ const Footer = () => {
               Operacional
             </h4>
             <div className="space-y-4">
-              <a 
-                href="https://wa.me/5592982410180" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="block hover:translate-x-1 transition-transform duration-300"
-              >
-                <p className="font-semibold text-white mb-1 flex items-center gap-2">
-                  <FaWhatsapp className="text-green-400 text-sm" />
-                  Daniela Pontes
-                </p>
-                <p className="text-gray-400 text-sm ml-6">(92) 98241-0180</p>
-              </a>
-              <a 
-                href="https://wa.me/5592982410138" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="block hover:translate-x-1 transition-transform duration-300"
-              >
-                <p className="font-semibold text-white mb-1 flex items-center gap-2">
-                  <FaWhatsapp className="text-green-400 text-sm" />
-                  Lia Lima
-                </p>
-                <p className="text-gray-400 text-sm ml-6">(92) 98241-0138</p>
-              </a>
+              {operacionalInfo.map((contact, idx) => (
+                <a 
+                  key={idx}
+                  href={`https://wa.me/${contact.whatsapp}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="block hover:translate-x-1 transition-transform duration-300"
+                >
+                  <p className="font-semibold text-white mb-1 flex items-center gap-2">
+                    <FaWhatsapp className="text-green-400 text-sm" />
+                    {contact.name}
+                  </p>
+                  <p className="text-gray-400 text-sm ml-6">{contact.display}</p>
+                </a>
+              ))}
             </div>
           </div>
         </div>

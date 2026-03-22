@@ -927,6 +927,7 @@ const MonitorEntregas = () => {
   const [colTemplate, setColTemplate] = useState(EXPANDED_COL_TEMPLATE);
 
   const [recentlyUpdated, setRecentlyUpdated] = useState({});
+  const [updateCounter, setUpdateCounter] = useState(0);
   const prevStatusRef = useRef({});
   const rowRefs = useRef({});
   const prevPositions = useRef({});
@@ -1489,13 +1490,31 @@ const MonitorEntregas = () => {
     const updates = {};
     filteredDeliveries.forEach((d) => {
       const prev = prevStatusRef.current[d._id];
-      if (prev !== undefined && prev !== d.status) updates[d._id] = Date.now();
+      if (prev !== undefined && prev !== d.status) {
+        // Usa um contador incremental para garantir ordenação determinística
+        updates[d._id] = updateCounter + Object.keys(updates).length + 1;
+        // eslint-disable-next-line no-console
+        console.log('DEBUG status changed:', {
+          id: d._id,
+          processo: d.processoCAB,
+          from: prev,
+          to: d.status,
+          ordem: updates[d._id]
+        });
+      }
       prevStatusRef.current[d._id] = d.status;
     });
 
     if (Object.keys(updates).length > 0) {
       prevPositions.current = capturedPositions;
-      setRecentlyUpdated((prev) => ({ ...prev, ...updates }));
+      // Incrementa o contador para próximas atualizações
+      setUpdateCounter((prev) => prev + Object.keys(updates).length);
+      setRecentlyUpdated((prev) => {
+        const next = { ...prev, ...updates };
+        // eslint-disable-next-line no-console
+        console.log('DEBUG recentlyUpdated state:', next);
+        return next;
+      });
       
       // Remove apenas a animação visual após RISE_WINDOW, mas mantém no topo via recentlyUpdated
       // setTimeout(() => {
@@ -1526,12 +1545,24 @@ const MonitorEntregas = () => {
     });
 
     // Ordena por atualização - sempre coloca entregas atualizadas no topo
-    return result.sort((a, b) => {
+    const sorted = result.sort((a, b) => {
       const aT = recentlyUpdated[a._id];
       const bT = recentlyUpdated[b._id];
       
       // Ambas foram atualizadas: ordena por timestamp (mais recente no topo)
-      if (aT && bT) return bT - aT;
+      if (aT && bT) {
+        const cmp = bT - aT;
+        // eslint-disable-next-line no-console
+        console.log('DEBUG sort ambas atualizadas:', {
+          a_id: a._id,
+          b_id: b._id,
+          aT,
+          bT,
+          cmp,
+          resultado: cmp > 0 ? 'b primeiro' : 'a primeiro'
+        });
+        return cmp;
+      }
       
       // Só uma foi atualizada: coloca no topo
       if (aT && !bT) return -1;
@@ -1540,6 +1571,15 @@ const MonitorEntregas = () => {
       // Nenhuma foi atualizada: mantém ordem original
       return 0;
     });
+    
+    // eslint-disable-next-line no-console
+    console.log('DEBUG sorted displayList:', sorted.map(d => ({
+      id: d._id,
+      processNumber: d.processoCAB,
+      timestamp: recentlyUpdated[d._id]
+    })));
+    
+    return sorted;
   }, [filteredDeliveries, recentlyUpdated]);
 
   useLayoutEffect(() => {

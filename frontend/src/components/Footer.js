@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaMapMarkerAlt, FaWhatsapp, FaInstagram, FaPhone, FaEnvelope } from 'react-icons/fa';
-import { useCity } from '../context/CityContext';
+import { useCity } from '../contexts/CityContext';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();

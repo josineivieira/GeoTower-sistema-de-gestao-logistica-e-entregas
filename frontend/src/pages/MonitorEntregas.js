@@ -1103,9 +1103,19 @@ const MonitorEntregas = () => {
     canhotNF: 'NF', canhotCTE: 'CTE', diarioBordo: 'Diário', devolucaoVazio: 'Vazio', retiradaCheio: 'Cheio'
   };
 
+  const itajaiDocumentLabels = {
+    ...itajaiConfig.documents,
+    retiradaCheio: 'Retirada Porto',
+    canhotCTE: 'CONTRATO',
+    canhotNF: 'TACOGRAFO/RIC ABASTECIMENTO',
+    diarioBordo: 'Diário',
+    devolucaoVazio: 'Vazio',
+    chegadaCliente: 'Chegada no Cliente'
+  };
+
   const getLabelsForDelivery = (d) => {
     if (!d) return defaultDocumentLabels;
-    return (d.city || '').toLowerCase() === 'itajai' ? (itajaiConfig.documents || {}) : defaultDocumentLabels;
+    return (d.city || '').toLowerCase() === 'itajai' ? itajaiDocumentLabels : defaultDocumentLabels;
   };
 
   const removeProgramacaoInfo = (obs) => obs ? obs.replace(/Criada a partir da Programação [A-Z0-9]+/g, '').trim() : '';
@@ -1408,7 +1418,18 @@ const MonitorEntregas = () => {
     if (filters.searchTerm.trim()) {
       const q = filters.searchTerm.toLowerCase();
       r = r.filter((d) =>
-        [d.deliveryNumber, d.driverName, d.userName, d.recebedor, d.vehiclePlate]
+        [
+          d.deliveryNumber,
+          d.driverName,
+          d.userName,
+          d.recebedor,
+          d.vehiclePlate,
+          d.processoCAB,
+          d.processo,
+          d.containerNumero,
+          d.container,
+          d.processNumber
+        ]
           .some((v) => String(v || '').toLowerCase().includes(q))
       );
     }

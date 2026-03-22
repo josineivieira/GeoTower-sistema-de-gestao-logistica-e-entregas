@@ -175,7 +175,7 @@ const KPIAnalytics = ({ onToggle }) => {
 
     if (lateDeliveriesData.length > 0) {
       const lateData = [
-        ['Motorista', city === 'itajai' ? 'Remetente' : 'Destinatário', 'Processo', 'Data Agendada', 'Data Entrega', 'Atraso (dias)', 'Status', 'Região'],
+        ['Motorista', city === 'itajai' ? 'Remetente' : 'Destinatário', 'Processo', 'Data Agendada', 'Data Entrega', 'Atraso (dias)', 'Status'],
         ...lateDeliveriesData.map(d => [
           d['Motorista'],
           d[city === 'itajai' ? 'Remetente' : 'Destinatário'],
@@ -183,8 +183,7 @@ const KPIAnalytics = ({ onToggle }) => {
           d['Data Agendada'],
           d['Data Entrega'],
           d['Atraso (dias)'],
-          d['Status'],
-          d['Região']
+          d['Status']
         ])
       ];
       const lateSheet = XLSX.utils.aoa_to_sheet(lateData);
@@ -213,7 +212,7 @@ const KPIAnalytics = ({ onToggle }) => {
 
     if (lateDeliveriesData.length > 0) {
       const lateData = [
-        ['Motorista', city === 'itajai' ? 'Remetente' : 'Destinatário', 'Processo', 'Data Agendada', 'Data Entrega', 'Atraso (dias)', 'Status', 'Região'],
+        ['Motorista', city === 'itajai' ? 'Remetente' : 'Destinatário', 'Processo', 'Data Agendada', 'Data Entrega', 'Atraso (dias)', 'Status'],
         ...lateDeliveriesData.map(d => [
           d.driverName || 'Não informado',
           getPartyName(d),
@@ -222,8 +221,7 @@ const KPIAnalytics = ({ onToggle }) => {
           getArrivalDate(d) ? new Date(getArrivalDate(d)).toLocaleDateString('pt-BR') : 'N/A',
           getScheduledDate(d) && getArrivalDate(d) ?
             Math.ceil((new Date(getArrivalDate(d)) - new Date(getScheduledDate(d))) / (1000 * 60 * 60 * 24)) : 'N/A',
-          d.status,
-          d.regiao || 'N/A'
+          d.status
         ])
       ];
       const lateSheet = XLSX.utils.aoa_to_sheet(lateData);
@@ -896,7 +894,6 @@ const KPIAnalytics = ({ onToggle }) => {
                     <th className="text-center py-3 px-4">Data Entrega</th>
                     <th className="text-center py-3 px-4">Atraso (dias)</th>
                     <th className="text-center py-3 px-4">Status</th>
-                    <th className="text-center py-3 px-4">Região</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -935,7 +932,6 @@ const KPIAnalytics = ({ onToggle }) => {
                               {delivery.status}
                             </span>
                           </td>
-                          <td className="text-center py-3 px-4 text-slate-300">{delivery.regiao || 'N/A'}</td>
                         </tr>
                       );
                     })}

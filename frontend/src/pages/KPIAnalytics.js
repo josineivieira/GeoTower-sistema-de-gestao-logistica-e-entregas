@@ -207,33 +207,34 @@ const KPIAnalytics = ({ onToggle }) => {
   }, [filteredDeliveries, city]);
 
   // ═══════════════════════════════════════════════════════════════
-  // KPI 7: Performance por Região
+  // KPI 7: Performance por Remetente (Itajaí) / Destinatário (Manaus)
   // ═══════════════════════════════════════════════════════════════
-  const regionPerformance = useMemo(() => {
-    const regions = {};
+  const performanceByParty = useMemo(() => {
+    const partyLabel = city === 'itajai' ? 'remetente' : 'destinatario';
+    const parties = {};
     filteredDeliveries.forEach(d => {
       if (!isCompletedStatus(d.status)) return; // Apenas entregas concluídas
-      
-      const region = d.regiao || 'Sem região';
-      if (!regions[region]) {
-        regions[region] = { total: 0, onTime: 0, late: 0, delays: [] };
+
+      const party = d[partyLabel] || (city === 'itajai' ? 'Sem remetente' : 'Sem destinatário');
+      if (!parties[party]) {
+        parties[party] = { total: 0, onTime: 0, late: 0, delays: [] };
       }
-      regions[region].total++;
+      parties[party].total++;
 
       const scheduled = getScheduledDate(d);
       const arrival = getArrivalDate(d);
       if (scheduled && arrival) {
         const delay = new Date(arrival) - new Date(scheduled);
         if (delay <= 0) {
-          regions[region].onTime++;
+          parties[party].onTime++;
         } else {
-          regions[region].late++;
-          regions[region].delays.push(delay / (1000 * 60)); // minutos
+          parties[party].late++;
+          parties[party].delays.push(delay / (1000 * 60)); // minutos
         }
       }
     });
 
-    return Object.entries(regions)
+    return Object.entries(parties)
       .map(([name, data]) => ({
         name,
         total: data.total,
@@ -554,16 +555,17 @@ const KPIAnalytics = ({ onToggle }) => {
             </div>
           </div>
 
-          {/* Performance por Região */}
+          {/* Performance por Remetente/Destinatário */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
             <h3 className="font-semibold text-slate-200 mb-4 flex items-center gap-2">
-              <FiAlertTriangle className="text-amber-400" /> Performance por Região
+              <FiAlertTriangle className="text-amber-400" />
+              Performance por {city === 'itajai' ? 'Remetente' : 'Destinatário'}
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-b border-white/10">
                   <tr className="text-slate-400 text-xs uppercase">
-                    <th className="text-left py-3 px-4">Região</th>
+                    <th className="text-left py-3 px-4">{city === 'itajai' ? 'Remetente' : 'Destinatário'}</th>
                     <th className="text-center py-3 px-4">Total</th>
                     <th className="text-center py-3 px-4">% No Prazo</th>
                     <th className="text-center py-3 px-4">% Atrasado</th>
@@ -571,13 +573,13 @@ const KPIAnalytics = ({ onToggle }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {regionPerformance.map((region, i) => (
-                    <tr key={i} className={`border-b border-white/5 transition ${region.latePercentage > 20 ? 'bg-red-500/10' : 'hover:bg-white/5'}`}>
-                      <td className="py-3 px-4 text-slate-300">{region.name}</td>
-                      <td className="text-center py-3 px-4 text-slate-300">{region.total}</td>
-                      <td className="text-center py-3 px-4 text-emerald-400">{region.onTimePercentage}%</td>
-                      <td className="text-center py-3 px-4 text-red-400">{region.latePercentage}%</td>
-                      <td className="text-center py-3 px-4 text-amber-400">{region.avgDelayMinutes}</td>
+                  {performanceByParty.map((party, i) => (
+                    <tr key={i} className={`border-b border-white/5 transition ${party.latePercentage > 20 ? 'bg-red-500/10' : 'hover:bg-white/5'}`}>
+                      <td className="py-3 px-4 text-slate-300">{party.name}</td>
+                      <td className="text-center py-3 px-4 text-slate-300">{party.total}</td>
+                      <td className="text-center py-3 px-4 text-emerald-400">{party.onTimePercentage}%</td>
+                      <td className="text-center py-3 px-4 text-red-400">{party.latePercentage}%</td>
+                      <td className="text-center py-3 px-4 text-amber-400">{party.avgDelayMinutes}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -594,8 +596,8 @@ const KPIAnalytics = ({ onToggle }) => {
               <ul className="space-y-2 text-sm text-slate-300">
                 {onTimeRate < 80 && <li>⚠️ Taxa de uma no prazo ({onTimeRate}%) está abaixo do ideal (95%). Investigar causas de atraso.</li>}
                 {lateDeliveries.percentage > 20 && <li>⚠️ {lateDeliveries.percentage}% das entregas estão atrasadas ({lateDeliveries.count}). Revisar processos.</li>}
-                {regionPerformance.some(r => r.latePercentage > 30) && (
-                  <li>⚠️ Regiões críticas detectadas: {regionPerformance.filter(r => r.latePercentage > 30).map(r => r.name).join(', ')} com atrasos acima de 30%.</li>
+                {performanceByParty.some(p => p.latePercentage > 30) && (
+                  <li>⚠️ {city === 'itajai' ? 'Remetentes críticos' : 'Destinatários críticos'} detectados: {performanceByParty.filter(p => p.latePercentage > 30).map(p => p.name).join(', ')} com atrasos acima de 30%.</li>
                 )}
               </ul>
             </div>

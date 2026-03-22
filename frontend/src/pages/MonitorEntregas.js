@@ -897,7 +897,7 @@ const MonitorEntregas = () => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState(30);
   const [editingDelivery, setEditingDelivery] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -1115,7 +1115,11 @@ const MonitorEntregas = () => {
 
   const getLabelsForDelivery = (d) => {
     if (!d) return defaultDocumentLabels;
-    return (d.city || '').toLowerCase() === 'itajai' ? itajaiDocumentLabels : defaultDocumentLabels;
+    // Usar city do contexto se o delivery não tiver, ou verificar ambos
+    const deliveryCity = (d.city || city || '').toLowerCase();
+    // eslint-disable-next-line no-console
+    console.log('DEBUG getLabelsForDelivery:', { d_city: d.city, context_city: city, deliveryCity, isItajai: deliveryCity === 'itajai' });
+    return deliveryCity === 'itajai' ? itajaiDocumentLabels : defaultDocumentLabels;
   };
 
   const removeProgramacaoInfo = (obs) => obs ? obs.replace(/Criada a partir da Programação [A-Z0-9]+/g, '').trim() : '';
@@ -1364,13 +1368,22 @@ const MonitorEntregas = () => {
         return d;
       });
 
-      // DEBUG: log entrega CAB43503
-      const cab43503 = normalized.find(d => d.deliveryNumber === 'CAB43503' || d.processoCAB === 'CAB43503');
-      if (cab43503) {
+      // DEBUG: log entrega de amostra e verificar city
+      const sampleDelivery = normalized[0];
+      if (sampleDelivery) {
         // eslint-disable-next-line no-console
-        console.log('DEBUG CAB43503:', cab43503);
+        console.log('DEBUG Sample Delivery (1a):', { 
+          deliveryNumber: sampleDelivery.deliveryNumber,
+          city: sampleDelivery.city,
+          documents: Object.keys(sampleDelivery.documents || {})
+        });
       }
-      setDeliveries(normalized);
+      // Enriquecer com city do contexto se não houver
+      const enrichedWithCity = normalized.map(d => ({
+        ...d,
+        city: d.city || city // Adiciona city do contexto se não tiver
+      }));
+      setDeliveries(enrichedWithCity);
 
       const sc = {};
       normalized.forEach((d) => {
@@ -1397,7 +1410,11 @@ const MonitorEntregas = () => {
   useEffect(() => {
     loadDeliveries();
     if (autoRefresh) {
-      const t = setInterval(loadDeliveries, refreshInterval * 1000);
+      const t = setInterval(() => {
+        // eslint-disable-next-line no-console
+        console.log('DEBUG autoRefresh triggered, filters:', filters);
+        loadDeliveries();
+      }, refreshInterval * 1000);
       return () => clearInterval(t);
     }
   }, [loadDeliveries, autoRefresh, refreshInterval]);

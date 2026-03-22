@@ -61,10 +61,10 @@ const KPIAnalytics = ({ onToggle }) => {
   };
 
   const getArrivalDate = (delivery) => {
-    // Em Itajaí: dtChegada é a data de chegada no cliente
+    // Em Itajaí: arrivedAt é a data de chegada no cliente (Dt. chegada cliente)
     // Em Manaus: dtEntrega
     if (city === 'itajai') {
-      return delivery.dtChegada;
+      return delivery.arrivedAt;
     }
     return delivery.dtEntrega;
   };
@@ -149,10 +149,10 @@ const KPIAnalytics = ({ onToggle }) => {
   const averageDeliveryTime = useMemo(() => {
     const completed = filteredDeliveries.filter(d => isCompletedStatus(d.status));
     const times = completed
-      .filter(d => d.dtSaida && (d.dtEntrega || d.dtChegada))
+      .filter(d => d.dtSaida && getArrivalDate(d))
       .map(d => {
         const saida = new Date(d.dtSaida);
-        const chegada = city === 'itajai' ? new Date(d.dtChegada) : new Date(d.dtEntrega);
+        const chegada = new Date(getArrivalDate(d));
         return (chegada - saida) / (1000 * 60 * 60); // horas
       });
     if (times.length === 0) return 0;

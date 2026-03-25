@@ -282,20 +282,37 @@ const BaseDadosGeral = () => {
         documentsJustification: editForm.documentsJustification,
       };
       console.log('[SAVE] Delivery payload:', delPayload);
-      const deliveryId = item?._entrega?._id || item?._entrega?.deliveryNumber;
+      const deliveryId = item?._entrega?._id;
       if (deliveryId) {
-        try { 
+        try {
           console.log('[SAVE] Updating delivery:', deliveryId);
-          await adminService.updateDelivery(deliveryId, delPayload); 
+          await adminService.updateDelivery(deliveryId, delPayload);
           console.log('[SAVE] Delivery updated successfully');
-        }
-        catch (e) { 
+        } catch (e) {
           console.warn('[SAVE] Delivery update error:', e);
-          if (e?.response?.status !== 404) throw e; 
+          if (e?.response?.status !== 404) throw e;
         }
       } else {
-        console.warn('[SAVE] No delivery ID found to update');
+        console.warn('[SAVE] No delivery ID found to update (skipping delivery update)');
       }
+
+      setDados((prevDados) =>
+        prevDados.map((d) => {
+          if (d._id !== editingId) return d;
+          return {
+            ...d,
+            _entrega: {
+              ...(d._entrega || {}),
+              containerMontadoAt: toISO(editForm.containerMontadoAt),
+              horarioChegada: toISO(editForm.horarioChegada),
+              horarioInicioDesova: toISO(editForm.horarioInicioDesova),
+              horarioFimDesova: toISO(editForm.horarioFimDesova),
+              horarioDevolucaoVazio: toISO(editForm.horarioDevolucaoVazio),
+            }
+          };
+        })
+      );
+
       setToast({ message: 'Registro atualizado com sucesso!', type: 'success' });
       setEditingId(null);
       // Aguarda um breve momento para garantir que o backend processou a atualização

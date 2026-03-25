@@ -1470,8 +1470,8 @@ router.delete("/motoristas/:id", auth, managerOnly, async (req, res) => {
  */
 router.get("/programacoes", auth, async (req, res) => {
   try {
-    const { period, periodDate } = req.query;
-    console.log('[PROGRAMACAO] Listando programações de entrega, filtros:', { period, periodDate });
+    const { period, periodDate, page = 1, limit = 500 } = req.query;
+    console.log('[PROGRAMACAO] Listando programações de entrega, filtros:', { period, periodDate, page, limit });
 
     const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
     
@@ -1490,12 +1490,8 @@ router.get("/programacoes", auth, async (req, res) => {
         { origem: { $nin: ['MANAUS', 'MANAUS - COELTA BALY'] } }
       ];
     }
-    
-    const programacoes = await ProgramacaoEntrega.find(cityFilter)
-      .sort({ dataAgendamento: -1 })
-      .limit(1000); // Limita a 1000 registros mais recentes para evitar timeout
 
-    // Aplicar filtro de período se fornecido
+    // Calcular o filtro de data para aplicar no DB sempre que possível
     let effectiveDate = '';
     if (periodDate && String(periodDate).trim()) {
       effectiveDate = String(periodDate).trim();
@@ -1513,14 +1509,34 @@ router.get("/programacoes", auth, async (req, res) => {
       console.log('   convertido para data efetiva:', effectiveDate);
     }
 
-    let filtered = programacoes;
-    
-    // Filtrar por período se fornecido
+    const dbFilter = { ...cityFilter };
     if (effectiveDate) {
-      console.log('📅 Aplicando filtro de período sobre programações para data:', effectiveDate, '(cidade:', city, ')');
+      if (city === 'itajai') {
+        dbFilter.$or = dbFilter.$or || [];
+        dbFilter.$or.push(
+          { dtColeta: effectiveDate },
+          { dtColeta: { $in: [null, '', undefined] }, dataAgendamento: effectiveDate }
+        );
+      } else {
+        dbFilter.dataAgendamento = effectiveDate;
+      }
+      console.log('📅 Aplicando filtro de data ao DB:', dbFilter);
+    }
+
+    const limitNum = Math.min(Math.max(parseInt(limit, 10) || 500, 10), 1000);
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+
+    const programacoes = await ProgramacaoEntrega.find(dbFilter)
+      .sort({ dataAgendamento: -1 })
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum);
+
+    let filtered = programacoes;
+
+    // Fallback de refinamento em memória para formatos de data não padronizados
+    if (effectiveDate) {
       const [edDay, edMonth, edYear] = effectiveDate.split('/').map(Number);
       filtered = filtered.filter(d => {
-        // Para Itajaí, usar dtColeta; para Manaus, usar dataAgendamento
         const dateField = city === 'itajai' && d.dtColeta ? d.dtColeta : d.dataAgendamento;
         if (!dateField) return false;
         const progDateStr = String(dateField).trim();
@@ -1533,14 +1549,10 @@ router.get("/programacoes", auth, async (req, res) => {
           pd = { day: Number(parts[2]), month: Number(parts[1]), year: Number(parts[0]) };
         } else {
           const tmp = new Date(progDateStr);
-          if (!isNaN(tmp)) {
-            pd = { day: tmp.getDate(), month: tmp.getMonth()+1, year: tmp.getFullYear() };
-          }
+          if (!isNaN(tmp)) pd = { day: tmp.getDate(), month: tmp.getMonth() + 1, year: tmp.getFullYear() };
         }
         if (!pd) return false;
-        const match = pd.day === edDay && pd.month === edMonth && pd.year === edYear;
-        if (match) console.log(`   ✓ "${progDateStr}" corresponde a ${effectiveDate}`);
-        return match;
+        return pd.day === edDay && pd.month === edMonth && pd.year === edYear;
       });
       console.log(`  ✓ ${filtered.length} programações após filtro de data`);
     }

@@ -112,6 +112,9 @@ programacaoEntregaSchema.index({ processo: 1 });
 programacaoEntregaSchema.index({ dataAgendamento: 1 });
 programacaoEntregaSchema.index({ status: 1 });
 programacaoEntregaSchema.index({ origem: 1 });
+// Índices de combinação para consultas de cidade + data (performance de Manaus/Itajaí)
+programacaoEntregaSchema.index({ origem: 1, dataAgendamento: 1 });
+programacaoEntregaSchema.index({ origem: 1, dtColeta: 1 });
 
 const ProgramacaoEntrega = mongoose.model('ProgramacaoEntrega', programacaoEntregaSchema);
 

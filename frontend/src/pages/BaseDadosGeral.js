@@ -276,9 +276,13 @@ const BaseDadosGeral = () => {
       }
       setToast({ message: 'Registro atualizado com sucesso!', type: 'success' });
       setEditingId(null);
-      carregarDados();
-    } catch {
+      // Aguarda um breve momento para garantir que o backend processou a atualização
+      setTimeout(() => {
+        carregarDados();
+      }, 300);
+    } catch (err) {
       setToast({ message: 'Erro ao salvar alterações', type: 'error' });
+      console.error('Erro handleSave:', err);
     }
   };
 
@@ -475,10 +479,14 @@ const BaseDadosGeral = () => {
                       'Documentos',
                       'Observações',
                       'Ações',
-                    ].map((col) => (
+                    ].map((col, idx) => (
                       <th
                         key={col}
-                        className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider whitespace-nowrap border-b border-violet-600 first:pl-6 last:text-center"
+                        className={`px-4 py-3 text-xs font-bold uppercase tracking-wider whitespace-nowrap border-b border-violet-600 ${
+                          col === 'Ações'
+                            ? 'sticky right-0 text-center shadow-[-4px_0_4px_rgba(0,0,0,0.1)]'
+                            : 'text-left' + (idx === 0 ? ' pl-6' : '')
+                        }`}
                       >
                         {col}
                       </th>
@@ -563,7 +571,7 @@ const BaseDadosGeral = () => {
                           {item._entrega?.observations || '—'}
                         </td>
                         {/* Ações */}
-                        <td className="px-4 py-3 whitespace-nowrap text-center">
+                        <td className="sticky right-0 px-4 py-3 whitespace-nowrap text-center bg-white group-hover:bg-violet-50 shadow-[-4px_0_8px_rgba(0,0,0,0.05)]">
                           <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => handleEdit(item)}

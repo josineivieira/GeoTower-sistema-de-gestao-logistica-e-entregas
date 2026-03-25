@@ -784,7 +784,7 @@ router.put("/deliveries/:id", auth, onlyAdmin, async (req, res) => {
   try {
     const city = req.city || 'manaus';
     const { id } = req.params;
-    const { deliveryNumber, userName, driverName, vehiclePlate, observations, dataAgendamento, horarioChegada, horarioDevolucaoVazio, horarioInicioDesova, horarioFimDesova, status } = req.body;
+    const { deliveryNumber, userName, driverName, vehiclePlate, observations, dataAgendamento, horarioChegada, horarioDevolucaoVazio, horarioInicioDesova, horarioFimDesova, containerMontadoAt, status } = req.body;
 
     console.log('📝 Recebido PUT /deliveries/:id', { id, deliveryNumber, userName, driverName, vehiclePlate, observations, horarioDevolucaoVazio, city });
 
@@ -821,6 +821,7 @@ router.put("/deliveries/:id", auth, onlyAdmin, async (req, res) => {
     if (horarioDevolucaoVazio !== undefined && horarioDevolucaoVazio) updates.horarioDevolucaoVazio = new Date(horarioDevolucaoVazio);
     if (horarioInicioDesova !== undefined && horarioInicioDesova) updates.desovaStartAt = new Date(horarioInicioDesova);
     if (horarioFimDesova !== undefined && horarioFimDesova) updates.desovaEndAt = new Date(horarioFimDesova);
+    if (containerMontadoAt !== undefined && containerMontadoAt) updates.containerMontadoAt = new Date(containerMontadoAt);
     if (status !== undefined) {
       updates.status = status;
       // Grava o horário de entrada em cada status

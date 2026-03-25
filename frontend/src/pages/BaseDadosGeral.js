@@ -464,6 +464,7 @@ const BaseDadosGeral = () => {
                 <thead>
                   <tr className="bg-gradient-to-r from-violet-700 to-violet-800 text-white">
                     {[
+                      'Ações',
                       'Processo',
                       getRecebedorLabel(city),
                       'Container',
@@ -478,14 +479,13 @@ const BaseDadosGeral = () => {
                       'Entrega CNTR Porto',
                       'Documentos',
                       'Observações',
-                      'Ações',
                     ].map((col, idx) => (
                       <th
                         key={col}
                         className={`px-4 py-3 text-xs font-bold uppercase tracking-wider whitespace-nowrap border-b border-violet-600 ${
                           col === 'Ações'
-                            ? 'sticky right-0 text-center shadow-[-4px_0_4px_rgba(0,0,0,0.1)]'
-                            : 'text-left' + (idx === 0 ? ' pl-6' : '')
+                            ? 'text-center pl-4'
+                            : 'text-left' + (idx === 1 ? ' pl-6' : '')
                         }`}
                       >
                         {col}
@@ -505,6 +505,25 @@ const BaseDadosGeral = () => {
                           idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'
                         }`}
                       >
+                        {/* Ações */}
+                        <td className="px-4 py-3 whitespace-nowrap text-center sticky left-0 bg-white group-hover:bg-violet-50 shadow-[4px_0_8px_rgba(0,0,0,0.05)] z-10">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleEdit(item)}
+                              title="Editar"
+                              className="p-1.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition shadow-sm"
+                            >
+                              <FaEdit size={13} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item._id, item)}
+                              title="Excluir"
+                              className="p-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white transition shadow-sm"
+                            >
+                              <FaTrash size={13} />
+                            </button>
+                          </div>
+                        </td>
                         {/* Processo */}
                         <td className="px-4 py-3 first:pl-6 whitespace-nowrap">
                           <span className="font-semibold text-violet-700 text-xs">{item.processo}</span>
@@ -569,25 +588,6 @@ const BaseDadosGeral = () => {
                         {/* Obs */}
                         <td className="px-4 py-3 text-xs text-gray-500 max-w-[180px] truncate" title={item._entrega?.observations}>
                           {item._entrega?.observations || '—'}
-                        </td>
-                        {/* Ações */}
-                        <td className="sticky right-0 px-4 py-3 whitespace-nowrap text-center bg-white group-hover:bg-violet-50 shadow-[-4px_0_8px_rgba(0,0,0,0.05)]">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => handleEdit(item)}
-                              title="Editar"
-                              className="p-1.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition shadow-sm"
-                            >
-                              <FaEdit size={13} />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(item._id, item)}
-                              title="Excluir"
-                              className="p-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white transition shadow-sm"
-                            >
-                              <FaTrash size={13} />
-                            </button>
-                          </div>
                         </td>
                       </tr>
                     );

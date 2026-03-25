@@ -823,7 +823,8 @@ router.post("/:id/submit", auth, async (req, res) => {
     };
 
     // Determine required docs for city
-    const requiredDocs = ['canhotNF', 'canhotCTE', 'diarioBordo', 'devolucaoVazio', 'retiradaCheio'];
+    // devolucaoVazio é opcional nesta etapa (feito separadamente)
+    const requiredDocs = ['canhotNF', 'canhotCTE', 'diarioBordo', 'retiradaCheio'];
 
     const missingDocs = requiredDocs.filter(doc => !docHasFiles(delivery.documents && delivery.documents[doc]));
 

@@ -28,6 +28,18 @@ const toISO = (val) => {
   return isNaN(d) ? val : d.toISOString();
 };
 
+const toDatetimeLocal = (val) => {
+  if (!val) return '';
+  const d = typeof val === 'string' ? new Date(val) : val;
+  if (isNaN(d)) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const date = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${date}T${hours}:${minutes}`;
+};
+
 /* ─────────────────────────────────────────
    Status helpers
 ───────────────────────────────────────── */
@@ -223,17 +235,16 @@ const BaseDadosGeral = () => {
       container: item.container,
       dataAgendamento:
         city === 'itajai'
-          ? item.dtColeta || item.dataAgendamento || ''
-          : item.dataAgendamento || '',
+          ? toDatetimeLocal(item.dtColeta || item.dataAgendamento)
+          : toDatetimeLocal(item.dataAgendamento),
       contratado: item.contratado,
       motorista: item.motorista || '',
       status: item._entrega?.status || item.status || '',
-      containerMontadoAt: item._entrega?.containerMontadoAt || '',
-      horarioChegada: item._entrega?.horarioChegada || '',
-      horarioInicioDesova: item._entrega?.horarioInicioDesova || '',
-      horarioFimDesova: item._entrega?.horarioFimDesova || '',
-      horarioDevolucaoVazio:
-        item._entrega?.horarioDevolucaoVazio || item._entrega?.dtDevolucaoCNTR || '',
+      containerMontadoAt: toDatetimeLocal(item._entrega?.containerMontadoAt),
+      horarioChegada: toDatetimeLocal(item._entrega?.horarioChegada || item._entrega?.arrivedAt),
+      horarioInicioDesova: toDatetimeLocal(item._entrega?.horarioInicioDesova || item._entrega?.desovaStartAt),
+      horarioFimDesova: toDatetimeLocal(item._entrega?.horarioFimDesova || item._entrega?.desovaEndAt),
+      horarioDevolucaoVazio: toDatetimeLocal(item._entrega?.horarioDevolucaoVazio || item._entrega?.dtDevolucaoCNTR),
       observations: item._entrega?.observations || '',
       submissionObservation: item._entrega?.submissionObservation || '',
       documentsJustification: item._entrega?.documentsJustification || '',
@@ -256,6 +267,7 @@ const BaseDadosGeral = () => {
         dataAgendamento: toISO(editForm.dataAgendamento),
         ...(city === 'itajai' && { dtColeta: toISO(editForm.dataAgendamento) }),
       };
+      console.log('[SAVE] Programacao payload:', progPayload);
       await adminService.updateProgramacao(editingId, progPayload);
 
       const delPayload = {
@@ -269,20 +281,30 @@ const BaseDadosGeral = () => {
         submissionObservation: editForm.submissionObservation,
         documentsJustification: editForm.documentsJustification,
       };
+      console.log('[SAVE] Delivery payload:', delPayload);
       const deliveryId = item?._entrega?._id || item?._entrega?.deliveryNumber;
       if (deliveryId) {
-        try { await adminService.updateDelivery(deliveryId, delPayload); }
-        catch (e) { if (e?.response?.status !== 404) throw e; }
+        try { 
+          console.log('[SAVE] Updating delivery:', deliveryId);
+          await adminService.updateDelivery(deliveryId, delPayload); 
+          console.log('[SAVE] Delivery updated successfully');
+        }
+        catch (e) { 
+          console.warn('[SAVE] Delivery update error:', e);
+          if (e?.response?.status !== 404) throw e; 
+        }
+      } else {
+        console.warn('[SAVE] No delivery ID found to update');
       }
       setToast({ message: 'Registro atualizado com sucesso!', type: 'success' });
       setEditingId(null);
       // Aguarda um breve momento para garantir que o backend processou a atualização
       setTimeout(() => {
         carregarDados();
-      }, 300);
+      }, 500);
     } catch (err) {
+      console.error('[SAVE] Error:', err);
       setToast({ message: 'Erro ao salvar alterações', type: 'error' });
-      console.error('Erro handleSave:', err);
     }
   };
 

@@ -93,12 +93,13 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error('❌ API response error', error?.response?.status, error?.response?.data || error.message);
-    // Token expirado ou inválido
+    // Token expirado ou inválido - redirecionar automaticamente para login
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Não fazer redirect automático para deixar a UI tratar
-      return Promise.reject({ ...error, isAuthError: true });
+      // Redirecionar para login sem mostrar erro
+      window.location.href = '/login';
+      return Promise.reject({ ...error, isAuthError: true, handled: true });
     }
 
     // Erro de rede

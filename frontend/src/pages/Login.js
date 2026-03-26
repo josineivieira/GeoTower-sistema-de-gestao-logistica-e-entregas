@@ -12,7 +12,26 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const { city, setCity } = useCity();
+
+  // Carregar credenciais salvas ao montar o componente
+  useEffect(() => {
+    const savedCredentials = localStorage.getItem('loginCredentials');
+    const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
+
+    if (savedRememberMe && savedCredentials) {
+      try {
+        const credentials = JSON.parse(savedCredentials);
+        setFormData(credentials);
+        setRememberMe(true);
+      } catch (e) {
+        // Se houver erro ao parsear, limpa
+        localStorage.removeItem('loginCredentials');
+        localStorage.removeItem('rememberMe');
+      }
+    }
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -30,6 +49,20 @@ const Login = () => {
 
     try {
       await login(formData.username, formData.password, city);
+
+      // Salvar credenciais se "Manter conectado" estiver marcado
+      if (rememberMe) {
+        localStorage.setItem('loginCredentials', JSON.stringify({
+          username: formData.username,
+          password: formData.password
+        }));
+        localStorage.setItem('rememberMe', 'true');
+      } else {
+        // Se não estiver marcado, remover credenciais salvas
+        localStorage.removeItem('loginCredentials');
+        localStorage.removeItem('rememberMe');
+      }
+
       setToast({ message: 'Login realizado com sucesso!', type: 'success' });
       setTimeout(() => navigate('/home'), 900);
     } catch (error) {
@@ -196,6 +229,20 @@ const Login = () => {
                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
+              </div>
+
+              {/* Checkbox Manter Conectado */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
+                />
+                <label htmlFor="rememberMe" className="ml-2 text-sm font-medium text-gray-700">
+                  Manter conectado
+                </label>
               </div>
 
               {/* Seletor de Cidade */}

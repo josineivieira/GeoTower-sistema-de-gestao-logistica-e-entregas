@@ -121,13 +121,7 @@ exports.getStatistics = async (req, res) => {
       {
         $addFields: {
           // Para Manaus: usa dataAgendamento, para Itajaí: usa dtColeta
-          scheduleDate: {
-            $cond: {
-              if: { $eq: ['$origem', { $in: ['MANAUS', 'MANAUS - COELTA BALY'] }] },
-              then: '$dataAgendamento',
-              else: '$dtColeta'
-            }
-          }
+          scheduleDate: city === 'manaus' ? '$dataAgendamento' : '$dtColeta'
         }
       },
       {

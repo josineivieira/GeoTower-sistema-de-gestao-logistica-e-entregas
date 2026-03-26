@@ -116,7 +116,7 @@ const getStatusColumns = (city = 'manaus') => [
     border: 'border-teal-200',
     text: 'text-teal-700',
     badge: 'bg-teal-100 text-teal-700',
-    filter: (p) => normalizeKey(p.status) === 'ANEXANDO DOCUMENTOS FINAIS',
+    filter: (p) => normalizeKey(p.status) === 'ANEXANDO DOCUMENTOS FINAIS' || normalizeKey(p.status) === 'DESOVA FINALIZADA',
   },
   {
     key: 'VIAGEM_RETORNO',
@@ -897,7 +897,7 @@ const MonitorEntregas = () => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(30);
   const [editingDelivery, setEditingDelivery] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -2226,7 +2226,7 @@ const MonitorEntregas = () => {
                       onClick={handleShareDelivery}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 hover:text-emerald-200 text-xs font-semibold rounded-lg transition border border-emerald-500/20"
                     >
-                      <FaShareAlt /> <span className="hidden sm:inline">Compartilhar</span>
+                      <FaShareAlt /> <span className="hidden sm:inline">Gerar Comprovante de Entrega</span>
                     </button>
 
                     <button

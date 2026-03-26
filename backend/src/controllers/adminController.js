@@ -93,28 +93,37 @@ exports.getStatistics = async (req, res) => {
       { $sort: { count: -1 } }
     ]);
 
-    // Daily deliveries (last 30 days) - por data de agendamento
+    // Daily deliveries (last 30 days) - PROGRAMAÇÕES por data de agendamento
     const thirtyDaysAgo = new Date(now);
     thirtyDaysAgo.setDate(now.getDate() - 29);
     thirtyDaysAgo.setHours(0, 0, 0, 0);
 
-    // Para Manaus: usa dataAgendamento, para Itajaí: usa dtColeta
-    const dateField = city === 'manaus' ? '$dataAgendamento' : '$dtColeta';
+    // Query na tabela ProgramacaoEntrega para contar programações por dia
+    const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
+    let progFilter = {};
+    if (city === 'manaus') {
+      progFilter.origem = { $in: ['MANAUS', 'MANAUS - COELTA BALY'] };
+    } else if (city === 'itajai') {
+      progFilter.$or = [
+        { origem: { $exists: false } },
+        { origem: '' },
+        { origem: { $nin: ['MANAUS', 'MANAUS - COELTA BALY'] } }
+      ];
+    }
 
-    const dailyDeliveries = await Delivery.aggregate([
+    const dailyDeliveries = await ProgramacaoEntrega.aggregate([
       {
         $match: {
-          status: { $in: ['submitted', 'completed'] },
-          cityCode: city,
-          submittedAt: { $gte: thirtyDaysAgo }
+          ...progFilter,
+          ativo: { $ne: false } // Só programações ativas
         }
       },
       {
         $addFields: {
-          // Usa dataAgendamento para Manaus, dtColeta para Itajaí
+          // Para Manaus: usa dataAgendamento, para Itajaí: usa dtColeta
           scheduleDate: {
             $cond: {
-              if: { $eq: ['$cityCode', 'manaus'] },
+              if: { $eq: ['$origem', { $in: ['MANAUS', 'MANAUS - COELTA BALY'] }] },
               then: '$dataAgendamento',
               else: '$dtColeta'
             }

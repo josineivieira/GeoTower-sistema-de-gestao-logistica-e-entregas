@@ -93,10 +93,13 @@ exports.getStatistics = async (req, res) => {
       { $sort: { count: -1 } }
     ]);
 
-    // Daily deliveries (last 30 days)
+    // Daily deliveries (last 30 days) - por data de agendamento
     const thirtyDaysAgo = new Date(now);
     thirtyDaysAgo.setDate(now.getDate() - 29);
     thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+    // Para Manaus: usa dataAgendamento, para Itajaí: usa dtColeta
+    const dateField = city === 'manaus' ? '$dataAgendamento' : '$dtColeta';
 
     const dailyDeliveries = await Delivery.aggregate([
       {
@@ -107,9 +110,26 @@ exports.getStatistics = async (req, res) => {
         }
       },
       {
+        $addFields: {
+          // Usa dataAgendamento para Manaus, dtColeta para Itajaí
+          scheduleDate: {
+            $cond: {
+              if: { $eq: ['$cityCode', 'manaus'] },
+              then: '$dataAgendamento',
+              else: '$dtColeta'
+            }
+          }
+        }
+      },
+      {
+        $match: {
+          scheduleDate: { $ne: null, $gte: thirtyDaysAgo }
+        }
+      },
+      {
         $group: {
           _id: {
-            $dateToString: { format: '%Y-%m-%d', date: '$submittedAt' }
+            $dateToString: { format: '%Y-%m-%d', date: '$scheduleDate' }
           },
           count: { $sum: 1 }
         }

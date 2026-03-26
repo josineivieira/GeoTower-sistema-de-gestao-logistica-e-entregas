@@ -1,5 +1,5 @@
 import { deliveryService, adminService } from '../services/authService';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, flushSync } from 'react';
 import imageCompression from 'browser-image-compression';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Toast from '../components/Toast';
@@ -180,10 +180,10 @@ const PhotoGrid = ({ photos, onRemove }) => (
   photos.length > 0 ? (
     <div className="grid grid-cols-3 gap-2">
       {photos.map((photo, idx) => (
-        <div key={idx} className="relative rounded-xl overflow-hidden shadow-md aspect-square">
-          <img src={photo} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+        <div key={photo.id} className="relative rounded-xl overflow-hidden shadow-md aspect-square">
+          <img src={photo.data} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
           <button
-            onClick={() => onRemove(idx)}
+            onClick={() => onRemove(photo.id)}
             className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition"
           >
             <FaTimes size={10} />
@@ -519,8 +519,8 @@ const ProgramadasEntregas = () => {
     } catch (_) {}
   };
 
-  const addPhoto = (photo) => setPhotos(prev => [...prev, photo]);
-  const removePhoto = (index) => setPhotos(prev => prev.filter((_, i) => i !== index));
+  const addPhoto = (photo) => flushSync(() => setPhotos(prev => [...prev, { id: Date.now() + Math.random(), data: photo }]));
+  const removePhoto = (id) => setPhotos(prev => prev.filter(photo => photo.id !== id));
 
   const handleCameraCapture = (e) => {
     const files = Array.from(e.target.files || []);
@@ -553,7 +553,7 @@ const ProgramadasEntregas = () => {
     try {
       const compressedFiles = [];
       for (let i = 0; i < photos.length; i++) {
-        const file = dataURLtoFile(photos[i], `foto_${i}.jpg`);
+        const file = dataURLtoFile(photos[i].data, `foto_${i}.jpg`);
         const compressed = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1280 });
         compressedFiles.push(compressed);
         setUploadProgress(Math.round(((i + 1) / photos.length) * 60));

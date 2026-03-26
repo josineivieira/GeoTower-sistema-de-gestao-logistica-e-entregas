@@ -300,21 +300,17 @@ const KPIAnalytics = ({ onToggle }) => {
   };
 
   const getScheduledDate = (delivery) => {
-    // Em Itajaí: dtColeta é a data agendada com cliente
-    // Em Manaus: dtAgendamentoDescarga
+    // Em Itajaí: dtColeta = data agendada, Manaus: dataAgendamento = data agendada
     if (city === 'itajai') {
-      return delivery.dtColeta;
+      return delivery.dtColeta || delivery.dataAgendamento || delivery.dtAgendamentoDescarga;
     }
-    return delivery.dtAgendamentoDescarga || delivery.dtColeta;
+    return delivery.dataAgendamento || delivery.dtAgendamentoDescarga || delivery.dtColeta;
   };
 
   const getArrivalDate = (delivery) => {
-    // Em Itajaí: arrivedAt é a data de chegada no cliente (Dt. chegada cliente)
-    // Em Manaus: dtEntrega
-    if (city === 'itajai') {
-      return delivery.arrivedAt;
-    }
-    return delivery.dtEntrega;
+    // Em todos os casos, usar a data em que o motorista chegou no cliente
+    // (horarioChegada já é alimentado a partir de arrivedAt no backend)
+    return delivery.horarioChegada || delivery.arrivedAt || delivery.dtEntrega || delivery.horarioChegadaCliente;
   };
 
   const isLate = (delivery) => {
@@ -332,10 +328,16 @@ const KPIAnalytics = ({ onToggle }) => {
   const filteredDeliveries = useMemo(() => {
     let result = [...deliveries];
 
+    // Garantir KPI separada por cidade (Manaus/Itajaí)
+    result = result.filter(d => {
+      const cityCode = String(d.cityCode || d.city || '').toLowerCase();
+      return !city || cityCode === city;
+    });
+
     if (filters.startDate) {
       const sd = new Date(filters.startDate);
       result = result.filter(d => {
-        const dt = d.dtAgendamentoDescarga || d.dtColeta || d.createdAt;
+        const dt = d.dtAgendamentoDescarga || d.dtColeta || d.dataAgendamento || d.createdAt;
         return new Date(dt) >= sd;
       });
     }

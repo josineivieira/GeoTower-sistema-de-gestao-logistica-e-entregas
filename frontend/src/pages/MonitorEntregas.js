@@ -910,6 +910,7 @@ const MonitorEntregas = () => {
   const [statsPeriod, setStatsPeriod] = useState('today');
   const [stats, setStats] = useState({ total: 0, statusCounts: {}, byDriver: 0 });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [icompanyVerified, setIcompanyVerified] = useState({});
   // Novo template para expandir a tabela e mostrar colunas completas
   const EXPANDED_COL_TEMPLATE = [
     'minmax(200px, 2.5fr)',   // Processo
@@ -1005,6 +1006,27 @@ const MonitorEntregas = () => {
     document.head.appendChild(el3);
     return () => document.head.removeChild(el3);
   }, [themeConfig]);
+
+  // Load icompanyVerified status from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('icompanyVerified');
+      if (saved) {
+        setIcompanyVerified(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error('Erro ao carregar status de verificação Icompany:', e);
+    }
+  }, []);
+
+  // Save icompanyVerified status to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('icompanyVerified', JSON.stringify(icompanyVerified));
+    } catch (e) {
+      console.error('Erro ao salvar status de verificação Icompany:', e);
+    }
+  }, [icompanyVerified]);
 
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement) {
@@ -2329,6 +2351,53 @@ const MonitorEntregas = () => {
 
                     return [...docRows, ...fotosRows];
                   })()}
+                </div>
+
+                {/* ✅ VERIFICAÇÃO ICOMPANY - Checkbox para marcar documentos verificados */}
+                <div className={`mt-4 pt-4 border-t border-white/10 p-4 rounded-xl transition-all duration-300 ${
+                  icompanyVerified?.[selectedDelivery._id]
+                    ? 'bg-gradient-to-r from-emerald-900/30 to-teal-900/30 border-l-4 border-l-emerald-500'
+                    : 'bg-gradient-to-r from-emerald-900/15 to-teal-900/15 hover:from-emerald-900/20 hover:to-teal-900/20'
+                }`}>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${
+                      icompanyVerified?.[selectedDelivery._id]
+                        ? 'bg-emerald-500 border-emerald-500 shadow-lg shadow-emerald-500/50'
+                        : 'border-emerald-400/50 group-hover:border-emerald-400'
+                    }`}>
+                      {icompanyVerified?.[selectedDelivery._id] && (
+                        <FaCheckCircle className="text-white text-xs" />
+                      )}
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={icompanyVerified?.[selectedDelivery._id] || false}
+                      onChange={(e) => setIcompanyVerified({
+                        ...icompanyVerified,
+                        [selectedDelivery._id]: e.target.checked
+                      })}
+                      className="hidden"
+                    />
+                    <div className="flex flex-col">
+                      <span className={`text-sm font-semibold transition-colors ${
+                        icompanyVerified?.[selectedDelivery._id]
+                          ? 'text-emerald-200'
+                          : 'text-emerald-300 group-hover:text-emerald-200'
+                      }`}>
+                        ✓ Arquivos Verificados
+                      </span>
+                      <span className={`text-xs transition-colors ${
+                        icompanyVerified?.[selectedDelivery._id]
+                          ? 'text-emerald-300/80'
+                          : 'text-emerald-400/70 group-hover:text-emerald-300/70'
+                      }`}>
+                        {icompanyVerified?.[selectedDelivery._id]
+                          ? 'Marcado como verificado em ' + new Date().toLocaleString('pt-BR')
+                          : 'Marcar documentos como verificados e importados para Icompany'
+                        }
+                      </span>
+                    </div>
+                  </label>
                 </div>
               </div>
 

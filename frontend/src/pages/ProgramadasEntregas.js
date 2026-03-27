@@ -838,7 +838,7 @@ const ProgramadasEntregas = () => {
         <button onClick={() => openContainerReturnModal(p)}
           className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-yellow-500 to-amber-600 text-white rounded-xl shadow-md hover:shadow-lg active:scale-95 transition font-bold text-sm"
         >
-          <FaTruck size={14} /> Devolver Entrega CNTR Porto
+          <FaTruck size={14} /> Entregar Container no Porto
         </button>
       );
     }

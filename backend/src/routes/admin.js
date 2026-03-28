@@ -1017,7 +1017,7 @@ router.post("/users", auth, managerOnly, async (req, res) => {
 
     // Use API do DB (mockdb or mongo adapter) to insert
     const created = await db.create('drivers', newUser);
-    console.log('➕ Novo usuário criado (sem senha no log):', { _id: created._id, username: created.username, email: created.email, role: created.role });
+    console.log('➕ Novo usuário criado:', { _id: created._id, username: created.username, email: created.email, role: created.role, city: created.city });
 
     return res.json({ 
       success: true, 
@@ -1058,20 +1058,30 @@ router.put("/users/:id", auth, managerOnly, async (req, res) => {
       updates.name = name;
       updates.fullName = name;
     }
-    if (role) updates.role = role;
-    if (role === 'gestor_contratado' && !contratado) {
-      return res.status(400).json({ message: "Contratado é obrigatório para Gestor Contratado" });
-    }
-    if (role === 'gestor_contratado' && contratado) {
-      updates.contratado = contratado;
-    } else if (role !== 'gestor_contratado') {
-      updates.contratado = null;
-    }
-    if (role !== 'manager' && city) {
+    if (role) {
+      updates.role = role;
+      // Validação: gestor_contratado precisa ter contratado
+      if (role === 'gestor_contratado' && !contratado) {
+        return res.status(400).json({ message: "Contratado é obrigatório para Gestor Contratado" });
+      }
+      // Atualizar contratado
+      if (role === 'gestor_contratado' && contratado) {
+        updates.contratado = contratado;
+      } else if (role !== 'gestor_contratado') {
+        updates.contratado = null;
+      }
+      // Atualizar city
+      if (role === 'manager') {
+        updates.city = null;
+      } else if (city !== undefined) {
+        updates.city = city;
+      }
+    } else if (city !== undefined) {
+      // Se não mudou role mas mudou city: atualiza
       updates.city = city;
-    } else if (role === 'manager') {
-      updates.city = null;
     }
+
+    console.log('✏️ Atualizando usuário:', { userId: id, updates });
 
     await db.updateOne("drivers", { _id: id }, updates);
 

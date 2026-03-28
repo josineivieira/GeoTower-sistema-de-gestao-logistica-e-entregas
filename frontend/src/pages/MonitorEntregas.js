@@ -911,6 +911,8 @@ const MonitorEntregas = () => {
   const [stats, setStats] = useState({ total: 0, statusCounts: {}, byDriver: 0 });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [icompanyVerified, setIcompanyVerified] = useState({});
+  const [confirmRemoveVerification, setConfirmRemoveVerification] = useState(false);
+  const [deliveryToUnverify, setDeliveryToUnverify] = useState(null);
   // Novo template para expandir a tabela e mostrar colunas completas
   const EXPANDED_COL_TEMPLATE = [
     'minmax(200px, 2.5fr)',   // Processo
@@ -2374,18 +2376,21 @@ const MonitorEntregas = () => {
                       type="checkbox"
                       checked={icompanyVerified?.[selectedDelivery._id]?.verified || false}
                       onChange={(e) => {
-                        const newState = {
-                          ...icompanyVerified,
-                          [selectedDelivery._id]: e.target.checked ? {
-                            verified: true,
-                            timestamp: new Date(),
-                            user: userName
-                          } : null
-                        };
-                        if (!e.target.checked) {
-                          delete newState[selectedDelivery._id];
+                        if (e.target.checked) {
+                          // Marcando como verificado
+                          setIcompanyVerified({
+                            ...icompanyVerified,
+                            [selectedDelivery._id]: {
+                              verified: true,
+                              timestamp: new Date(),
+                              user: userName
+                            }
+                          });
+                        } else {
+                          // Tentando desmarcar - abrir modal de confirmação
+                          setDeliveryToUnverify(selectedDelivery._id);
+                          setConfirmRemoveVerification(true);
                         }
-                        setIcompanyVerified(newState);
                       }}
                       className="hidden"
                     />
@@ -2617,6 +2622,66 @@ const MonitorEntregas = () => {
                 className="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 font-bold text-sm transition"
               >
                 Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação para Remover Verificação Icompany */}
+      {confirmRemoveVerification && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-3">
+          <div className="bg-[#1a1a2e] rounded-2xl border border-amber-500/30 shadow-2xl max-w-sm w-full overflow-hidden">
+            <div className="px-6 py-5 bg-gradient-to-r from-amber-900/40 to-orange-900/40 border-b border-amber-500/30">
+              <h3 className="text-lg font-bold text-amber-200 flex items-center gap-2">
+                <FaExclamationTriangle className="text-amber-400" /> Remover Verificação?
+              </h3>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-sm text-gray-300">
+                Você tem certeza que deseja <strong>remover a confirmação de verificação</strong> desta entrega?
+              </p>
+              
+              {icompanyVerified?.[deliveryToUnverify] && (
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-xs text-gray-400 space-y-1">
+                  <p>
+                    <strong>Verificado por:</strong> {icompanyVerified[deliveryToUnverify].user}
+                  </p>
+                  <p>
+                    <strong>Em:</strong> {new Date(icompanyVerified[deliveryToUnverify].timestamp).toLocaleString('pt-BR')}
+                  </p>
+                </div>
+              )}
+
+              <p className="text-xs text-amber-300">
+                ⚠️ Esta ação não pode ser desfeita rapidamente. A próxima sincronização poderá recriar este status.
+              </p>
+            </div>
+
+            <div className="px-6 py-4 bg-white/[0.02] border-t border-white/10 flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setConfirmRemoveVerification(false);
+                  setDeliveryToUnverify(null);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 font-semibold text-sm transition"
+              >
+                Cancelar
+              </button>
+
+              <button
+                onClick={() => {
+                  // Confirmar remoção
+                  const newState = { ...icompanyVerified };
+                  delete newState[deliveryToUnverify];
+                  setIcompanyVerified(newState);
+                  setConfirmRemoveVerification(false);
+                  setDeliveryToUnverify(null);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-red-600/30 hover:bg-red-600/50 text-red-300 hover:text-red-200 font-semibold text-sm transition border border-red-500/30"
+              >
+                Remover Confirmação
               </button>
             </div>
           </div>

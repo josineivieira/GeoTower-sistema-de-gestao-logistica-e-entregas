@@ -1004,8 +1004,8 @@ const Home = () => {
               />
             </div>
 
-            {/* Management grid: Oculto para geomar */}
-            {role !== 'geomar' && (
+            {/* Management grid: Oculto para geomar e gestor_contratado */}
+            {role !== 'geomar' && role !== 'gestor_contratado' && (
               <>
                 <SectionHeader
                   icon={<FaCog style={{ color: B.v, fontSize: '0.85rem' }} />}

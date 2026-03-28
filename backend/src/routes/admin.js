@@ -31,8 +31,8 @@ async function getDb(req) {
 
 function onlyAdmin(req, res, next) {
   const role = req.user?.role || "operacao";
-  // Libera acesso para admin, gestor, manager e geomar
-  if (role !== "admin" && role !== "gestor" && role !== "manager" && role !== "geomar") {
+  // Libera acesso para admin, gestor, manager, geomar e gestor_contratado
+  if (role !== "admin" && role !== "gestor" && role !== "manager" && role !== "geomar" && role !== "gestor_contratado") {
     return res.status(403).json({ message: "Sem permissão" });
   }
   next();
@@ -45,7 +45,13 @@ function onlyAdmin(req, res, next) {
 router.get("/statistics", auth, onlyAdmin, async (req, res) => {
   try {
     const db = await getDb(req);
-    const deliveries = await db.find("deliveries", {});
+    let deliveries = await db.find("deliveries", {});
+
+    // NOVO: Se gestor_contratado, filtrar por contratado
+    if (req.user && req.user.role === 'gestor_contratado' && req.user.contratado) {
+      console.log('  ✓ Aplicando filtro de contratado para gestor em statistics:', req.user.contratado);
+      deliveries = (deliveries || []).filter(d => d.userName === req.user.contratado);
+    }
     
     const totalDeliveries = (deliveries || []).length;
     const submitted = (deliveries || []).filter(d => d.status === "submitted").length;
@@ -299,6 +305,12 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
         if (status === 'A CAMINHO DO CLIENTE') return d.status === 'pending' || d.status === 'PENDING';
         return d.status === status;
       });
+    }
+
+    // NOVO: Se gestor_contratado, filtrar por contratado
+    if (req.user && req.user.role === 'gestor_contratado' && req.user.contratado) {
+      console.log('  ✓ Aplicando filtro de contratado para gestor:', req.user.contratado);
+      filtered = filtered.filter(d => d.userName === req.user.contratado);
     }
 
     if (q && q.trim()) {
@@ -931,9 +943,9 @@ router.delete("/deliveries/:id", auth, onlyAdmin, async (req, res) => {
  */
 router.get("/users", auth, async (req, res) => {
   try {
-    // Permitir que gerentes, admins e GeoMar visualizem a lista de usuários.
+    // Permitir que gerentes, admins, GeoMar e Gestor Contratado visualizem a lista de usuários.
     const role = req.user?.role;
-    if (!role || (role !== 'manager' && role !== 'admin' && role !== 'geomar')) {
+    if (!role || (role !== 'manager' && role !== 'admin' && role !== 'geomar' && role !== 'gestor_contratado')) {
       return res.status(403).json({ message: "Sem permissão" });
     }
     const db = await getDb(req);

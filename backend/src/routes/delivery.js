@@ -884,6 +884,13 @@ router.delete("/:id", auth, async (req, res) => {
       return res.status(403).json({ message: 'Acesso negado - dados de outra cidade' });
     }
 
+    // NOVO: Se gestor_contratado, validar se é do seu contratado
+    if (req.user && req.user.role === 'gestor_contratado' && req.user.contratado) {
+      if (delivery.userName !== req.user.contratado) {
+        return res.status(403).json({ message: 'Acesso negado - entrega de outro contratado' });
+      }
+    }
+
     if (delivery.status !== "pending") {
       return res.status(400).json({ message: "Entrega enviada não pode ser deletada" });
     }

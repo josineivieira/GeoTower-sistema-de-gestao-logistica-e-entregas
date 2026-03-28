@@ -22,16 +22,18 @@ import {
 /* ─── helpers ─────────────────────────────────────────────────────────── */
 
 const ROLE_CONFIG = {
-  admin:   { label: 'Admin',     color: 'red',    Icon: FaUserShield },
-  manager: { label: 'Gerente',   color: 'violet', Icon: FaUserTie    },
-  geomar:  { label: 'GeoMar',    color: 'teal',   Icon: FaGlobe      },
-  driver:  { label: 'Motorista', color: 'blue',   Icon: FaCar        },
+  admin:               { label: 'Admin',               color: 'red',    Icon: FaUserShield },
+  manager:             { label: 'Gerente',             color: 'violet', Icon: FaUserTie    },
+  geomar:              { label: 'GeoMar',              color: 'teal',   Icon: FaGlobe      },
+  gestor_contratado:   { label: 'Gestor Contratado',   color: 'amber',  Icon: FaUserShield },
+  driver:              { label: 'Motorista',           color: 'blue',   Icon: FaCar        },
 };
 
 const BADGE_CLASSES = {
   red:    'bg-red-50    text-red-700    ring-red-200',
   violet: 'bg-violet-50 text-violet-700 ring-violet-200',
   teal:   'bg-teal-50   text-teal-700   ring-teal-200',
+  amber:  'bg-amber-50  text-amber-700  ring-amber-200',
   blue:   'bg-blue-50   text-blue-700   ring-blue-200',
 };
 
@@ -61,12 +63,15 @@ const UserManagement = () => {
   const [editingUser, setEditingUser] = useState(null);
   const [search,      setSearch]      = useState('');
   const [formData,    setFormData]    = useState({
-    username: '', email: '', name: '', password: '', role: 'driver',
+    username: '', email: '', name: '', password: '', role: 'driver', contratado: null,
   });
+
+  // Lista de contratados disponíveis
+  const CONTRATADOS = ['GEO', 'MACHADO', 'BANDEIRA', 'TRANSCAVALCANTE', 'GEOMAR'];
 
   /* ── guard & load ── */
   useEffect(() => {
-    if (!user || !['manager', 'admin', 'geomar'].includes(user.role)) {
+    if (!user || !['manager', 'admin', 'geomar', 'gestor_contratado'].includes(user.role)) {
       navigate('/');
       return;
     }
@@ -87,7 +92,7 @@ const UserManagement = () => {
 
   /* ── form handlers ── */
   const resetForm = () => {
-    setFormData({ username: '', email: '', name: '', password: '', role: 'driver' });
+    setFormData({ username: '', email: '', name: '', password: '', role: 'driver', contratado: null });
     setEditingUser(null);
     setShowForm(false);
   };
@@ -96,6 +101,10 @@ const UserManagement = () => {
     e.preventDefault();
     if (!formData.username || !formData.email || !formData.name) {
       setToast({ message: 'Preencha todos os campos obrigatórios', type: 'error' });
+      return;
+    }
+    if (formData.role === 'gestor_contratado' && !formData.contratado) {
+      setToast({ message: 'Selecione um contratado para o Gestor Contratado', type: 'error' });
       return;
     }
     try {
@@ -119,7 +128,7 @@ const UserManagement = () => {
 
   const handleEdit = (u) => {
     setEditingUser(u);
-    setFormData({ username: u.username, email: u.email, name: u.name, password: '', role: u.role });
+    setFormData({ username: u.username, email: u.email, name: u.name, password: '', role: u.role, contratado: u.contratado || null });
     setShowForm(true);
   };
 
@@ -418,8 +427,25 @@ const UserManagement = () => {
                     <option value="manager">Gerente</option>
                     <option value="admin">Administrador</option>
                     <option value="geomar">GeoMar</option>
+                    <option value="gestor_contratado">Gestor Contratado</option>
                   </select>
                 </Field>
+
+                {/* Contratado — apenas para gestor_contratado */}
+                {formData.role === 'gestor_contratado' && (
+                  <Field label="Contratado" required>
+                    <select
+                      value={formData.contratado || ''}
+                      onChange={(e) => setFormData({ ...formData, contratado: e.target.value || null })}
+                      className="input-base bg-white"
+                    >
+                      <option value="">Selecione um contratado...</option>
+                      {CONTRATADOS.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </Field>
+                )}
 
                 {/* Senha — apenas criação */}
                 {!editingUser && (

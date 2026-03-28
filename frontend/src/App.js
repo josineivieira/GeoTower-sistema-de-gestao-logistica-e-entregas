@@ -143,7 +143,7 @@ function AppContent() {
       <Route
         path="/admin"
         element={
-          <PrivateRoute allowedRoles={[ 'admin', 'manager', 'geomar' ]}>
+          <PrivateRoute allowedRoles={[ 'admin', 'manager', 'geomar', 'gestor_contratado' ]}>
             <AppLayout>
               <AdminDashboard />
             </AppLayout>
@@ -154,7 +154,7 @@ function AppContent() {
       <Route
         path="/monitor-entregas"
         element={
-          <PrivateRoute allowedRoles={[ 'admin', 'manager', 'geomar' ]}>
+          <PrivateRoute allowedRoles={[ 'admin', 'manager', 'geomar', 'gestor_contratado' ]}>
             <AppLayout>
               <MonitorEntregas />
             </AppLayout>

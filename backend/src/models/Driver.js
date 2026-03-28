@@ -35,7 +35,7 @@ const driverSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['driver', 'manager', 'admin'],
+    enum: ['driver', 'manager', 'admin', 'geomar', 'gestor_contratado'],
     default: 'driver'
   },
   // Contratado: GEO, MACHADO, BANDEIRA, TRANSCAVALCANTE, etc

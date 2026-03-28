@@ -1,7 +1,7 @@
 module.exports = function cityMiddleware(req, res, next) {
   let city = req.header('x-city') || req.query.city || req.body?.city || 'manaus';
   city = String(city || 'manaus').toLowerCase();
-  if (city !== 'manaus' && city !== 'itajai') city = 'manaus';
+  if (city !== 'manaus' && city !== 'itajai' && city !== 'both') city = 'manaus';
   req.city = city;
   
   // Usa adapter com fallback automático MongoDB → MockDB

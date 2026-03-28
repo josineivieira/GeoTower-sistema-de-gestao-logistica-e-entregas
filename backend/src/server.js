@@ -78,6 +78,9 @@ app.use((req, res, next) => {
 // City middleware (define req.city e req.mockdb)
 app.use(require('./middleware/city'));
 
+// Validate user city permissions (verifica se o usuário tem acesso à cidade da requisição)
+app.use(require('./middleware/validateUserCity'));
+
 // ✅ Serve uploads (para abrir imagens no navegador)
 const staticUploadsPath = process.env.BACKEND_UPLOADS_DIR ? path.resolve(process.env.BACKEND_UPLOADS_DIR) : path.join(__dirname, '../uploads');
 console.log('✓ Serving uploads from:', staticUploadsPath);

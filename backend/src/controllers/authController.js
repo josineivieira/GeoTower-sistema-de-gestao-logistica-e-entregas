@@ -3,11 +3,14 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
-const generateToken = (userId, role, contratado = null) => {
+const generateToken = (userId, role, contratado = null, city = null) => {
   // Expira em 8 horas
   const payload = { id: userId, role };
   if (contratado) {
     payload.contratado = contratado;
+  }
+  if (city) {
+    payload.city = city;
   }
   return jwt.sign(payload, process.env.JWT_SECRET || 'seu_jwt_secret_super_seguro_aqui_mude_em_producao', { expiresIn: '8h' });
 };
@@ -73,7 +76,7 @@ exports.register = async (req, res) => {
       console.warn('[REGISTER] could not get drivers total', e && e.message);
     }
 
-    const token = generateToken(driver._id, driver.role, driver.contratado || null);
+    const token = generateToken(driver._id, driver.role, driver.contratado || null, driver.city || null);
 
     res.status(201).json({
       success: true,
@@ -85,7 +88,8 @@ exports.register = async (req, res) => {
         email: driver.email,
         fullName: driver.fullName || driver.name || '',
         name: driver.name || driver.fullName || '',
-        role: driver.role
+        role: driver.role,
+        city: driver.city || null
       }
     });
   } catch (error) {
@@ -195,7 +199,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Motorista desativado' });
     }
 
-    const token = generateToken(driver._id, driver.role, driver.contratado);
+    const token = generateToken(driver._id, driver.role, driver.contratado, driver.city || null);
     console.log('✅ Login success:', driver.username);
 
     res.json({
@@ -209,7 +213,8 @@ exports.login = async (req, res) => {
         fullName: driver.fullName || driver.name || '',
         name: driver.name || driver.fullName || '',
         role: driver.role,
-        contratado: driver.contratado || null
+        contratado: driver.contratado || null,
+        city: driver.city || null
       }
     });
   } catch (error) {

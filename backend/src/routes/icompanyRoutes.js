@@ -72,7 +72,7 @@ router.get('/compare', async (req, res) => {
     await client.connect();
     const db = client.db(DB_NAME);
     
-    const ycompanyCol = db.collection('ycompany');
+    const icompanyCol = db.collection('icompany');
     const excelCol = db.collection('programacaoentregas');
     
     // Construir filtro baseado na cidade do usuário
@@ -174,7 +174,7 @@ router.get('/debug-comparison', async (req, res) => {
     await client.connect();
     const db = client.db(DB_NAME);
     
-    const ycompanyCol = db.collection('ycompany');
+    const icompanyCol = db.collection('icompany');
     const excelCol = db.collection('programacaoentregas');
     
     // Construir filtro baseado na cidade do usuário
@@ -386,7 +386,7 @@ router.get("/entregas", async (req, res) => {
 });
 
 /**
- * PATCH /api/ycompany/entregas/:processo
+ * PATCH /api/icompany/entregas/:processo
  * Admin pode editar qualquer campo (cuidado: aqui é “poder total”)
  */
 router.patch("/entregas/:processo", async (req, res) => {

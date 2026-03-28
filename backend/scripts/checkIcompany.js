@@ -1,4 +1,4 @@
-// Temporary script to inspect Ycompany document keys
+// Temporary script to inspect Icompany document keys
 const mongoose = require('mongoose');
 const path = require('path');
 
@@ -12,7 +12,7 @@ mongoose
   .connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(async () => {
     console.log('connected to db');
-    const rec = await Ycompany.findOne().lean();
+    const rec = await Icompany.findOne().lean();
     console.log('sample record:', rec);
     console.log('fields:', Object.keys(rec));
     process.exit(0);

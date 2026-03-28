@@ -230,11 +230,11 @@ function AppContent() {
         }
       />
       <Route
-        path="/ycompany"
+        path="/icompany"
         element={
           <PrivateRoute allowedRoles={['admin', 'manager', 'geomar']}>
             <AppLayout>
-              <Ycompany />
+              <Icompany />
             </AppLayout>
           </PrivateRoute>
         }

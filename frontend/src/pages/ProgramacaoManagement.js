@@ -78,14 +78,14 @@ const ProgramacaoManagement = () => {
     }
   };
 
-  const handleSyncYcompany = async () => {
+  const handleSyncIcompany = async () => {
     if (syncLoading) return;
     try {
       setSyncLoading(true);
-      const response = await adminService.syncProgramacoesYcompany();
+      const response = await adminService.syncProgramacoesIcompany();
       
       if (response.data.success) {
-        showToast(`✅ ${response.data.sincronizados} registro(s) sincronizado(s) do Ycompany` + 
+        showToast(`✅ ${response.data.sincronizados} registro(s) sincronizado(s) do Icompany` + 
                   (response.data.duplicados > 0 ? ` (${response.data.duplicados} duplicados ignorados)` : ''));
         loadProgramacoes();
       }

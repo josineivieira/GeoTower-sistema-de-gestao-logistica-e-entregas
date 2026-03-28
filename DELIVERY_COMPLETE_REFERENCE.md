@@ -621,7 +621,7 @@ const deliveryService = {
 │  _id, deliveryNumber, vehiclePlate, status, documents, ...  │
 └────────┬──────────────────┬──────────────────┬──────────────┘
          │                  │                  │
-         │ linkedDeliveryId │ linkedYcompanyId │ userId
+         │ linkedDeliveryId │ linkedIcompanyId │ userId
          ↓                  ↓                  ↓
     ProgrmaacaoEntrega  Icompany         User/Driver
     (status, container) (processo)      (fullName)

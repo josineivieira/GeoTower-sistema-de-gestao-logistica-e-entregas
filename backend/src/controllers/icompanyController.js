@@ -13,7 +13,7 @@ exports.getAll = async (req, res) => {
       filter.origem = { $nin: ['MANAUS', 'MANAUS - COELTA BALY'] };
     }
     
-    const records = await Ycompany.find(filter)
+    const records = await Icompany.find(filter)
       .sort({ createdAt: -1 })
       .lean();
 
@@ -205,7 +205,7 @@ exports.search = async (req, res) => {
       filter.cliente = { $regex: cliente, $options: 'i' };
     }
 
-    const records = await Ycompany.find(filter)
+    const records = await Icompany.find(filter)
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
       .skip(parseInt(skip))

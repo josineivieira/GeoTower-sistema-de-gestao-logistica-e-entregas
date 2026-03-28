@@ -1,6 +1,6 @@
 /*
-Migration script: migrates maritime data from 'programacaoentregas' collection to 'ycompany' collection.
-Usage: node scripts/migrate-geomar-to-ycompany.js --dry-run
+Migration script: migrates maritime data from 'programacaoentregas' collection to 'icompany' collection.
+Usage: node scripts/migrate-geomar-to-icompany.js --dry-run
 */
 const { MongoClient } = require('mongodb');
 const Icompany = require('../src/models/Icompany');
@@ -51,8 +51,8 @@ async function main() {
 
   for (const record of maritimeRecords) {
     try {
-      // Map fields from programacaoentregas to ycompany schema
-      const ycompanyData = {
+      // Map fields from programacaoentregas to icompany schema
+      const icompanyData = {
         codigo: record['Código'] || record['codigo'] || `AUTO_${Date.now()}_${migrated}`,
         geomaritima: record['N° GeoMaritima'] || record['Nº GeoMaritima'] || record.geomaritima,
         dtInicio: record['Dt. início'] ? new Date(record['Dt. início']) : new Date(),
@@ -112,19 +112,19 @@ async function main() {
         createdBy: 'migration_script'
       };
 
-      // Check if this record already exists in ycompany
-      const existing = await Ycompany.findOne({ codigo: ycompanyData.codigo });
+      // Check if this record already exists in icompany
+      const existing = await Icompany.findOne({ codigo: icompanyData.codigo });
       if (existing) {
-        console.log(`Skipping existing record: ${ycompanyData.codigo}`);
+        console.log(`Skipping existing record: ${icompanyData.codigo}`);
         skipped++;
         continue;
       }
 
       if (dryRun) {
-        console.log(`Would migrate: ${ycompanyData.codigo} - ${ycompanyData.cliente}`);
+        console.log(`Would migrate: ${icompanyData.codigo} - ${icompanyData.cliente}`);
       } else {
-        await Ycompany.create(ycompanyData);
-        console.log(`Migrated: ${ycompanyData.codigo}`);
+        await Icompany.create(icompanyData);
+        console.log(`Migrated: ${icompanyData.codigo}`);
       }
 
       migrated++;

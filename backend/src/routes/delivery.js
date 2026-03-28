@@ -113,15 +113,15 @@ router.post("/", auth, async (req, res) => {
       console.warn('[DELIVERY] Falha ao sincronizar programacao:', syncErr.message || syncErr);
     }
 
-    // Sincronizar com Ycompany se aplicável
+    // Sincronizar com Icompany se aplicável
     try {
-      const Ycompany = require('../models/Ycompany');
+      const Icompany = require('../models/Icompany');
       const deliveryNum = String(deliveryNumber || '').trim().toUpperCase();
-      let ycompanyRecord = null;
+      let icompanyRecord = null;
 
       if (deliveryNum) {
         // Buscar por processo ou container - expandir busca
-        ycompanyRecord = await Ycompany.findOne({
+        icompanyRecord = await Icompany.findOne({
           $or: [
             { processo: new RegExp(`^${deliveryNum}$`, 'i') },
             { numero: new RegExp(`^${deliveryNum}$`, 'i') },
@@ -137,21 +137,21 @@ router.post("/", auth, async (req, res) => {
         });
       }
 
-      if (ycompanyRecord) {
-        const ycompanyUpdates = {};
+      if (icompanyRecord) {
+        const icompanyUpdates = {};
 
-        // Mapear campos do delivery para Ycompany
+        // Mapear campos do delivery para Icompany
         if (containerMontadoAt && !icompanyRecord.dtRetiraPD) {
           icompanyUpdates.dtRetiraPD = new Date(containerMontadoAt);
         }
 
-        if (Object.keys(ycompanyUpdates).length > 0) {
-          await Ycompany.findByIdAndUpdate(ycompanyRecord._id, ycompanyUpdates);
-          console.log('[DELIVERY] sincronizado campos do Ycompany', ycompanyRecord._id, Object.keys(ycompanyUpdates));
+        if (Object.keys(icompanyUpdates).length > 0) {
+          await Icompany.findByIdAndUpdate(icompanyRecord._id, icompanyUpdates);
+          console.log('[DELIVERY] sincronizado campos do Icompany', icompanyRecord._id, Object.keys(icompanyUpdates));
         }
       }
     } catch (syncErr) {
-      console.warn('[DELIVERY] erro sync Ycompany:', syncErr.message || syncErr);
+      console.warn('[DELIVERY] erro sync Icompany:', syncErr.message || syncErr);
     }
 
     res.status(201).json({ delivery });

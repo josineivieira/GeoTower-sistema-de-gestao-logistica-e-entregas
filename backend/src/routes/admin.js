@@ -1877,9 +1877,9 @@ router.post("/programacoes/import", auth, managerOnly, async (req, res) => {
  * Mapeia: Processo←processo, RECEBEDOR←destinatario, CONTAINER←containerNumero, STATUS=AGENDADO
  * Filtra dados baseado na cidade do usuário (Manaus vs Itajaí)
  */
-router.get("/programacoes/sync/ycompany", auth, managerOnly, async (req, res) => {
+router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) => {
   try {
-    console.log('[SYNC YCOMPANY] Iniciando sincronização');
+    console.log('[SYNC ICOMPANY] Iniciando sincronização');
 
     const { connectIfNeeded } = require("../db/mongo");
     await connectIfNeeded();

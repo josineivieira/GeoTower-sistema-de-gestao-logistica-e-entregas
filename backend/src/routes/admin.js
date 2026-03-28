@@ -956,7 +956,8 @@ router.get("/users", auth, async (req, res) => {
       email: u.email,
       name: u.name || u.fullName,
       role: u.role,
-      contratado: u.contratado || null
+      contratado: u.contratado || null,
+      city: u.city || null
     }));
     return res.json({ users: usersWithoutPasswords });
   } catch (err) {
@@ -971,13 +972,16 @@ router.get("/users", auth, async (req, res) => {
  */
 router.post("/users", auth, managerOnly, async (req, res) => {
   try {
-    const { username, email, name, password, role, contratado } = req.body;
+    const { username, email, name, password, role, contratado, city } = req.body;
 
     if (!username || !email || !name || !password) {
       return res.status(400).json({ message: "Preencha todos os campos" });
     }
     if (role === 'gestor_contratado' && !contratado) {
       return res.status(400).json({ message: "Contratado é obrigatório para Gestor Contratado" });
+    }
+    if (role !== 'manager' && !city) {
+      return res.status(400).json({ message: "Cidade é obrigatória para este perfil" });
     }
 
     // Normaliza username/email para minúsculas — login procura por username.toLowerCase()
@@ -1005,6 +1009,7 @@ router.post("/users", auth, managerOnly, async (req, res) => {
       password: hashedPassword,
       role: role || 'driver',
       contratado: (role === 'gestor_contratado') ? contratado : null,
+      city: (role !== 'manager') ? (city || 'manaus') : null,
       phone: '',
       isActive: true,
       createdAt: new Date()
@@ -1039,7 +1044,7 @@ router.post("/users", auth, managerOnly, async (req, res) => {
 router.put("/users/:id", auth, managerOnly, async (req, res) => {
   try {
     const { id } = req.params;
-    const { email, name, role, contratado } = req.body;
+    const { email, name, role, contratado, city } = req.body;
 
     const db = await getDb(req);
     const user = await db.findById("drivers", id);
@@ -1061,6 +1066,11 @@ router.put("/users/:id", auth, managerOnly, async (req, res) => {
       updates.contratado = contratado;
     } else if (role !== 'gestor_contratado') {
       updates.contratado = null;
+    }
+    if (role !== 'manager' && city) {
+      updates.city = city;
+    } else if (role === 'manager') {
+      updates.city = null;
     }
 
     await db.updateOne("drivers", { _id: id }, updates);

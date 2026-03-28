@@ -64,7 +64,7 @@ const UserManagement = () => {
   const [editingUser,   setEditingUser]   = useState(null);
   const [search,        setSearch]        = useState('');
   const [formData,      setFormData]      = useState({
-    username: '', email: '', name: '', password: '', role: 'driver', contratado: null,
+    username: '', email: '', name: '', password: '', role: 'driver', contratado: null, city: 'manaus',
   });
 
   /* ── guard & load ── */
@@ -101,7 +101,7 @@ const UserManagement = () => {
 
   /* ── form handlers ── */
   const resetForm = () => {
-    setFormData({ username: '', email: '', name: '', password: '', role: 'driver', contratado: null });
+    setFormData({ username: '', email: '', name: '', password: '', role: 'driver', contratado: null, city: 'manaus' });
     setEditingUser(null);
     setShowForm(false);
   };
@@ -137,7 +137,7 @@ const UserManagement = () => {
 
   const handleEdit = (u) => {
     setEditingUser(u);
-    setFormData({ username: u.username, email: u.email, name: u.name, password: '', role: u.role, contratado: u.contratado || null });
+    setFormData({ username: u.username, email: u.email, name: u.name, password: '', role: u.role, contratado: u.contratado || null, city: u.city || 'manaus' });
     setShowForm(true);
   };
 
@@ -456,6 +456,20 @@ const UserManagement = () => {
                       ) : (
                         <option disabled>Nenhum contratado disponível</option>
                       )}
+                    </select>
+                  </Field>
+                )}
+
+                {/* Cidade — para todos exceto Gerente */}
+                {formData.role !== 'manager' && (
+                  <Field label="Cidade" required>
+                    <select
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      className="input-base bg-white"
+                    >
+                      <option value="manaus">Manaus</option>
+                      <option value="itajai">Itajaí</option>
                     </select>
                   </Field>
                 )}

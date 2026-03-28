@@ -44,6 +44,12 @@ const driverSchema = new mongoose.Schema({
     trim: true,
     default: null
   },
+  // City access: 'manaus', 'itajai', 'both' or null for managers
+  city: {
+    type: String,
+    enum: ['manaus', 'itajai', 'both', null],
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

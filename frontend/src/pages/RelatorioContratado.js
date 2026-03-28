@@ -52,7 +52,7 @@ const RelatorioContratado = () => {
 
   const loadContratados = async () => {
     try {
-      const response = await api.get('/ycompany/contratados-unicos');
+      const response = await api.get('/icompany/contratados-unicos');
       if (response.data.ok) {
         setContratados(response.data.contratados || []);
       }
@@ -122,7 +122,7 @@ const RelatorioContratado = () => {
       setLoading(true);
 
       // Busca TODOS os dados do backend (sem filtrar)
-      const response = await api.get(`/ycompany/relatorio-contratado`);
+      const response = await api.get(`/icompany/relatorio-contratado`);
 
       if (response.data.ok) {
         const todosOsDados = response.data.dados || [];

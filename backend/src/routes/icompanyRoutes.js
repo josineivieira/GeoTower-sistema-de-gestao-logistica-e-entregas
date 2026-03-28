@@ -188,7 +188,7 @@ router.get('/debug-comparison', async (req, res) => {
     }
     
     // Get 3 records from each collection for detailed analysis
-    const ycompanyRecords = await ycompanyCol.find(filter).limit(5).toArray();
+    const icompanyRecords = await icompanyCol.find(filter).limit(5).toArray();
     const excelRecords = await excelCol.find({}).limit(5).toArray();
     
     // Map to compare side by side

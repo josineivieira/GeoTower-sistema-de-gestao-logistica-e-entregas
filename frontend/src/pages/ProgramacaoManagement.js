@@ -452,7 +452,7 @@ const ProgramacaoManagement = () => {
           {!isGeoMar() && (
             <>
               <button
-                onClick={handleSyncYcompany}
+                onClick={handleSyncIcompany}
                 disabled={syncLoading}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 7,
@@ -466,7 +466,7 @@ const ProgramacaoManagement = () => {
                 }}
               >
                 <FaSyncAlt size={12} style={{ animation: syncLoading ? 'spin 1s linear infinite' : 'none' }} /> 
-                {syncLoading ? 'Sincronizando...' : 'Sincronizar Ycompany'}
+                {syncLoading ? 'Sincronizando...' : 'Sincronizar Icompany'}
               </button>
 
               <button

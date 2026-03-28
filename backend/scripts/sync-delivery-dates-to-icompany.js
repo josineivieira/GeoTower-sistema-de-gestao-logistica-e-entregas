@@ -4,10 +4,10 @@ const Delivery = require('../src/models/Delivery');
 const Icompany = require('../src/models/Icompany');
 const { connectIfNeeded } = require('../src/db/mongo');
 
-async function syncDeliveryDatesToYcompany() {
+async function syncDeliveryDatesToIcompany() {
   try {
     await connectIfNeeded();
-    console.log('🔄 Iniciando sincronização de datas de entregas para Ycompany...');
+    console.log('🔄 Iniciando sincronização de datas de entregas para Icompany...');
 
     // Buscar todas as entregas
     const deliveries = await Delivery.find({}).lean();
@@ -19,17 +19,17 @@ async function syncDeliveryDatesToYcompany() {
       const deliveryNumber = delivery.deliveryNumber;
       if (!deliveryNumber) continue;
 
-      // Tentar encontrar Ycompany por linkedYcompanyId ou por campos
-      let ycompanyRecord = null;
+      // Tentar encontrar Icompany por linkedIcompanyId ou por campos
+      let icompanyRecord = null;
 
-      if (delivery.linkedYcompanyId) {
-        ycompanyRecord = await Ycompany.findById(delivery.linkedYcompanyId);
+      if (delivery.linkedIcompanyId) {
+        icompanyRecord = await Icompany.findById(delivery.linkedIcompanyId);
       }
 
-      if (!ycompanyRecord) {
+      if (!icompanyRecord) {
         // Buscar por campos, normalizando
         const normalizedDeliveryNum = deliveryNumber.trim().toUpperCase();
-        ycompanyRecord = await Ycompany.findOne({
+        icompanyRecord = await Icompany.findOne({
           $or: [
             { geomaritima: new RegExp(`^${normalizedDeliveryNum}$`, 'i') },
             { numero: new RegExp(`^${normalizedDeliveryNum}$`, 'i') },
@@ -51,54 +51,54 @@ async function syncDeliveryDatesToYcompany() {
         });
       }
 
-      if (!ycompanyRecord) {
-        console.log(`❌ Ycompany não encontrado para entrega: ${deliveryNumber}`);
+      if (!icompanyRecord) {
+        console.log(`❌ Icompany não encontrado para entrega: ${deliveryNumber}`);
         continue;
       }
 
-      // Atualizar linkedYcompanyId na entrega se não estiver setado
-      if (!delivery.linkedYcompanyId) {
-        await Delivery.findByIdAndUpdate(delivery._id, { linkedYcompanyId: ycompanyRecord._id });
-        console.log(`✅ Linked Ycompany ID setado para entrega ${deliveryNumber}`);
+      // Atualizar linkedIcompanyId na entrega se não estiver setado
+      if (!delivery.linkedIcompanyId) {
+        await Delivery.findByIdAndUpdate(delivery._id, { linkedIcompanyId: icompanyRecord._id });
+        console.log(`✅ Linked Icompany ID setado para entrega ${deliveryNumber}`);
       }
 
       const updates = {};
 
-      // Mapear datas da entrega para Ycompany
-      if ((delivery.status === 'A_CAMINHO_DO_CLIENTE' || delivery.status === 'EM_DESOVA' || delivery.status === 'AGUARDANDO_ANEXO' || delivery.status === 'ANEXANDO_DOCUMENTOS_FINAIS' || delivery.status === 'EM_ROTA' || delivery.status === 'ENTREGUE' || delivery.status === 'FINALIZADO') && !ycompanyRecord.dtInicioRota) {
+      // Mapear datas da entrega para Icompany
+      if ((delivery.status === 'A_CAMINHO_DO_CLIENTE' || delivery.status === 'EM_DESOVA' || delivery.status === 'AGUARDANDO_ANEXO' || delivery.status === 'ANEXANDO_DOCUMENTOS_FINAIS' || delivery.status === 'EM_ROTA' || delivery.status === 'ENTREGUE' || delivery.status === 'FINALIZADO') && !icompanyRecord.dtInicioRota) {
         // Para dtInicioRota, usar quando iniciou a rota, aproximar com createdAt se não tiver arrivedAt
         updates.dtInicioRota = delivery.arrivedAt || delivery.createdAt;
       }
 
-      if (delivery.desovaStartAt && !ycompanyRecord.dtInicioDescarga) {
+      if (delivery.desovaStartAt && !icompanyRecord.dtInicioDescarga) {
         updates.dtInicioDescarga = delivery.desovaStartAt;
       }
 
-      if (delivery.desovaEndAt && !ycompanyRecord.dtFimDescarga) {
+      if (delivery.desovaEndAt && !icompanyRecord.dtFimDescarga) {
         updates.dtFimDescarga = delivery.desovaEndAt;
       }
 
-      if (delivery.containerMontadoAt && !ycompanyRecord.dtRetiraPD) {
+      if (delivery.containerMontadoAt && !icompanyRecord.dtRetiraPD) {
         updates.dtRetiraPD = delivery.containerMontadoAt;
       }
 
-      if (delivery.horarioDevolucaoVazio && !ycompanyRecord.dtDevolucaoCNTR) {
+      if (delivery.horarioDevolucaoVazio && !icompanyRecord.dtDevolucaoCNTR) {
         updates.dtDevolucaoCNTR = delivery.horarioDevolucaoVazio;
       }
 
       // Verificar observations para CONTAINER_VAZIO_DEVOLVIDO
-      if (delivery.observations && delivery.observations.includes('(CONTAINER_VAZIO_DEVOLVIDO)') && !ycompanyRecord.dtDevolucaoCNTR) {
+      if (delivery.observations && delivery.observations.includes('(CONTAINER_VAZIO_DEVOLVIDO)') && !icompanyRecord.dtDevolucaoCNTR) {
         updates.dtDevolucaoCNTR = delivery.updatedAt; // Usar updatedAt como aproximado
       }
 
       if (Object.keys(updates).length > 0) {
-        await Ycompany.findByIdAndUpdate(ycompanyRecord._id, updates);
-        console.log(`✅ Atualizado Ycompany ${ycompanyRecord.codigo}:`, Object.keys(updates));
+        await Icompany.findByIdAndUpdate(icompanyRecord._id, updates);
+        console.log(`✅ Atualizado Icompany ${icompanyRecord.codigo}:`, Object.keys(updates));
         updatedCount++;
       }
     }
 
-    console.log(`🎉 Sincronização concluída! ${updatedCount} registros Ycompany atualizados.`);
+    console.log(`🎉 Sincronização concluída! ${updatedCount} registros Icompany atualizados.`);
   } catch (error) {
     console.error('❌ Erro na sincronização:', error);
   } finally {
@@ -106,4 +106,4 @@ async function syncDeliveryDatesToYcompany() {
   }
 }
 
-syncDeliveryDatesToYcompany();
+syncDeliveryDatesToIcompany();

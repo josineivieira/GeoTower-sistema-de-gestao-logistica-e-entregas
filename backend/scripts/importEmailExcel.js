@@ -190,7 +190,7 @@ async function importarExcel() {
   const mongo = new MongoClient(MONGO_URI);
   await mongo.connect();
 
-  const col = mongo.db("delivery-docs").collection("ycompany");
+  const col = mongo.db("delivery-docs").collection("icompany");
 
   console.log("📊 Lendo Excel...");
 

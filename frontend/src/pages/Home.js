@@ -1064,7 +1064,7 @@ const Home = () => {
                   )}
                   {hasAccess(['manager','admin']) && (
                     <ManageCard
-                      onClick={() => navigate('/ycompany')}
+                      onClick={() => navigate('/icompany')}
                       accentColor="#DC2626"
                       accentDark="#991B1B"
                       icon={<FaTable />}

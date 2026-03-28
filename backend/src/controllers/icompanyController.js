@@ -37,7 +37,7 @@ exports.getAll = async (req, res) => {
 exports.getById = async (req, res) => {
   try {
     const { id } = req.params;
-    const record = await Ycompany.findById(id);
+    const record = await Icompany.findById(id);
 
     if (!record) {
       return res.status(404).json({
@@ -77,7 +77,7 @@ exports.create = async (req, res) => {
     }
 
     // Verificar se código já existe
-    const existing = await Ycompany.findOne({ codigo, city });
+    const existing = await Icompany.findOne({ codigo, city });
     if (existing) {
       return res.status(409).json({
         success: false,
@@ -85,7 +85,7 @@ exports.create = async (req, res) => {
       });
     }
 
-    const newRecord = new Ycompany({
+    const newRecord = new Icompany({
       ...req.body,
       city,
       createdBy: req.user?.id,
@@ -113,7 +113,7 @@ exports.update = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const updated = await Ycompany.findByIdAndUpdate(
+    const updated = await Icompany.findByIdAndUpdate(
       id,
       { ...req.body, updatedAt: new Date() },
       { new: true, runValidators: true }
@@ -146,7 +146,7 @@ exports.delete = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deleted = await Ycompany.findByIdAndDelete(id);
+    const deleted = await Icompany.findByIdAndDelete(id);
 
     if (!deleted) {
       return res.status(404).json({
@@ -211,7 +211,7 @@ exports.search = async (req, res) => {
       .skip(parseInt(skip))
       .lean();
 
-    const total = await Ycompany.countDocuments(filter);
+    const total = await Icompany.countDocuments(filter);
 
     res.json({
       success: true,
@@ -253,7 +253,7 @@ exports.bulkImport = async (req, res) => {
       createdBy: req.user?.id,
     }));
 
-    const inserted = await Ycompany.insertMany(withCity, { ordered: false });
+    const inserted = await Icompany.insertMany(withCity, { ordered: false });
 
     res.status(201).json({
       success: true,
@@ -279,7 +279,7 @@ exports.bulkImport = async (req, res) => {
 exports.export = async (req, res) => {
   try {
     // Exporta TODOS os registros
-    const records = await Ycompany.find({}).lean();
+    const records = await Icompany.find({}).lean();
 
     // Converter para CSV simples
     if (!records.length) {
@@ -296,7 +296,7 @@ exports.export = async (req, res) => {
     ].join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=ycompany.csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=icompany.csv');
     res.send(csv);
   } catch (error) {
     console.error('Erro ao exportar:', error);
@@ -312,7 +312,7 @@ exports.export = async (req, res) => {
 exports.stats = async (req, res) => {
   try {
     // Estatísticas de TODOS os registros
-    const stats = await Ycompany.aggregate([
+    const stats = await Icompany.aggregate([
       {
         $group: {
           _id: '$situacao',
@@ -323,7 +323,7 @@ exports.stats = async (req, res) => {
       },
     ]);
 
-    const total = await Ycompany.countDocuments({});
+    const total = await Icompany.countDocuments({});
 
     res.json({
       success: true,

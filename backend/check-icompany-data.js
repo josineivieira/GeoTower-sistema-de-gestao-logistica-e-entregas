@@ -11,10 +11,10 @@ mongoose.connect(mongoUri)
     const Icompany = require('./src/models/Icompany');
     
     try {
-      const totalCount = await Ycompany.countDocuments({});
-      const manausCount = await Ycompany.countDocuments({ city: 'manaus' });
-      const itajaiCount = await Ycompany.countDocuments({ city: 'itajai' });
-      const noCity = await Ycompany.countDocuments({ city: { $exists: false } });
+      const totalCount = await Icompany.countDocuments({});
+      const manausCount = await Icompany.countDocuments({ city: 'manaus' });
+      const itajaiCount = await Icompany.countDocuments({ city: 'itajai' });
+      const noCity = await Icompany.countDocuments({ city: { $exists: false } });
       
       console.log('\n📋 Contagem de Registros:');
       console.log('  Total geral:', totalCount);
@@ -23,7 +23,7 @@ mongoose.connect(mongoUri)
       console.log('  Sem city:', noCity);
       
       if (totalCount > 0) {
-        const sample = await Ycompany.findOne({}).lean();
+        const sample = await Icompany.findOne({}).lean();
         console.log('\n📄 Exemplo de registro:');
         console.log('  Campos:', Object.keys(sample).slice(0, 10).join(', '), '...');
       } else {

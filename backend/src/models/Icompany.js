@@ -293,10 +293,10 @@ const icompanySchema = new mongoose.Schema({
 });
 
 // Índices para melhor performance
-ycompanySchema.index({ codigo: 1, city: 1 });
-ycompanySchema.index({ geomaritima: 1, city: 1 });
-ycompanySchema.index({ situacao: 1, city: 1 });
-ycompanySchema.index({ cliente: 1, city: 1 });
-ycompanySchema.index({ dtInicio: -1, city: 1 });
+icompanySchema.index({ codigo: 1, city: 1 });
+icompanySchema.index({ geomaritima: 1, city: 1 });
+icompanySchema.index({ situacao: 1, city: 1 });
+icompanySchema.index({ cliente: 1, city: 1 });
+icompanySchema.index({ dtInicio: -1, city: 1 });
 
-module.exports = mongoose.model('Ycompany', ycompanySchema, process.env.MONGO_COLLECTION || 'ycompany');
+module.exports = mongoose.model('Icompany', icompanySchema, process.env.MONGO_COLLECTION || 'icompany');

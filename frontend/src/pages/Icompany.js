@@ -200,7 +200,7 @@ const Icompany = () => {
   const fetchAll = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const res = await api.get('/ycompany');
+      const res = await api.get('/icompany');
       setData(res.data?.data || []);
     } catch {
       setError('Falha ao carregar dados da Icompany');
@@ -210,7 +210,7 @@ const Icompany = () => {
 
   const fetchComparison = useCallback(async () => {
     try {
-      const res = await api.get('/ycompany/compare');
+      const res = await api.get('/icompany/compare');
       const compMap = {};
       res.data?.data?.forEach(comp => {
         // Tenta várias chaves possíveis para mapear
@@ -247,7 +247,7 @@ const Icompany = () => {
       if (!value.trim()) { fetchAll(); return; }
       setLoading(true);
       try {
-        const res = await api.get('/ycompany/search', { params: { q: value } });
+        const res = await api.get('/icompany/search', { params: { q: value } });
         setData(res.data?.data || []);
       } catch { setError('Falha ao buscar registros'); }
       finally { setLoading(false); }
@@ -263,7 +263,7 @@ const Icompany = () => {
 
   const handleExport = async () => {
     try {
-      const res = await api.get('/ycompany/export', { responseType: 'blob' });
+      const res = await api.get('/icompany/export', { responseType: 'blob' });
       const url = window.URL.createObjectURL(res.data);
       const a   = document.createElement('a');
       a.href = url; a.download = `icompany-${new Date().toISOString().slice(0,10)}.csv`;

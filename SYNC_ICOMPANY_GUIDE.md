@@ -66,7 +66,7 @@ Resposta de sucesso:
 
 ## 📊 Arquivos Alterados
 
-- Backend: `src/routes/admin.js` - novo endpoint `/programacoes/sync/ycompany`
+- Backend: `src/routes/admin.js` - novo endpoint `/programacoes/sync/icompany`
 - Frontend: `src/pages/ProgramacaoManagement.js` - novo botão e função
-- Frontend: `src/services/authService.js` - novo método `syncProgramacoesYcompany()`
+- Frontend: `src/services/authService.js` - novo método `syncProgramacoesIcompany()`
 

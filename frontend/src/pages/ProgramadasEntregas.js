@@ -14,7 +14,7 @@ import { MdLocalShipping, MdAssignment } from 'react-icons/md';
 import { useAuth } from '../services/authContext';
 import { useCity } from '../contexts/CityContext';
 import { getProgramacaoDate } from '../utils/programacaoDate';
-import { formatarData, formatarDataApenas, formatarHora } from '../utils/date';
+import { formatarData, formatarDataApenas, formatarHora, formatarAgendamento } from '../utils/date';
 import { getRecebedoresLabel, getDesovaStatusLabel } from '../utils/cityLabels';
 import { useTheme, THEMES } from '../contexts/ThemeContext';
 
@@ -1061,7 +1061,7 @@ const ProgramadasEntregas = () => {
                       </div>
                       <ul className="font-bold text-gray-800 text-sm leading-tight">
                         {p.fracionadas && p.fracionadas.map(f => (
-                          <li key={f._id}>{getProgramacaoDate(f, city) ? formatarData(getProgramacaoDate(f, city), city) : '-'}</li>
+                          <li key={f._id}>{getProgramacaoDate(f, city) ? formatarAgendamento(getProgramacaoDate(f, city)) : '-'}</li>
                         ))}
                       </ul>
                     </div>
@@ -1406,7 +1406,7 @@ const ProgramadasEntregas = () => {
                       <div>
                         <p className="text-sm text-gray-500">Data agendada</p>
                         <p className="font-bold text-blue-700 text-base">
-                          {formatarData(getProgramacaoDate(currentProgramacao, city), city)}
+                          {formatarAgendamento(getProgramacaoDate(currentProgramacao, city))}
                         </p>
                       </div>
                     </div>

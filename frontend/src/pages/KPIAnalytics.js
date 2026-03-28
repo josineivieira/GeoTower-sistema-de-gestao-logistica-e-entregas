@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import { adminService } from '../services/authService';
 import { useCity } from '../contexts/CityContext';
-import { formatarDataApenas, formatarDataApenasLocal } from '../utils/date';
+import { formatarDataApenas, formatarDataApenasLocal, formatarAgendamento } from '../utils/date';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -166,7 +166,7 @@ const KPIAnalytics = ({ onToggle }) => {
         'Motorista': d.driverName || 'Não informado',
         [city === 'itajai' ? 'Remetente' : 'Destinatário']: getPartyName(d),
         'Processo': getProcessNumber(d),
-        'Data Agendada': getScheduledDate(d) ? formatarDataApenas(getScheduledDate(d), city) : 'N/A',
+        'Data Agendada': getScheduledDate(d) ? formatarAgendamento(getScheduledDate(d)) : 'N/A',
         'Data Entrega': getArrivalDate(d) ? formatarDataApenas(getArrivalDate(d), city) : 'N/A',
         'Atraso (dias)': getScheduledDate(d) && getArrivalDate(d) ?
           Math.ceil((new Date(getArrivalDate(d)) - new Date(getScheduledDate(d))) / (1000 * 60 * 60 * 24)) : 'N/A',
@@ -218,7 +218,7 @@ const KPIAnalytics = ({ onToggle }) => {
           d.driverName || 'Não informado',
           getPartyName(d),
           getProcessNumber(d),
-          getScheduledDate(d) ? formatarDataApenas(getScheduledDate(d), city) : 'N/A',
+          getScheduledDate(d) ? formatarAgendamento(getScheduledDate(d)) : 'N/A',
           getArrivalDate(d) ? formatarDataApenas(getArrivalDate(d), city) : 'N/A',
           getScheduledDate(d) && getArrivalDate(d) ?
             Math.ceil((new Date(getArrivalDate(d)) - new Date(getScheduledDate(d))) / (1000 * 60 * 60 * 24)) : 'N/A',
@@ -922,7 +922,7 @@ const KPIAnalytics = ({ onToggle }) => {
                           <td className="py-3 px-4 text-slate-300">{getPartyName(delivery)}</td>
                           <td className="py-3 px-4 text-slate-300">{getProcessNumber(delivery)}</td>
                           <td className="text-center py-3 px-4 text-slate-300">
-                            {scheduled ? formatarDataApenas(scheduled, city) : 'N/A'}
+                            {scheduled ? formatarAgendamento(scheduled) : 'N/A'}
                           </td>
                           <td className="text-center py-3 px-4 text-slate-300">
                             {arrival ? formatarDataApenas(arrival, city) : 'N/A'}

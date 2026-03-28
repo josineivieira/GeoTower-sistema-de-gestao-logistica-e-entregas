@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import { adminService } from '../services/authService';
 import { getProgramacaoDate } from '../utils/programacaoDate';
-import { formatarData, formatarDataApenas, formatarHora } from '../utils/date';
+import { formatarData, formatarDataApenas, formatarHora, formatarAgendamento } from '../utils/date';
 import {
   FaArrowLeft, FaEye, FaDownload, FaSync, FaFilter, FaTimes,
   FaTrash, FaEdit, FaExclamationTriangle, FaShareAlt, FaCalendarAlt,
@@ -313,7 +313,7 @@ const Pill = ({ active, onClick, children, color = 'purple' }) => {
 const formatBoardDate = (value, city) => {
   if (!value) return '—';
   try {
-    return formatarData(value, city);
+    return formatarAgendamento(value);
   } catch {
     return value;
   }
@@ -839,7 +839,7 @@ const MobileDeliveryCard = ({
         <div>
           <p className="text-gray-600 text-[10px] uppercase font-bold">Agendamento</p>
           <p className="text-gray-300 font-mono text-[11px]">
-            {getProgramacaoDate(d, city) ? formatarData(getProgramacaoDate(d, city), city) : '—'}
+            {getProgramacaoDate(d, city) ? formatarAgendamento(getProgramacaoDate(d, city)) : '—'}
           </p>
         </div>
         <div>
@@ -2141,7 +2141,7 @@ const MonitorEntregas = () => {
 
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             <span className="text-gray-400 text-[11px] tabular-nums" style={{ whiteSpace: 'normal', wordBreak: 'break-all' }}>
-                              {getProgramacaoDate(d, city) ? formatarData(getProgramacaoDate(d, city), city) : '—'}
+                              {getProgramacaoDate(d, city) ? formatarAgendamento(getProgramacaoDate(d, city)) : '—'}
                             </span>
                           </div>
 
@@ -2214,7 +2214,7 @@ const MonitorEntregas = () => {
                   ['Placa', selectedDelivery.placaIcompany || selectedDelivery.vehiclePlate || '—'],
                   ['Entrega CNTR Porto', selectedDelivery.horarioDevolucaoVazio ? formatarData(selectedDelivery.horarioDevolucaoVazio, city) : '—'],
                   ['Recebedor', selectedDelivery.recebedor || '—'],
-                  ['Agendamento', getProgramacaoDate(selectedDelivery, city) ? formatarData(getProgramacaoDate(selectedDelivery, city), city) : '—'],
+                  ['Agendamento', getProgramacaoDate(selectedDelivery, city) ? formatarAgendamento(getProgramacaoDate(selectedDelivery, city)) : '—'],
                   ['Montagem Container', selectedDelivery.containerMontadoAt ? formatarData(selectedDelivery.containerMontadoAt, city) : '—'],
                   ['Chegada', selectedDelivery.horarioChegada ? formatarData(selectedDelivery.horarioChegada, city) : '—'],
                   [`Início ${getDesovaStepLabel(city)}`, selectedDelivery.horarioInicioDesova ? formatarData(selectedDelivery.horarioInicioDesova, city) : '—'],

@@ -103,6 +103,20 @@ function isEmpty(v) {
   return v === null || v === undefined || (typeof v === "string" && v.trim() === "");
 }
 
+// NOVA REGRA:
+// Excel com valor -> atualiza
+// Excel vazio -> não apaga Mongo
+function buildPatchFromExcel(incoming) {
+  const patch = {};
+
+  for (const [key, value] of Object.entries(incoming)) {
+    if (value === null || value === undefined || value === "") continue;
+    patch[key] = value;
+  }
+
+  return patch;
+}
+
 // ---------- MAP ----------
 
 function mapToEntrega(row) {
@@ -176,7 +190,7 @@ async function importarExcel() {
   const mongo = new MongoClient(MONGO_URI);
   await mongo.connect();
 
-  const col = mongo.db("delivery-docs").collection("programacaoentregas");
+  const col = mongo.db("delivery-docs").collection("ycompany");
 
   console.log("📊 Lendo Excel...");
 
@@ -194,18 +208,11 @@ async function importarExcel() {
   const ops = [];
 
   for (const d of docs) {
-
     const existing = mapExist.get(d.processo);
 
     if (!existing) {
+      const toInsert = buildPatchFromExcel(d);
 
-      const toInsert = {};
-
-      for (const [k, v] of Object.entries(d)) {
-        if (!isEmpty(v)) toInsert[k] = v;
-      }
-
-      // 🔥 ALTERAÇÃO AQUI (UPSERT)
       ops.push({
         updateOne: {
           filter: { codigo: d.codigo },
@@ -230,7 +237,7 @@ async function importarExcel() {
       continue;
     }
 
-    const patch = pickOnlyMissingFields(existing, d);
+    const patch = buildPatchFromExcel(d);
 
     if (Object.keys(patch).length === 0) continue;
 
@@ -271,13 +278,11 @@ setInterval(() => {
   const stats = fs.statSync(EXCEL_PATH);
 
   if (stats.mtimeMs !== ultimaModificacao) {
-
     ultimaModificacao = stats.mtimeMs;
 
     console.log("📥 Excel atualizado pelo ERP");
 
     importarExcel().catch(console.error);
-
   }
 
 }, 5000);

@@ -1905,87 +1905,101 @@ router.get("/programacoes/sync/ycompany", auth, managerOnly, async (req, res) =>
     const ycompanyRecords = await Ycompany.find(cityFilter).lean();
     console.log(`[SYNC YCOMPANY] Encontrados ${ycompanyRecords.length} registros no Ycompany`);
 
-    // Buscar todos os processos já existentes para evitar duplicação
-    const existingProcessos = await ProgramacaoEntrega.find({}).select('processo').lean();
-    const existingProcessosSet = new Set(existingProcessos.map(p => String(p.processo || '').trim().toUpperCase()));
+    // Buscar todos os processos já existentes para evitar duplicação e permitir atualização
+    const existingProgramacoes = await ProgramacaoEntrega.find({}).lean();
+    const existingMap = new Map(existingProgramacoes.map(p => [String(p.processo || '').trim().toUpperCase(), p]));
 
-    console.log(`[SYNC YCOMPANY] ${existingProcessosSet.size} processos já existentes`);
+    console.log(`[SYNC YCOMPANY] ${existingMap.size} processos já existentes`);
 
-    // Mapear dados do Ycompany para Programação de Entregas
-    const novosRegistros = ycompanyRecords
-      .filter(y => {
-        // Filtrar registros que já existem
-        const processo = String(y.processo || '').trim().toUpperCase();
-        return processo && !existingProcessosSet.has(processo);
-      })
-      .map(y => {
-        // Converter data mantendo o horário original (sem timezone conversion)
-        const formatSyncDate = (raw) => {
-          if (!raw) return '';
-          const dtStr = String(raw).trim();
-          if (!dtStr) return '';
+    // Converter função de data uma única vez
+    const formatSyncDate = (raw) => {
+      if (!raw) return '';
+      const dtStr = String(raw).trim();
+      if (!dtStr) return '';
 
-          if (dtStr.includes(' ')) {
-            const parts = dtStr.split(' ');
-            return parts[0] + 'T' + parts[1].substring(0, 5);
-          }
-          if (dtStr.includes('T')) {
-            return dtStr.substring(0, 16);
-          }
-          if (dtStr.includes('-')) {
-            return dtStr.substring(0, 10) + 'T00:00';
-          }
-          return '';
-        };
+      if (dtStr.includes(' ')) {
+        const parts = dtStr.split(' ');
+        return parts[0] + 'T' + parts[1].substring(0, 5);
+      }
+      if (dtStr.includes('T')) {
+        return dtStr.substring(0, 16);
+      }
+      if (dtStr.includes('-')) {
+        return dtStr.substring(0, 10) + 'T00:00';
+      }
+      return '';
+    };
 
-        let dataAgendamento = formatSyncDate(y.dtAgendamentoDescarga);
-        if (!dataAgendamento) {
-          dataAgendamento = new Date().toISOString().slice(0, 16);
-        }
+    let updatedCount = 0;
+    let insertedCount = 0;
+    const novosRegistros = [];
 
-        const dtColeta = formatSyncDate(y.dtColeta);
+    for (const y of ycompanyRecords) {
+      const processoRaw = String(y.processo || '').trim();
+      if (!processoRaw) continue;
 
-        // Para Itajaí: puxar remetente | Para Manaus: puxar destinatário
-        const recebedorValue = city === 'itajai' 
-          ? String(y.remetente || '').trim() || 'N/A'
-          : String(y.destinatario || '').trim() || 'N/A';
+      const processoKey = processoRaw.toUpperCase();
+      const existing = existingMap.get(processoKey);
 
-        return {
-          processo: String(y.processo || '').trim(),
-          recebedor: recebedorValue,
-          container: String(y.containerNumero || '').trim() || '',
-          dataAgendamento: dataAgendamento,
-          dtColeta,
-          contratado: String(y.contratado || '').trim() || 'OUTRO',
-          motorista: String(y.motorista || '').trim() || '',
-          origem: String(y.origem || '').trim() || '',
-          // Mapear situação do Ycompany para AGENDADO (como solicitado)
-          status: 'AGENDADO',
-          observacoes: `Sincronizado do Ycompany - ${y.situacao || 'N/A'}`
-        };
-      });
+      let dataAgendamento = formatSyncDate(y.dtAgendamentoDescarga);
+      if (!dataAgendamento) dataAgendamento = new Date().toISOString().slice(0, 16);
+      const dtColeta = formatSyncDate(y.dtColeta);
+      const recebedorValue = city === 'itajai'
+        ? String(y.remetente || '').trim() || 'N/A'
+        : String(y.destinatario || '').trim() || 'N/A';
+
+      const mappedData = {
+        recebedor: recebedorValue,
+        container: String(y.containerNumero || '').trim() || '',
+        dataAgendamento,
+        dtColeta,
+        contratado: String(y.contratado || '').trim() || 'OUTRO',
+        motorista: String(y.motorista || '').trim() || '',
+        origem: String(y.origem || '').trim() || '',
+        observacoes: `Sincronizado do Ycompany - ${y.situacao || 'N/A'}`
+      };
+
+      if (existing) {
+        // Atualiza dados, mas mantém status atual
+        await ProgramacaoEntrega.updateOne({ _id: existing._id }, { $set: mappedData });
+        updatedCount++;
+      } else {
+        novosRegistros.push({
+          processo: processoRaw,
+          ...mappedData,
+          status: 'AGENDADO'
+        });
+      }
+    }
+
+    console.log(`[SYNC YCOMPANY] ${updatedCount} registros existentes atualizados`);
 
     console.log(`[SYNC YCOMPANY] ${novosRegistros.length} novos registros para importar (sem duplicação)`);
 
     if (novosRegistros.length === 0) {
       return res.json({
         success: true,
-        message: 'Nenhum registro novo para sincronizar',
-        sincronizados: 0,
-        duplicados: ycompanyRecords.length,
+        message: `${updatedCount} registro(s) atualizado(s) do Ycompany`,
+        atualizados: updatedCount,
+        sincronizados: updatedCount,
+        duplicados: ycompanyRecords.length - updatedCount,
         total: ycompanyRecords.length
       });
     }
 
     // Inserir novos registros
     const inserted = await ProgramacaoEntrega.insertMany(novosRegistros, { ordered: false });
-    console.log(`[SYNC YCOMPANY] ✅ ${inserted.length} registros sincronizados com sucesso`);
+    insertedCount = inserted.length;
+    console.log(`[SYNC YCOMPANY] ✅ ${insertedCount} registros inseridos com sucesso`);
 
+    const totalSynced = updatedCount + insertedCount;
     return res.json({
       success: true,
-      message: `${inserted.length} registro(s) sincronizado(s) com sucesso do Ycompany`,
-      sincronizados: inserted.length,
-      duplicados: ycompanyRecords.length - novosRegistros.length,
+      message: `${insertedCount} novo(s) registro(s) sincronizado(s) do Ycompany e ${updatedCount} existente(s) atualizado(s)`,
+      sincronizados: totalSynced,
+      atualizados: updatedCount,
+      inseridos: insertedCount,
+      duplicados: ycompanyRecords.length - (updatedCount + insertedCount),
       total: ycompanyRecords.length,
       registros: inserted
     });

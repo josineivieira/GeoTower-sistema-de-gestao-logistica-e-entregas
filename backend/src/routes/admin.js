@@ -1296,6 +1296,36 @@ router.get("/motoristas", auth, managerOnly, async (req, res) => {
 });
 
 /**
+ * GET /api/admin/contractors
+ * Lista todos os contratados únicos (transportadoras)
+ */
+router.get("/contractors", auth, onlyAdmin, async (req, res) => {
+  try {
+    const Motorista = require("../models/Motorista");
+    let motoristas = [];
+    try {
+      motoristas = await Motorista.find().select('transportadora').sort({ createdAt: -1 });
+    } catch (mongoErr) {
+      console.warn('[CONTRACTORS] MongoDB não disponível, retornando array vazio');
+      motoristas = [];
+    }
+    
+    // Extrair transportadoras únicas
+    const contractors = [...new Set(
+      (motoristas || [])
+        .filter(m => m.transportadora && m.transportadora.trim())
+        .map(m => m.transportadora.trim())
+    )].sort();
+    
+    console.log('[CONTRACTORS] Retornando ', contractors.length, ' contratados únicos');
+    return res.json({ contractors });
+  } catch (err) {
+    console.error('[CONTRACTORS] ❌ Erro ao listar:', err);
+    return res.status(500).json({ message: "Erro ao listar contratados", error: err.message });
+  }
+});
+
+/**
  * POST /api/admin/motoristas
  * Criar novo motorista
  */

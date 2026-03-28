@@ -52,6 +52,8 @@ export const adminService = {
   createMotorista: (data) => api.post('/admin/motoristas', data),
   updateMotorista: (id, data) => api.put(`/admin/motoristas/${id}`, data),
   deleteMotorista: (id) => api.delete(`/admin/motoristas/${id}`),
+  // Contratados
+  getContractors: () => api.get('/admin/contractors'),
   // Programações de Entrega
   getProgramacoes: (statsPeriod, periodDate) => {
     const params = new URLSearchParams();

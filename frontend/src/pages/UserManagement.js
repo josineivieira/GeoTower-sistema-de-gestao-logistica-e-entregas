@@ -56,18 +56,16 @@ const UserManagement = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [users,       setUsers]       = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [toast,       setToast]       = useState(null);
-  const [showForm,    setShowForm]    = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [search,      setSearch]      = useState('');
-  const [formData,    setFormData]    = useState({
+  const [users,         setUsers]         = useState([]);
+  const [contractors,   setContractors]   = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [toast,         setToast]         = useState(null);
+  const [showForm,      setShowForm]      = useState(false);
+  const [editingUser,   setEditingUser]   = useState(null);
+  const [search,        setSearch]        = useState('');
+  const [formData,      setFormData]      = useState({
     username: '', email: '', name: '', password: '', role: 'driver', contratado: null,
   });
-
-  // Lista de contratados disponíveis
-  const CONTRATADOS = ['GEO', 'MACHADO', 'BANDEIRA', 'TRANSCAVALCANTE', 'GEOMAR'];
 
   /* ── guard & load ── */
   useEffect(() => {
@@ -76,7 +74,18 @@ const UserManagement = () => {
       return;
     }
     loadUsers();
+    loadContractors();
   }, [user, navigate]);
+
+  const loadContractors = async () => {
+    try {
+      const response = await adminService.getContractors();
+      setContractors(response.data.contractors || []);
+      console.log('Contractors loaded:', response.data.contractors);
+    } catch (err) {
+      console.error('Erro ao carregar contratados:', err);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -440,9 +449,13 @@ const UserManagement = () => {
                       className="input-base bg-white"
                     >
                       <option value="">Selecione um contratado...</option>
-                      {CONTRATADOS.map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
+                      {contractors.length > 0 ? (
+                        contractors.map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))
+                      ) : (
+                        <option disabled>Nenhum contratado disponível</option>
+                      )}
                     </select>
                   </Field>
                 )}

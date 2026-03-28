@@ -679,7 +679,7 @@ const Home = () => {
 
   const hasAccess      = (roles) => !!user?.role && roles.includes(user.role);
   const isViewOnly     = () => false; // Libera acesso total para geomar
-  const canAccessAdmin = () => hasAccess(['manager','admin','geomar']);
+  const canAccessAdmin = () => hasAccess(['manager','admin','geomar','gestor_contratado']);
 
   useEffect(() => {
     if (user?.role === 'driver') loadStats();

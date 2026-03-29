@@ -172,17 +172,6 @@ const AdminDashboard = () => {
     barCli:      useRef(null),
   };
 
-  // Handler para aplicar filtros
-  const handleApplyFilters = useCallback(() => {
-    loadData(false, filters);
-  }, [filters, loadData]);
-
-  // Handler para limpar filtros
-  const handleClearFilters = useCallback(() => {
-    setFilters({ startDate: '', endDate: '' });
-    loadData(false, { startDate: '', endDate: '' });
-  }, [loadData]);
-
   const loadData = useCallback(async (silent = false, customFilters = null) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
@@ -207,6 +196,17 @@ const AdminDashboard = () => {
       setRefreshing(false);
     }
   }, [filters, navigate]);
+
+  // Handler para aplicar filtros
+  const handleApplyFilters = useCallback(() => {
+    loadData(false, filters);
+  }, [filters, loadData]);
+
+  // Handler para limpar filtros
+  const handleClearFilters = useCallback(() => {
+    setFilters({ startDate: '', endDate: '' });
+    loadData(false, { startDate: '', endDate: '' });
+  }, [loadData]);
 
   useEffect(() => { 
     loadData(); 

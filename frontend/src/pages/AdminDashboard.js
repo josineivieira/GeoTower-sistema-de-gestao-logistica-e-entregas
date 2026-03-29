@@ -276,16 +276,9 @@ const AdminDashboard = () => {
   }, [deliveries]);
 
   const topContratados = React.useMemo(() => {
-    const counts = {};
-    deliveries.forEach(d => {
-      const key = d.driverName || d.driver?.name || 'Sem Motorista';
-      counts[key] = (counts[key] || 0) + 1;
-    });
-    return Object.entries(counts)
-      .map(([driverName, count]) => ({ _id: driverName, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-  }, [deliveries]);
+    // Usar dados do backend que já agrupa por contratado
+    return statistics?.deliveriesByDriver || [];
+  }, [statistics]);
 
   const avgCliByRecebedor = React.useMemo(() => {
     const sums = {}, cnts = {};

@@ -523,7 +523,7 @@ const AdminDashboard = () => {
                   />
                   <ResponsiveContainer width="100%" height={300}>
                     <AreaChart
-                      data={statistics.dailyDeliveries}
+                      data={dailyDeliveriesData}
                       margin={{ top: 10, right: 10, left: -10, bottom: 30 }}
                     >
                       <defs>
@@ -556,7 +556,7 @@ const AdminDashboard = () => {
                         cursor={{ stroke: '#818cf8', strokeWidth: 1.5, strokeDasharray: '4 4' }}
                       />
                       <ReferenceLine
-                        y={statistics.dailyDeliveries.reduce((s, d) => s + d.count, 0) / statistics.dailyDeliveries.length}
+                        y={dailyDeliveriesData.reduce((s, d) => s + d.count, 0) / (dailyDeliveriesData.length || 1)}
                         stroke="#818cf8"
                         strokeDasharray="4 4"
                         strokeOpacity={0.5}

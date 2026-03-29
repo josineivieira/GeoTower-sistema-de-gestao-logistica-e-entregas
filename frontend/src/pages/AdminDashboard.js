@@ -614,7 +614,7 @@ const AdminDashboard = () => {
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
                       <XAxis
-                        dataKey="_id"
+                        dataKey="name"
                         stroke={axisStroke}
                         tick={{ fontSize: 10, fill: tickFill }}
                         axisLine={false}
@@ -642,7 +642,7 @@ const AdminDashboard = () => {
                         isAnimationActive
                         animationDuration={700}
                       >
-                        {statistics.deliveriesByDriver.map((_, i) => (
+                        {contratadoCountData.map((_, i) => (
                           <Cell
                             key={i}
                             fill={PALETTE[i % PALETTE.length]}

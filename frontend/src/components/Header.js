@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../services/authContext';
+import { notificationService } from '../services/authService';
+import NotificationBell from './NotificationBell';
 import {
   FaSignOutAlt, FaUser, FaBars, FaHome,
   FaTimes, FaTruck, FaChevronRight, FaCircle,
@@ -291,7 +293,8 @@ const Header = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
   const { user, logout } = useAuth();
-  const [menuOpen, setMenuOpen] = React.useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   const handleLogout = () => {
     logout();
@@ -299,9 +302,34 @@ const Header = () => {
     navigate('/login');
   };
 
-  React.useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+  // Buscar contagem de notificações
+  useEffect(() => {
+    const fetchNotificationCount = async () => {
+      if (user && (user.role === 'admin' || user.role === 'manager')) {
+        try {
+          const response = await notificationService.getNotifications();
+          setNotificationCount(response.data.unreadCount || 0);
+        } catch (error) {
+          console.warn('Erro ao buscar notificações:', error);
+          setNotificationCount(0);
+        }
+      }
+    };
 
-  React.useEffect(() => {
+    fetchNotificationCount();
+    // Atualizar a cada 30 segundos
+    const interval = setInterval(fetchNotificationCount, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const handleNotificationClick = () => {
+    // TODO: Abrir modal/página de notificações
+    console.log('Notificações clicadas');
+  };
+
+  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+
+  useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -364,6 +392,14 @@ const Header = () => {
 
             {/* Separador vertical */}
             <div className="hidden sm:block h-7 w-px bg-white/20 rounded-full" />
+
+            {/* Notificações - apenas para admin/manager */}
+            {(user?.role === 'admin' || user?.role === 'manager') && (
+              <NotificationBell
+                count={notificationCount}
+                onClick={handleNotificationClick}
+              />
+            )}
 
             {/* Botão hamburger */}
             <button

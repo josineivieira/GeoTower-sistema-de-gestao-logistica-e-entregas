@@ -47,17 +47,18 @@ router.get("/statistics", auth, onlyAdmin, async (req, res) => {
   try {
     const deliveryService = require('../services/deliveryService');
     const city = req.city || 'manaus';
-    
+    const { startDate, endDate } = req.query;
+
     // Determinar filtro de contratado se user é gestor_contratado
-    const contratadobFilter = req.user?.role === 'gestor_contratado' 
-      ? req.user.contratado 
+    const contratadobFilter = req.user?.role === 'gestor_contratado'
+      ? req.user.contratado
       : null;
-    
-    console.log(`⚡ GET /admin/statistics [OTIMIZADO] city=${city} contratado=${contratadobFilter || 'all'}`);
-    
+
+    console.log(`⚡ GET /admin/statistics [OTIMIZADO] city=${city} contratado=${contratadobFilter || 'all'} startDate=${startDate} endDate=${endDate}`);
+
     // Usar serviço otimizado com aggregation pipeline
-    const stats = await deliveryService.getStatistics(city, contratadobFilter);
-    
+    const stats = await deliveryService.getStatistics(city, contratadobFilter, startDate, endDate);
+
     // Converter para formato compatível com frontend
     const statistics = {
       totalDeliveries: stats.total,
@@ -65,7 +66,7 @@ router.get("/statistics", auth, onlyAdmin, async (req, res) => {
       pending: stats.pending,
       finalized: stats.finalized,
       deliveriesByDriver: stats.byContratado || [],
-      dailyDeliveries: []  // TODO: Implementar em próxima fase se necessário
+      dailyDeliveries: stats.dailyDeliveries || []
     };
 
     return res.json({ statistics });
@@ -1569,8 +1570,8 @@ router.delete("/motoristas/:id", auth, managerOnly, async (req, res) => {
  */
 router.get("/programacoes", auth, async (req, res) => {
   try {
-    const { period, periodDate, page = 1, limit = 500 } = req.query;
-    console.log('[PROGRAMACAO] Listando programações de entrega, filtros:', { period, periodDate, page, limit });
+    const { period, periodDate, startDate, endDate, page = 1, limit = 500 } = req.query;
+    console.log('[PROGRAMACAO] Listando programações de entrega, filtros:', { period, periodDate, startDate, endDate, page, limit });
 
     const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
     
@@ -1592,10 +1593,21 @@ router.get("/programacoes", auth, async (req, res) => {
 
     // Calcular o filtro de data para aplicar no DB sempre que possível
     let effectiveDate = '';
+    let rangeStart = null;
+    let rangeEnd = null;
+    if (startDate) {
+      rangeStart = new Date(startDate);
+      rangeStart.setHours(0, 0, 0, 0);
+    }
+    if (endDate) {
+      rangeEnd = new Date(endDate);
+      rangeEnd.setHours(23, 59, 59, 999);
+    }
+
     if (periodDate && String(periodDate).trim()) {
       effectiveDate = String(periodDate).trim();
       console.log('🗓️  Usando periodDate do cliente:', effectiveDate);
-    } else if (period && period !== 'general') {
+    } else if (!startDate && !endDate && period && period !== 'general') {
       console.log('🗓️  Aplicando filtro de período:', period);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -1619,7 +1631,12 @@ router.get("/programacoes", auth, async (req, res) => {
       } else {
         dbFilter.dataAgendamento = effectiveDate;
       }
-      console.log('📅 Aplicando filtro de data ao DB:', dbFilter);
+      console.log('📅 Aplicando filtro de data ao DB (data única):', dbFilter);
+    }
+
+    if (!effectiveDate && (rangeStart || rangeEnd)) {
+      console.log('📅 Aplicando filtro de data por intervalo:', { rangeStart, rangeEnd });
+      // dbFilter cannot reliably compare string dates, aplicamos filtro em memória abaixo
     }
 
     const limitNum = Math.min(Math.max(parseInt(limit, 10) || 500, 10), 1000);
@@ -1653,7 +1670,36 @@ router.get("/programacoes", auth, async (req, res) => {
         if (!pd) return false;
         return pd.day === edDay && pd.month === edMonth && pd.year === edYear;
       });
-      console.log(`  ✓ ${filtered.length} programações após filtro de data`);
+      console.log(`  ✓ ${filtered.length} programações após filtro de data única`);
+    }
+
+    if (!effectiveDate && (rangeStart || rangeEnd)) {
+      filtered = filtered.filter(d => {
+        const dateField = city === 'itajai' && d.dtColeta ? d.dtColeta : d.dataAgendamento;
+        if (!dateField) return false;
+
+        const progDateStr = String(dateField).trim();
+        let progDate = null;
+
+        if (/\d{2}\/\d{2}\/\d{4}/.test(progDateStr)) {
+          const parts = progDateStr.split(' ')[0].split('/');
+          progDate = new Date(+parts[2], +parts[1] - 1, +parts[0]);
+        } else if (/\d{4}-\d{2}-\d{2}/.test(progDateStr)) {
+          const parts = progDateStr.split('T')[0].split('-');
+          progDate = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+        } else {
+          const tmp = new Date(progDateStr);
+          if (!isNaN(tmp)) progDate = tmp;
+        }
+
+        if (!progDate) return false;
+        progDate.setHours(12, 0, 0, 0);
+
+        if (rangeStart && progDate < rangeStart) return false;
+        if (rangeEnd && progDate > rangeEnd) return false;
+        return true;
+      });
+      console.log(`  ✓ ${filtered.length} programações após filtro por intervalo`);
     }
 
     // também trazemos entregas para permitir associação com motoristas (apenas da mesma cidade)

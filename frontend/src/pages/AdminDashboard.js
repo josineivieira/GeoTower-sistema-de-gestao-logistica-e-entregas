@@ -183,7 +183,7 @@ const AdminDashboard = () => {
       const [delivRes, statsRes, progRes] = await Promise.all([
         adminService.getDeliveries(filtersToUse),
         adminService.getStatistics(filtersToUse),
-        adminService.getProgramacoes(),
+        adminService.getProgramacoes(filtersToUse),
       ]);
       setDeliveries(delivRes.data.deliveries);
       setStatistics(statsRes.data.statistics);
@@ -281,6 +281,13 @@ const AdminDashboard = () => {
   }, [deliveries]);
 
   const topContratados = React.useMemo(() => {
+    if (statistics?.deliveriesByDriver && statistics.deliveriesByDriver.length > 0) {
+      return statistics.deliveriesByDriver
+        .map(item => ({ _id: item._id || 'SEM CONTRATADO', count: item.count || 0 }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+    }
+
     const counts = {};
     const source = programacoes.length ? programacoes : deliveries;
 
@@ -309,7 +316,7 @@ const AdminDashboard = () => {
       .map(([contratado, count]) => ({ _id: contratado, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
-  }, [deliveries, programacoes]);
+  }, [deliveries, programacoes, statistics]);
 
   const avgCliByRecebedor = React.useMemo(() => {
     const sums = {}, cnts = {};

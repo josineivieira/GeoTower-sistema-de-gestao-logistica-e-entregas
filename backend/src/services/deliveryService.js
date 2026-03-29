@@ -17,19 +17,30 @@ const Icompany = require('../models/Icompany');
  * Obter estatísticas de entregas com performance otimizada
  * Usa aggregation pipeline ao invés de carregar tudo em memória
  */
-exports.getStatistics = async (cityCode = 'manaus', contratadobFilter = null) => {
+exports.getStatistics = async (cityCode = 'manaus', contratadobFilter = null, startDate = null, endDate = null) => {
   try {
     const match = { cityCode };
-    
+
     // Se houver filtro de contratado (gestor_contratado), adicionar
     if (contratadobFilter) {
       match.userName = contratadobFilter;
     }
 
+    // Aplica filtros de data na camada de Delivery (submittedAt), para manter compatibilidade com /admin/deliveries
+    if (startDate || endDate) {
+      match.submittedAt = {};
+      if (startDate) match.submittedAt.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        match.submittedAt.$lte = end;
+      }
+    }
+
     // Usar aggregation pipeline para performance
     const pipeline = [
       { $match: match },
-      
+
       // Group por status
       {
         $group: {
@@ -37,7 +48,7 @@ exports.getStatistics = async (cityCode = 'manaus', contratadobFilter = null) =>
           count: { $sum: 1 }
         }
       },
-      
+
       { $sort: { _id: 1 } }
     ];
 
@@ -74,33 +85,73 @@ exports.getStatistics = async (cityCode = 'manaus', contratadobFilter = null) =>
     const [totals] = await totalMatch;
 
     // Contar por contratado
-    const byContratado = await Delivery.aggregate([
-      { $match: match },
+    // Estatísticas agrupadas por contratado com base nas programações
+    const progFilter = {};
+    if (cityCode === 'manaus') {
+      progFilter.origem = { $in: ['MANAUS', 'MANAUS - COELTA BALY'] };
+    } else if (cityCode === 'itajai') {
+      progFilter.$or = [
+        { origem: { $exists: false } },
+        { origem: '' },
+        { origem: { $nin: ['MANAUS', 'MANAUS - COELTA BALY'] } }
+      ];
+    }
+
+    const scheduleFilter = {};
+    if (startDate) scheduleFilter.$gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      scheduleFilter.$lte = end;
+    }
+
+    const progPipeline = [
+      { $match: progFilter },
+      {
+        $addFields: {
+          scheduleDate: {
+            $dateFromString: {
+              dateString: cityCode === 'manaus' ? '$dataAgendamento' : '$dtColeta',
+              onError: null
+            }
+          }
+        }
+      },
+      { $match: { scheduleDate: { $ne: null, ...(Object.keys(scheduleFilter).length ? scheduleFilter : {}) } } },
       {
         $group: {
-          _id: '$userName',
+          _id: '$contratado',
           count: { $sum: 1 }
         }
       },
       { $sort: { count: -1 } }
-    ]);
+    ];
 
-    const dailyDeliveries = await Delivery.aggregate([
-      { $match: match },
+    const byContratado = await ProgramacaoEntrega.aggregate(progPipeline);
+
+    const dailyPipeline = [
+      { $match: progFilter },
+      {
+        $addFields: {
+          scheduleDate: {
+            $dateFromString: {
+              dateString: cityCode === 'manaus' ? '$dataAgendamento' : '$dtColeta',
+              onError: null
+            }
+          }
+        }
+      },
+      { $match: { scheduleDate: { $ne: null, ...(Object.keys(scheduleFilter).length ? scheduleFilter : { $gte: new Date(new Date().setDate(new Date().getDate() - 29)) }) } } },
       {
         $group: {
-          _id: {
-            $dateToString: {
-              format: '%Y-%m-%d',
-              date: '$createdAt',
-              timezone: 'America/Sao_Paulo'
-            }
-          },
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$scheduleDate' } },
           count: { $sum: 1 }
         }
       },
-      { $sort: { '_id': 1 } }
-    ]);
+      { $sort: { _id: 1 } }
+    ];
+
+    const dailyDeliveries = await ProgramacaoEntrega.aggregate(dailyPipeline);
 
     return {
       total: totals?.total || 0,

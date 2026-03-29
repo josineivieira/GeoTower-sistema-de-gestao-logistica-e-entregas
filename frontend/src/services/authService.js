@@ -55,10 +55,12 @@ export const adminService = {
   // Contratados
   getContractors: () => api.get('/admin/contractors'),
   // Programações de Entrega
-  getProgramacoes: (statsPeriod, periodDate) => {
+  getProgramacoes: (filters = {}) => {
     const params = new URLSearchParams();
-    if (statsPeriod && statsPeriod !== 'general') params.append('period', statsPeriod);
-    if (periodDate) params.append('periodDate', periodDate);
+    if (filters.period && filters.period !== 'general') params.append('period', filters.period);
+    if (filters.periodDate) params.append('periodDate', filters.periodDate);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
     return api.get('/admin/programacoes' + (params.toString() ? '?' + params.toString() : ''), { timeout: 30000 });
   },
   updateProgramacao: (id, data) => api.put(`/admin/programacoes/${id}`, data),

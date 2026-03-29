@@ -183,11 +183,30 @@ exports.getStatistics = async (req, res) => {
       { $sort: { _id: 1 } }
     ]);
 
+    // Transportadoras - usar Delivery com filtro de data
+    const deliveriesByTransportadora = await Delivery.aggregate([
+      {
+        $match: {
+          status: { $in: ['submitted', 'completed'] },
+          cityCode: city,
+          submittedAt: dateFilter
+        }
+      },
+      {
+        $group: {
+          _id: '$vehiclePlate',
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+
     res.json({
       success: true,
       statistics: {
         totalDeliveries,
         deliveriesByDriver,
+        deliveriesByTransportadora,
         dailyDeliveries,
         period
       }

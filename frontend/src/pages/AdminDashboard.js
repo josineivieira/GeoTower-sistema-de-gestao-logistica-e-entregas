@@ -276,17 +276,9 @@ const AdminDashboard = () => {
   }, [deliveries]);
 
   const topContratados = React.useMemo(() => {
-    const counts = {};
-    deliveries.forEach(d => {
-      // Usar vehiclePlate (transportadora)
-      const key = d.vehiclePlate || 'Sem Transportadora';
-      counts[key] = (counts[key] || 0) + 1;
-    });
-    return Object.entries(counts)
-      .map(([transportadora, count]) => ({ _id: transportadora, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-  }, [deliveries]);
+    // Backend já agrupa por transportadora com filtros corretos
+    return (statistics?.deliveriesByTransportadora || []).slice(0, 10);
+  }, [statistics]);
 
   const avgCliByRecebedor = React.useMemo(() => {
     const sums = {}, cnts = {};

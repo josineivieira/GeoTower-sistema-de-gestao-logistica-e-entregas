@@ -85,13 +85,31 @@ exports.getStatistics = async (cityCode = 'manaus', contratadobFilter = null) =>
       { $sort: { count: -1 } }
     ]);
 
+    const dailyDeliveries = await Delivery.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: {
+            $dateToString: {
+              format: '%Y-%m-%d',
+              date: '$createdAt',
+              timezone: 'America/Sao_Paulo'
+            }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id': 1 } }
+    ]);
+
     return {
       total: totals?.total || 0,
       submitted: totals?.submitted || 0,
       pending: totals?.pending || 0,
       finalized: totals?.finalized || 0,
       statusCounts,
-      byContratado
+      byContratado,
+      dailyDeliveries
     };
   } catch (error) {
     console.error('❌ Erro em getStatistics:', error);

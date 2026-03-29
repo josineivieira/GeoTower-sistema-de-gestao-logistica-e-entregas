@@ -107,14 +107,25 @@ programacaoEntregaSchema.pre('save', function(next) {
   next();
 });
 
-// Índice para buscar por processo
+// Índices para performance de consultas
+// Índices simples
 programacaoEntregaSchema.index({ processo: 1 });
 programacaoEntregaSchema.index({ dataAgendamento: 1 });
 programacaoEntregaSchema.index({ status: 1 });
 programacaoEntregaSchema.index({ origem: 1 });
-// Índices de combinação para consultas de cidade + data (performance de Manaus/Itajaí)
+programacaoEntregaSchema.index({ contratado: 1 });
+programacaoEntregaSchema.index({ ativo: 1 });
+
+// Índices compostos (multi-campo) para queries frequentes
 programacaoEntregaSchema.index({ origem: 1, dataAgendamento: 1 });
 programacaoEntregaSchema.index({ origem: 1, dtColeta: 1 });
+programacaoEntregaSchema.index({ contratado: 1, status: 1 });
+programacaoEntregaSchema.index({ contratado: 1, ativo: 1 });
+programacaoEntregaSchema.index({ ativo: 1, status: 1 });
+programacaoEntregaSchema.index({ dataAgendamento: 1, status: 1 });
+
+// Índices de text search
+programacaoEntregaSchema.index({ processo: 'text', container: 'text', recebedor: 'text' });
 
 const ProgramacaoEntrega = mongoose.model('ProgramacaoEntrega', programacaoEntregaSchema);
 

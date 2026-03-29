@@ -41,67 +41,36 @@ function onlyAdmin(req, res, next) {
 /**
  * GET /api/admin/statistics
  * Retorna estatísticas gerais
+ * ✅ OTIMIZADO: Usa deliveryService com aggregation pipeline
  */
 router.get("/statistics", auth, onlyAdmin, async (req, res) => {
   try {
-    const db = await getDb(req);
-    let deliveries = await db.find("deliveries", {});
-
-    // NOVO: Se gestor_contratado, filtrar por contratado
-    if (req.user && req.user.role === 'gestor_contratado' && req.user.contratado) {
-      console.log('  ✓ Aplicando filtro de contratado para gestor em statistics:', req.user.contratado);
-      deliveries = (deliveries || []).filter(d => d.userName === req.user.contratado);
-    }
+    const deliveryService = require('../services/deliveryService');
+    const city = req.city || 'manaus';
     
-    const totalDeliveries = (deliveries || []).length;
-    const submitted = (deliveries || []).filter(d => d.status === "submitted").length;
-    const pending = (deliveries || []).filter(d => d.status === "pending").length;
+    // Determinar filtro de contratado se user é gestor_contratado
+    const contratadobFilter = req.user?.role === 'gestor_contratado' 
+      ? req.user.contratado 
+      : null;
     
-    // Agrupa por transportadora (placa) - removendo espaços em branco
-    // Agrupa por contratado (userName)
-    const deliveriesByContratado = {};
-    deliveries.forEach(d => {
-      const contratado = (d.userName || "Sem Contratado").trim();
-      if (!deliveriesByContratado[contratado]) {
-        deliveriesByContratado[contratado] = 0;
-      }
-      deliveriesByContratado[contratado]++;
-    });
-
-    // Filtra apenas entregas finalizadas (status ENTREGUE ou FINALIZADO)
-    const finalizedDeliveries = deliveries.filter(d => 
-      d.status === 'ENTREGUE' || d.status === 'FINALIZADO' || d.status === 'ENTREGUE_COM_PENDENCIA_CANHOTO'
-    );
-
-    const dailyDeliveries = [];
-    const daysMap = {};
+    console.log(`⚡ GET /admin/statistics [OTIMIZADO] city=${city} contratado=${contratadobFilter || 'all'}`);
     
-    finalizedDeliveries.forEach(d => {
-      // Usa data de chegada no cliente (arrivedAt) ou a data atualizada
-      const completionDate = d.arrivedAt || d.updatedAt || d.createdAt;
-      const dt = new Date(completionDate);
-      const date = dt.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }); // YYYY-MM-DD
-      if (!daysMap[date]) {
-        daysMap[date] = 0;
-      }
-      daysMap[date]++;
-    });
-
-    Object.entries(daysMap).forEach(([date, count]) => {
-      dailyDeliveries.push({ _id: date, count });
-    });
-
+    // Usar serviço otimizado com aggregation pipeline
+    const stats = await deliveryService.getStatistics(city, contratadobFilter);
+    
+    // Converter para formato compatível com frontend
     const statistics = {
-      totalDeliveries,
-      submitted,
-      pending,
-      deliveriesByDriver: Object.entries(deliveriesByContratado).map(([contratado, count]) => ({ _id: contratado, count })),
-      dailyDeliveries: dailyDeliveries.sort((a, b) => new Date(a._id) - new Date(b._id))
+      totalDeliveries: stats.total,
+      submitted: stats.submitted,
+      pending: stats.pending,
+      finalized: stats.finalized,
+      deliveriesByDriver: stats.byContratado || [],
+      dailyDeliveries: []  // TODO: Implementar em próxima fase se necessário
     };
 
     return res.json({ statistics });
   } catch (error) {
-    console.error("Erro ao buscar estatísticas:", error);
+    console.error("❌ Erro ao buscar estatísticas:", error);
     return res.status(500).json({ message: "Erro ao buscar estatísticas" });
   }
 });

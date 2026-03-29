@@ -73,8 +73,25 @@ const DeliverySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Índices para filtrar por cidade
+// Índices para performance de consultas comuns
+// Índices simples
 DeliverySchema.index({ cityCode: 1 });
+DeliverySchema.index({ status: 1 });
+DeliverySchema.index({ deliveryNumber: 1 });
+DeliverySchema.index({ createdAt: -1 });
+DeliverySchema.index({ userName: 1 });
+DeliverySchema.index({ driverId: 1 });
+
+// Índices compostos (multi-campo) - maior impacto em performance
+DeliverySchema.index({ cityCode: 1, status: 1 });
+DeliverySchema.index({ cityCode: 1, createdAt: -1 });
+DeliverySchema.index({ cityCode: 1, userName: 1 });
+DeliverySchema.index({ status: 1, createdAt: -1 });
+DeliverySchema.index({ userName: 1, createdAt: -1 });
+DeliverySchema.index({ driverId: 1, cityCode: 1 });
+
+// Índice de texto para busca (deliveryNumber + recebedor)
+DeliverySchema.index({ deliveryNumber: 'text', recebedor: 'text' });
 DeliverySchema.index({ cityCode: 1, deliveryNumber: 1 });
 DeliverySchema.index({ cityCode: 1, status: 1 });
 DeliverySchema.index({ cityCode: 1, linkedProgramacaoId: 1 });

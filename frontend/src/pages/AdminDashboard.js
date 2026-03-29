@@ -275,6 +275,18 @@ const AdminDashboard = () => {
       .slice(0, 5);
   }, [deliveries]);
 
+  const topContratados = React.useMemo(() => {
+    const counts = {};
+    deliveries.forEach(d => {
+      const key = d.driverName || d.driver?.name || 'Sem Motorista';
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([driverName, count]) => ({ _id: driverName, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+  }, [deliveries]);
+
   const avgCliByRecebedor = React.useMemo(() => {
     const sums = {}, cnts = {};
     deliveries.forEach(d => {
@@ -293,6 +305,11 @@ const AdminDashboard = () => {
   const recebedorCountData = React.useMemo(
     () => topRecebedores.map(r => ({ name: r.recebedor, count: r.count })),
     [topRecebedores]
+  );
+
+  const contratadoCountData = React.useMemo(
+    () => topContratados.map(r => ({ name: r._id, count: r.count })),
+    [topContratados]
   );
 
   const recebedorAvgData = React.useMemo(
@@ -579,7 +596,7 @@ const AdminDashboard = () => {
               )}
 
               {/* Bar — Por Contratado */}
-              {statistics.deliveriesByDriver.length > 0 && (
+              {topContratados.length > 0 && (
                 <div
                   ref={chartRefs.barDriver}
                   className="xl:col-span-2 bg-gradient-to-br from-emerald-500/[0.10] via-white/[0.03] to-transparent backdrop-blur-xl rounded-2xl shadow-xl border border-white/[0.08] p-6 hover:border-emerald-500/30 hover:shadow-emerald-500/10 transition-all duration-300"
@@ -591,7 +608,7 @@ const AdminDashboard = () => {
                   />
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart
-                      data={statistics.deliveriesByDriver}
+                      data={contratadoCountData}
                       margin={{ top: 10, right: 10, left: -10, bottom: 50 }}
                       onMouseLeave={() => setActiveBar(null)}
                     >

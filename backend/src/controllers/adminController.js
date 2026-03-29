@@ -50,12 +50,22 @@ exports.getAllDeliveries = async (req, res) => {
 exports.getStatistics = async (req, res) => {
   try {
     const city = req.city || 'manaus';
-    const { period = 'month' } = req.query;
+    const { period = 'month', startDate, endDate } = req.query;
 
     let dateFilter = {};
     const now = new Date();
 
-    if (period === 'day') {
+    // Se startDate/endDate foram passados, usar esses; senão usar period
+    if (startDate || endDate) {
+      if (startDate) {
+        dateFilter.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        dateFilter.$lte = end;
+      }
+    } else if (period === 'day') {
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       dateFilter = { $gte: startOfDay };
     } else if (period === 'week') {
@@ -75,30 +85,7 @@ exports.getStatistics = async (req, res) => {
       submittedAt: dateFilter
     });
 
-    // Deliveries by driver
-    const deliveriesByDriver = await Delivery.aggregate([
-      {
-        $match: {
-          status: { $in: ['submitted', 'completed'] },
-          cityCode: city,
-          submittedAt: dateFilter
-        }
-      },
-      {
-        $group: {
-          _id: '$driverName',
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { count: -1 } }
-    ]);
-
-    // Daily deliveries (last 30 days) - PROGRAMAÇÕES por data de agendamento
-    const thirtyDaysAgo = new Date(now);
-    thirtyDaysAgo.setDate(now.getDate() - 29);
-    thirtyDaysAgo.setHours(0, 0, 0, 0);
-
-    // Query na tabela ProgramacaoEntrega para contar programações por dia
+    // Deliveries by driver — AGORA usando ProgramacaoEntrega para ser consistente com dailyDeliveries
     const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
     let progFilter = {};
     if (city === 'manaus') {
@@ -111,10 +98,59 @@ exports.getStatistics = async (req, res) => {
       ];
     }
 
-    const dailyDeliveries = await ProgramacaoEntrega.aggregate([
+    // Aplicar filtro de data na programação (usando scheduleDate: dataAgendamento ou dtColeta)
+    const scheduleFilter = {};
+    if (Object.keys(dateFilter).length > 0) {
+      Object.assign(scheduleFilter, dateFilter);
+    }
+
+    const deliveriesByDriver = await ProgramacaoEntrega.aggregate([
       {
         $match: {
           ...progFilter,
+          ativo: { $ne: false }
+        }
+      },
+      {
+        $addFields: {
+          scheduleDate: city === 'manaus' ? '$dataAgendamento' : '$dtColeta'
+        }
+      },
+      {
+        $match: {
+          scheduleDate: { $ne: null, ...scheduleFilter }
+        }
+      },
+      {
+        $group: {
+          _id: '$motorista', // ou o campo que identifica o motorista/contratado
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+
+    // Daily deliveries (last 30 days) - PROGRAMAÇÕES por data de agendamento
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(now.getDate() - 29);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+    // Query na tabela ProgramacaoEntrega para contar programações por dia
+    let progDailyFilter = {};
+    if (city === 'manaus') {
+      progDailyFilter.origem = { $in: ['MANAUS', 'MANAUS - COELTA BALY'] };
+    } else if (city === 'itajai') {
+      progDailyFilter.$or = [
+        { origem: { $exists: false } },
+        { origem: '' },
+        { origem: { $nin: ['MANAUS', 'MANAUS - COELTA BALY'] } }
+      ];
+    }
+
+    const dailyDeliveries = await ProgramacaoEntrega.aggregate([
+      {
+        $match: {
+          ...progDailyFilter,
           ativo: { $ne: false } // Só programações ativas
         }
       },

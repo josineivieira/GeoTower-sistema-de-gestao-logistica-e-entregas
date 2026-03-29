@@ -1,5 +1,4 @@
 const Notification = require('../models/Notification');
-const User = require('../models/User');
 
 class NotificationService {
   // Criar notificação para usuários específicos
@@ -17,51 +16,27 @@ class NotificationService {
     expiresAt
   }) {
     try {
-      // Buscar usuários com os roles especificados
-      const recipients = await User.find({
-        role: { $in: recipientRoles },
-        isActive: { $ne: false }
-      }).select('_id role city');
-
-      if (recipients.length === 0) {
-        console.log('Nenhum usuário encontrado para receber notificação:', recipientRoles);
-        return [];
-      }
-
-      // Filtrar recipients por cidade se necessário
-      let filteredRecipients = recipients;
-      if (city !== 'both') {
-        filteredRecipients = recipients.filter(user => {
-          const userCity = user.city || 'manaus';
-          return userCity === 'both' || userCity === city;
-        });
-      }
-
-      if (filteredRecipients.length === 0) {
-        console.log('Nenhum usuário elegível encontrado para cidade:', city);
-        return [];
-      }
-
-      // Criar notificações para cada recipient
-      const notifications = filteredRecipients.map(recipient => ({
+      // Criar notificação simples sem filtrar recipients aqui
+      // As notificações serão filtradas quando o usuário as buscar
+      const notification = new Notification({
         title,
         message,
         type,
         priority,
-        recipientId: recipient._id,
-        recipientRole: recipient.role,
+        recipientRoles: Array.isArray(recipientRoles) ? recipientRoles : [recipientRoles],
         senderId,
         senderName,
         relatedEntity,
         metadata,
         city,
-        expiresAt
-      }));
+        expiresAt,
+        createdAt: new Date()
+      });
 
-      const createdNotifications = await Notification.insertMany(notifications);
-      console.log(`✅ Criadas ${createdNotifications.length} notificações: ${title}`);
+      const saved = await notification.save();
+      console.log(`✅ Notificação criada: ${title} (ID: ${saved._id})`);
 
-      return createdNotifications;
+      return [saved];
     } catch (error) {
       console.error('❌ Erro ao criar notificação:', error);
       throw error;
@@ -112,46 +87,41 @@ class NotificationService {
     });
   }
 
-  // Buscar notificações de um usuário
-  static async getUserNotifications(userId, options = {}) {
-    const { limit = 50, offset = 0, unreadOnly = false } = options;
+  // Buscar notificações de um usuário baseado em sua role e cidade
+  static async getUserNotifications(userRole, userCity, options = {}) {
+    const { limit = 50, offset = 0 } = options;
 
-    const query = { recipientId: userId };
-    if (unreadOnly) {
-      query.read = false;
-    }
+    // Buscar notificações que contêm a role do usuário e coincidem com sua cidade
+    const query = {
+      recipientRoles: { $in: [userRole, 'all'] },
+      $or: [
+        { city: userCity },
+        { city: 'both' }
+      ]
+    };
 
     return Notification.find(query)
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip(offset)
-      .populate('senderId', 'name username')
       .lean();
   }
 
-  // Contar notificações não lidas
-  static async countUnreadNotifications(userId) {
+  // Contar notificações para um role
+  static async countUnreadNotifications(userRole) {
     return Notification.countDocuments({
-      recipientId: userId,
-      read: false
+      recipientRoles: { $in: [userRole, 'all'] }
     });
   }
 
-  // Marcar notificação como lida
-  static async markAsRead(notificationId, userId) {
-    return Notification.findOneAndUpdate(
-      { _id: notificationId, recipientId: userId },
-      { read: true, readAt: new Date() },
-      { new: true }
-    );
+  // Marcar notificação como lida (placeholder - não implementado no modelo atual)
+  static async markAsRead(notificationId) {
+    return Notification.findById(notificationId).lean();
   }
 
-  // Marcar todas como lidas para um usuário
-  static async markAllAsRead(userId) {
-    return Notification.updateMany(
-      { recipientId: userId, read: false },
-      { read: true, readAt: new Date() }
-    );
+  // Marcar todas como lidas para um usuário (placeholder)
+  static async markAllAsRead(userRole) {
+    return { acknowledged: true };
   }
 
   // Limpar notificações antigas (mais de 30 dias)

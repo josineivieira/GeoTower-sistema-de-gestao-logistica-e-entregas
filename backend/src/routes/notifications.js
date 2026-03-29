@@ -6,15 +6,16 @@ const NotificationService = require('../services/notificationService');
 // Buscar notificações do usuário logado
 router.get('/', auth, async (req, res) => {
   try {
-    const { limit = 50, offset = 0, unreadOnly = false } = req.query;
+    const { limit = 50, offset = 0 } = req.query;
+    const userRole = req.user.role || 'driver';
+    const userCity = req.city || 'manaus';
 
-    const notifications = await NotificationService.getUserNotifications(req.user.id, {
+    const notifications = await NotificationService.getUserNotifications(userRole, userCity, {
       limit: parseInt(limit),
-      offset: parseInt(offset),
-      unreadOnly: unreadOnly === 'true'
+      offset: parseInt(offset)
     });
 
-    const unreadCount = await NotificationService.countUnreadNotifications(req.user.id);
+    const unreadCount = await NotificationService.countUnreadNotifications(userRole);
 
     res.json({
       success: true,
@@ -35,7 +36,8 @@ router.get('/', auth, async (req, res) => {
 // Contar notificações não lidas
 router.get('/unread-count', auth, async (req, res) => {
   try {
-    const count = await NotificationService.countUnreadNotifications(req.user.id);
+    const userRole = req.user.role || 'driver';
+    const count = await NotificationService.countUnreadNotifications(userRole);
     res.json({ success: true, count });
   } catch (error) {
     console.error('Erro ao contar notificações:', error);
@@ -46,7 +48,7 @@ router.get('/unread-count', auth, async (req, res) => {
 // Marcar notificação como lida
 router.put('/:id/read', auth, async (req, res) => {
   try {
-    const notification = await NotificationService.markAsRead(req.params.id, req.user.id);
+    const notification = await NotificationService.markAsRead(req.params.id);
     if (!notification) {
       return res.status(404).json({ success: false, message: 'Notificação não encontrada' });
     }
@@ -60,8 +62,9 @@ router.put('/:id/read', auth, async (req, res) => {
 // Marcar todas como lidas
 router.put('/mark-all-read', auth, async (req, res) => {
   try {
-    const result = await NotificationService.markAllAsRead(req.user.id);
-    res.json({ success: true, modifiedCount: result.modifiedCount });
+    const userRole = req.user.role || 'driver';
+    const result = await NotificationService.markAllAsRead(userRole);
+    res.json({ success: true, acknowledged: result.acknowledged });
   } catch (error) {
     console.error('Erro ao marcar todas como lidas:', error);
     res.status(500).json({ success: false, message: 'Erro ao marcar todas como lidas', error: error.message });

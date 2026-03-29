@@ -324,42 +324,23 @@ const getPunctualityStatus = (d, now = new Date(), city = 'manaus') => {
   const schedStr = getProgramacaoDate(d, city);
   if (!schedStr) return { label: 'Sem agendamento', type: 'unknown', eta: null, lateBy: null };
   
-  // Função para converter timestamp UTC para hora local da cidade
-  const getTimeInCityTimezone = (dateObj) => {
-    if (!dateObj) return null;
-    const timezone = city === 'manaus' ? 'America/Manaus' : 'America/Sao_Paulo';
-    const formatter = new Intl.DateTimeFormat('pt-BR', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
-    
-    const parts = formatter.formatToParts(new Date(dateObj));
-    const partsMap = {};
-    parts.forEach(part => {
-      if (part.type !== 'literal') partsMap[part.type] = part.value;
-    });
-    
-    return new Date(
-      parseInt(partsMap.year),
-      parseInt(partsMap.month) - 1,
-      parseInt(partsMap.day),
-      parseInt(partsMap.hour),
-      parseInt(partsMap.minute),
-      parseInt(partsMap.second)
-    ).getTime();
+  // Offset de timezone em horas (Manaus = UTC-4, então +4 para converter local para UTC)
+  const getTimezoneOffsetHours = (cityCode) => {
+    if (cityCode === 'manaus') return 4;   // Manaus é UTC-4, então adiciona 4 para converter local→UTC
+    if (cityCode === 'itajai') return 3;  // Itajaí é UTC-3, então adiciona 3 para converter local→UTC
+    return 3;
   };
   
   const scheduled = new Date(schedStr);
   const arrival = d.horarioChegada ? new Date(d.horarioChegada) : null;
   const start = d.createdAt ? new Date(d.createdAt) : null;
   const travel = Number(d.estimatedTravelMinutes || d.minimumTravelMinutes || 40);
-
+  
+  // Converter agendamento (hora local) para UTC adicionando o offset
+  const offset = getTimezoneOffsetHours(city);
+  const offsetMs = offset * 60 * 60 * 1000;
+  const scheduledUTC = new Date(scheduled.getTime() + offsetMs);
+  
   const computeEta = () => {
     if (!start) return null;
     const expected = new Date(start.getTime() + travel * 60000);
@@ -368,24 +349,19 @@ const getPunctualityStatus = (d, now = new Date(), city = 'manaus') => {
   };
 
   if (arrival) {
-    // Converter ambas para horário local da cidade para comparação correta
-    const arrivalCityTime = getTimeInCityTimezone(arrival);
-    const scheduledCityTime = getTimeInCityTimezone(scheduled);
-    const lateBy = Math.round((arrivalCityTime - scheduledCityTime) / 60000);
+    // Agora ambas estão em UTC para comparação correta
+    const lateBy = Math.round((arrival - scheduledUTC) / 60000);
     return {
-      label: arrivalCityTime <= scheduledCityTime ? 'Pontual' : 'Atrasado',
-      type: arrivalCityTime <= scheduledCityTime ? 'ok' : 'late',
+      label: arrival.getTime() <= scheduledUTC.getTime() ? 'Pontual' : 'Atrasado',
+      type: arrival.getTime() <= scheduledUTC.getTime() ? 'ok' : 'late',
       eta: 0, lateBy
     };
   }
 
   const eta = computeEta();
-  const nowCityTime = getTimeInCityTimezone(now);
-  const scheduledCityTime = getTimeInCityTimezone(scheduled);
-  
-  if (nowCityTime >= scheduledCityTime) return { label: 'Atrasado', type: 'late', eta: eta || 0, lateBy: null };
+  if (now.getTime() >= scheduledUTC.getTime()) return { label: 'Atrasado', type: 'late', eta: eta || 0, lateBy: null };
   if (!start) return { label: 'Sem início', type: 'unknown', eta, lateBy: null };
-  const timeLeft = Math.round((scheduledCityTime - nowCityTime) / 60000);
+  const timeLeft = Math.round((scheduledUTC.getTime() - now.getTime()) / 60000);
   if (timeLeft <= travel) return { label: 'Possível atraso', type: 'possible', eta, lateBy: null };
   return { label: 'No prazo', type: 'ok', eta, lateBy: null };
 };

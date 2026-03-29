@@ -232,6 +232,37 @@ const AdminDashboard = () => {
     return date;
   };
 
+  const dailyDeliveriesData = React.useMemo(() => {
+    // Base principal: mesmo que os outros gráficos (data de programação)
+    const grouped = {};
+    deliveries.forEach(d => {
+      const dateValue = getProgramacaoDate(d, city);
+      if (!dateValue) return;
+
+      let day;
+      if (typeof dateValue === 'string' && /\d{4}-\d{2}-\d{2}/.test(dateValue)) {
+        day = dateValue.slice(0, 10);
+      } else {
+        const dt = new Date(dateValue);
+        if (isNaN(dt)) return;
+        day = dt.toISOString().slice(0, 10);
+      }
+
+      grouped[day] = (grouped[day] || 0) + 1;
+    });
+
+    const result = Object.entries(grouped)
+      .map(([day, count]) => ({ _id: day, count }))
+      .sort((a, b) => a._id.localeCompare(b._id));
+
+    if (result.length > 0) {
+      return result;
+    }
+
+    // Fallback para dados do backend se deliveries estiver vazio
+    return statistics?.dailyDeliveries || [];
+  }, [statistics, deliveries, city]);
+
   const topRecebedores = React.useMemo(() => {
     const counts = {};
     deliveries.forEach(d => {
@@ -446,7 +477,7 @@ const AdminDashboard = () => {
                 subtitle="Total no período filtrado"
                 icon={FiPackage}
                 color="indigo"
-                sparkData={statistics.dailyDeliveries}
+                sparkData={dailyDeliveriesData}
                 badge={`${deliveries.length} registros`}
               />
               <KpiCard
@@ -455,7 +486,7 @@ const AdminDashboard = () => {
                 subtitle="Contratados com entregas"
                 icon={FiTruck}
                 color="cyan"
-                sparkData={statistics.dailyDeliveries}
+                sparkData={dailyDeliveriesData}
               />
               <KpiCard
                 title={`Top ${getRecebedorLabel(city)}`}
@@ -470,7 +501,7 @@ const AdminDashboard = () => {
                 subtitle="Média chegada → fim desova"
                 icon={FiClock}
                 color="emerald"
-                sparkData={statistics.dailyDeliveries}
+                sparkData={dailyDeliveriesData}
               />
             </div>
           )}
@@ -480,7 +511,7 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
 
               {/* Área — Evolução Diária */}
-              {statistics.dailyDeliveries.length > 0 && (
+              {dailyDeliveriesData.length > 0 && (
                 <div
                   ref={chartRefs.area}
                   className="xl:col-span-3 bg-gradient-to-br from-indigo-500/[0.10] via-white/[0.03] to-transparent backdrop-blur-xl rounded-2xl shadow-xl border border-white/[0.08] p-6 hover:border-indigo-500/30 hover:shadow-indigo-500/10 transition-all duration-300"

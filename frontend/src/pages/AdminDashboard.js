@@ -155,6 +155,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const { city } = useCity();
   const [deliveries,  setDeliveries]  = useState([]);
+  const [programacoes,setProgramacoes]= useState([]);
   const [statistics,  setStatistics]  = useState(null);
   const [loading,     setLoading]     = useState(true);
   const [refreshing,  setRefreshing]  = useState(false);
@@ -179,12 +180,16 @@ const AdminDashboard = () => {
       // Usar filtros customizados passados como parâmetro
       // Não usar filters do state para evitar recarregar a cada digitação
       const filtersToUse = customFilters !== null ? customFilters : {};
-      const [delivRes, statsRes] = await Promise.all([
+      const [delivRes, statsRes, progRes] = await Promise.all([
         adminService.getDeliveries(filtersToUse),
         adminService.getStatistics(filtersToUse),
+        adminService.getProgramacoes(),
       ]);
       setDeliveries(delivRes.data.deliveries);
       setStatistics(statsRes.data.statistics);
+      setProgramacoes(progRes.data.programacoes || []);
+      console.log('✅ loadData deliveries sample', delivRes.data.deliveries.slice(0, 10));
+      console.log('✅ statistics sample', statsRes.data.statistics?.deliveriesByTransportadora || statsRes.data.statistics);
     } catch (err) {
       if (err && err.response && err.response.status === 401) {
         setToast({ message: 'Sessão expirada. Faça login novamente.', type: 'error' });
@@ -277,16 +282,34 @@ const AdminDashboard = () => {
 
   const topContratados = React.useMemo(() => {
     const counts = {};
-    deliveries.forEach(d => {
-      const key = d.linkedProgramacaoId?.contratado || d.vehiclePlate || 'Sem Contratado';
-      if (!key) return;
+    const source = programacoes.length ? programacoes : deliveries;
+
+    source.forEach(item => {
+      let key = null;
+
+      // Se for programação, usa contratado direto
+      if (item.contratado) key = item.contratado;
+
+      // Se veio do merge de delivery, pode conter linkedProgramacaoId
+      if (!key && item.linkedProgramacaoId?.contratado) key = item.linkedProgramacaoId.contratado;
+
+      // Fallback por driverName + lookup no programacoes (mesma base)
+      if (!key && item.driverName) {
+        const p = programacoes.find(p => (p.motorista || '').trim().toLowerCase() === (item.driverName || '').trim().toLowerCase());
+        if (p?.contratado) key = p.contratado;
+      }
+
+      if (!key && item.vehiclePlate) key = item.vehiclePlate;
+      if (!key) key = 'SEM CONTRATADO';
+
       counts[key] = (counts[key] || 0) + 1;
     });
+
     return Object.entries(counts)
       .map(([contratado, count]) => ({ _id: contratado, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
-  }, [deliveries]);
+  }, [deliveries, programacoes]);
 
   const avgCliByRecebedor = React.useMemo(() => {
     const sums = {}, cnts = {};

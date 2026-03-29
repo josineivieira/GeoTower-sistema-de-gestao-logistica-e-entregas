@@ -36,8 +36,9 @@ const KPIAnalytics = ({ onToggle }) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      // Usar filtros customizados ou os do state
-      const filtersToUse = customFilters || filters || {};
+      // Usar filtros customizados passados como parâmetro
+      // Não usar filters do state para evitar recarregar a cada digitação
+      const filtersToUse = customFilters !== null ? customFilters : {};
       const res = await adminService.getDeliveries(filtersToUse);
       setDeliveries(res.data.deliveries || []);
     } catch (err) {
@@ -51,7 +52,7 @@ const KPIAnalytics = ({ onToggle }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters, navigate]);
+  }, [navigate]);
 
   // ═══ Helper Functions ═══
   const isCompletedStatus = (status) => {
@@ -324,8 +325,8 @@ const KPIAnalytics = ({ onToggle }) => {
   };
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadData(false, {});
+  }, []);
 
   // Handler para aplicar filtros
   const handleApplyFilters = useCallback(() => {

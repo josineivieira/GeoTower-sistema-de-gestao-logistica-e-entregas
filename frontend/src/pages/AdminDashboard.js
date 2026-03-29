@@ -176,8 +176,9 @@ const AdminDashboard = () => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      // Usar filtros customizados ou os do state
-      const filtersToUse = customFilters || filters || {};
+      // Usar filtros customizados passados como parâmetro
+      // Não usar filters do state para evitar recarregar a cada digitação
+      const filtersToUse = customFilters !== null ? customFilters : {};
       const [delivRes, statsRes] = await Promise.all([
         adminService.getDeliveries(filtersToUse),
         adminService.getStatistics(filtersToUse),
@@ -195,7 +196,7 @@ const AdminDashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters, navigate]);
+  }, [navigate]);
 
   // Handler para aplicar filtros
   const handleApplyFilters = useCallback(() => {
@@ -205,12 +206,13 @@ const AdminDashboard = () => {
   // Handler para limpar filtros
   const handleClearFilters = useCallback(() => {
     setFilters({ startDate: '', endDate: '' });
-    loadData(false, { startDate: '', endDate: '' });
+    loadData(false, {});
   }, [loadData]);
 
+  // Carregar dados APENAS no mount inicial, não quando filters muda
   useEffect(() => { 
-    loadData(); 
-  }, [loadData]);
+    loadData(false, {}); 
+  }, []);
 
   // Dados já vêm filtrados do backend, não precisa mais de useMemo
   const getCliMinutes = (d) => {

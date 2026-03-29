@@ -32,11 +32,13 @@ const KPIAnalytics = ({ onToggle }) => {
     status: ''
   });
 
-  const loadData = useCallback(async (silent = false) => {
+  const loadData = useCallback(async (silent = false, customFilters = null) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const res = await adminService.getDeliveries({});
+      // Usar filtros customizados ou os do state
+      const filtersToUse = customFilters || filters || {};
+      const res = await adminService.getDeliveries(filtersToUse);
       setDeliveries(res.data.deliveries || []);
     } catch (err) {
       if (err?.response?.status === 401) {
@@ -49,7 +51,7 @@ const KPIAnalytics = ({ onToggle }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [navigate]);
+  }, [filters, navigate]);
 
   // ═══ Helper Functions ═══
   const isCompletedStatus = (status) => {
@@ -153,7 +155,7 @@ const KPIAnalytics = ({ onToggle }) => {
     }
 
     // Aba 5: Entregas Atrasadas (detalhes)
-    const lateDeliveriesData = filteredDeliveries
+    const lateDeliveriesData = deliveries
       .filter(d => isCompletedStatus(d.status) && isLate(d))
       .sort((a, b) => {
         const aDelay = getScheduledDate(a) && getArrivalDate(a) ?
@@ -201,7 +203,7 @@ const KPIAnalytics = ({ onToggle }) => {
     const workbook = XLSX.utils.book_new();
 
     // Aba 1: Entregas Atrasadas (detalhes completos)
-    const lateDeliveriesData = filteredDeliveries
+    const lateDeliveriesData = deliveries
       .filter(d => isCompletedStatus(d.status) && isLate(d))
       .sort((a, b) => {
         const aDelay = getScheduledDate(a) && getArrivalDate(a) ?
@@ -325,80 +327,50 @@ const KPIAnalytics = ({ onToggle }) => {
     loadData();
   }, [loadData]);
 
-  // Filtrar entregas
-  const filteredDeliveries = useMemo(() => {
-    let result = [...deliveries];
+  // Handler para aplicar filtros
+  const handleApplyFilters = useCallback(() => {
+    loadData(false, filters);
+  }, [filters, loadData]);
 
-    // Garantir KPI separada por cidade (Manaus/Itajaí)
-    result = result.filter(d => {
-      const cityCode = String(d.cityCode || d.city || '').toLowerCase();
-      return !city || cityCode === city;
-    });
-
-    if (filters.startDate) {
-      const sd = new Date(filters.startDate);
-      result = result.filter(d => {
-        const dt = d.dtAgendamentoDescarga || d.dtColeta || d.dataAgendamento || d.createdAt;
-        return new Date(dt) >= sd;
-      });
-    }
-
-    if (filters.endDate) {
-      const ed = new Date(filters.endDate);
-      ed.setHours(23, 59, 59);
-      result = result.filter(d => {
-        const dt = d.dtAgendamentoDescarga || d.dtColeta || d.createdAt;
-        return new Date(dt) <= ed;
-      });
-    }
-
-    if (filters.driver) {
-      result = result.filter(d => d.driverName?.includes(filters.driver));
-    }
-
-    if (filters.region) {
-      result = result.filter(d => d.regiao?.includes(filters.region));
-    }
-
-    if (filters.status) {
-      result = result.filter(d => d.status === filters.status);
-    }
-
-    return result;
-  }, [deliveries, filters]);
+  // Handler para limpar filtros
+  const handleClearFilters = useCallback(() => {
+    const clearedFilters = { startDate: '', endDate: '', driver: '', region: '', status: '' };
+    setFilters(clearedFilters);
+    loadData(false, clearedFilters);
+  }, [loadData]);
 
   // ═══════════════════════════════════════════════════════════════
   // KPI 1: Taxa de Entregas no Prazo
   // ═══════════════════════════════════════════════════════════════
   const onTimeRate = useMemo(() => {
-    if (filteredDeliveries.length === 0) return 0;
-    const completed = filteredDeliveries.filter(d => isCompletedStatus(d.status));
+    if (deliveries.length === 0) return 0;
+    const completed = deliveries.filter(d => isCompletedStatus(d.status));
     if (completed.length === 0) return 0;
     const onTime = completed.filter(d => !isLate(d)).length;
     return Math.round((onTime / completed.length) * 100);
-  }, [filteredDeliveries, city]);
+  }, [deliveries, city]);
 
   // ═══════════════════════════════════════════════════════════════
   // KPI 2: Total de Entregas Realizadas
   // ═══════════════════════════════════════════════════════════════
-  const totalDeliveries = filteredDeliveries.length;
-  const completedDeliveries = filteredDeliveries.filter(d => isCompletedStatus(d.status)).length;
+  const totalDeliveries = deliveries.length;
+  const completedDeliveries = deliveries.filter(d => isCompletedStatus(d.status)).length;
 
   // ═══════════════════════════════════════════════════════════════
   // KPI 3: Entregas Atrasadas
   // ═══════════════════════════════════════════════════════════════
   const lateDeliveries = useMemo(() => {
-    const completed = filteredDeliveries.filter(d => isCompletedStatus(d.status));
+    const completed = deliveries.filter(d => isCompletedStatus(d.status));
     const late = completed.filter(d => isLate(d));
     const percentage = completed.length > 0 ? Math.round((late.length / completed.length) * 100) : 0;
     return { count: late.length, percentage };
-  }, [filteredDeliveries, city]);
+  }, [deliveries, city]);
 
   // ═══════════════════════════════════════════════════════════════
   // KPI 4: Tempo Médio de Entrega
   // ═══════════════════════════════════════════════════════════════
   const averageDeliveryTime = useMemo(() => {
-    const completed = filteredDeliveries.filter(d => isCompletedStatus(d.status));
+    const completed = deliveries.filter(d => isCompletedStatus(d.status));
     const times = completed
       .filter(d => d.dtSaida && getArrivalDate(d))
       .map(d => {
@@ -409,13 +381,13 @@ const KPIAnalytics = ({ onToggle }) => {
     if (times.length === 0) return 0;
     const avg = times.reduce((a, b) => a + b, 0) / times.length;
     return avg.toFixed(1);
-  }, [filteredDeliveries, city]);
+  }, [deliveries, city]);
 
   // ═══════════════════════════════════════════════════════════════
   // KPI 5: SLA de Entrega
   // ═══════════════════════════════════════════════════════════════
   const slaMetric = useMemo(() => {
-    const completed = filteredDeliveries.filter(d => isCompletedStatus(d.status));
+    const completed = deliveries.filter(d => isCompletedStatus(d.status));
     const withDates = completed.filter(d => getScheduledDate(d) && getArrivalDate(d));
     if (withDates.length === 0) return { met: 0, total: 0, percentage: 0 };
     const met = withDates.filter(d => !isLate(d)).length;
@@ -424,14 +396,14 @@ const KPIAnalytics = ({ onToggle }) => {
       total: withDates.length,
       percentage: Math.round((met / withDates.length) * 100)
     };
-  }, [filteredDeliveries]);
+  }, [deliveries]);
 
   // ═══════════════════════════════════════════════════════════════
   // KPI 6: Performance por Motorista
   // ═══════════════════════════════════════════════════════════════
   const driverPerformance = useMemo(() => {
     const drivers = {};
-    filteredDeliveries.forEach(d => {
+    deliveries.forEach(d => {
       if (!isCompletedStatus(d.status)) return; // Apenas entregas concluídas
       
       const name = d.driverName || 'Sem motorista';
@@ -455,14 +427,14 @@ const KPIAnalytics = ({ onToggle }) => {
         latePercentage: data.total > 0 ? Math.round((data.late / data.total) * 100) : 0
       }))
       .sort((a, b) => b.total - a.total);
-  }, [filteredDeliveries, city]);
+  }, [deliveries, city]);
 
   // ═══════════════════════════════════════════════════════════════
   // KPI 7: Performance por Remetente (Itajaí) / Destinatário (Manaus)
   // ═══════════════════════════════════════════════════════════════
   const performanceByParty = useMemo(() => {
     const parties = {};
-    filteredDeliveries.forEach(d => {
+    deliveries.forEach(d => {
       if (!isCompletedStatus(d.status)) return; // Apenas entregas concluídas
 
       const party = getPartyName(d);
@@ -493,7 +465,7 @@ const KPIAnalytics = ({ onToggle }) => {
         avgDelayMinutes: data.delays.length > 0 ? Math.round(data.delays.reduce((a, b) => a + b) / data.delays.length) : 0
       }))
       .sort((a, b) => b.latePercentage - a.latePercentage);
-  }, [filteredDeliveries, city]);
+  }, [deliveries, city]);
 
   // ═══════════════════════════════════════════════════════════════
   // KPI 8: Tendência de Entregas (últimos 7, 15 e 30 dias)
@@ -506,7 +478,7 @@ const KPIAnalytics = ({ onToggle }) => {
       last30: 0
     };
 
-    filteredDeliveries.forEach(d => {
+    deliveries.forEach(d => {
       const dt = d.dtEntrega || d.dtSaida || d.createdAt;
       if (!dt) return;
       const deliveryDate = new Date(dt);
@@ -518,7 +490,7 @@ const KPIAnalytics = ({ onToggle }) => {
     });
 
     return trend;
-  }, [filteredDeliveries]);
+  }, [deliveries]);
 
   // Dados para gráfico de linha (tendência)
   const trendChartData = useMemo(() => {
@@ -528,7 +500,7 @@ const KPIAnalytics = ({ onToggle }) => {
       date.setDate(date.getDate() - i);
       const dateStr = formatarDataApenasLocal(date, { month: '2-digit', day: '2-digit' });
 
-      const count = filteredDeliveries.filter(d => {
+      const count = deliveries.filter(d => {
         const dt = d.dtEntrega || d.dtSaida || d.createdAt;
         if (!dt) return false;
         const deliveryDate = new Date(dt);
@@ -538,17 +510,17 @@ const KPIAnalytics = ({ onToggle }) => {
       data.push({ date: dateStr, entrega: count });
     }
     return data;
-  }, [filteredDeliveries]);
+  }, [deliveries]);
 
   // Gráfico de status
   const statusChartData = useMemo(() => {
     const statuses = {};
-    filteredDeliveries.forEach(d => {
+    deliveries.forEach(d => {
       const status = d.status || 'Desconhecido';
       statuses[status] = (statuses[status] || 0) + 1;
     });
     return Object.entries(statuses).map(([status, count]) => ({ name: status, value: count }));
-  }, [filteredDeliveries]);
+  }, [deliveries]);
 
   const COLORS = ['#34d399', '#fbbf24', '#fb7185', '#818cf8', '#22d3ee'];
 
@@ -658,6 +630,21 @@ const KPIAnalytics = ({ onToggle }) => {
                 <option value="Em Rota">Em Rota</option>
               </select>
             </div>
+            <button
+              onClick={handleApplyFilters}
+              disabled={!filters.startDate && !filters.endDate && !filters.driver && !filters.region && !filters.status}
+              className="px-3 py-2 text-xs rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition self-end"
+            >
+              Filtrar
+            </button>
+            {(filters.startDate || filters.endDate || filters.driver || filters.region || filters.status) && (
+              <button
+                onClick={handleClearFilters}
+                className="px-3 py-2 text-xs rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition self-end"
+              >
+                Limpar
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -900,7 +887,7 @@ const KPIAnalytics = ({ onToggle }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDeliveries
+                  {deliveries
                     .filter(d => isCompletedStatus(d.status) && isLate(d))
                     .sort((a, b) => {
                       // Ordenar por atraso decrescente (mais atrasadas primeiro)
@@ -938,7 +925,7 @@ const KPIAnalytics = ({ onToggle }) => {
                         </tr>
                       );
                     })}
-                  {filteredDeliveries.filter(d => isCompletedStatus(d.status) && isLate(d)).length === 0 && (
+                  {deliveries.filter(d => isCompletedStatus(d.status) && isLate(d)).length === 0 && (
                     <tr>
                       <td colSpan="7" className="text-center py-8 text-slate-400">
                         Nenhuma entrega atrasada encontrada

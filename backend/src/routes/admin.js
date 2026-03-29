@@ -234,31 +234,67 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
 
     console.log(`  ✓ Combinação total após incluir agendadas: ${deliveriesWithProgramacao.length}`);
 
-    // se tem effectiveDate, filtramos a lista combinada por dtColeta (Itajaí) ou dataAgendamento (Manaus)
-    if (effectiveDate) {
+    // HELPER: Parse data string para objeto {day, month, year}
+    const parseStringDate = (dateStr) => {
+      if (!dateStr) return null;
+      const progDateStr = String(dateStr).trim();
+      let pd;
+      if (/\d{2}\/\d{2}\/\d{4}/.test(progDateStr)) {
+        const parts = progDateStr.split(' ')[0].split('/');
+        pd = { day: Number(parts[0]), month: Number(parts[1]), year: Number(parts[2]) };
+      } else if (/\d{4}-\d{2}-\d{2}/.test(progDateStr)) {
+        const parts = progDateStr.split('T')[0].split('-');
+        pd = { day: Number(parts[2]), month: Number(parts[1]), year: Number(parts[0]) };
+      } else {
+        const tmp = new Date(progDateStr);
+        if (!isNaN(tmp)) {
+          pd = { day: tmp.getDate(), month: tmp.getMonth()+1, year: tmp.getFullYear() };
+        }
+      }
+      return pd;
+    };
+
+    // HELPER: Comparar datas {day, month, year}
+    const compareDates = (d1, d2) => {
+      if (!d1 || !d2) return null;
+      if (d1.year !== d2.year) return d1.year - d2.year;
+      if (d1.month !== d2.month) return d1.month - d2.month;
+      return d1.day - d2.day;
+    };
+
+    // NOVO: Se tem startDate/endDate, filtrar por range
+    if (startDate || endDate) {
+      console.log('📅 Aplicando filtro de range de datas:', { startDate, endDate }, '(cidade:', city, ')');
+      const sd = startDate ? parseStringDate(startDate) : null;
+      const ed = endDate ? parseStringDate(endDate) : null;
+      
+      deliveriesWithProgramacao = deliveriesWithProgramacao.filter(d => {
+        // Para Itajaí, usar dtColeta; para Manaus, usar dataAgendamento
+        const dateField = city === 'itajai' && d.dtColeta ? d.dtColeta : d.dataAgendamento;
+        if (!dateField) return false;
+        const pd = parseStringDate(dateField);
+        if (!pd) return false;
+        
+        let inRange = true;
+        if (sd) inRange = inRange && compareDates(pd, sd) >= 0;  // pd >= startDate
+        if (ed) inRange = inRange && compareDates(pd, ed) <= 0;  // pd <= endDate
+        
+        return inRange;
+      });
+      console.log(`  ✓ ${deliveriesWithProgramacao.length} registros após filtro de range de datas`);
+    }
+    // se não tem startDate/endDate mas tem effectiveDate, usa período único
+    else if (effectiveDate) {
       console.log('📅 Aplicando filtro de período sobre lista combinada para data:', effectiveDate, '(cidade:', city, ')');
       const [edDay, edMonth, edYear] = effectiveDate.split('/').map(Number);
       deliveriesWithProgramacao = deliveriesWithProgramacao.filter(d => {
         // Para Itajaí, usar dtColeta; para Manaus, usar dataAgendamento
         const dateField = city === 'itajai' && d.dtColeta ? d.dtColeta : d.dataAgendamento;
         if (!dateField) return false;
-        const progDateStr = String(dateField).trim();
-        let pd;
-        if (/\d{2}\/\d{2}\/\d{4}/.test(progDateStr)) {
-          const parts = progDateStr.split(' ')[0].split('/');
-          pd = { day: Number(parts[0]), month: Number(parts[1]), year: Number(parts[2]) };
-        } else if (/\d{4}-\d{2}-\d{2}/.test(progDateStr)) {
-          const parts = progDateStr.split('T')[0].split('-');
-          pd = { day: Number(parts[2]), month: Number(parts[1]), year: Number(parts[0]) };
-        } else {
-          const tmp = new Date(progDateStr);
-          if (!isNaN(tmp)) {
-            pd = { day: tmp.getDate(), month: tmp.getMonth()+1, year: tmp.getFullYear() };
-          }
-        }
+        const pd = parseStringDate(dateField);
         if (!pd) return false;
         const match = pd.day === edDay && pd.month === edMonth && pd.year === edYear;
-        if (match) console.log(`   ✓ "${progDateStr}" corresponde a ${effectiveDate}`);
+        if (match) console.log(`   ✓ "${dateField}" corresponde a ${effectiveDate}`);
         return match;
       });
       console.log(`  ✓ ${deliveriesWithProgramacao.length} registros após filtro de data`);

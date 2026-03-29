@@ -172,13 +172,26 @@ const AdminDashboard = () => {
     barCli:      useRef(null),
   };
 
-  const loadData = useCallback(async (silent = false) => {
+  // Handler para aplicar filtros
+  const handleApplyFilters = useCallback(() => {
+    loadData(false, filters);
+  }, [filters, loadData]);
+
+  // Handler para limpar filtros
+  const handleClearFilters = useCallback(() => {
+    setFilters({ startDate: '', endDate: '' });
+    loadData(false, { startDate: '', endDate: '' });
+  }, [loadData]);
+
+  const loadData = useCallback(async (silent = false, customFilters = null) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
+      // Usar filtros customizados ou os do state
+      const filtersToUse = customFilters || filters || {};
       const [delivRes, statsRes] = await Promise.all([
-        adminService.getDeliveries({}),
-        adminService.getStatistics({}),
+        adminService.getDeliveries(filtersToUse),
+        adminService.getStatistics(filtersToUse),
       ]);
       setDeliveries(delivRes.data.deliveries);
       setStatistics(statsRes.data.statistics);
@@ -193,32 +206,13 @@ const AdminDashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [navigate]);
+  }, [filters, navigate]);
 
   useEffect(() => { 
     loadData(); 
   }, [loadData]);
 
-  // Filtrar entregas por data agendamento
-  const filteredDeliveries = React.useMemo(() => {
-    if (!filters.startDate && !filters.endDate) return deliveries;
-    return deliveries.filter(d => {
-      const agendamento = getProgramacaoDate(d, city);
-      if (!agendamento) return false;
-      const dt = new Date(agendamento);
-      let ok = true;
-      if (filters.startDate) {
-        const sd = new Date(filters.startDate);
-        ok = ok && dt >= sd;
-      }
-      if (filters.endDate) {
-        const ed = new Date(filters.endDate);
-        ok = ok && dt <= ed;
-      }
-      return ok;
-    });
-  }, [deliveries, filters, city]);
-
+  // Dados já vêm filtrados do backend, não precisa mais de useMemo
   const getCliMinutes = (d) => {
     if (!d.horarioChegada) return null;
     const chegada = new Date(d.horarioChegada);
@@ -367,7 +361,7 @@ const AdminDashboard = () => {
                 </div>
                 <p className="text-slate-400 text-xs mt-0.5 pl-6">Análise em tempo real das operações</p>
                 {/* Filtros de data */}
-                <div className="flex gap-3 mt-2">
+                <div className="flex gap-2 mt-2 items-end flex-wrap">
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 mb-1">Data Inicial</label>
                     <input
@@ -386,11 +380,20 @@ const AdminDashboard = () => {
                       className="bg-slate-800 border border-white/10 rounded-lg px-2 py-1 text-xs text-white"
                     />
                   </div>
+                  <button
+                    onClick={handleApplyFilters}
+                    disabled={!filters.startDate && !filters.endDate}
+                    className="px-3 py-1 text-xs rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    Filtrar
+                  </button>
                   {(filters.startDate || filters.endDate) && (
                     <button
-                      onClick={() => setFilters({ startDate: '', endDate: '' })}
-                      className="ml-2 px-3 py-1 text-xs rounded-lg bg-red-500/10 text-red-400 border border-red-500/20"
-                    >Limpar</button>
+                      onClick={handleClearFilters}
+                      className="px-3 py-1 text-xs rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition"
+                    >
+                      Limpar
+                    </button>
                   )}
                 </div>
               </div>
@@ -437,16 +440,16 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
               <KpiCard
                 title="Total de Entregas"
-                value={filteredDeliveries.length}
+                value={deliveries.length}
                 subtitle="Total no período filtrado"
                 icon={FiPackage}
                 color="indigo"
                 sparkData={statistics.dailyDeliveries}
-                badge={`${filteredDeliveries.length} registros`}
+                badge={`${deliveries.length} registros`}
               />
               <KpiCard
                 title="Motoristas Ativos"
-                value={filteredDeliveries.filter((d, i, arr) => arr.findIndex(x => x.driverName === d.driverName) === i).length}
+                value={deliveries.filter((d, i, arr) => arr.findIndex(x => x.driverName === d.driverName) === i).length}
                 subtitle="Contratados com entregas"
                 icon={FiTruck}
                 color="cyan"
@@ -605,7 +608,7 @@ const AdminDashboard = () => {
           )}
 
           {/* ══════ GRÁFICOS INFERIORES ══════ */}
-          {filteredDeliveries.length > 0 && (
+          {deliveries.length > 0 && (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
 
               {/* Bar — Por Recebedor */}

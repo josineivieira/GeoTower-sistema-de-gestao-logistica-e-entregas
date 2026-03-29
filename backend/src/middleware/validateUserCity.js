@@ -1,5 +1,6 @@
 /**
  * Middleware para validar se o usuário tem permissão de acessar a cidade solicitada
+ * - Gerentes têm acesso a qualquer cidade
  * - Se user.city = 'both': acesso a qualquer cidade
  * - Se user.city = 'manaus' ou 'itajai': acesso apenas àquela cidade
  * - Se user.city = null: acesso padrão a 'manaus' (compatibilidade com usuários antigos)
@@ -9,6 +10,9 @@ module.exports = function validateUserCity(req, res, next) {
     // Sem autenticação, deixa passar (pode ser validado por outro middleware)
     return next();
   }
+
+  // Gerentes têm acesso a ambas as cidades
+  if (req.user.role === 'manager') {
 
   const userCity = req.user.city || 'manaus';
   const requestCity = req.city || 'manaus';

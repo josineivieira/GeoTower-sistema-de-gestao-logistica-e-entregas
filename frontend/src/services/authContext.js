@@ -44,7 +44,10 @@ export const AuthProvider = ({ children }) => {
 
     // Verificar se o usuário tem permissão para acessar a cidade selecionada
     const userCity = driver.city || 'manaus';
-    if (userCity !== 'both' && userCity !== city) {
+    const isManager = driver.role === 'manager';
+
+    // Gerentes têm acesso a ambas as cidades independente da configuração
+    if (!isManager && userCity !== 'both' && userCity !== city) {
       throw new Error(`Acesso negado. Seu usuário tem permissão apenas para ${userCity === 'manaus' ? 'Manaus' : 'Itajaí'}`);
     }
 

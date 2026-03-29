@@ -42,6 +42,12 @@ export const AuthProvider = ({ children }) => {
       throw new Error(data?.message || 'Resposta de login inválida');
     }
 
+    // Verificar se o usuário tem permissão para acessar a cidade selecionada
+    const userCity = driver.city || 'manaus';
+    if (userCity !== 'both' && userCity !== city) {
+      throw new Error(`Acesso negado. Seu usuário tem permissão apenas para ${userCity === 'manaus' ? 'Manaus' : 'Itajaí'}`);
+    }
+
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(driver));
 

@@ -278,12 +278,12 @@ const AdminDashboard = () => {
   const topContratados = React.useMemo(() => {
     const counts = {};
     deliveries.forEach(d => {
-      // OBRIGATORIAMENTE de linkedProgramacaoId.contratado
-      const key = d.linkedProgramacaoId?.contratado || 'Sem Contratado';
+      // Usar vehiclePlate (transportadora)
+      const key = d.vehiclePlate || 'Sem Transportadora';
       counts[key] = (counts[key] || 0) + 1;
     });
     return Object.entries(counts)
-      .map(([contratado, count]) => ({ _id: contratado, count }))
+      .map(([transportadora, count]) => ({ _id: transportadora, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
   }, [deliveries]);

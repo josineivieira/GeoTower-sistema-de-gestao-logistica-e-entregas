@@ -38,6 +38,7 @@ exports.getAllDeliveries = async (req, res) => {
 
     const deliveries = await Delivery.find(query)
       .populate('driverId', 'name username email')
+      .populate('linkedProgramacaoId', 'contratado dataAgendamento dtColeta')
       .sort({ submittedAt: -1 });
 
     res.json({ success: true, deliveries });

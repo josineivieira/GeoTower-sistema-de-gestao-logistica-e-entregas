@@ -276,9 +276,16 @@ const AdminDashboard = () => {
   }, [deliveries]);
 
   const topContratados = React.useMemo(() => {
-    // Backend já agrupa por contratado com filtros corretos
-    return (statistics?.deliveriesByDriver || []).slice(0, 10);
-  }, [statistics]);
+    const counts = {};
+    deliveries.forEach(d => {
+      const key = d.contratado || d.linkedProgramacaoId?.contratado || d.driverName || 'Sem Contratado';
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([contratado, count]) => ({ _id: contratado, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+  }, [deliveries]);
 
   const avgCliByRecebedor = React.useMemo(() => {
     const sums = {}, cnts = {};

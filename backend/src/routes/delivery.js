@@ -1015,14 +1015,11 @@ router.get("/:id/verification", auth, async (req, res) => {
 // POST - Marcar entrega como verificada
 // POST /api/deliveries/:id/verification
 router.post("/:id/verification", auth, async (req, res) => {
-  console.log('🔄 POST /:id/verification called:', { id: req.params.id, body: req.body, user: req.user?.name });
   try {
     const city = req.city || 'manaus';
     const { id } = req.params;
     const { verified, notes } = req.body;
     const userName = req.user?.name || 'Usuário Desconhecido';
-
-    console.log('📋 Processing verification:', { id, verified, notes, userName, city });
 
     const DeliveryVerification = require('../models/DeliveryVerification');
     const Delivery = require('../models/Delivery');

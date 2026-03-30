@@ -622,12 +622,16 @@ const ProgramadasEntregas = () => {
           
           // Criar notificação para gestores/administradores
           try {
+            const containerNum = currentDelivery?.deliveryNumber || currentDelivery?.containerNumber || 'N/A';
+            const motoristaNome = user?.name || currentDelivery?.driverName || 'Desconhecido';
+            console.log('Enviando notificação com:', { containerNum, motoristaNome, currentDelivery });
+            
             await notificationService.createNotification({
               title: 'Solicitação de Agendamento',
-              message: `Motorista ${user?.name || 'Desconhecido'} solicitou agendamento de devolução para o container ${currentDelivery?.deliveryNumber || 'N/A'}.`,
+              message: `Motorista ${motoristaNome} solicitou agendamento de devolução para o container ${containerNum}.`,
               type: 'scheduling_request',
               deliveryId: currentDelivery._id,
-              containerNumber: currentDelivery?.deliveryNumber || 'N/A'
+              containerNumber: containerNum
             });
           } catch (notifError) {
             console.warn('Erro ao criar notificação:', notifError);

@@ -1080,10 +1080,11 @@ const MonitorEntregas = () => {
     const syncVerificationsFromServer = async () => {
       try {
         const response = await adminService.getVerificationsList();
-        if (response.success && response.data) {
-          setIcompanyVerified(response.data);
+        const payload = response?.data;
+        if (payload?.success && payload?.data) {
+          setIcompanyVerified(payload.data);
           // Também salvamos no localStorage como backup
-          localStorage.setItem('icompanyVerified', JSON.stringify(response.data));
+          localStorage.setItem('icompanyVerified', JSON.stringify(payload.data));
         }
       } catch (e) {
         console.warn('Aviso ao sincronizar verificações do servidor:', e);

@@ -47,7 +47,7 @@ class NotificationService {
   static async notifyScheduleRequest(deliveryId, driverName, containerNumber, city = 'manaus') {
     return this.createNotification({
       title: 'Solicitação de Agendamento',
-      message: `${driverName} solicitou agendamento de devolução para o container ${containerNumber}`,
+      message: `Container ${containerNumber} - ${driverName} solicitou agendamento de devolução`,
       type: 'info',
       priority: 'medium',
       recipientRoles: ['admin', 'manager'],

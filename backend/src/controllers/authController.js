@@ -76,7 +76,8 @@ exports.register = async (req, res) => {
       console.warn('[REGISTER] could not get drivers total', e && e.message);
     }
 
-    const token = generateToken(driver._id, driver.name || driver.fullName || 'Usuário', driver.role, driver.contratado || null, driver.city || null);
+    const driverName = driver.name || driver.fullName || driver.username || 'Usuário';
+    const token = generateToken(driver._id, driverName, driver.role, driver.contratado || null, driver.city || null);
 
     res.status(201).json({
       success: true,
@@ -199,9 +200,9 @@ exports.login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Motorista desativado' });
     }
 
-    const token = generateToken(driver._id, driver.name || driver.fullName || 'Usuário', driver.role, driver.contratado, driver.city || null);
+    const driverName = driver.name || driver.fullName || driver.username || 'Usuário';
+    const token = generateToken(driver._id, driverName, driver.role, driver.contratado || null, driver.city || null);
     console.log('✅ Login success:', driver.username);
-
     res.json({
       success: true,
       message: 'Login realizado com sucesso',

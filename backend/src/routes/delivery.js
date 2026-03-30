@@ -1019,7 +1019,7 @@ router.post("/:id/verification", auth, async (req, res) => {
     const city = req.city || 'manaus';
     const { id } = req.params;
     const { verified, notes } = req.body;
-    const userName = req.user?.name || 'Usuário Desconhecido';
+    const userName = req.user?.name || req.user?.fullName || req.user?.username || 'Usuário Desconhecido';
 
     const DeliveryVerification = require('../models/DeliveryVerification');
     const Delivery = require('../models/Delivery');

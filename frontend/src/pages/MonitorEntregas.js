@@ -2477,7 +2477,7 @@ const MonitorEntregas = () => {
                               [selectedDelivery._id]: {
                                 verified: true,
                                 verifiedAt: verification.verifiedAt,
-                                verifiedBy: verification.verifiedBy
+                                verifiedBy: verification.verifiedBy || userName
                               }
                             });
                             setToast({
@@ -2528,7 +2528,7 @@ const MonitorEntregas = () => {
                               const ts = new Date(data.verifiedAt || data.timestamp);
                               const horaBrasil = ts.toLocaleString('pt-BR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
                               const [dataParte, horaParte] = horaBrasil.split(', ');
-                              const user = data.verifiedBy || data.user;
+                              const user = data.verifiedBy || data.user || userName;
                               return `Marcado como verificado e importado para o Icompany em ${dataParte}, às ${horaParte} por ${user}`;
                             })()
                           : 'Marcar documentos como verificados e importados para Icompany'
@@ -2762,7 +2762,7 @@ const MonitorEntregas = () => {
               {icompanyVerified?.[deliveryToUnverify] && (
                 <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-xs text-gray-400 space-y-1">
                   <p>
-                    <strong>Verificado por:</strong> {icompanyVerified[deliveryToUnverify].verifiedBy || icompanyVerified[deliveryToUnverify].user}
+                    <strong>Verificado por:</strong> {icompanyVerified[deliveryToUnverify].verifiedBy || icompanyVerified[deliveryToUnverify].user || userName}
                   </p>
                   <p>
                     <strong>Em:</strong> {new Date(icompanyVerified[deliveryToUnverify].verifiedAt || icompanyVerified[deliveryToUnverify].timestamp).toLocaleString('pt-BR')}

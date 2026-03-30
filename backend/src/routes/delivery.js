@@ -359,8 +359,8 @@ router.put("/:id", auth, async (req, res) => {
         if (req.body.horarioDevolucaoVazio !== undefined && req.body.horarioDevolucaoVazio && !icompanyRecord.dtDevolucaoCNTR) {
           icompanyUpdates.dtDevolucaoCNTR = new Date(req.body.horarioDevolucaoVazio);
         }
-        // Verificar se observations contém CONTAINER_VAZIO_DEVOLVIDO
-        if (req.body.observations !== undefined && req.body.observations && req.body.observations.includes('(CONTAINER_VAZIO_DEVOLVIDO)') && !icompanyRecord.dtDevolucaoCNTR) {
+        // Verificar se observations contém CONTAINER_VAZIO_DEVOLVIDO ou Baixa_Container
+        if (req.body.observations !== undefined && req.body.observations && (req.body.observations.includes('(CONTAINER_VAZIO_DEVOLVIDO)') || req.body.observations.includes('(Baixa_Container)')) && !icompanyRecord.dtDevolucaoCNTR) {
           icompanyUpdates.dtDevolucaoCNTR = new Date();
         }
 

@@ -348,7 +348,7 @@ const ProgramadasEntregas = () => {
           return false;
         }
         // also hide if delivery has observation marker (in case document upload failed)
-        if (byProg && byProg.observations && byProg.observations.includes('(CONTAINER_VAZIO_DEVOLVIDO)')) {
+        if (byProg && byProg.observations && (byProg.observations.includes('(CONTAINER_VAZIO_DEVOLVIDO)') || byProg.observations.includes('(Baixa_Container)'))) {
           return false;
         }
 
@@ -739,7 +739,7 @@ const ProgramadasEntregas = () => {
       const finalStatus = 'FINALIZADO';
       const existingObs = fresh.data.delivery.observations || '';
       const timestamp = formatarData(new Date(), city);
-      const containerObs = `[${timestamp}] (CONTAINER_VAZIO_DEVOLVIDO) Entrega CNTR Porto devolvida com comprovante.`;
+      const containerObs = `[${timestamp}] (${city === 'itajai' ? 'Baixa_Container' : 'CONTAINER_VAZIO_DEVOLVIDO'}) Entrega CNTR Porto devolvida com comprovante.`;
       const newObs = `${existingObs ? existingObs + '\n' : ''}${containerObs}`;
       const horarioDevolucaoVazio = new Date().toISOString();
       

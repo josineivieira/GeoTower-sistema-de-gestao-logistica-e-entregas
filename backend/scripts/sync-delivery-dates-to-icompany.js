@@ -86,8 +86,8 @@ async function syncDeliveryDatesToIcompany() {
         updates.dtDevolucaoCNTR = delivery.horarioDevolucaoVazio;
       }
 
-      // Verificar observations para CONTAINER_VAZIO_DEVOLVIDO
-      if (delivery.observations && delivery.observations.includes('(CONTAINER_VAZIO_DEVOLVIDO)') && !icompanyRecord.dtDevolucaoCNTR) {
+      // Verificar observations para CONTAINER_VAZIO_DEVOLVIDO ou Baixa_Container
+      if (delivery.observations && (delivery.observations.includes('(CONTAINER_VAZIO_DEVOLVIDO)') || delivery.observations.includes('(Baixa_Container)')) && !icompanyRecord.dtDevolucaoCNTR) {
         updates.dtDevolucaoCNTR = delivery.updatedAt; // Usar updatedAt como aproximado
       }
 

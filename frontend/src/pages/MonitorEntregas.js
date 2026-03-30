@@ -1090,6 +1090,8 @@ const MonitorEntregas = () => {
           setIcompanyVerified(payload.data);
           // Também salvamos no localStorage como backup
           localStorage.setItem('icompanyVerified', JSON.stringify(payload.data));
+          // Trigger para outras abas/navegadores
+          localStorage.setItem('icompanyVerifiedRefresh', Date.now().toString());
         }
       } catch (e) {
         console.warn('Aviso ao sincronizar verificações do servidor:', e);
@@ -1105,12 +1107,23 @@ const MonitorEntregas = () => {
       }
     };
 
+    const handleStorage = (event) => {
+      if (event.key === 'icompanyVerifiedRefresh') {
+        syncVerificationsFromServer();
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+
     syncVerificationsFromServer();
 
     // Polling a cada 10 segundos para sincronizar mudanças de outros usuários
     const syncInterval = setInterval(syncVerificationsFromServer, 10000);
 
-    return () => clearInterval(syncInterval);
+    return () => {
+      clearInterval(syncInterval);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   // Função para atualizar verificação no servidor
@@ -1240,8 +1253,8 @@ const MonitorEntregas = () => {
     retiradaCheio: 'Retirada Porto',
     canhotCTE: 'CONTRATO',
     canhotNF: 'TACOGRAFO/RIC ABASTECIMENTO',
-    diarioBordo: 'Diário',
-    devolucaoVazio: 'Vazio',
+    diarioBordo: 'Diario de Bordo',
+    devolucaoVazio: 'Baixa no Porto',
     chegadaCliente: 'Chegada no Cliente'
   };
 
@@ -2477,14 +2490,17 @@ const MonitorEntregas = () => {
                           // Marcando como verificado
                           try {
                             const verification = await updateVerificationWithServer(selectedDelivery._id, true, '');
-                            setIcompanyVerified({
+                            const newState = {
                               ...icompanyVerified,
                               [selectedDelivery._id]: {
                                 verified: true,
                                 verifiedAt: verification.verifiedAt,
                                 verifiedBy: verification.verifiedBy || userName
                               }
-                            });
+                            };
+                            setIcompanyVerified(newState);
+                            localStorage.setItem('icompanyVerified', JSON.stringify(newState));
+                            localStorage.setItem('icompanyVerifiedRefresh', Date.now().toString());
                             setToast({
                               type: 'success',
                               message: `✓ Arquivos marcados como verificados`,

@@ -324,7 +324,7 @@ const getPunctualityStatus = (d, now = new Date(), city = 'manaus') => {
   const schedStr = getProgramacaoDate(d, city);
   if (!schedStr) return { label: 'Sem agendamento', type: 'unknown', eta: null, lateBy: null };
   
-  // Offset de timezone em horas (Manaus = UTC-4, então +4 para converter local para UTC)
+  // Offset de timezone em horas baseado na cidade da entrega (Manaus = UTC-4, então +4 para converter local para UTC)
   const getTimezoneOffsetHours = (cityCode) => {
     if (cityCode === 'manaus') return 4;   // Manaus é UTC-4, então adiciona 4 para converter local→UTC
     if (cityCode === 'itajai') return 3;  // Itajaí é UTC-3, então adiciona 3 para converter local→UTC
@@ -336,8 +336,9 @@ const getPunctualityStatus = (d, now = new Date(), city = 'manaus') => {
   const start = d.createdAt ? new Date(d.createdAt) : null;
   const travel = Number(d.estimatedTravelMinutes || d.minimumTravelMinutes || 40);
   
-  // Converter agendamento (hora local) para UTC adicionando o offset
-  const offset = getTimezoneOffsetHours(city);
+  // Usar a cidade da entrega para o offset correto
+  const deliveryCity = d.city || 'manaus';
+  const offset = getTimezoneOffsetHours(deliveryCity);
   const offsetMs = offset * 60 * 60 * 1000;
   const scheduledUTC = new Date(scheduled.getTime() + offsetMs);
   const nowUTC = new Date(now.getTime() + offsetMs);

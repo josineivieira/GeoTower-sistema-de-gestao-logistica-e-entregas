@@ -2457,7 +2457,6 @@ const MonitorEntregas = () => {
                     ? 'bg-gradient-to-r from-emerald-900/30 to-teal-900/30 border-l-4 border-l-emerald-500'
                     : 'bg-gradient-to-r from-emerald-900/15 to-teal-900/15 hover:from-emerald-900/20 hover:to-teal-900/20'
                 }`}>
-                  <label className="flex items-center gap-3 cursor-pointer group">
                   <label 
                     className="flex items-center gap-3 cursor-pointer group"
                     onClick={(e) => {

@@ -1741,7 +1741,7 @@ const MonitorEntregas = () => {
     prevPositions.current = {};
   }, [displayList]);
 
-  const handleDownload = async (id, type) => {
+  const handleDownload = async (id, type, label) => {
     try {
       const delivery = deliveries.find((d) => d._id === id);
       const docEntry = delivery?.documents?.[type];
@@ -1751,7 +1751,7 @@ const MonitorEntregas = () => {
           urls.forEach((url, i) => {
             const a = document.createElement('a');
             a.href = url;
-            a.setAttribute('download', `${delivery.deliveryNumber || 'doc'}_${type}_${i + 1}`);
+            a.setAttribute('download', `${delivery.deliveryNumber || 'doc'}_${label || type}_${i + 1}`);
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1768,7 +1768,7 @@ const MonitorEntregas = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.setAttribute('download', `${deliveries.find((d) => d._id === id)?.deliveryNumber || 'doc'}_${type}.${ext}`);
+      a.setAttribute('download', `${deliveries.find((d) => d._id === id)?.deliveryNumber || 'doc'}_${label || type}.${ext}`);
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -2411,7 +2411,7 @@ const MonitorEntregas = () => {
                                 </button>
 
                                 <button
-                                  onClick={() => handleDownload(selectedDelivery._id, k)}
+                                  onClick={() => handleDownload(selectedDelivery._id, k, labels[k] || k)}
                                   className="w-7 h-7 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 flex items-center justify-center transition"
                                 >
                                   <FaDownload size={11} />

@@ -603,7 +603,10 @@ const ProgramadasEntregas = () => {
   const handleJustificationSubmit = async () => {
     if (!justification.trim()) { setToast({ message: 'Informe a justificativa', type: 'error' }); return; }
     try {
-      await deliveryService.updateDelivery(currentDelivery._id, { observations: `(${city === 'itajai' ? 'OVAÇÃO' : 'DESOVA'} NÃO INICIADA) ${justification}` });
+      const fresh = await deliveryService.getDelivery(currentDelivery._id);
+      const existingObs = fresh.data.delivery.observations || '';
+      const timestamp = formatarData(new Date(), city);
+      await deliveryService.updateDelivery(currentDelivery._id, { observations: `${existingObs ? existingObs + '\n' : ''}[${timestamp}] (${city === 'itajai' ? 'OVAÇÃO' : 'DESOVA'} NÃO INICIADA) ${justification}` });
       setToast({ message: 'Justificativa enviada', type: 'success' });
       goToStep('confirmDesova');
     } catch (_) { setToast({ message: 'Erro ao enviar justificativa', type: 'error' }); }

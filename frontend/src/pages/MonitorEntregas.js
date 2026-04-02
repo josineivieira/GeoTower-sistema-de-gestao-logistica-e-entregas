@@ -321,52 +321,64 @@ const formatBoardDate = (value, city) => {
 
 const getPunctualityStatus = (d, now = new Date(), city = 'manaus') => {
   if (!d) return { label: '-', type: 'unknown', eta: null, lateBy: null };
-  const schedStr = getProgramacaoDate(d, city);
-  if (!schedStr) return { label: 'Sem agendamento', type: 'unknown', eta: null, lateBy: null };
-  
-  // Offset de timezone em horas
-  const getTimezoneOffsetHours = (cityCode) => {
-    if (cityCode === 'manaus') return 4;   // Manaus é UTC-4, então +4 para converter local→UTC
-    if (cityCode === 'itajai') return 3;  // Itajaí é UTC-3, então adiciona 3 para converter local→UTC
-    return 3;
+
+  const normalizeDateValue = (value, cityCode) => {
+    if (!value) return null;
+
+    let raw = String(value).trim();
+    if (!raw) return null;
+
+    raw = raw.replace(' ', 'T');
+
+    // Se já tem timezone explícito, usa diretamente
+    if (/[zZ]$/.test(raw) || /[+-]\d{2}:\d{2}$/.test(raw)) {
+      const parsed = new Date(raw);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    // Se não tem hora, assume meia-noite
+    if (!raw.includes('T')) raw += 'T00:00:00';
+
+    const tz = cityCode === 'itajai' ? '-03:00' : '-04:00';
+    const parsed = new Date(`${raw}${tz}`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
-  
-  const scheduled = new Date(schedStr);
-  const arrival = d.horarioChegada ? new Date(d.horarioChegada) : null; // Assumindo que já está em UTC do servidor
-  const start = d.createdAt ? new Date(d.createdAt) : null;
+
+  const deliveryCity = (d.city || city || 'manaus').toLowerCase();
+  const schedStr = getProgramacaoDate(d, deliveryCity);
+  if (!schedStr) return { label: 'Sem agendamento', type: 'unknown', eta: null, lateBy: null };
+
+  const scheduled = normalizeDateValue(schedStr, deliveryCity);
+  if (!scheduled) return { label: 'Sem agendamento', type: 'unknown', eta: null, lateBy: null };
+
+  const arrival = d.horarioChegada ? normalizeDateValue(d.horarioChegada, deliveryCity) : null;
+  const start = d.createdAt ? normalizeDateValue(d.createdAt, deliveryCity) : null;
   const travel = Number(d.estimatedTravelMinutes || d.minimumTravelMinutes || 40);
-  
-  // Offsets separados: usuário (para now) e entrega (para scheduled)
-  const deliveryCity = d.city || 'manaus';
-  const offsetUser = getTimezoneOffsetHours(city); // city passado é do usuário/visualizador
-  const offsetDelivery = getTimezoneOffsetHours(deliveryCity);
-  const offsetUserMs = offsetUser * 60 * 60 * 1000;
-  const offsetDeliveryMs = offsetDelivery * 60 * 60 * 1000;
-  
-  const scheduledUTC = new Date(scheduled.getTime() + offsetDeliveryMs);
-  const nowUTC = new Date(now.getTime() + offsetUserMs);
-  
+
+  const nowInstant = now instanceof Date ? now : new Date(now);
+
   const computeEta = () => {
     if (!start) return null;
     const expected = new Date(start.getTime() + travel * 60000);
-    const diff = Math.round((expected - now) / 60000);
+    const diff = Math.round((expected.getTime() - nowInstant.getTime()) / 60000);
     return diff < 0 ? 0 : diff;
   };
 
   if (arrival) {
-    // arrival já está em UTC (do servidor)
-    const lateBy = Math.round((arrival - scheduledUTC) / 60000);
+    const lateBy = Math.round((arrival.getTime() - scheduled.getTime()) / 60000);
+    const isOnTime = arrival.getTime() <= scheduled.getTime();
     return {
-      label: arrival.getTime() <= scheduledUTC.getTime() ? 'Pontual' : 'Atrasado',
-      type: arrival.getTime() <= scheduledUTC.getTime() ? 'ok' : 'late',
-      eta: 0, lateBy
+      label: isOnTime ? 'Pontual' : 'Atrasado',
+      type: isOnTime ? 'ok' : 'late',
+      eta: 0,
+      lateBy
     };
   }
 
   const eta = computeEta();
-  if (nowUTC.getTime() >= scheduledUTC.getTime()) return { label: 'Atrasado', type: 'late', eta: eta || 0, lateBy: null };
+  if (nowInstant.getTime() >= scheduled.getTime()) return { label: 'Atrasado', type: 'late', eta: eta || 0, lateBy: null };
   if (!start) return { label: 'Sem início', type: 'unknown', eta, lateBy: null };
-  const timeLeft = Math.round((scheduledUTC.getTime() - nowUTC.getTime()) / 60000);
+  const timeLeft = Math.round((scheduled.getTime() - nowInstant.getTime()) / 60000);
   if (timeLeft <= travel) return { label: 'Possível atraso', type: 'possible', eta, lateBy: null };
   return { label: 'No prazo', type: 'ok', eta, lateBy: null };
 };

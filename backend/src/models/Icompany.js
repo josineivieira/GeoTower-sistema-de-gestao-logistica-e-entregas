@@ -63,6 +63,9 @@ const icompanySchema = new mongoose.Schema({
   dtEntradaPlanta: {
     type: Date,
   },
+  entradaDistrito: {
+    type: Date,
+  },
   dtDevolucaoCNTR: {
     type: Date,
   },

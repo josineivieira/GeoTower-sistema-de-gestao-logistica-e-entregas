@@ -114,6 +114,7 @@ function mapToEntrega(row) {
 
     // ✅ MUDANÇA 1
     "Dt. Retirada porto": toLocalDateTimeString(row["Dt. retirada porto"]),
+    "Dt. entrada": toLocalDateTimeString(row["Dt. entrada"]),
 
     dtInicio: toLocalDateTimeString(row["Dt. início"]),
     situacao: row["Situação"] ?? null,

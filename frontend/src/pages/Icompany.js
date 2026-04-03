@@ -26,6 +26,7 @@ const FIELD_MAP = {
   'Dt. fim carregamento':     'dtFimCarregamento',
   'Dt. saída planta':         'dtSaidaPlanta',
   'Dt. entrada planta':       'dtEntradaPlanta',
+  'Entrada de Distrito':      'entradaDistrito',
   'Dt. retirada P.D.':        'dtRetiraPD',
   'Dt. Retirada porto':       'dtRetiraPD',
   'Situação':                 'situacao',
@@ -103,7 +104,7 @@ const SYNC_DATE_FIELDS = [
   'dtInicioRota', 'dtAgendamentoDescarga', 'arrivedAt',
   'dtInicioDescarga', 'dtFimDescarga', 'dtRetiraPD',
   'dtDevolucaoCNTR', 'dtAverbacaoMDFE', 'dtDescidaCNTRCarga',
-  'dtColeta', 'dtChegadaPlanta', 'dtInicioCarregamento', 'dtFimCarregamento', 'dtSaidaPlanta', 'dtEntradaPlanta'
+  'dtColeta', 'dtChegadaPlanta', 'dtInicioCarregamento', 'dtFimCarregamento', 'dtSaidaPlanta', 'dtEntradaPlanta', 'entradaDistrito'
 ];
 
 const calculateSyncStatus = (record) => {
@@ -124,7 +125,7 @@ const calculateSyncStatus = (record) => {
 const CURRENCY_FIELDS = new Set(['vlFreteProcesso','vlPedagio','vlFreteLista','vlAbastecimento']);
 const DATE_FIELDS = new Set([
   'dtInicioRota','dtInicioDescarga','dtFimDescarga','dtRetiraPD','dtDevolucaoCNTR',
-  'dtInicio','dtSM','dtAgendamentoDescarga','dtDescidaCNTRCarga','dtAverbacaoMDFE','arrivedAt',
+  'dtInicio','dtSM','dtAgendamentoDescarga','dtDescidaCNTRCarga','dtAverbacaoMDFE','arrivedAt','entradaDistrito',
 ]);
 
 const formatCurrency = (val) => {

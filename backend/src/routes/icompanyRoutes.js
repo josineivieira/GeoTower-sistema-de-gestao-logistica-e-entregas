@@ -48,6 +48,7 @@ const FIELD_MAPPING = {
   'Dt. Retirada porto': 'dtRetiraPD',
   'Dt. retirada P.D.': 'dtRetiraPD',
   'Dt. Retirada P.D.': 'dtRetiraPD',
+  'Entrada de Distrito': 'entradaDistrito',
   'Dt. início rota': 'dtInicioRota',
   'Dt. Início Rota': 'dtInicioRota',
   'Dt. chegada cliente': 'arrivedAt',

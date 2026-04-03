@@ -2455,6 +2455,7 @@ const MonitorEntregas = () => {
               <div>
                 <p className="text-xs text-purple-300 uppercase tracking-widest font-semibold mb-0.5">Entrega</p>
                 <h2 className="text-xl font-black text-white tracking-wide">#{selectedDelivery.deliveryNumber}</h2>
+                <p className="text-xs text-gray-300 mt-1">CAB: {selectedDelivery.processoCAB || selectedDelivery.processo || selectedDelivery.processNumber || selectedDelivery.codigo || '—'}</p>
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">

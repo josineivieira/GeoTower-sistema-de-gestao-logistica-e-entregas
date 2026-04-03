@@ -5,16 +5,35 @@ const { MongoClient } = require("mongodb");
 
 const MONGODB_URI = process.env.MONGODB_URI; // ⚠️ no Render tem que ser esse nome
 const DB_NAME = process.env.MONGO_DB || "delivery-docs";
-// default collection should match the mongoose model (icompany) unless overridden by env
-const COLLECTION = process.env.MONGO_COLLECTION || "icompany";
+// default collection should match a primary data source, but também admite vários como fallback
+const PRIMARY_COLLECTION = process.env.MONGO_COLLECTION || "icompany";
+const FALLBACK_COLLECTIONS = Array.from(new Set([PRIMARY_COLLECTION, 'icompany', 'basegeomars', 'ycompany']));
 
 let _client, _col;
 async function col() {
   if (_col) return _col;
   _client = new MongoClient(MONGODB_URI);
   await _client.connect();
-  _col = _client.db(DB_NAME).collection(COLLECTION);
+  _col = _client.db(DB_NAME).collection(PRIMARY_COLLECTION);
   return _col;
+}
+
+async function findInCollections(query) {
+  const client = new MongoClient(MONGODB_URI);
+  await client.connect();
+  const db = client.db(DB_NAME);
+
+  for (const collectionName of FALLBACK_COLLECTIONS) {
+    const collection = db.collection(collectionName);
+    const docs = await collection.find(query).toArray();
+    if (docs && docs.length > 0) {
+      await client.close();
+      return { collection: collectionName, docs };
+    }
+  }
+
+  await client.close();
+  return { collection: null, docs: [] };
 }
 
 function isEmpty(v) {
@@ -41,11 +60,20 @@ router.get('/', async (req, res) => {
       filter.origem = { $nin: ['MANAUS', 'MANAUS - COELTA BALY'] };
     }
     
-    const data = await c.find(filter)
+    let data = await c.find(filter)
       .sort({ updatedAt: -1, _id: -1 })
       .limit(2000)
       .toArray();
-    
+
+    let collectionUsed = PRIMARY_COLLECTION;
+    if (!data.length) {
+      const fall = await findInCollections(filter);
+      if (fall.docs && fall.docs.length > 0) {
+        data = fall.docs;
+        collectionUsed = fall.collection;
+      }
+    }
+
     // Serializar datas para ISO string
     const serialized = data.map(doc => {
       const obj = { ...doc };
@@ -57,7 +85,7 @@ router.get('/', async (req, res) => {
       if (obj.arrivedAt && obj.arrivedAt instanceof Date) obj.arrivedAt = obj.arrivedAt.toISOString();
       return obj;
     });
-    res.json({ ok: true, count: serialized.length, data: serialized, city: city });
+    res.json({ ok: true, success: true, collection: collectionUsed, count: serialized.length, data: serialized, city: city });
   } catch (e) {
     console.error('Icompany GET / error:', e);
     res.status(500).json({ ok: false, error: 'Erro ao buscar dados' });
@@ -171,18 +199,13 @@ router.get('/compare', async (req, res) => {
 router.get('/search', async (req, res) => {
   try {
     const q = (req.query.q || '').toString().trim();
-    if (!q) return res.status(400).json({ ok: false, message: 'Query q é obrigatória' });
+    if (!q) return res.status(400).json({ ok: false, success: false, message: 'Query q é obrigatória' });
 
     const cleaned = q.replace(/^#/, '').trim();
     const safe = cleaned.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
     const regex = new RegExp(`^${safe}$`, 'i');
 
-    const client = new MongoClient(MONGODB_URI);
-    await client.connect();
-    const db = client.db(DB_NAME);
-    const collection = db.collection(COLLECTION);
-
-    const records = await collection.find({
+    const searchQuery = {
       $or: [
         { numero: regex },
         { NUMERO: regex },
@@ -192,13 +215,20 @@ router.get('/search', async (req, res) => {
         { geomaritima: regex },
         { container: regex }
       ]
-    }).toArray();
+    };
 
-    await client.close();
-    res.json({ ok: true, count: records.length, data: records });
+    const { collection, docs } = await findInCollections(searchQuery);
+
+    res.json({
+      ok: true,
+      success: true,
+      collection: collection || PRIMARY_COLLECTION,
+      count: docs.length,
+      data: docs
+    });
   } catch (e) {
     console.error('Icompany search error:', e);
-    res.status(500).json({ ok: false, error: 'Erro ao buscar Icompany' });
+    res.status(500).json({ ok: false, success: false, error: 'Erro ao buscar Icompany' });
   }
 });
 

@@ -1727,7 +1727,8 @@ const MonitorEntregas = () => {
     setIcompanyLookupStatus('searching');
     adminService.searchIcompanyByProcess(query)
       .then((res) => {
-        if (res.data?.success && res.data.data?.length > 0) {
+        const isOk = res.data?.success || res.data?.ok;
+        if (isOk && res.data.data?.length > 0) {
           setIcompanyRemoteRecord(res.data.data[0]);
           setIcompanyLookupStatus('found');
         } else {

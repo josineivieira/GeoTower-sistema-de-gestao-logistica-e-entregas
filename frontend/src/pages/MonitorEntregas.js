@@ -1617,8 +1617,7 @@ const MonitorEntregas = () => {
       'Agendamento': { deliveryField: 'dataAgendamento', icompanyField: 'dtAgendamentoDescarga' },
       'Recebedor': { deliveryField: 'recebedor', icompanyField: 'destinatario' },
       'Montagem Container': { deliveryField: 'containerMontadoAt', icompanyField: 'dtRetiraPD' },
-      'Chegada': { deliveryField: 'horarioChegada', icompanyField: 'dtEntradaPlanta' },
-      'Início Desova': { deliveryField: 'horarioInicioDesova', icompanyField: 'dtInicioDescarga' },
+      'Chegada': { deliveryField: 'horarioChegada', icompanyField: 'dtInicioDescarga' },
       'Fim Desova': { deliveryField: 'horarioFimDesova', icompanyField: 'dtFimDescarga' }
     };
 
@@ -1671,6 +1670,15 @@ const MonitorEntregas = () => {
       return val.toString();
     };
 
+    const compareDateOnly = (a, b) => {
+      const da = parseDateValue(a);
+      const db = parseDateValue(b);
+      if (!da || !db) return false;
+      return da.getFullYear() === db.getFullYear()
+        && da.getMonth() === db.getMonth()
+        && da.getDate() === db.getDate();
+    };
+
     Object.entries(fieldMapping).forEach(([displayName, mapping]) => {
       const deliveryValue = delivery[mapping.deliveryField];
       const icompanyValue = icompanyRecord[mapping.icompanyField];
@@ -1678,10 +1686,17 @@ const MonitorEntregas = () => {
       const normalizedDelivery = normalizeValue(deliveryValue);
       const normalizedIcompany = normalizeValue(icompanyValue);
 
+      let isInconsistent = false;
+      if (displayName === 'Montagem Container' || displayName === 'Entrega CNTR Porto') {
+        isInconsistent = !compareDateOnly(deliveryValue, icompanyValue) && (deliveryValue || icompanyValue);
+      } else {
+        isInconsistent = normalizedDelivery !== normalizedIcompany && (normalizedDelivery || normalizedIcompany);
+      }
+
       comparisons[displayName] = {
         deliveryValue,
         icompanyValue,
-        isInconsistent: normalizedDelivery !== normalizedIcompany && (normalizedDelivery || normalizedIcompany),
+        isInconsistent,
         displayDelivery: formatDisplay(deliveryValue),
         displayIcompany: formatDisplay(icompanyValue)
       };

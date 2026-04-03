@@ -114,46 +114,13 @@ router.post("/", auth, async (req, res) => {
       console.warn('[DELIVERY] Falha ao sincronizar programacao:', syncErr.message || syncErr);
     }
 
-    // Sincronizar com Icompany se aplicável
-    try {
-      const Icompany = require('../models/Icompany');
-      const deliveryNum = String(deliveryNumber || '').trim().toUpperCase();
-      let icompanyRecord = null;
-
-      if (deliveryNum) {
-        // Buscar por processo ou container - expandir busca
-        icompanyRecord = await Icompany.findOne({
-          $or: [
-            { processo: new RegExp(`^${deliveryNum}$`, 'i') },
-            { numero: new RegExp(`^${deliveryNum}$`, 'i') },
-            { containerNumero: new RegExp(`^${deliveryNum}$`, 'i') },
-            { geomaritima: new RegExp(`^${deliveryNum}$`, 'i') },
-            { codigo: new RegExp(`^${deliveryNum}$`, 'i') },
-            { processo: deliveryNum },
-            { numero: deliveryNum },
-            { containerNumero: deliveryNum },
-            { geomaritima: deliveryNum },
-            { codigo: deliveryNum }
-          ]
-        });
-      }
-
-      if (icompanyRecord) {
-        const icompanyUpdates = {};
-
-        // Mapear campos do delivery para Icompany
-        if (containerMontadoAt && !icompanyRecord.dtRetiraPD) {
-          icompanyUpdates.dtRetiraPD = new Date(containerMontadoAt);
-        }
-
-        if (Object.keys(icompanyUpdates).length > 0) {
-          await Icompany.findByIdAndUpdate(icompanyRecord._id, icompanyUpdates);
-          console.log('[DELIVERY] sincronizado campos do Icompany', icompanyRecord._id, Object.keys(icompanyUpdates));
-        }
-      }
-    } catch (syncErr) {
-      console.warn('[DELIVERY] erro sync Icompany:', syncErr.message || syncErr);
-    }
+    // DESABILITADO: Sincronização com Icompany foi removida
+    // try {
+    //   const Icompany = require('../models/Icompany');
+    //   // Sincronização desabilitada por requisito do usuário
+    // } catch (syncErr) {
+    //   console.warn('[DELIVERY] erro sync Icompany:', syncErr.message || syncErr);
+    // }
 
     res.status(201).json({ delivery });
   } catch (err) {
@@ -317,61 +284,15 @@ router.put("/:id", auth, async (req, res) => {
       }
     }
 
-    // Sincronizar com Icompany se aplicável
-    try {
-      const Icompany = require('../models/Icompany');
-      const deliveryNum = String(delivery.deliveryNumber || '').trim().toUpperCase();
-      let icompanyRecord = null;
-
-      if (deliveryNum) {
-        // Buscar por processo ou container
-        icompanyRecord = await Icompany.findOne({
-          $or: [
-            { processo: new RegExp(`^${deliveryNum}$`, 'i') },
-            { numero: new RegExp(`^${deliveryNum}$`, 'i') },
-            { containerNumero: new RegExp(`^${deliveryNum}$`, 'i') }
-          ]
-        });
-      }
-
-      if (icompanyRecord) {
-        const icompanyUpdates = {};
-
-        // Mapear campos do delivery para Icompany
-        if (req.body.status === 'A_CAMINHO_DO_CLIENTE' && !icompanyRecord.dtInicioRota) {
-          icompanyUpdates.dtInicioRota = new Date();
-        }
-        if (req.body.arrivedAt !== undefined && req.body.arrivedAt && !icompanyRecord.arrivedAt) {
-          icompanyUpdates.arrivedAt = new Date(req.body.arrivedAt);
-        }
-        if (req.body.desovaStartAt !== undefined && req.body.desovaStartAt && !icompanyRecord.dtInicioDescarga) {
-          const desovaDate = new Date(req.body.desovaStartAt);
-          icompanyUpdates.dtInicioDescarga = desovaDate;
-          // Extrair hora no formato HH:MM:SS
-          icompanyUpdates.hrInicioDescarga = desovaDate.toLocaleTimeString('pt-BR', { hour12: false });
-        }
-        if (req.body.desovaEndAt !== undefined && req.body.desovaEndAt && !icompanyRecord.dtFimDescarga) {
-          icompanyUpdates.dtFimDescarga = new Date(req.body.desovaEndAt);
-        }
-        if (req.body.containerMontadoAt !== undefined && req.body.containerMontadoAt && !icompanyRecord.dtRetiraPD) {
-          icompanyUpdates.dtRetiraPD = new Date(req.body.containerMontadoAt);
-        }
-        if (req.body.horarioDevolucaoVazio !== undefined && req.body.horarioDevolucaoVazio && !icompanyRecord.dtDevolucaoCNTR) {
-          icompanyUpdates.dtDevolucaoCNTR = new Date(req.body.horarioDevolucaoVazio);
-        }
-        // Verificar se observations contém CONTAINER_VAZIO_DEVOLVIDO ou Baixa_Container
-        if (req.body.observations !== undefined && req.body.observations && (req.body.observations.includes('(CONTAINER_VAZIO_DEVOLVIDO)') || req.body.observations.includes('(Baixa_Container)')) && !icompanyRecord.dtDevolucaoCNTR) {
-          icompanyUpdates.dtDevolucaoCNTR = new Date();
-        }
-
-        if (Object.keys(icompanyUpdates).length > 0) {
-          await Icompany.findByIdAndUpdate(icompanyRecord._id, icompanyUpdates);
-          console.log('[DELIVERY] sincronizado campos do Icompany', icompanyRecord._id, Object.keys(icompanyUpdates));
-        }
-      }
-    } catch (syncErr) {
-      console.warn('[DELIVERY] erro sync Icompany:', syncErr.message || syncErr);
-    }
+    // DESABILITADO: Sincronização com Icompany foi removida
+    // try {
+    //   const Icompany = require('../models/Icompany');
+    //   // Sincronização desabilitada por requisito do usuário
+    //   // Campos que eram sincronizados:
+    //   // - dtInicioRota, arrivedAt, dtInicioDescarga, dtFimDescarga, dtRetiraPD, dtDevolucaoCNTR
+    // } catch (syncErr) {
+    //   console.warn('[DELIVERY] erro sync Icompany:', syncErr.message || syncErr);
+    // }
 
     if (req.body.arrivedAt !== undefined) updates.arrivedAt = req.body.arrivedAt;
     if (req.body.containerMontadoAt !== undefined) updates.containerMontadoAt = req.body.containerMontadoAt ? new Date(req.body.containerMontadoAt) : null;

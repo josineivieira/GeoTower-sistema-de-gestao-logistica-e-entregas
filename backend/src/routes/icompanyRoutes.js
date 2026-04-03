@@ -43,6 +43,56 @@ function isEmpty(v) {
   return false;
 }
 
+// Mapeamento de campos do banco para formato camelCase esperado pelo frontend
+const FIELD_MAPPING = {
+  'Dt. Retirada porto': 'dtRetiraPD',
+  'Dt. retirada P.D.': 'dtRetiraPD',
+  'Dt. Retirada P.D.': 'dtRetiraPD',
+  'Dt. início rota': 'dtInicioRota',
+  'Dt. Início Rota': 'dtInicioRota',
+  'Dt. chegada cliente': 'arrivedAt',
+  'Dt. Chegada Cliente': 'arrivedAt',
+  'Dt. agendamento descarga': 'dtAgendamentoDescarga',
+  'Dt. Agendamento Descarga': 'dtAgendamentoDescarga',
+  'Dt. início descarga': 'dtInicioDescarga',
+  'Dt. Início Descarga': 'dtInicioDescarga',
+  'Dt. fim descarga': 'dtFimDescarga',
+  'Dt. Fim Descarga': 'dtFimDescarga',
+  'Dt. coleta': 'dtColeta',
+  'Dt. Coleta': 'dtColeta',
+  'Dt. chegada planta': 'dtChegadaPlanta',
+  'Dt. Chegada Planta': 'dtChegadaPlanta',
+  'Dt. início carregamento': 'dtInicioCarregamento',
+  'Dt. Início Carregamento': 'dtInicioCarregamento',
+  'Dt. fim carregamento': 'dtFimCarregamento',
+  'Dt. Fim Carregamento': 'dtFimCarregamento',
+  'Dt. saída planta': 'dtSaidaPlanta',
+  'Dt. Saída Planta': 'dtSaidaPlanta',
+  'Dt. entrada planta': 'dtEntradaPlanta',
+  'Dt. Entrada Planta': 'dtEntradaPlanta',
+  'Dt. devolução CNTR': 'dtDevolucaoCNTR',
+  'Dt. Devolução CNTR': 'dtDevolucaoCNTR',
+  'Dt Entrega CNTR Porto': 'dtDevolucaoCNTR',
+  'Dt. descida CNTR/Carga': 'dtDescidaCNTRCarga',
+  'Dt. Descida CNTR/Carga': 'dtDescidaCNTRCarga',
+  'Dt. averbação MDFE': 'dtAverbacaoMDFE',
+  'Dt. Averbação MDFE': 'dtAverbacaoMDFE',
+};
+
+// Função para normalizar o documento mapeando campos com espaços para camelCase
+function normalizeDocument(doc) {
+  const result = { ...doc };
+  
+  // Mapear campos com espaços em nomes para camelCase
+  for (const [sourceField, targetField] of Object.entries(FIELD_MAPPING)) {
+    if (sourceField in result && !result[targetField]) {
+      result[targetField] = result[sourceField];
+    }
+  }
+  
+  return result;
+}
+
 // --- new endpoints for the React Icompany page ------------------------------------------------
 router.get('/', async (req, res) => {
   try {
@@ -73,6 +123,9 @@ router.get('/', async (req, res) => {
         collectionUsed = fall.collection;
       }
     }
+
+    // Normalizar documentos (mapear campos com espaços para camelCase)
+    data = data.map(doc => normalizeDocument(doc));
 
     // Serializar datas para ISO string
     const serialized = data.map(doc => {
@@ -128,9 +181,12 @@ router.get('/compare', async (req, res) => {
     const comparison = [];
     
     for (const yRecord of icompanyRecords) {
+      // Normalizar documento do icompany
+      const normalizedRecord = normalizeDocument(yRecord);
+      
       // Procurar por processo usando múltiplos campos possíveis
       let excelRecord = null;
-      const processoProcurar = yRecord.geomaritima || yRecord.processo || yRecord.codigo;
+      const processoProcurar = normalizedRecord.geomaritima || normalizedRecord.processo || normalizedRecord.codigo;
       
       if (processoProcurar && processoProcurar.trim() !== '') {
         const cleanedProc = processoProcurar.trim().toUpperCase();
@@ -144,9 +200,9 @@ router.get('/compare', async (req, res) => {
       }
       
       const record = {
-        processo: yRecord.geomaritima || yRecord.processo || yRecord.codigo,
-        cliente: yRecord.cliente,
-        containerNumero: yRecord.containerNumero,
+        processo: normalizedRecord.geomaritima || normalizedRecord.processo || normalizedRecord.codigo,
+        cliente: normalizedRecord.cliente,
+        containerNumero: normalizedRecord.containerNumero,
         analysis: {},
         _debug: {
           processoBuscado: processoProcurar,
@@ -156,7 +212,7 @@ router.get('/compare', async (req, res) => {
       
       // Comparar os 4 campos específicos - retornar os valores reais também
       COMPARE_FIELDS.forEach(([geoTowerField, icompanyField, displayName]) => {
-        const geoTowerValue = yRecord[geoTowerField];
+        const geoTowerValue = normalizedRecord[geoTowerField];
         const icompanyValue = excelRecord ? excelRecord[icompanyField] : null;
         
         const hasInGeoTower = !isEmpty(geoTowerValue);
@@ -218,13 +274,16 @@ router.get('/search', async (req, res) => {
     };
 
     const { collection, docs } = await findInCollections(searchQuery);
+    
+    // Normalizar documentos
+    const normalizedDocs = docs.map(doc => normalizeDocument(doc));
 
     res.json({
       ok: true,
       success: true,
       collection: collection || PRIMARY_COLLECTION,
-      count: docs.length,
-      data: docs
+      count: normalizedDocs.length,
+      data: normalizedDocs
     });
   } catch (e) {
     console.error('Icompany search error:', e);
@@ -256,6 +315,9 @@ router.get('/debug-comparison', async (req, res) => {
     const icompanyRecords = await icompanyCol.find(filter).limit(5).toArray();
     const excelRecords = await excelCol.find({}).limit(5).toArray();
     
+    // Normalizar documentos
+    const normalizedIcompanyRecords = icompanyRecords.map(doc => normalizeDocument(doc));
+    
     // Map to compare side by side
     const COMPARE_FIELDS = [
       ['dtRetiraPD', 'dtRetiraPD', 'Dt. Retirada P.D.'],
@@ -264,7 +326,7 @@ router.get('/debug-comparison', async (req, res) => {
       ['dtDevolucaoCNTR', 'dtDevolucaoCNTR', 'Dt. Devolução CNTR']
     ];
     
-    const detailedComparison = icompanyRecords.map(yRecord => {
+    const detailedComparison = normalizedIcompanyRecords.map(yRecord => {
       const processoProcurar = yRecord.geomaritima || yRecord.processo || yRecord.codigo;
       
       // Find matching excel record
@@ -389,10 +451,13 @@ router.get('/export', async (req, res) => {
       return res.status(404).json({ ok: false, error: 'Nenhum registro para exportar' });
     }
     
-    const keys = Object.keys(records[0]);
+    // Normalizar documentos
+    const normalizedRecords = records.map(doc => normalizeDocument(doc));
+    
+    const keys = Object.keys(normalizedRecords[0]);
     const csv = [
       keys.join(','),
-      ...records.map(r => keys.map(k => `"${r[k] || ''}"`).join(',')),
+      ...normalizedRecords.map(r => keys.map(k => `"${r[k] || ''}"`).join(',')),
     ].join('\n');
     
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -443,7 +508,10 @@ router.get("/entregas", async (req, res) => {
       .limit(Math.min(parseInt(limit, 10) || 500, 2000))
       .toArray();
 
-    res.json({ ok: true, total: data.length, data, city: city });
+    // Normalizar documentos
+    const normalizedData = data.map(doc => normalizeDocument(doc));
+
+    res.json({ ok: true, total: normalizedData.length, data: normalizedData, city: city });
   } catch (e) {
     console.error("ICompany list error:", e);
     res.status(500).json({ ok: false, error: "Erro ao buscar entregas" });
@@ -530,16 +598,19 @@ router.get("/relatorio-contratado", async (req, res) => {
       .sort({ dtAgendamentoDescarga: -1, dataAgendamento: -1, createdAt: -1, _id: -1 })
       .toArray();
 
-    console.log('Total de registros encontrados:', dados.length);
+    // Normalizar documentos
+    const normalizedDados = dados.map(doc => normalizeDocument(doc));
+
+    console.log('Total de registros encontrados:', normalizedDados.length);
 
     // Calcular sumário
-    const totalEntregas = dados.length;
-    const totalFrete = dados.reduce((sum, d) => sum + (d.vlFreteProcesso || 0), 0);
+    const totalEntregas = normalizedDados.length;
+    const totalFrete = normalizedDados.reduce((sum, d) => sum + (d.vlFreteProcesso || 0), 0);
     const mediaFrete = totalEntregas > 0 ? totalFrete / totalEntregas : 0;
 
     // Agrupar por contratado para sumário
     const resumoPorContratado = {};
-    dados.forEach(d => {
+    normalizedDados.forEach(d => {
       const c = d.contratado || 'SEM CONTRATADO';
       if (!resumoPorContratado[c]) {
         resumoPorContratado[c] = { quantidade: 0, totalFrete: 0 };
@@ -556,7 +627,7 @@ router.get("/relatorio-contratado", async (req, res) => {
         mediaFrete: parseFloat(mediaFrete.toFixed(2))
       },
       resumoPorContratado,
-      dados,
+      dados: normalizedDados,
       city: city
     });
   } catch (e) {

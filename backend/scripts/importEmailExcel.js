@@ -16,7 +16,6 @@ function formatDateLocal(date) {
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
   const seconds = String(date.getSeconds()).padStart(2, "0");
-
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
@@ -57,14 +56,7 @@ function parseBrazilianDateTimeString(value) {
 
   const [, dd, mm, yyyy, hh = "00", mi = "00", ss = "00"] = match;
 
-  const day = Number(dd);
-  const month = Number(mm) - 1;
-  const year = Number(yyyy);
-  const hour = Number(hh);
-  const minute = Number(mi);
-  const second = Number(ss);
-
-  return new Date(year, month, day, hour, minute, second);
+  return new Date(yyyy, mm - 1, dd, hh, mi, ss);
 }
 
 function toLocalDateTimeString(value) {
@@ -119,6 +111,10 @@ function mapToEntrega(row) {
   return {
     codigo: row["Código"] ?? null,
     processo: row["N° GeoMaritima"] ?? row["Nº GeoMaritima"] ?? row["Processo"] ?? null,
+
+    // ✅ MUDANÇA 1
+    "Dt. Retirada porto": toLocalDateTimeString(row["Dt. retirada porto"]),
+
     dtInicio: toLocalDateTimeString(row["Dt. início"]),
     situacao: row["Situação"] ?? null,
     cliente: row["Cliente"] ?? null,
@@ -164,6 +160,7 @@ function mapToEntrega(row) {
     dtDevolucaoCNTR: dtEntradaVal,
     isValidDtRetiraPD: dtRetiraPDVal ? "V" : "X",
     isValidDtDevolucaoCNTR: dtEntradaVal ? "V" : "X",
+    
   };
 }
 
@@ -211,11 +208,14 @@ async function importarExcel(origem = "manual/startup") {
     const antes = await col.countDocuments({});
     console.log("📌 Documentos antes da limpeza:", antes);
 
-    const deleteResult = await col.deleteMany({});
-    console.log("🧹 Removidos da icompany:", deleteResult.deletedCount);
+    // ✅ MUDANÇA 2
+    const processosExcel = docs.map(d => d.processo).filter(Boolean);
 
-    const depoisDaLimpeza = await col.countDocuments({});
-    console.log("📌 Documentos após limpeza:", depoisDaLimpeza);
+    const deleteResult = await col.deleteMany({
+      processo: { $in: processosExcel }
+    });
+
+    console.log("🧹 Removidos da icompany:", deleteResult.deletedCount);
 
     if (docs.length > 0) {
       const agora = new Date();
@@ -263,15 +263,11 @@ if (fs.existsSync(EXCEL_PATH)) {
   }
 }
 
-// roda uma vez ao iniciar
 importarExcel("startup").catch(console.error);
 
 setInterval(() => {
   try {
-    if (!fs.existsSync(EXCEL_PATH)) {
-      console.log("⚠️ Excel não encontrado:", EXCEL_PATH);
-      return;
-    }
+    if (!fs.existsSync(EXCEL_PATH)) return;
 
     const stats = fs.statSync(EXCEL_PATH);
 

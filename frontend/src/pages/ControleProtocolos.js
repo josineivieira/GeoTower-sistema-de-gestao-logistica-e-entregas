@@ -97,6 +97,7 @@ const ControleProtocolos = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const [toast, setToast] = useState(null);
 
   /* ───────────────────────────────────────────────────────────
@@ -177,8 +178,11 @@ const ControleProtocolos = () => {
     if (!scrollRef.current) return;
 
     const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+    const maxScroll = Math.max(scrollWidth - clientWidth, 1);
+
     setCanScrollLeft(scrollLeft > 0);
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    setCanScrollRight(scrollLeft < maxScroll - 10);
+    setScrollProgress(Math.min(1, Math.max(0, scrollLeft / maxScroll)));
   }, []);
 
   useEffect(() => {
@@ -348,7 +352,7 @@ const ControleProtocolos = () => {
         <div className="cp-hero">
           <div className="cp-hero-left">
             <button
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/home')}
               className="cp-btn cp-btn-back"
               title="Voltar"
             >
@@ -578,6 +582,12 @@ const ControleProtocolos = () => {
                   )}
                 </tbody>
               </table>
+            </div>
+            <div className="cp-scroll-track">
+              <div
+                className="cp-scroll-thumb"
+                style={{ width: `${Math.round(scrollProgress * 100)}%` }}
+              />
             </div>
           </div>
         </div>

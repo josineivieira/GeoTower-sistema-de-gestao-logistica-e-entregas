@@ -425,6 +425,7 @@ router.get('/search', async (req, res) => {
       if (obj.dtRetiraPD && obj.dtRetiraPD instanceof Date) obj.dtRetiraPD = obj.dtRetiraPD.toISOString();
       if (obj.dtDevolucaoCNTR && obj.dtDevolucaoCNTR instanceof Date) obj.dtDevolucaoCNTR = obj.dtDevolucaoCNTR.toISOString();
       if (obj.arrivedAt && obj.arrivedAt instanceof Date) obj.arrivedAt = obj.arrivedAt.toISOString();
+      if (obj.entradaDistrito && obj.entradaDistrito instanceof Date) obj.entradaDistrito = obj.entradaDistrito.toISOString();
       return obj;
     });
     res.json({ ok: true, count: serialized.length, data: serialized, city: city });
@@ -513,7 +514,20 @@ router.get("/entregas", async (req, res) => {
     // Normalizar documentos
     const normalizedData = data.map(doc => normalizeDocument(doc));
 
-    res.json({ ok: true, total: normalizedData.length, data: normalizedData, city: city });
+    // Serializar datas para ISO string
+    const serializedData = normalizedData.map(doc => {
+      const obj = { ...doc };
+      if (obj.dtInicioRota && obj.dtInicioRota instanceof Date) obj.dtInicioRota = obj.dtInicioRota.toISOString();
+      if (obj.dtInicioDescarga && obj.dtInicioDescarga instanceof Date) obj.dtInicioDescarga = obj.dtInicioDescarga.toISOString();
+      if (obj.dtFimDescarga && obj.dtFimDescarga instanceof Date) obj.dtFimDescarga = obj.dtFimDescarga.toISOString();
+      if (obj.dtRetiraPD && obj.dtRetiraPD instanceof Date) obj.dtRetiraPD = obj.dtRetiraPD.toISOString();
+      if (obj.dtDevolucaoCNTR && obj.dtDevolucaoCNTR instanceof Date) obj.dtDevolucaoCNTR = obj.dtDevolucaoCNTR.toISOString();
+      if (obj.arrivedAt && obj.arrivedAt instanceof Date) obj.arrivedAt = obj.arrivedAt.toISOString();
+      if (obj.entradaDistrito && obj.entradaDistrito instanceof Date) obj.entradaDistrito = obj.entradaDistrito.toISOString();
+      return obj;
+    });
+
+    res.json({ ok: true, total: serializedData.length, data: serializedData, city: city });
   } catch (e) {
     console.error("ICompany list error:", e);
     res.status(500).json({ ok: false, error: "Erro ao buscar entregas" });
@@ -603,16 +617,29 @@ router.get("/relatorio-contratado", async (req, res) => {
     // Normalizar documentos
     const normalizedDados = dados.map(doc => normalizeDocument(doc));
 
-    console.log('Total de registros encontrados:', normalizedDados.length);
+    // Serializar datas para ISO string
+    const serializedDados = normalizedDados.map(doc => {
+      const obj = { ...doc };
+      if (obj.dtInicioRota && obj.dtInicioRota instanceof Date) obj.dtInicioRota = obj.dtInicioRota.toISOString();
+      if (obj.dtInicioDescarga && obj.dtInicioDescarga instanceof Date) obj.dtInicioDescarga = obj.dtInicioDescarga.toISOString();
+      if (obj.dtFimDescarga && obj.dtFimDescarga instanceof Date) obj.dtFimDescarga = obj.dtFimDescarga.toISOString();
+      if (obj.dtRetiraPD && obj.dtRetiraPD instanceof Date) obj.dtRetiraPD = obj.dtRetiraPD.toISOString();
+      if (obj.dtDevolucaoCNTR && obj.dtDevolucaoCNTR instanceof Date) obj.dtDevolucaoCNTR = obj.dtDevolucaoCNTR.toISOString();
+      if (obj.arrivedAt && obj.arrivedAt instanceof Date) obj.arrivedAt = obj.arrivedAt.toISOString();
+      if (obj.entradaDistrito && obj.entradaDistrito instanceof Date) obj.entradaDistrito = obj.entradaDistrito.toISOString();
+      return obj;
+    });
+
+    console.log('Total de registros encontrados:', serializedDados.length);
 
     // Calcular sumário
-    const totalEntregas = normalizedDados.length;
-    const totalFrete = normalizedDados.reduce((sum, d) => sum + (d.vlFreteProcesso || 0), 0);
+    const totalEntregas = serializedDados.length;
+    const totalFrete = serializedDados.reduce((sum, d) => sum + (d.vlFreteProcesso || 0), 0);
     const mediaFrete = totalEntregas > 0 ? totalFrete / totalEntregas : 0;
 
     // Agrupar por contratado para sumário
     const resumoPorContratado = {};
-    normalizedDados.forEach(d => {
+    serializedDados.forEach(d => {
       const c = d.contratado || 'SEM CONTRATADO';
       if (!resumoPorContratado[c]) {
         resumoPorContratado[c] = { quantidade: 0, totalFrete: 0 };
@@ -629,7 +656,7 @@ router.get("/relatorio-contratado", async (req, res) => {
         mediaFrete: parseFloat(mediaFrete.toFixed(2))
       },
       resumoPorContratado,
-      dados: normalizedDados,
+      dados: serializedDados,
       city: city
     });
   } catch (e) {

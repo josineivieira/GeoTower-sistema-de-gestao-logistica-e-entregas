@@ -600,13 +600,15 @@ const ProgramadasEntregas = () => {
     } catch (_) { setToast({ message: 'Erro ao salvar observação', type: 'error' }); }
   };
 
+  const getDesovaProgressLabel = () => city === 'itajai' ? 'OVAÇÃO EM ANDAMENTO' : 'DESOVA EM ANDAMENTO';
+
   const handleJustificationSubmit = async () => {
     if (!justification.trim()) { setToast({ message: 'Informe a justificativa', type: 'error' }); return; }
     try {
       const fresh = await deliveryService.getDelivery(currentDelivery._id);
       const existingObs = fresh.data.delivery.observations || '';
       const timestamp = formatarData(new Date(), city);
-      await deliveryService.updateDelivery(currentDelivery._id, { observations: `${existingObs ? existingObs + '\n' : ''}[${timestamp}] (${city === 'itajai' ? 'OVAÇÃO' : 'DESOVA'} NÃO INICIADA) ${justification}` });
+      await deliveryService.updateDelivery(currentDelivery._id, { observations: `${existingObs ? existingObs + '\n' : ''}[${timestamp}] (${getDesovaProgressLabel()}) ${justification}` });
       setToast({ message: 'Justificativa enviada', type: 'success' });
       goToStep('confirmDesova');
     } catch (_) { setToast({ message: 'Erro ao enviar justificativa', type: 'error' }); }
@@ -1440,7 +1442,10 @@ const ProgramadasEntregas = () => {
                         </p>
                       </div>
                     </div>
-                    {(currentDelivery && ['pending', 'PENDING', 'EM_ROTA'].includes((currentDelivery.status || ''))) && (
+                    {(() => {
+                      const statusKey = String(currentDelivery?.status || '').toUpperCase();
+                      return currentDelivery && ['PENDING', 'A_CAMINHO_DO_CLIENTE', 'EM_ROTA'].includes(statusKey);
+                    })() && (
                       <div className="pt-1 space-y-2">
                         <ProgressiveTruck start={currentDelivery.createdAt} />
                         <div className="flex justify-between text-xs text-gray-500 px-1">

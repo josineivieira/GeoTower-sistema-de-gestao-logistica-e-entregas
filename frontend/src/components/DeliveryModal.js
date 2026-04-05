@@ -160,48 +160,43 @@ const DeliveryModal = ({
           {(() => {
             const localRecord = findIcompanyInCache(selectedDelivery);
             const effectiveRecord = icompanyRemoteRecord || localRecord;
-            const comparisons = compareWithIcompany(selectedDelivery, effectiveRecord);
-            const hasNotFound = comparisons && comparisons.__notFound;
-            const icompanyMatched = !hasNotFound && comparisons && Object.keys(comparisons).length > 0;
+            const effectiveComparisons = compareWithIcompany(selectedDelivery, effectiveRecord);
+            const hasNotFound = effectiveComparisons && effectiveComparisons.__notFound;
+            const icompanyMatched = !hasNotFound && effectiveComparisons && Object.keys(effectiveComparisons).length > 0;
 
+            let warning = null;
             if (hasNotFound) {
-              return (
+              warning = (
                 <div className="rounded-xl p-3 bg-yellow-900/20 border border-yellow-700/50 text-yellow-200 text-xs font-semibold">
-                  ⚠️ {comparisons.mensagem || 'Registro Icompany não encontrado para esta entrega.'}
+                  ⚠️ {effectiveComparisons.mensagem || 'Registro Icompany não encontrado para esta entrega.'}
                 </div>
               );
-            }
-
-            if (icompanyLookupStatus === 'searching') {
-              return (
+            } else if (icompanyLookupStatus === 'searching') {
+              warning = (
                 <div className="rounded-xl p-3 bg-blue-900/20 border border-blue-700/50 text-blue-200 text-xs font-semibold">
                   🔍 Buscando registro em Icompany...
                 </div>
               );
-            }
-
-            if (icompanyLookupStatus === 'error') {
-              return (
+            } else if (icompanyLookupStatus === 'error') {
+              warning = (
                 <div className="rounded-xl p-3 bg-red-900/20 border border-red-700/50 text-red-200 text-xs font-semibold">
                   ❌ Erro ao buscar registro em Icompany. Verifique o log no console.
                 </div>
               );
-            }
-
-            if (!icompanyMatched) {
-              return (
+            } else if (!icompanyMatched) {
+              warning = (
                 <div className="rounded-xl p-3 bg-yellow-900/20 border border-yellow-700/50 text-yellow-200 text-xs font-semibold">
                   ⚠️ Registro Icompany não encontrado para o processo/ID desta entrega. A comparação só funciona quando há correspondência exata em Icompany (campo código/processo/numero).
                 </div>
               );
             }
 
-            return null;
-          })()}
-
-          <div className="grid grid-cols-2 gap-2 sm:gap-3">
-            {(() => {
-              const comparisons = compareWithIcompany(selectedDelivery);
+            return (
+              <>
+                {warning}
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  {(() => {
+                    const comparisons = effectiveComparisons;
 
               return [
                 ['Contratado', selectedDelivery.userName],
@@ -236,7 +231,10 @@ const DeliveryModal = ({
                 );
               });
             })()}
-          </div>
+              </div>
+            </>
+          );
+          })()}
 
           {flowHistory.length > 0 && (
             <div className="bg-white/5 rounded-xl p-4 border border-white/5">

@@ -1571,8 +1571,7 @@ const MonitorEntregas = () => {
     if (!controleProtocolosData.length) return 0;
 
     const controleRecord = findControleProtocolosInCache(delivery);
-    if (!controleRecord) return 1;
-    if (!controleRecord.documentos) return 1;
+    if (!controleRecord || !controleRecord.documentos) return 0;
 
     return Object.entries(controleProtocolosDocumentMap).reduce((count, [deliveryKey, protocoloKey]) => {
       const deliveryPresent = !!delivery.documents?.[deliveryKey];

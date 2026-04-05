@@ -378,8 +378,180 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       };
     });
 
-    console.log(`📤 Retornando ${deliveriesWithFiles.length} entregas`);
-    return res.json({ deliveries: deliveriesWithFiles });
+    // NOVO: Carregar dados de controle de protocolos para comparações
+    let controleProtocolosData = [];
+    try {
+      const { MongoClient } = require("mongodb");
+      const mongoClient = new MongoClient(process.env.MONGODB_URI);
+      await mongoClient.connect();
+      const db = mongoClient.db(process.env.MONGO_DB || "delivery-docs");
+      const collection = db.collection("controle_protocolos");
+      controleProtocolosData = await collection.find({}).toArray();
+      await mongoClient.close();
+      console.log(`📋 Carregados ${controleProtocolosData.length} registros de controle de protocolos`);
+    } catch (error) {
+      console.error('Erro ao carregar controle de protocolos:', error);
+    }
+
+    // HELPER FUNCTIONS para comparações
+    const controleProtocolosDocumentMap = {
+      retiradaCheio: 'RIC PORTO DESTINO',
+      canhotCTE: 'COMPROVANTE DE DESOVA',
+      diarioBordo: 'DIARIO DE BORDO',
+      canhotNF: 'CANHOTO DE DANFE',
+      devolucaoVazio: 'RIC DEPOT DESTINO'
+    };
+
+    const isControleDocumentoPresent = (value) => {
+      return value === true;
+    };
+
+    const parseDateValue = (val) => {
+      if (!val) return null;
+      if (val instanceof Date) return val;
+      const date = new Date(val);
+      return isNaN(date.getTime()) ? null : date;
+    };
+
+    const normalizeValue = (val) => {
+      if (val === null || val === undefined || val === '') return '';
+      const date = parseDateValue(val);
+      if (date) return date.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
+      return val.toString().trim().toUpperCase();
+    };
+
+    const compareDateOnly = (a, b) => {
+      const da = parseDateValue(a);
+      const db = parseDateValue(b);
+      if (!da || !db) return false;
+      return da.getFullYear() === db.getFullYear()
+        && da.getMonth() === db.getMonth()
+        && da.getDate() === db.getDate();
+    };
+
+    const findControleProtocolosRecord = (delivery) => {
+      if (!delivery || !controleProtocolosData.length) return null;
+
+      const getClean = (value) => {
+        if (value === null || value === undefined) return '';
+        return value.toString().replace(/^#/, '').trim().toUpperCase();
+      };
+
+      const target = getClean(delivery.processoCAB || delivery.deliveryNumber || delivery.processo || delivery.container || '');
+      if (!target) return null;
+
+      const lookupKeys = ['processo', 'container', 'destinatario', 'embarcador'];
+
+      return controleProtocolosData.find((record) => {
+        return lookupKeys.some((key) => {
+          const val = getClean(record[key]);
+          return val && val === target;
+        });
+      }) || null;
+    };
+
+    const getControleProtocolosMismatchCount = (delivery) => {
+      if (!delivery) return 0;
+      if (!controleProtocolosData.length) return 0;
+
+      const controleRecord = findControleProtocolosRecord(delivery);
+      if (!controleRecord) return 1;
+      if (!controleRecord.documentos) return 1;
+
+      return Object.entries(controleProtocolosDocumentMap).reduce((count, [deliveryKey, protocoloKey]) => {
+        const deliveryPresent = !!delivery.documents?.[deliveryKey];
+        const controlePresent = isControleDocumentoPresent(controleRecord.documentos[protocoloKey]);
+        return count + (deliveryPresent !== controlePresent ? 1 : 0);
+      }, 0);
+    };
+
+    const findIcompanyRecord = (delivery, icompanyRecords) => {
+      if (!delivery || !icompanyRecords.length) return null;
+
+      const getClean = (value) => {
+        if (value === null || value === undefined) return '';
+        return value.toString().replace(/^#/, '').trim().toUpperCase();
+      };
+
+      const target = getClean(delivery.processoCAB || delivery.deliveryNumber || delivery.processo || delivery.container || '');
+      if (!target) return null;
+
+      const lookupKeys = ['geomaritima', 'processo', 'codigo', 'numero', 'NUMERO', 'NÚMERO', 'container', 'containerNumero'];
+
+      return icompanyRecords.find((record) => {
+        return lookupKeys.some((key) => {
+          const v = getClean(record[key]);
+          return v && v === target;
+        });
+      }) || null;
+    };
+
+    const getIcompanyMismatchCount = (delivery, icompanyRecords, city) => {
+      if (!delivery) return 0;
+      if (!icompanyRecords.length) return 0;
+
+      const icompanyRecord = findIcompanyRecord(delivery, icompanyRecords);
+      if (!icompanyRecord) return 1;
+
+      // Mapeamento dos campos conforme o modelo Icompany
+      const isItajai = city.toLowerCase() === 'itajai';
+      const fieldMapping = isItajai ? {
+        'Contratado': { deliveryField: 'userName', icompanyField: 'contratado' },
+        'Entrega CNTR Porto': { deliveryField: 'horarioDevolucaoVazio', icompanyField: 'entradaDistrito' },
+        'Agendamento': { deliveryField: 'dataAgendamento', icompanyField: 'dtColeta' },
+        'Recebedor': { deliveryField: 'recebedor', icompanyField: 'remetente' },
+        'Montagem Container': { deliveryField: 'containerMontadoAt', icompanyField: 'dtRetiraPD' },
+        'Chegada': { deliveryField: 'horarioChegada', icompanyField: 'dtChegadaPlanta' },
+        'Fim Desova': { deliveryField: 'horarioFimDesova', icompanyField: 'dtFimDescarga' }
+      } : {
+        'Contratado': { deliveryField: 'userName', icompanyField: 'contratado' },
+        'Entrega CNTR Porto': { deliveryField: 'horarioDevolucaoVazio', icompanyField: 'dtDevolucaoCNTR' },
+        'Agendamento': { deliveryField: 'dataAgendamento', icompanyField: 'dtAgendamentoDescarga' },
+        'Recebedor': { deliveryField: 'recebedor', icompanyField: 'destinatario' },
+        'Montagem Container': { deliveryField: 'containerMontadoAt', icompanyField: 'dtRetiraPD' },
+        'Chegada': { deliveryField: 'horarioChegada', icompanyField: 'dtInicioDescarga' },
+        'Fim Desova': { deliveryField: 'horarioFimDesova', icompanyField: 'dtFimDescarga' }
+      };
+
+      let mismatchCount = 0;
+
+      Object.entries(fieldMapping).forEach(([displayName, mapping]) => {
+        const deliveryValue = delivery[mapping.deliveryField];
+        const icompanyValue = icompanyRecord[mapping.icompanyField];
+
+        const normalizedDelivery = normalizeValue(deliveryValue);
+        const normalizedIcompany = normalizeValue(icompanyValue);
+
+        let isInconsistent = false;
+        if (displayName === 'Montagem Container' || displayName === 'Entrega CNTR Porto') {
+          isInconsistent = !compareDateOnly(deliveryValue, icompanyValue) && (deliveryValue || icompanyValue);
+        } else {
+          isInconsistent = normalizedDelivery !== normalizedIcompany && (normalizedDelivery || normalizedIcompany);
+        }
+
+        if (isInconsistent) mismatchCount++;
+      });
+
+      return mismatchCount;
+    };
+
+    // Adicionar comparações a cada entrega
+    const deliveriesWithComparisons = deliveriesWithFiles.map(delivery => {
+      const icompanyMismatchCount = getIcompanyMismatchCount(delivery, icompanyRecords, city);
+      const controleMismatchCount = getControleProtocolosMismatchCount(delivery);
+
+      return {
+        ...delivery,
+        docsComparison: {
+          total: icompanyMismatchCount + controleMismatchCount,
+          icompanyMismatchCount,
+          controleMismatchCount
+        }
+      };
+    });
+
+    console.log(`📤 Retornando ${deliveriesWithComparisons.length} entregas`);
+    return res.json({ deliveries: deliveriesWithComparisons });
   } catch (err) {
     console.error('❌ Erro em /admin/deliveries:', err);
     return res.status(500).json({ message: "Erro ao listar entregas (admin)", error: err.message });

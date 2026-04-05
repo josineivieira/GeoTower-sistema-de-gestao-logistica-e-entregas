@@ -1622,25 +1622,22 @@ const MonitorEntregas = () => {
   useEffect(() => {
     let r = [...deliveries];
 
+    // Aplicar apenas filtros que o backend não consegue fazer
     if (statsPeriod === 'general' && filters.status !== 'all') {
-      r = r.filter((d) => {
-        if (filters.status === 'OPERACAO_FINALIZADA') return d.status === 'ENTREGUE' || d.status === 'submitted' || d.status === 'FINALIZADO';
-        if (filters.status === 'A CAMINHO DO CLIENTE') return d.status === 'pending' || d.status === 'PENDING';
-        if (filters.status === 'DOCUMENTOS_ENTREGUES') return d.status === 'FINALIZADO' && allModalDocsComplete(d);
-        if (filters.status === 'FINALIZADO') return d.status === 'FINALIZADO' && !allModalDocsComplete(d);
-        return d.status === filters.status;
-      });
+      // Filtros especiais que dependem de lógica do frontend
+      if (filters.status === 'DOCUMENTOS_ENTREGUES') {
+        r = r.filter(d => d.status === 'FINALIZADO' && allModalDocsComplete(d));
+      } else if (filters.status === 'FINALIZADO') {
+        r = r.filter(d => d.status === 'FINALIZADO' && !allModalDocsComplete(d));
+      }
+      // Outros status já são filtrados pelo backend
     }
 
+    // Busca adicional por campos que o backend não filtra
     if (filters.searchTerm.trim()) {
       const q = filters.searchTerm.toLowerCase();
       r = r.filter((d) =>
         [
-          d.deliveryNumber,
-          d.driverName,
-          d.userName,
-          d.recebedor,
-          d.vehiclePlate,
           d.processoCAB,
           d.processo,
           d.containerNumero,
@@ -1649,29 +1646,6 @@ const MonitorEntregas = () => {
         ]
           .some((v) => String(v || '').toLowerCase().includes(q))
       );
-    }
-
-    const pad = (v) => String(v).padStart(2, '0');
-    if (filters.startDate) {
-      const sdStr = filters.startDate;
-      r = r.filter((d) => {
-        const agendDate = getProgramacaoDate(d, city);
-        if (!agendDate) return false;
-        const dt = new Date(agendDate);
-        const dStr = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
-        return dStr >= sdStr;
-      });
-    }
-
-    if (filters.endDate) {
-      const edStr = filters.endDate;
-      r = r.filter((d) => {
-        const agendDate = getProgramacaoDate(d, city);
-        if (!agendDate) return false;
-        const dt = new Date(agendDate);
-        const dStr = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
-        return dStr <= edStr;
-      });
     }
 
     setFilteredDeliveries(r);

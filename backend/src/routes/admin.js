@@ -307,7 +307,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     if (status && status !== "all") {
       console.log('  ✓ Aplicando filtro de status:', status);
       filtered = filtered.filter(d => {
-        if (status === 'OPERACAO_FINALIZADA') return d.status === 'ENTREGUE' || d.status === 'submitted';
+        if (status === 'OPERACAO_FINALIZADA') return d.status === 'ENTREGUE' || d.status === 'submitted' || d.status === 'FINALIZADO';
         if (status === 'A CAMINHO DO CLIENTE') return d.status === 'pending' || d.status === 'PENDING';
         return d.status === status;
       });
@@ -322,12 +322,17 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     if (q && q.trim()) {
       const text = q.trim();
       console.log('  ✓ Aplicando filtro de busca:', text);
-      filtered = filtered.filter(d => 
+      filtered = filtered.filter(d =>
         (d.deliveryNumber || '').toLowerCase().includes(text.toLowerCase()) ||
         (d.vehiclePlate || '').toLowerCase().includes(text.toLowerCase()) ||
         (d.userName || '').toLowerCase().includes(text.toLowerCase()) ||
         (d.driverName || '').toLowerCase().includes(text.toLowerCase()) ||
-        (d.recebedor || '').toLowerCase().includes(text.toLowerCase())
+        (d.recebedor || '').toLowerCase().includes(text.toLowerCase()) ||
+        (d.processoCAB || '').toLowerCase().includes(text.toLowerCase()) ||
+        (d.processo || '').toLowerCase().includes(text.toLowerCase()) ||
+        (d.containerNumero || '').toLowerCase().includes(text.toLowerCase()) ||
+        (d.container || '').toLowerCase().includes(text.toLowerCase()) ||
+        (d.processNumber || '').toLowerCase().includes(text.toLowerCase())
       );
     }
 

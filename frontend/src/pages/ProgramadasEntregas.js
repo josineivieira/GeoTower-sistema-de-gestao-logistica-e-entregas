@@ -459,7 +459,10 @@ const ProgramadasEntregas = () => {
       const isPendingCanhoto = Array.isArray(currentProgramacao.missingDocumentsAtSubmit) && currentProgramacao.missingDocumentsAtSubmit.length > 0;
       if (currentProgramacao.linkedDeliveryId) {
         if (!isPendingCanhoto) await deliveryService.updateDelivery(currentProgramacao.linkedDeliveryId, { status: 'FINALIZADO' });
-        if (returnProof) await deliveryService.uploadDocument(currentProgramacao.linkedDeliveryId, 'devolucaoVazio', returnProof);
+        if (returnProof) {
+          const proofFile = await compressUploadFile(returnProof);
+          await deliveryService.uploadDocument(currentProgramacao.linkedDeliveryId, 'devolucaoVazio', proofFile);
+        }
       } else {
         const searchVal = (currentProgramacao.container || currentProgramacao.processo || '').trim();
         if (searchVal) {
@@ -467,7 +470,10 @@ const ProgramadasEntregas = () => {
           const found = resp.data.deliveries && resp.data.deliveries[0];
           if (found) {
             if (!isPendingCanhoto) await deliveryService.updateDelivery(found._id, { status: 'FINALIZADO' });
-            if (returnProof) await deliveryService.uploadDocument(found._id, 'devolucaoVazio', returnProof);
+            if (returnProof) {
+              const proofFile = await compressUploadFile(returnProof);
+              await deliveryService.uploadDocument(found._id, 'devolucaoVazio', proofFile);
+            }
           }
         }
       }
@@ -501,7 +507,10 @@ const ProgramadasEntregas = () => {
       const delivery = res.data.delivery;
       // Enviar múltiplas fotos
       for (const file of montagemComprovas) {
-        try { await deliveryService.uploadDocument(delivery._id, 'retiradaCheio', file); } catch (_) {}
+        try {
+          const compressed = await compressUploadFile(file);
+          await deliveryService.uploadDocument(delivery._id, 'retiradaCheio', compressed);
+        } catch (_) {}
       }
       await deliveryService.updateDelivery(delivery._id, { status: 'CONTAINER_MONTADO' });
       setToast({ message: 'Container montado com sucesso!', type: 'success' });
@@ -569,6 +578,32 @@ const ProgramadasEntregas = () => {
     return new File([u8arr], filename, { type: mime });
   }
 
+  const compressPhotoFile = async (file) => {
+    const options = {
+      maxSizeMB: 0.25,
+      maxWidthOrHeight: 1024,
+      useWebWorker: true,
+      fileType: 'image/jpeg',
+      initialQuality: 0.7,
+      maxIteration: 10
+    };
+    return await imageCompression(file, options);
+  };
+
+  const compressUploadFile = async (file) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) return file;
+    return await compressPhotoFile(file);
+  };
+
+  const compressUploadFiles = async (files) => {
+    if (!Array.isArray(files)) return files;
+    const compressed = [];
+    for (const file of files) {
+      compressed.push(await compressUploadFile(file));
+    }
+    return compressed;
+  };
+
   const compressAndUpload = async (docKey, status, nextStep, timestamps = {}) => {
     if (!photos || photos.length === 0) { setToast({ message: 'Tire ao menos uma foto', type: 'error' }); return; }
     setSubmitting(true); setUploadProgress(0);
@@ -576,7 +611,7 @@ const ProgramadasEntregas = () => {
       const compressedFiles = [];
       for (let i = 0; i < photos.length; i++) {
         const file = dataURLtoFile(photos[i].data, `foto_${i}.jpg`);
-        const compressed = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1280 });
+        const compressed = await compressPhotoFile(file);
         compressedFiles.push(compressed);
         setUploadProgress(Math.round(((i + 1) / photos.length) * 60));
       }
@@ -586,6 +621,7 @@ const ProgramadasEntregas = () => {
       goToStep(nextStep);
       loadProgramacoes();
     } catch (err) {
+      console.error(err);
       setToast({ message: 'Erro ao enviar fotos', type: 'error' });
     } finally {
       setSubmitting(false);
@@ -680,7 +716,8 @@ const ProgramadasEntregas = () => {
       // upload any new docs
       for (const docType of requiredDocs) {
         if (documentsUpload[docType] && documentsUpload[docType].length > 0) {
-          await deliveryService.uploadDocument(currentDelivery._id, docType, documentsUpload[docType]);
+          const filesToUpload = await compressUploadFiles(documentsUpload[docType]);
+          await deliveryService.uploadDocument(currentDelivery._id, docType, filesToUpload);
         }
       }
 
@@ -741,7 +778,8 @@ const ProgramadasEntregas = () => {
       if (containerVazioProof) {
         try {
           // write using the canonical key expected by tower UI
-          await deliveryService.uploadDocument(deliveryId, 'devolucaoVazio', containerVazioProof);
+          const proofFile = await compressUploadFile(containerVazioProof);
+          await deliveryService.uploadDocument(deliveryId, 'devolucaoVazio', proofFile);
         } catch (uploadErr) {
           console.error('Erro ao fazer upload:', uploadErr);
           setToast({ message: 'Erro ao fazer upload do comprovante: ' + (uploadErr?.response?.data?.message || uploadErr.message), type: 'error' });

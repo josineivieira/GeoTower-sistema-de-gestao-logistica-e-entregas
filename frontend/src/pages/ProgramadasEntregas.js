@@ -78,6 +78,11 @@ const ProgressiveTruck = ({ start }) => {
   return <TruckEmoji progress={progress} />;
 };
 
+const normalizeStatus = (status) => {
+  const key = String(status || '').toUpperCase();
+  return key === 'EM_ROTA' ? 'A_CAMINHO_DO_CLIENTE' : key;
+};
+
 const StepTimer = ({ start, label = 'Tempo esperando' }) => (
   <div className="flex items-center justify-between px-4 py-3 bg-blue-50 rounded-xl border border-blue-200">
     <div className="flex items-center gap-2">
@@ -1443,15 +1448,15 @@ const ProgramadasEntregas = () => {
                       </div>
                     </div>
                     {(() => {
-                      const statusKey = String(currentDelivery?.status || '').toUpperCase();
-                      return currentDelivery && ['PENDING', 'A_CAMINHO_DO_CLIENTE', 'EM_ROTA'].includes(statusKey);
+                      const statusKey = normalizeStatus(currentDelivery?.status);
+                      return currentDelivery && statusKey === 'A_CAMINHO_DO_CLIENTE';
                     })() && (
                       <div className="pt-1 space-y-2">
-                        <ProgressiveTruck start={currentDelivery.createdAt} />
+                        <ProgressiveTruck start={currentDelivery.tripStartedAt || currentDelivery.createdAt} />
                         <div className="flex justify-between text-xs text-gray-500 px-1">
                           <span>Origem</span>
                           <span className="font-bold text-blue-600">
-                            <ElapsedTimer start={currentDelivery.createdAt} />
+                            <ElapsedTimer start={currentDelivery.tripStartedAt || currentDelivery.createdAt} />
                           </span>
                           <span>Destino</span>
                         </div>

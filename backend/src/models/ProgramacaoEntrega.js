@@ -54,7 +54,6 @@ const programacaoEntregaSchema = new mongoose.Schema({
         'EM_DESOVA',
         'AGUARDANDO_ANEXO',
         'ANEXANDO_DOCUMENTOS_FINAIS',
-        'EM_ROTA',
         'ENTREGUE',
         'FINALIZADO',
         'ENTREGUE_COM_PENDENCIA_CANHOTO',

@@ -11,7 +11,7 @@ const DeliverySchema = new mongoose.Schema(
       type: String, 
       enum: [
         'pending', 'submitted', 'AGENDADO', 'CONTAINER_MONTADO', 'AGUARDANDO_DESOVA',
-        'EM_DESOVA', 'AGUARDANDO_ANEXO', 'ANEXANDO_DOCUMENTOS_FINAIS', 'EM_ROTA',
+        'EM_DESOVA', 'AGUARDANDO_ANEXO', 'ANEXANDO_DOCUMENTOS_FINAIS',
         'ENTREGUE', 'CANCELADO', 'A_CAMINHO_DO_CLIENTE', 'ENTREGUE_COM_PENDENCIA_CANHOTO',
         'FINALIZADO'
       ],

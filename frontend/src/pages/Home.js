@@ -64,6 +64,11 @@ const getGreeting = () => {
   return             { text: 'Boa noite', Icon: FaMoon,     sub: 'Encerrando o dia com qualidade.' };
 };
 
+const normalizeStatus = (status) => {
+  const key = String(status || '').toUpperCase();
+  return key === 'EM_ROTA' ? 'A_CAMINHO_DO_CLIENTE' : key;
+};
+
 const useCounter = (target, duration = 900) => {
   const [val, setVal] = useState(0);
   const prev = useRef(0);
@@ -699,7 +704,10 @@ const Home = () => {
       const calc = (list) => {
         const total      = list.length;
         const completed  = list.filter(e => String(e.status).toUpperCase() === 'ENTREGUE').length;
-        const inProgress = list.filter(e => String(e.status).toUpperCase() === 'EM_ROTA').length;
+        const inProgress = list.filter(e => {
+          const statusKey = normalizeStatus(e.status);
+          return statusKey === 'A_CAMINHO_DO_CLIENTE' || statusKey === 'PENDING';
+        }).length;
 
         // Pontualidade: considera entregas com horário agendado e horário de chegada
         let onTimeCount = 0;

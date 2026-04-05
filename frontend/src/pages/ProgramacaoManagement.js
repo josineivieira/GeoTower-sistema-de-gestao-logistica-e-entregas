@@ -103,6 +103,11 @@ const ProgramacaoManagement = () => {
     return prog.dataAgendamento;
   };
 
+  const normalizeProgramacaoStatus = (status) => {
+    const key = String(status || '').toUpperCase();
+    return key === 'EM_ROTA' ? 'A_CAMINHO_DO_CLIENTE' : key;
+  };
+
   useEffect(() => {
     let data = [...programacoes];
     if (filters.search) {
@@ -115,7 +120,7 @@ const ProgramacaoManagement = () => {
       );
     }
     if (filters.status && filters.status !== 'all')
-      data = data.filter(p => p.status === filters.status);
+      data = data.filter(p => normalizeProgramacaoStatus(p.status) === normalizeProgramacaoStatus(filters.status));
     if (filters.startDate) {
       const sd = new Date(filters.startDate);
       data = data.filter(p => {
@@ -174,7 +179,7 @@ const ProgramacaoManagement = () => {
         processo: programacao.processo, recebedor: programacao.recebedor,
         container: programacao.container || '', dataAgendamento,
         contratado: programacao.contratado, motorista: programacao.motorista || '',
-        status: programacao.status, observacoes: programacao.observacoes || ''
+        status: normalizeProgramacaoStatus(programacao.status), observacoes: programacao.observacoes || ''
       });
     } else { resetForm(); }
     setShowModal(true);
@@ -217,10 +222,10 @@ const ProgramacaoManagement = () => {
   };
 
   const statusConfig = {
-    AGENDADO:   { color: '#3b82f6', bg: '#eff6ff', label: 'Agendado' },
-    EM_ROTA:    { color: '#f59e0b', bg: '#fffbeb', label: 'Em Rota' },
-    ENTREGUE:   { color: '#10b981', bg: '#f0fdf4', label: 'Entregue' },
-    CANCELADO:  { color: '#ef4444', bg: '#fef2f2', label: 'Cancelado' },
+    AGENDADO:           { color: '#3b82f6', bg: '#eff6ff', label: 'Agendado' },
+    A_CAMINHO_DO_CLIENTE: { color: '#f59e0b', bg: '#fffbeb', label: 'A caminho do cliente' },
+    ENTREGUE:           { color: '#10b981', bg: '#f0fdf4', label: 'Entregue' },
+    CANCELADO:          { color: '#ef4444', bg: '#fef2f2', label: 'Cancelado' },
   };
 
   const contratadoConfig = {
@@ -231,7 +236,7 @@ const ProgramacaoManagement = () => {
     OUTRO:          { color: '#6b7280', bg: '#f9fafb' },
   };
 
-  const getStatusStyle = (s) => statusConfig[s] || { color: '#6b7280', bg: '#f9fafb', label: s };
+  const getStatusStyle = (s) => statusConfig[normalizeProgramacaoStatus(s)] || { color: '#6b7280', bg: '#f9fafb', label: normalizeProgramacaoStatus(s) };
   const getContratadoStyle = (c) => contratadoConfig[c] || { color: '#6b7280', bg: '#f9fafb' };
 
   const SortIcon = ({ col }) => {
@@ -526,7 +531,7 @@ const ProgramacaoManagement = () => {
               >
                 <option value="all">Todos os status</option>
                 <option value="AGENDADO">Agendado</option>
-                <option value="EM_ROTA">Em Rota</option>
+                <option value="A_CAMINHO_DO_CLIENTE">A caminho do cliente</option>
                 <option value="ENTREGUE">Entregue</option>
                 <option value="CANCELADO">Cancelado</option>
               </select>
@@ -792,7 +797,7 @@ const ProgramacaoManagement = () => {
                     onChange={e => setFormData({...formData, status: e.target.value})}
                     style={{ ...inputStyle(isGeoMar()), cursor: isGeoMar() ? 'not-allowed' : 'pointer' }}>
                     <option value="AGENDADO">Agendado</option>
-                    <option value="EM_ROTA">Em Rota</option>
+                    <option value="A_CAMINHO_DO_CLIENTE">A caminho do cliente</option>
                     <option value="ENTREGUE">Entregue</option>
                     <option value="CANCELADO">Cancelado</option>
                   </select>

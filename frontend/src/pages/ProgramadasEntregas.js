@@ -605,7 +605,13 @@ const ProgramadasEntregas = () => {
     } catch (_) { setToast({ message: 'Erro ao salvar observação', type: 'error' }); }
   };
 
-  const getDesovaProgressLabel = () => city === 'itajai' ? 'OVAÇÃO EM ANDAMENTO' : 'DESOVA EM ANDAMENTO';
+  const getDesovaObservationLabel = () => {
+    const statusKey = String(currentDelivery?.status || '').toUpperCase();
+    if (statusKey === 'EM_DESOVA') {
+      return city === 'itajai' ? 'OVAÇÃO EM ANDAMENTO' : 'DESOVA EM ANDAMENTO';
+    }
+    return city === 'itajai' ? 'AGUARDANDO OVAÇÃO' : 'AGUARDANDO DESOVA';
+  };
 
   const handleJustificationSubmit = async () => {
     if (!justification.trim()) { setToast({ message: 'Informe a justificativa', type: 'error' }); return; }
@@ -613,7 +619,7 @@ const ProgramadasEntregas = () => {
       const fresh = await deliveryService.getDelivery(currentDelivery._id);
       const existingObs = fresh.data.delivery.observations || '';
       const timestamp = formatarData(new Date(), city);
-      await deliveryService.updateDelivery(currentDelivery._id, { observations: `${existingObs ? existingObs + '\n' : ''}[${timestamp}] (${getDesovaProgressLabel()}) ${justification}` });
+      await deliveryService.updateDelivery(currentDelivery._id, { observations: `${existingObs ? existingObs + '\n' : ''}[${timestamp}] (${getDesovaObservationLabel()}) ${justification}` });
       setToast({ message: 'Justificativa enviada', type: 'success' });
       goToStep('confirmDesova');
     } catch (_) { setToast({ message: 'Erro ao enviar justificativa', type: 'error' }); }

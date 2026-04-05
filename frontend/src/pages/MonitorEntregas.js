@@ -749,6 +749,7 @@ const MonitorEntregas = () => {
   const [icompanyComparisons, setIcompanyComparisons] = useState({});
   const [icompanyRemoteRecord, setIcompanyRemoteRecord] = useState(null);
   const [icompanyLookupStatus, setIcompanyLookupStatus] = useState('idle');
+  const [controleProtocolosData, setControleProtocolosData] = useState([]);
   const [controleProtocolosRecord, setControleProtocolosRecord] = useState(null);
   const [controleProtocolosLookupStatus, setControleProtocolosLookupStatus] = useState('idle');
   const lastIcompanyQueryRef = useRef('');
@@ -1398,6 +1399,17 @@ const MonitorEntregas = () => {
     }
   }, []);
 
+  const loadControleProtocolosData = useCallback(async () => {
+    try {
+      const response = await adminService.getControleProtocolos();
+      if (response.data?.success) {
+        setControleProtocolosData(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados de controle de protocolos:', error);
+    }
+  }, []);
+
   const findIcompanyInCache = useCallback((delivery) => {
     if (!delivery || !icompanyData.length) return null;
 
@@ -1533,18 +1545,72 @@ const MonitorEntregas = () => {
     return comparisons;
   }, [icompanyData, city]);
 
+  const findControleProtocolosInCache = useCallback((delivery) => {
+    if (!delivery || !controleProtocolosData.length) return null;
+
+    const getClean = (value) => {
+      if (value === null || value === undefined) return '';
+      return value.toString().replace(/^#/, '').trim().toUpperCase();
+    };
+
+    const target = getClean(delivery.codigo || delivery.processoCAB || delivery.deliveryNumber || delivery.processo || delivery.container || '');
+    if (!target) return null;
+
+    const lookupKeys = ['processo', 'container', 'destinatario', 'embarcador'];
+
+    return controleProtocolosData.find((record) => {
+      return lookupKeys.some((key) => {
+        const val = getClean(record[key]);
+        return val && val === target;
+      });
+    }) || null;
+  }, [controleProtocolosData]);
+
+  const getControleProtocolosMismatchCount = (delivery) => {
+    if (!delivery) return 0;
+    if (!controleProtocolosData.length) return 0;
+
+    const controleRecord = findControleProtocolosInCache(delivery);
+    if (!controleRecord) return 1;
+    if (!controleRecord.documentos) return 1;
+
+    return Object.entries(controleProtocolosDocumentMap).reduce((count, [deliveryKey, protocoloKey]) => {
+      const deliveryPresent = !!delivery.documents?.[deliveryKey];
+      const controlePresent = isControleDocumentoPresent(controleRecord.documentos[protocoloKey]);
+      return count + (deliveryPresent !== controlePresent ? 1 : 0);
+    }, 0);
+  };
+
+  const getDocsComparisonSummary = (delivery) => {
+    const icompanyResult = compareWithIcompany(delivery);
+    const icompanyMismatchCount = icompanyData.length === 0
+      ? 0
+      : icompanyResult.__notFound
+        ? 1
+        : Object.values(icompanyResult).filter((item) => item.isInconsistent).length;
+    const controleMismatchCount = getControleProtocolosMismatchCount(delivery);
+
+    return {
+      total: icompanyMismatchCount + controleMismatchCount,
+      icompanyMismatchCount,
+      controleMismatchCount
+    };
+  };
+
   useEffect(() => {
     loadDeliveries();
     loadIcompanyData(); // Carregar dados da Icompany na inicialização
+    loadControleProtocolosData();
     if (autoRefresh) {
       const t = setInterval(() => {
         // eslint-disable-next-line no-console
         console.log('DEBUG autoRefresh triggered, filters:', filters);
         loadDeliveries();
+        loadControleProtocolosData();
       }, refreshInterval * 1000);
       return () => clearInterval(t);
     }
-  }, [loadDeliveries, loadIcompanyData, autoRefresh, refreshInterval]);
+  }, [loadDeliveries, loadIcompanyData, loadControleProtocolosData, autoRefresh, refreshInterval]);
 
   useEffect(() => {
     if (!selectedDelivery) {
@@ -2172,8 +2238,8 @@ const MonitorEntregas = () => {
                   <div className="relative">
                     {displayList.map((d, i) => {
                       const cliTime = calculateCliTime(d, currentTime);
-                      const docStatus = getDocumentsStatus(d);
-                      const isComplete = docStatus.includes('COMPLETO');
+                      const docsComparison = getDocsComparisonSummary(d);
+                      const docsOk = docsComparison.total === 0;
                       const now = Date.now();
                       const updatedAt = recentlyUpdated[d._id];
                       const isRising = updatedAt && (now - updatedAt) < 900;
@@ -2266,10 +2332,21 @@ const MonitorEntregas = () => {
                           </div>
 
                           <div className="px-1 py-3 flex items-center justify-center min-w-0">
-                            {isComplete
-                              ? <FaCheckCircle className="text-emerald-400" title={docStatus} size={15} />
-                              : <FaTimesCircle className="text-red-400/70" title={docStatus} size={15} />
-                            }
+                            {docsOk ? (
+                              <FaCheckCircle
+                                className="text-emerald-400"
+                                title="Comparação de dados OK"
+                                size={15}
+                              />
+                            ) : (
+                              <span
+                                className="inline-flex items-center gap-1 text-rose-400"
+                                title={`Inconsistências: ${docsComparison.total}`}
+                              >
+                                <FaTimesCircle size={15} />
+                                <span className="text-[10px] font-semibold">{docsComparison.total}</span>
+                              </span>
+                            )}
                           </div>
 
                           <div className="px-1 py-3 flex items-center justify-center min-w-0">

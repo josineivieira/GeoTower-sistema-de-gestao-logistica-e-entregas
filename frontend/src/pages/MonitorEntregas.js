@@ -1553,6 +1553,22 @@ const MonitorEntregas = () => {
       return value.toString().replace(/^#/, '').trim().toUpperCase();
     };
 
+    // Primeiro tenta encontrar pelo código Icompany (como no modal)
+    const icompanyRecord = findIcompanyInCache(delivery);
+    if (icompanyRecord?.codigo) {
+      const icompanyCode = getClean(icompanyRecord.codigo);
+      if (icompanyCode) {
+        const foundByIcompanyCode = controleProtocolosData.find((record) => {
+          return getClean(record.processo) === icompanyCode ||
+                 getClean(record.container) === icompanyCode ||
+                 getClean(record.destinatario) === icompanyCode ||
+                 getClean(record.embarcador) === icompanyCode;
+        });
+        if (foundByIcompanyCode) return foundByIcompanyCode;
+      }
+    }
+
+    // Fallback: busca pelos campos tradicionais
     const target = getClean(delivery.codigo || delivery.processoCAB || delivery.deliveryNumber || delivery.processo || delivery.container || '');
     if (!target) return null;
 
@@ -1564,7 +1580,7 @@ const MonitorEntregas = () => {
         return val && val === target;
       });
     }) || null;
-  }, [controleProtocolosData]);
+  }, [controleProtocolosData, findIcompanyInCache]);
 
   const getControleProtocolosMismatchCount = (delivery) => {
     if (!delivery) return 0;
@@ -2317,7 +2333,7 @@ const MonitorEntregas = () => {
                           </div>
 
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
-                            <ProgressDots delivery={d} allModalDocsComplete={allModalDocsComplete} />
+                            <ProgressDots delivery={d} allModalDocsComplete={allModalDocsComplete} getDocsComparisonSummary={getDocsComparisonSummary} />
                           </div>
 
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">

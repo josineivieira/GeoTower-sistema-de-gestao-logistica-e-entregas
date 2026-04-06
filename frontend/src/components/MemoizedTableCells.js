@@ -121,7 +121,7 @@ const getProgress = (delivery) => {
   return Math.round((idx / (progressStatuses.length - 1)) * 100);
 };
 
-export const MemoizedProgressDots = memo(({ delivery, allModalDocsComplete }) => {
+export const MemoizedProgressDots = memo(({ delivery, allModalDocsComplete, getDocsComparisonSummary }) => {
   let p = getProgress(delivery);
   const statusKey = normalizeKey(delivery.status);
   if (statusKey === 'FINALIZADO') {
@@ -129,6 +129,11 @@ export const MemoizedProgressDots = memo(({ delivery, allModalDocsComplete }) =>
   } else if (statusKey === 'DOCUMENTOS ENTREGUES') {
     p = 100;
   }
+
+  // Se temos função de comparação de documentos, mostra as inconsistências
+  const docsComparison = getDocsComparisonSummary ? getDocsComparisonSummary(delivery) : null;
+  const hasInconsistencies = docsComparison && docsComparison.total > 0;
+
   const total = 7;
   const filled = Math.ceil((p / 100) * total);
   const colorDot =
@@ -137,9 +142,15 @@ export const MemoizedProgressDots = memo(({ delivery, allModalDocsComplete }) =>
     p >= 33 ? 'bg-indigo-500 shadow-sm shadow-indigo-300' :
     'bg-gray-300';
 
+  const title = hasInconsistencies
+    ? `${p}% - ${docsComparison.total} inconsistências (${docsComparison.icompanyMismatchCount} Icompany, ${docsComparison.controleMismatchCount} Controle)`
+    : `${p}%`;
+
   return (
-    <div className="flex items-center gap-1" title={`${p}%`}>
-      <span className="text-[10px] font-bold text-gray-500 w-6 text-right">{p}%</span>
+    <div className="flex items-center gap-1" title={title}>
+      <span className={`text-[10px] font-bold w-6 text-right ${hasInconsistencies ? 'text-red-400' : 'text-gray-500'}`}>
+        {hasInconsistencies ? `!${docsComparison.total}` : `${p}%`}
+      </span>
       <div className="flex gap-[3px]">
         {Array.from({ length: total }).map((_, i) => (
           <span

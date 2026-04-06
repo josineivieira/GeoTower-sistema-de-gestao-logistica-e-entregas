@@ -50,33 +50,9 @@ const ElapsedTimer = ({ start }) => {
   return <span className="font-mono">{hh}:{mm}:{ss}</span>;
 };
 
-const TruckEmoji = ({ progress = 0 }) => (
-  <div className="w-full h-10 bg-white/20 rounded-full relative overflow-hidden">
-    <div
-      className="absolute inset-y-0 left-0 bg-white/10 rounded-full transition-all duration-500"
-      style={{ width: `${Math.min(progress, 100)}%` }}
-    />
-    <div
-      className="absolute top-1/2 -translate-y-1/2 transition-all duration-500 text-2xl"
-      style={{ left: `calc(${Math.min(progress, 96)}% - 16px)` }}
-    >
-      🚚
-    </div>
-  </div>
-);
+const TruckEmoji = () => null;
 
-const ProgressiveTruck = ({ start }) => {
-  const [progress, setProgress] = useState(0);
-  useEffect(() => {
-    let s = start ? new Date(start) : new Date();
-    if (isNaN(s.getTime())) s = new Date();
-    const tick = () => setProgress(Math.min(100, ((Date.now() - s.getTime()) / 1800000) * 100));
-    tick();
-    const id = setInterval(tick, 500);
-    return () => clearInterval(id);
-  }, [start]);
-  return <TruckEmoji progress={progress} />;
-};
+const ProgressiveTruck = ({ start }) => null;
 
 const normalizeStatus = (status) => {
   const key = String(status || '').toUpperCase();

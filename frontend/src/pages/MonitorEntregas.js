@@ -2333,7 +2333,7 @@ const MonitorEntregas = () => {
                           </div>
 
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
-                            <ProgressDots delivery={d} allModalDocsComplete={allModalDocsComplete} getDocsComparisonSummary={getDocsComparisonSummary} />
+                            <ProgressDots delivery={d} allModalDocsComplete={allModalDocsComplete} />
                           </div>
 
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">

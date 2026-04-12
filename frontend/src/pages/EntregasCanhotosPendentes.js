@@ -63,9 +63,22 @@ const InfoRow = ({ icon: Icon, label, value }) => (
 );
 
 /* ─── Upload Field ─────────────────────────────────────────── */
-/* Mantido no formato simples para preservar compatibilidade */
+/* Adiciona suporte para câmera e seleção de arquivos */
 const UploadField = ({ doc, file, onChange }) => {
   const hasFile = file && file.length > 0;
+  const fileInputRef = React.useRef(null);
+  const cameraInputRef = React.useRef(null);
+
+  const handleFileSelect = (e) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      const existingFiles = file ? Array.from(file) : [];
+      const allFiles = [...existingFiles, ...newFiles];
+      const dataTransfer = new DataTransfer();
+      allFiles.forEach(f => dataTransfer.items.add(f));
+      onChange({ target: { files: dataTransfer.files } });
+    }
+  };
 
   return (
     <div
@@ -75,7 +88,7 @@ const UploadField = ({ doc, file, onChange }) => {
           : 'border-gray-300 bg-white hover:border-emerald-400 hover:bg-emerald-50/40'
       }`}
     >
-      <label className="flex flex-col items-center justify-center gap-2 p-5 cursor-pointer">
+      <div className="flex flex-col items-center justify-center gap-2 p-5">
         <div
           className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-colors ${
             hasFile
@@ -101,18 +114,46 @@ const UploadField = ({ doc, file, onChange }) => {
           >
             {hasFile
               ? `${file.length} arquivo(s) selecionado(s)`
-              : 'Clique para selecionar imagem ou PDF'}
+              : 'Selecione arquivo ou tire uma foto'}
           </p>
         </div>
 
+        <div className="flex gap-2 mt-2">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl text-xs font-bold active:scale-95 transition"
+          >
+            <FaUpload size={11} />
+            Arquivo
+          </button>
+          <button
+            type="button"
+            onClick={() => cameraInputRef.current?.click()}
+            className="flex items-center gap-1.5 px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-xl text-xs font-bold active:scale-95 transition"
+          >
+            📷
+            Câmera
+          </button>
+        </div>
+
         <input
+          ref={fileInputRef}
           type="file"
           accept="image/*,application/pdf"
           multiple
           className="hidden"
-          onChange={onChange}
+          onChange={handleFileSelect}
         />
-      </label>
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
+      </div>
     </div>
   );
 };
@@ -551,7 +592,7 @@ const EntregasCanhotosPendentes = () => {
             </div>
 
             {/* Footer do modal */}
-            <div className="p-4 border-t border-gray-100 bg-white shrink-0 space-y-3">
+            <div className="p-4 border-t border-gray-100 bg-white shrink-0 space-y-3" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
               {!allFilesSelected && !modalSubmitting && (
                 <p className="text-center text-xs text-gray-400 font-medium">
                   Selecione todos os arquivos para habilitar o envio

@@ -610,7 +610,15 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
       if (updated.missingDocumentsAtSubmit && Array.isArray(updated.missingDocumentsAtSubmit) && updated.missingDocumentsAtSubmit.includes(type)) {
         const newMissing = updated.missingDocumentsAtSubmit.filter(d => d !== type);
         console.log(`[UPLOAD] Removendo "${type}" de missingDocumentsAtSubmit. Pendências restantes:`, newMissing);
-        await db.updateOne("deliveries", { _id: id }, { missingDocumentsAtSubmit: newMissing });
+        
+        // Também limpar o log de correção para este documento específico
+        let newCorrectionLog = updated.documentCorrectionLog || [];
+        if (Array.isArray(newCorrectionLog)) {
+          newCorrectionLog = newCorrectionLog.filter(log => log.documentType !== type);
+          console.log(`[UPLOAD] Limpando log de correção para "${type}". Logs restantes:`, newCorrectionLog.length);
+        }
+        
+        await db.updateOne("deliveries", { _id: id }, { missingDocumentsAtSubmit: newMissing, documentCorrectionLog: newCorrectionLog });
       }
     } else {
       console.warn('[UPLOAD] Nenhum arquivo recebido no upload.');

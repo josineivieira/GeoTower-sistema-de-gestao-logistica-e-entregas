@@ -186,6 +186,14 @@ exports.updateDeliveryDocument = async (req, res) => {
     if (delivery.missingDocumentsAtSubmit && Array.isArray(delivery.missingDocumentsAtSubmit)) {
       updates.missingDocumentsAtSubmit = delivery.missingDocumentsAtSubmit.filter(d => d !== documentType);
       console.log(`[UPLOAD] Removendo "${documentType}" de missingDocumentsAtSubmit. Pendências restantes:`, updates.missingDocumentsAtSubmit);
+      
+      // Também limpar o log de correção para este documento específico
+      let newCorrectionLog = delivery.documentCorrectionLog || [];
+      if (Array.isArray(newCorrectionLog)) {
+        newCorrectionLog = newCorrectionLog.filter(log => log.documentType !== documentType);
+        updates.documentCorrectionLog = newCorrectionLog;
+        console.log(`[UPLOAD] Limpando log de correção para "${documentType}". Logs restantes:`, newCorrectionLog.length);
+      }
     }
 
     // Atualizar atomicamente

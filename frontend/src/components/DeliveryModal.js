@@ -233,6 +233,102 @@ const DeliveryModal = ({
                 );
               });
             })()}
+
+            {/* Detectar inconsistências para o botão de verificação */}
+            {(() => {
+              const comparisons = effectiveComparisons;
+              const temInconsistenciaData = Object.values(comparisons || {}).some(comp => comp?.isInconsistent === true);
+              
+              const labels = getLabelsForDelivery(selectedDelivery);
+              const temInconsistenciaDocumento = Object.keys(selectedDelivery.documents || {})
+                .filter((k) => !['chegadaCliente', 'inicioDesova', 'fimDesova'].includes(k))
+                .some((k) => {
+                  const present = !!selectedDelivery.documents[k];
+                  const controleField = controleProtocolosDocumentMap[k];
+                  const controlePresent = controleField && controleProtocolosRecord && controleProtocolosRecord.documentos
+                    ? isControleDocumentoPresent(controleProtocolosRecord.documentos[controleField])
+                    : false;
+                  return present && controleField && !controlePresent;
+                });
+
+              const temInconsistencias = temInconsistenciaData || temInconsistenciaDocumento;
+
+              // Só renderizar o botão se houver inconsistências
+              if (!temInconsistencias) return null;
+
+              return (
+                <div className={`mt-4 pt-4 border-t border-white/10 p-4 rounded-xl transition-all duration-300 ${
+                  icompanyVerified?.[selectedDelivery._id]?.verified
+                    ? 'bg-gradient-to-r from-emerald-900/30 to-teal-900/30 border-l-4 border-l-emerald-500'
+                    : 'bg-gradient-to-r from-emerald-900/15 to-teal-900/15 hover:from-emerald-900/20 hover:to-teal-900/20'
+                }`}>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={icompanyVerified?.[selectedDelivery._id]?.verified || false}
+                      onChange={async (e) => {
+                        if (e.target.checked) {
+                          try {
+                            const verification = await updateVerificationWithServer(selectedDelivery._id, true, '');
+                            const newState = {
+                              ...icompanyVerified,
+                              [selectedDelivery._id]: {
+                                verified: true,
+                                verifiedAt: verification.verifiedAt,
+                                verifiedBy: verification.verifiedBy || userName
+                              }
+                            };
+                            setIcompanyVerified(newState);
+                            localStorage.setItem('icompanyVerified', JSON.stringify(newState));
+                            localStorage.setItem('icompanyVerifiedRefresh', Date.now().toString());
+                            setToast({
+                              type: 'success',
+                              message: `✓ Inconsistências verificadas`,
+                              duration: 3000
+                            });
+                          } catch (err) {
+                            e.target.checked = false;
+                          }
+                        } else {
+                          setDeliveryToUnverify(selectedDelivery._id);
+                          setConfirmRemoveVerification(true);
+                        }
+                      }}
+                      className="sr-only"
+                      id={`verification-checkbox-${selectedDelivery._id}`}
+                    />
+                    <div 
+                      className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all cursor-pointer ${
+                        icompanyVerified?.[selectedDelivery._id]?.verified
+                          ? 'bg-emerald-500 border-emerald-500 shadow-lg shadow-emerald-500/50'
+                          : 'border-emerald-400/50 group-hover:border-emerald-400'
+                      }`}>
+                      {icompanyVerified?.[selectedDelivery._id]?.verified && (
+                        <FaCheckCircle className="text-white text-xs" />
+                      )}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className={`text-sm font-semibold transition-colors ${
+                        icompanyVerified?.[selectedDelivery._id]?.verified
+                          ? 'text-emerald-200'
+                          : 'text-emerald-300 group-hover:text-emerald-200'
+                      }`}>
+                        ✓ Inconsistências Verificadas
+                      </span>
+                      <span className={`text-xs transition-colors ${
+                        icompanyVerified?.[selectedDelivery._id]?.verified
+                          ? 'text-emerald-300/80'
+                          : 'text-emerald-400/70 group-hover:text-emerald-300/70'
+                      }`}>
+                        {icompanyVerified?.[selectedDelivery._id]?.verified
+                          ? `Verificado por ${icompanyVerified[selectedDelivery._id]?.verifiedBy || 'Usuário'}`
+                          : 'Marque para confirmar que as inconsistências foram verificadas'}
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              );
+            })()}
               </div>
             </>
           );

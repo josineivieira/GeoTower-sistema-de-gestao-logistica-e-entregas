@@ -2,6 +2,7 @@ const Delivery = require('../models/Delivery');
 const Driver = require('../models/Driver');
 const fs = require('fs');
 const path = require('path');
+const { updateDeliveryAtomic, updateDeliveryStatus, addDocumentToDelivery } = require('../utils/deliveryConcurrency');
 
 function getDocsForCity(city = 'manaus') {
   city = String(city || 'manaus').toLowerCase();
@@ -44,6 +45,7 @@ exports.createDelivery = async (req, res) => {
       status: 'draft'
     });
 
+    // Para criação, ainda usamos save() pois é um documento novo
     await delivery.save();
 
     res.status(201).json({
@@ -175,21 +177,24 @@ exports.updateDeliveryDocument = async (req, res) => {
     // Salva caminho relativo (container/filename)
     const relativePath = path.join(containerFolder, finalFilename).replace(/\\/g, '/');
 
-    delivery.documents[documentType] = relativePath;
+    // Preparar updates atômicos
+    const updates = {
+      [`documents.${documentType}`]: relativePath
+    };
 
     // Remover documentType de missingDocumentsAtSubmit se estava lá
     if (delivery.missingDocumentsAtSubmit && Array.isArray(delivery.missingDocumentsAtSubmit)) {
-      delivery.missingDocumentsAtSubmit = delivery.missingDocumentsAtSubmit.filter(d => d !== documentType);
-      console.log(`[UPLOAD] Removendo "${documentType}" de missingDocumentsAtSubmit. Pendências restantes:`, delivery.missingDocumentsAtSubmit);
+      updates.missingDocumentsAtSubmit = delivery.missingDocumentsAtSubmit.filter(d => d !== documentType);
+      console.log(`[UPLOAD] Removendo "${documentType}" de missingDocumentsAtSubmit. Pendências restantes:`, updates.missingDocumentsAtSubmit);
     }
 
-    delivery.updatedAt = new Date();
-    await delivery.save();
+    // Atualizar atomicamente
+    const updatedDelivery = await updateDeliveryAtomic(delivery._id, updates);
 
     res.json({
       success: true,
       message: 'Documento anexado com sucesso',
-      delivery
+      delivery: updatedDelivery
     });
   } catch (error) {
     console.error('Erro ao atualizar documento:', error);
@@ -233,11 +238,16 @@ exports.submitDelivery = async (req, res) => {
     // If there are missing docs, require force + observation
     const { force, observation } = req.body || {};
 
+    // Preparar updates para submissão
+    const submissionUpdates = {
+      submittedAt: new Date()
+    };
+
     if (missingDocs.length > 0) {
       if (city !== 'itajai') {
         if (!force) {
-          return res.status(400).json({ 
-            success: false, 
+          return res.status(400).json({
+            success: false,
             message: 'Documentos obrigatórios faltando: ' + missingDocs.join(', ')
           });
         }
@@ -247,26 +257,23 @@ exports.submitDelivery = async (req, res) => {
         }
       }
 
-      delivery.submissionObservation = observation ? String(observation).trim() : '';
-      delivery.submissionForce = true;
-      delivery.missingDocumentsAtSubmit = missingDocs;
+      submissionUpdates.submissionObservation = observation ? String(observation).trim() : '';
+      submissionUpdates.submissionForce = true;
+      submissionUpdates.missingDocumentsAtSubmit = missingDocs;
     } else {
       // Limpar possível pendência anterior
-      delivery.missingDocumentsAtSubmit = [];
-      delivery.submissionForce = false;
-      delivery.submissionObservation = '';
+      submissionUpdates.missingDocumentsAtSubmit = [];
+      submissionUpdates.submissionForce = false;
+      submissionUpdates.submissionObservation = '';
     }
 
-    delivery.status = 'submitted';
-    delivery.submittedAt = new Date();
-    delivery.updatedAt = new Date();
-
-    await delivery.save();
+    // Atualizar status atomicamente com validação
+    const updatedDelivery = await updateDeliveryStatus(delivery._id, 'submitted', submissionUpdates);
 
     res.json({
       success: true,
       message: 'Entrega enviada com sucesso',
-      delivery
+      delivery: updatedDelivery
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erro no servidor', error: error.message });

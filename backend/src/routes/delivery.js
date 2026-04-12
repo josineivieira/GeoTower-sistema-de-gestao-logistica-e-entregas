@@ -5,6 +5,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const NotificationService = require("../services/notificationService");
+const { updateDeliveryAtomic, updateDeliveryStatus } = require("../utils/deliveryConcurrency");
 
 // =======================
 // Upload config (disk by default, memory for S3)
@@ -261,71 +262,29 @@ router.put("/:id", auth, async (req, res) => {
       }
     }
 
+    // Preparar updates
     const updates = {};
+
+    // Se há mudança de status, usar função especializada com validação de ordem
     if (req.body.status) {
-      updates.status = req.body.status;
-      // mirror to programacao if exists - try multiple approaches
-      try {
-        const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
-        let prog = null;
-        const deliveryNum = String(delivery.deliveryNumber || '').trim().toUpperCase();
-        
-        // Construir filtro de cidade
-        let cityFilter = {};
-        if (city === 'manaus') {
-          cityFilter.origem = { $in: ['MANAUS', 'MANAUS - COELTA BALY'] };
-        } else if (city === 'itajai') {
-          cityFilter.$or = [
-            { origem: { $exists: false } },
-            { origem: '' },
-            { origem: { $nin: ['MANAUS', 'MANAUS - COELTA BALY'] } }
-          ];
-        }
-        
-        // Approach 1: Exact match (case-insensitive)
-        if (deliveryNum) {
-          prog = await ProgramacaoEntrega.findOne({
-            ...cityFilter,
-            $or: [
-              { processo: new RegExp(`^${deliveryNum}$`, 'i') },
-              { container: new RegExp(`^${deliveryNum}$`, 'i') }
-            ]
-          });
-        }
-        
-        // Approach 2: If not found, try substring match
-        if (!prog && deliveryNum) {
-          prog = await ProgramacaoEntrega.findOne({
-            ...cityFilter,
-            $or: [
-              { processo: new RegExp(deliveryNum, 'i') },
-              { container: new RegExp(deliveryNum, 'i') }
-            ]
-          });
-        }
-        
-        if (prog) {
-          prog.status = req.body.status;
-          await prog.save();
-          console.log('[DELIVERY] sincronizado status da programacao', prog._id, 'para', req.body.status);
-        } else {
-          console.log('[DELIVERY] programacao nao encontrada para deliveryNumber', deliveryNum);
-        }
-      } catch (syncErr) {
-        console.warn('[DELIVERY] erro sync programacao:', syncErr.message || syncErr);
-      }
+      // Usar updateDeliveryStatus para mudança de status (com validação de ordem)
+      const statusUpdates = {};
+      if (req.body.arrivedAt !== undefined) statusUpdates.arrivedAt = req.body.arrivedAt;
+      if (req.body.containerMontadoAt !== undefined) statusUpdates.containerMontadoAt = req.body.containerMontadoAt ? new Date(req.body.containerMontadoAt) : null;
+      if (req.body.currentStep !== undefined) statusUpdates.currentStep = req.body.currentStep;
+      if (req.body.observations !== undefined) statusUpdates.observations = req.body.observations;
+      if (req.body.documentsJustification !== undefined) statusUpdates.documentsJustification = req.body.documentsJustification;
+      if (req.body.desovaStartAt !== undefined) statusUpdates.desovaStartAt = req.body.desovaStartAt;
+      if (req.body.desovaEndAt !== undefined) statusUpdates.desovaEndAt = req.body.desovaEndAt;
+      if (req.body.recebedor !== undefined) statusUpdates.recebedor = req.body.recebedor;
+      if (req.body.programacaoId !== undefined) statusUpdates.programacaoId = req.body.programacaoId;
+      if (req.body.horarioDevolucaoVazio !== undefined) statusUpdates.horarioDevolucaoVazio = req.body.horarioDevolucaoVazio;
+
+      const updated = await updateDeliveryStatus(delivery._id, req.body.status, statusUpdates);
+      return res.json({ delivery: normalizeDeliveryForResponse(updated) });
     }
 
-    // DESABILITADO: Sincronização com Icompany foi removida
-    // try {
-    //   const Icompany = require('../models/Icompany');
-    //   // Sincronização desabilitada por requisito do usuário
-    //   // Campos que eram sincronizados:
-    //   // - dtInicioRota, arrivedAt, dtInicioDescarga, dtFimDescarga, dtRetiraPD, dtDevolucaoCNTR
-    // } catch (syncErr) {
-    //   console.warn('[DELIVERY] erro sync Icompany:', syncErr.message || syncErr);
-    // }
-
+    // Para updates sem mudança de status, usar updateDeliveryAtomic
     if (req.body.arrivedAt !== undefined) updates.arrivedAt = req.body.arrivedAt;
     if (req.body.containerMontadoAt !== undefined) updates.containerMontadoAt = req.body.containerMontadoAt ? new Date(req.body.containerMontadoAt) : null;
     if (req.body.currentStep !== undefined) updates.currentStep = req.body.currentStep;
@@ -334,19 +293,19 @@ router.put("/:id", auth, async (req, res) => {
     if (req.body.desovaStartAt !== undefined) updates.desovaStartAt = req.body.desovaStartAt;
     if (req.body.desovaEndAt !== undefined) updates.desovaEndAt = req.body.desovaEndAt;
     if (req.body.recebedor !== undefined) updates.recebedor = req.body.recebedor;
-    
+
     // Se programacaoId for fornecido, guardar (será usado para atualizar depois)
     const programacaoIdFromBody = req.body.programacaoId;
     if (programacaoIdFromBody !== undefined) updates.programacaoId = programacaoIdFromBody;
-    
+
     if (req.body.horarioDevolucaoVazio !== undefined) updates.horarioDevolucaoVazio = req.body.horarioDevolucaoVazio;
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ message: 'Nada para atualizar' });
     }
 
-    await db.updateOne("deliveries", { _id: id }, updates);
-    const updated = await db.findById("deliveries", id);
+    const updated = await updateDeliveryAtomic(delivery._id, updates);
+    return res.json({ delivery: normalizeDeliveryForResponse(updated) });
 
     // Se houver horário de devolução vazio agora (seja de antes ou desta chamada),
     // marca containerReturned na programação vinculada
@@ -799,23 +758,22 @@ router.post("/:id/upload-and-update", auth, upload.array("file"), async (req, re
 
       // Now, update the delivery with documents and status
       const updates = { documents: normalizedDocs };
-      if (status) updates.status = status;
-      if (currentStep) updates.currentStep = currentStep;
-      Object.assign(updates, otherUpdates);
+      if (status) {
+        // Se há mudança de status, usar função especializada
+        const statusUpdates = { documents: normalizedDocs };
+        if (currentStep) statusUpdates.currentStep = currentStep;
+        Object.assign(statusUpdates, otherUpdates);
 
-      await db.updateOne("deliveries", { _id: id }, updates);
+        const updated = await updateDeliveryStatus(delivery._id, status, statusUpdates);
+        return res.json({ delivery: normalizeDeliveryForResponse(updated) });
+      } else {
+        // Sem mudança de status, usar update atômico
+        if (currentStep) updates.currentStep = currentStep;
+        Object.assign(updates, otherUpdates);
 
-      // Remove from missingDocumentsAtSubmit if applicable
-      if (deduped.length > 0) {
-        const updated = await db.findById("deliveries", id);
-        if (updated.missingDocumentsAtSubmit && Array.isArray(updated.missingDocumentsAtSubmit) && updated.missingDocumentsAtSubmit.includes(documentType)) {
-          const newMissing = updated.missingDocumentsAtSubmit.filter(d => d !== documentType);
-          await db.updateOne("deliveries", { _id: id }, { missingDocumentsAtSubmit: newMissing });
-        }
+        const updated = await updateDeliveryAtomic(delivery._id, updates);
+        return res.json({ delivery: normalizeDeliveryForResponse(updated) });
       }
-
-      const finalUpdated = await db.findById("deliveries", id);
-      res.json({ delivery: normalizeDeliveryForResponse(finalUpdated) });
     } else {
       return res.status(400).json({ message: "Nenhum arquivo enviado" });
     }

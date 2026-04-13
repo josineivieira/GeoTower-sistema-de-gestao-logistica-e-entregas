@@ -81,6 +81,10 @@ const DeliverySchema = new mongoose.Schema(
       inicioDesova: { type: String, default: null },   // Fotos do início da desova
       fimDesova: { type: String, default: null },      // Fotos do fim da desova
     },
+
+    // Soft delete para cancelados
+    isCanceled: { type: Boolean, default: false },
+    canceledAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
@@ -89,6 +93,7 @@ const DeliverySchema = new mongoose.Schema(
 // Índices simples
 DeliverySchema.index({ cityCode: 1 });
 DeliverySchema.index({ status: 1 });
+DeliverySchema.index({ isCanceled: 1 });
 DeliverySchema.index({ deliveryNumber: 1 });
 DeliverySchema.index({ createdAt: -1 });
 DeliverySchema.index({ userName: 1 });
@@ -96,6 +101,7 @@ DeliverySchema.index({ driverId: 1 });
 
 // Índices compostos (multi-campo) - maior impacto em performance
 DeliverySchema.index({ cityCode: 1, status: 1 });
+DeliverySchema.index({ cityCode: 1, isCanceled: 1 });
 DeliverySchema.index({ cityCode: 1, createdAt: -1 });
 DeliverySchema.index({ cityCode: 1, userName: 1 });
 DeliverySchema.index({ status: 1, createdAt: -1 });

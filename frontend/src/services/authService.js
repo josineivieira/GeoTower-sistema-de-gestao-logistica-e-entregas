@@ -107,7 +107,13 @@ export const adminService = {
 // Adiciona métodos do deliveryService para iniciar entrega
 export const deliveryService = {
   createDelivery: (data) => api.post('/deliveries', data),
-  getMyDeliveries: (params) => api.get('/deliveries', { params }),
+  getMyDeliveries: (params) => {
+    const query = { ...params };
+    if (query.includeCanceled === true) {
+      query.includeCanceled = 'true';
+    }
+    return api.get('/deliveries', { params: query });
+  },
   // Programações atribuídas ao contratado do usuário
   // Note: rota implementada dentro do router de `deliveries`, portanto URL completa será /api/deliveries/programacoes/mine
   getProgramacoesAssigned: () => api.get('/deliveries/programacoes/mine'),

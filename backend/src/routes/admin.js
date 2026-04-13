@@ -128,18 +128,6 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     // *** UNIFIED LOGIC BELOW ***
     // buscamos entregas iniciadas e também levamos em conta programações não iniciadas
     const db = await getDb(req);
-    const allDeliveries = await db.find("deliveries", { cityCode: city });
-    console.log('  ℹ️  Total de entregas na DB (' + city + '):', allDeliveries ? allDeliveries.length : 0);
-
-    // Normaliza documentos para resposta
-    const normalizedDeliveries = (allDeliveries || []).map(d => {
-      try {
-        return normalizeDeliveryForResponse(d);
-      } catch (err) {
-        console.error('Erro ao normalizar entrega:', err);
-        return d;
-      }
-    });
 
     // antes de cruzar, carregar dados do Icompany para termos placas (tracao)
     const Icompany = require('../models/Icompany');
@@ -161,18 +149,40 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     });
 
     // Cruzar dados de programação (por container) e construir lista combinada
+    const deliveryFilter = { cityCode: city };
+    if (status && status !== 'all') {
+      if (status === 'CANCELADO') {
+        deliveryFilter.status = 'CANCELADO';
+      } else {
+        deliveryFilter.status = status;
+        deliveryFilter.isCanceled = { $ne: true };
+      }
+    } else {
+      deliveryFilter.isCanceled = { $ne: true };
+    }
+
+    const allDeliveries = await db.find("deliveries", deliveryFilter);
+    console.log('  ℹ️  Total de entregas na DB (' + city + '):', allDeliveries ? allDeliveries.length : 0);
+
+    // Normaliza documentos para resposta
+    const normalizedDeliveries = (allDeliveries || []).map(d => {
+      try {
+        return normalizeDeliveryForResponse(d);
+      } catch (err) {
+        console.error('Erro ao normalizar entrega:', err);
+        return d;
+      }
+    });
+
     let deliveriesWithProgramacao = normalizedDeliveries.map(delivery => {
       const prog = programacoes.find(p => 
         (p.container || '').toUpperCase() === (delivery.deliveryNumber || '').toUpperCase()
       );
-      // buscar registro(s) Icompany correspondente (processo primeiro, depois container)
       const keyProc = (delivery.processoCAB || '').toUpperCase();
       const keyCont = (delivery.deliveryNumber || '').toUpperCase();
       const yrecArray = ycByProcess.get(keyProc) || ycByContainer.get(keyCont) || [];
       const yrec = Array.isArray(yrecArray) ? yrecArray[0] : yrecArray;  // pega o primeiro para placa
       const placaY = yrec ? (yrec.tracao || '') : '';
-      
-      // Extrair todos os containers únicos do array Icompany
       const containerNumeros = Array.isArray(yrecArray) 
         ? [...new Set(yrecArray.map(y => y.numero || y.containerNumero).filter(Boolean))]
         : [];
@@ -1082,7 +1092,7 @@ router.put("/deliveries/:id", auth, onlyAdmin, async (req, res) => {
     const { id } = req.params;
     const { deliveryNumber, userName, driverName, vehiclePlate, observations, dataAgendamento, horarioChegada, horarioDevolucaoVazio, horarioInicioDesova, horarioFimDesova, containerMontadoAt, status } = req.body;
 
-    console.log('📝 Recebido PUT /deliveries/:id', { id, deliveryNumber, userName, driverName, vehiclePlate, observations, horarioDevolucaoVazio, city });
+    console.log('📝 Recebido PUT /deliveries/:id', { id, deliveryNumber, userName, driverName, vehiclePlate, observations, horarioDevolucaoVazio, city, status });
 
     // Validar se motivo da edição foi fornecido
     if (!observations || observations.trim() === '') {
@@ -1106,7 +1116,7 @@ router.put("/deliveries/:id", auth, onlyAdmin, async (req, res) => {
       return res.status(403).json({ message: 'Acesso negado - dados de outra cidade' });
     }
 
-    // Atualiza campos
+    // Atualiza campos (exceto status)
     const updates = {};
     if (deliveryNumber !== undefined) updates.deliveryNumber = deliveryNumber.toUpperCase();
     if (userName !== undefined) updates.userName = userName;
@@ -1118,37 +1128,29 @@ router.put("/deliveries/:id", auth, onlyAdmin, async (req, res) => {
     if (horarioInicioDesova !== undefined && horarioInicioDesova) updates.desovaStartAt = new Date(horarioInicioDesova);
     if (horarioFimDesova !== undefined && horarioFimDesova) updates.desovaEndAt = new Date(horarioFimDesova);
     if (containerMontadoAt !== undefined && containerMontadoAt) updates.containerMontadoAt = new Date(containerMontadoAt);
-    if (status !== undefined) {
-      updates.status = status;
-      // Grava o horário de entrada em cada status
-      const now = new Date();
-      if (status === 'AGENDADO') {
-        updates.scheduledAt = now;
-      } else if (status === 'CONTAINER MONTADO') {
-        updates.containerMontadoAt = now;
-      } else if (status === 'A CAMINHO DO CLIENTE' || status === 'pending' || status === 'PENDING') {
-        updates.tripStartedAt = now;
-      } else if (status === 'AGUARDANDO DESOVA') {
-        updates.arrivedAt = now;
-      } else if (status === 'EM DESOVA') {
-        updates.desovaStartedAt = now;
-      } else if (status === 'ANEXANDO DOCUMENTOS FINAIS') {
-        updates.docsStartedAt = now;
-      } else if (status === 'FINALIZADO' || status === 'ENTREGUE' || status === 'DOCUMENTOS ENTREGUES') {
-        updates.finalizedAt = now;
-      } else if (status === 'CANCELADO') {
-        updates.cancelledAt = now;
-      }
-    }
+    
+    // Adicionar metadados de edição
     updates.editedAt = new Date().toISOString();
     updates.editReason = observations;
 
     console.log('🔄 Updates a fazer:', updates);
 
-    // Use o _id real encontrado para garantir a atualização correta (caso a rota tenha usado deliveryNumber em vez de _id)
+    // Se há mudança de status, usar updateDeliveryStatus (que valida e limpa campos)
     const targetId = delivery._id || req.params.id;
-    const updated = await db.updateOne("deliveries", { _id: targetId }, updates);
-    console.log('✅ Atualizado:', updated?.deliveryNumber);
+    let updated;
+
+    if (status !== undefined) {
+      const { updateDeliveryStatus } = require("../utils/deliveryConcurrency");
+      
+      // Admin pode fazer qualquer transição incluindo retrocesso
+      updated = await updateDeliveryStatus(targetId, status, updates, true);
+      console.log('✅ Status atualizado via updateDeliveryStatus:', updated?.status);
+    } else {
+      // Sem mudança de status, usar updateOne direto
+      updated = await db.updateOne("deliveries", { _id: targetId }, updates);
+      console.log('✅ Atualizado:', updated?.deliveryNumber);
+    }
+
     if (!updated) {
       return res.status(500).json({ message: "Erro ao atualizar entrega" });
     }

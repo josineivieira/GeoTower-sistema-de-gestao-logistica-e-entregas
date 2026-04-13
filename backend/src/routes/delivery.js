@@ -143,9 +143,13 @@ router.get("/", auth, async (req, res) => {
     
     console.log(`⚡ GET /api/deliveries [OTIMIZADO] user=${req.user.id} city=${city} status=${status || 'all'} search=${q || 'none'}`);
     
-    // Construir filtro otimizado
+    // Construir filtro otimizado - excluir canceladas por padrão
+    const includeCanceled = req.query.includeCanceled === 'true' || req.query.includeCanceled === true;
     const filter = { userId: req.user.id, cityCode: city };
-    
+    if (!includeCanceled) {
+      filter.isCanceled = { $ne: true };
+    }
+
     if (status && status !== 'all') {
       filter.status = status;
     }
@@ -267,6 +271,15 @@ router.put("/:id", auth, async (req, res) => {
 
     // Se há mudança de status, usar função especializada com validação de ordem
     if (req.body.status) {
+      // Verificar se motorista está tentando fazer retrocesso
+      const { STATUS_ORDER } = require("../utils/deliveryConcurrency");
+      const currentLevel = STATUS_ORDER[delivery.status] || 0;
+      const newLevel = STATUS_ORDER[req.body.status] || 0;
+      
+      if (newLevel < currentLevel && req.body.status !== 'CANCELADO') {
+        return res.status(403).json({ message: 'Motorista não pode fazer retrocesso de status. Apenas ADM/GERENTE podem.' });
+      }
+
       // Usar updateDeliveryStatus para mudança de status (com validação de ordem)
       const statusUpdates = {};
       if (req.body.arrivedAt !== undefined) statusUpdates.arrivedAt = req.body.arrivedAt;
@@ -280,7 +293,7 @@ router.put("/:id", auth, async (req, res) => {
       if (req.body.programacaoId !== undefined) statusUpdates.programacaoId = req.body.programacaoId;
       if (req.body.horarioDevolucaoVazio !== undefined) statusUpdates.horarioDevolucaoVazio = req.body.horarioDevolucaoVazio;
 
-      const updated = await updateDeliveryStatus(delivery._id, req.body.status, statusUpdates);
+      const updated = await updateDeliveryStatus(delivery._id, req.body.status, statusUpdates, false);
       return res.json({ delivery: normalizeDeliveryForResponse(updated) });
     }
 

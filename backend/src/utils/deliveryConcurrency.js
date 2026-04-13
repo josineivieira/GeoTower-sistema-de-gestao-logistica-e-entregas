@@ -21,18 +21,43 @@ const STATUS_ORDER = {
 };
 
 /**
+ * Mapa de campos que devem ser limpos quando retrocede de um status
+ * Usado para garantir integridade de dados ao retroceder
+ */
+const FIELDS_TO_CLEAR_ON_REGRESSION = {
+  'AGENDADO': [],
+  'CONTAINER_MONTADO': ['containerMontadoAt'],
+  'A_CAMINHO_DO_CLIENTE': ['containerMontadoAt'],
+  'AGUARDANDO_DESOVA': ['arrivedAt', 'horarioChegada'],
+  'EM_DESOVA': ['arrivedAt', 'horarioChegada', 'horarioInicioDesova', 'desovaStartAt', 'desovaStartedAt'],
+  'DESOVA_FINALIZADA': ['arrivedAt', 'horarioChegada', 'horarioInicioDesova', 'desovaStartAt', 'desovaStartedAt', 'horarioFimDesova', 'desovaEndAt', 'desovaEndedAt'],
+  'AGUARDANDO_ANEXO': ['arrivedAt', 'horarioChegada', 'horarioInicioDesova', 'desovaStartAt', 'desovaStartedAt', 'horarioFimDesova', 'desovaEndAt', 'desovaEndedAt'],
+  'ANEXANDO_DOCUMENTOS_FINAIS': ['arrivedAt', 'horarioChegada', 'horarioInicioDesova', 'desovaStartAt', 'desovaStartedAt', 'horarioFimDesova', 'desovaEndAt', 'desovaEndedAt', 'docsStartedAt'],
+  'ENTREGUE': ['arrivedAt', 'horarioChegada', 'horarioInicioDesova', 'desovaStartAt', 'desovaStartedAt', 'horarioFimDesova', 'desovaEndAt', 'desovaEndedAt', 'docsStartedAt', 'documentosFinaisAt', 'horarioDevolucaoVazio'],
+  'ENTREGUE_COM_PENDENCIA_CANHOTO': ['arrivedAt', 'horarioChegada', 'horarioInicioDesova', 'desovaStartAt', 'desovaStartedAt', 'horarioFimDesova', 'desovaEndAt', 'desovaEndedAt', 'docsStartedAt', 'documentosFinaisAt', 'horarioDevolucaoVazio'],
+  'FINALIZADO': ['arrivedAt', 'horarioChegada', 'horarioInicioDesova', 'desovaStartAt', 'desovaStartedAt', 'horarioFimDesova', 'desovaEndAt', 'desovaEndedAt', 'docsStartedAt', 'documentosFinaisAt', 'horarioDevolucaoVazio']
+};
+
+/**
  * Valida se um status pode ser atualizado para outro
+ * Permite ADM/GERENTE fazer retrocesso de qualquer nível
  * @param {string} currentStatus - Status atual
  * @param {string} newStatus - Novo status desejado
+ * @param {boolean} isAdminOrManager - Se é ADM ou GERENTE
  * @returns {boolean} - True se a transição é permitida
  */
-function canUpdateStatus(currentStatus, newStatus) {
+function canUpdateStatus(currentStatus, newStatus, isAdminOrManager = false) {
   // Cancelado pode ser aplicado a qualquer status
   if (newStatus === 'CANCELADO') return true;
 
   // Status atual não pode ser inferior ao novo (exceto cancelado)
   const currentLevel = STATUS_ORDER[currentStatus] || 0;
   const newLevel = STATUS_ORDER[newStatus] || 0;
+
+  // ADM/GERENTE pode fazer retrocesso; usuários normais só podem avançar
+  if (newLevel < currentLevel) {
+    return isAdminOrManager;
+  }
 
   return newLevel >= currentLevel;
 }
@@ -86,12 +111,14 @@ async function updateDeliveryAtomic(deliveryId, updates, options = {}) {
 
 /**
  * Atualiza status de delivery com validação de ordem
+ * Limpa campos automaticamente ao fazer retrocesso
  * @param {string} deliveryId - ID da delivery
  * @param {string} newStatus - Novo status
  * @param {object} additionalUpdates - Outros campos a atualizar
+ * @param {boolean} isAdminOrManager - Se é ADM ou GERENTE (para permitir retrocesso)
  * @returns {object} - Delivery atualizada
  */
-async function updateDeliveryStatus(deliveryId, newStatus, additionalUpdates = {}) {
+async function updateDeliveryStatus(deliveryId, newStatus, additionalUpdates = {}, isAdminOrManager = false) {
   try {
     const Delivery = mongoose.model('Delivery');
 
@@ -102,7 +129,7 @@ async function updateDeliveryStatus(deliveryId, newStatus, additionalUpdates = {
     }
 
     // Validar se a transição é permitida
-    if (!canUpdateStatus(currentDelivery.status, newStatus)) {
+    if (!canUpdateStatus(currentDelivery.status, newStatus, isAdminOrManager)) {
       throw new Error(`Transição de status não permitida: ${currentDelivery.status} -> ${newStatus}`);
     }
 
@@ -111,6 +138,28 @@ async function updateDeliveryStatus(deliveryId, newStatus, additionalUpdates = {
       status: newStatus,
       ...additionalUpdates
     };
+
+    // Se estão fazendo retrocesso, limpar campos posteriores
+    const currentLevel = STATUS_ORDER[currentDelivery.status] || 0;
+    const newLevel = STATUS_ORDER[newStatus] || 0;
+    
+    if (newLevel < currentLevel) {
+      // Retrocesso detectado - limpar campos do status anterior
+      const fieldsToClear = FIELDS_TO_CLEAR_ON_REGRESSION[currentDelivery.status] || [];
+      fieldsToClear.forEach(field => {
+        updates[field] = null;
+      });
+    }
+
+    // Se é CANCELADO, marcar como cancelado com soft delete
+    if (newStatus === 'CANCELADO') {
+      updates.canceledAt = new Date();
+      updates.isCanceled = true;
+    } else if (currentDelivery.status === 'CANCELADO') {
+      // Caso um cancelamento seja revertido, limpar flags de cancelamento
+      updates.canceledAt = null;
+      updates.isCanceled = false;
+    }
 
     // Atualizar atomicamente
     return await updateDeliveryAtomic(deliveryId, updates);
@@ -168,6 +217,7 @@ async function updateDeliveryField(deliveryId, field, value) {
 
 module.exports = {
   STATUS_ORDER,
+  FIELDS_TO_CLEAR_ON_REGRESSION,
   canUpdateStatus,
   updateDeliveryAtomic,
   updateDeliveryStatus,

@@ -305,7 +305,7 @@ const ProgramadasEntregas = () => {
       let filtradas = [];
       if (nomeFiltro) filtradas = todas.filter(p => String(p.contratado).trim().toUpperCase() === nomeFiltro);
       
-      const deliveriesRes = await deliveryService.getMyDeliveries({});
+      const deliveriesRes = await deliveryService.getMyDeliveries({ includeCanceled: true });
       const deliveries = deliveriesRes.data.deliveries || [];
       const map = {};
       const programacaoMap = {};
@@ -379,7 +379,7 @@ const ProgramadasEntregas = () => {
       setSubmitting(true);
       let existing = null;
       try {
-        const searchRes = await deliveryService.getMyDeliveries({ q: deliveryNumber.toUpperCase() });
+        const searchRes = await deliveryService.getMyDeliveries({ q: deliveryNumber.toUpperCase(), includeCanceled: true });
         const list = searchRes.data.deliveries || [];
         existing = list.find(d => String(d.deliveryNumber).toUpperCase() === deliveryNumber.toUpperCase());
       } catch (_) {}
@@ -454,7 +454,7 @@ const ProgramadasEntregas = () => {
       } else {
         const searchVal = (currentProgramacao.container || currentProgramacao.processo || '').trim();
         if (searchVal) {
-          const resp = await deliveryService.getMyDeliveries({ q: searchVal });
+          const resp = await deliveryService.getMyDeliveries({ q: searchVal, includeCanceled: true });
           const found = resp.data.deliveries && resp.data.deliveries[0];
           if (found) {
             if (!isPendingCanhoto) await deliveryService.updateDelivery(found._id, { status: 'FINALIZADO' });
@@ -753,7 +753,7 @@ const ProgramadasEntregas = () => {
       const deliveryNumber = (currentProgramacaoForReturn.container && currentProgramacaoForReturn.container.trim()) || (currentProgramacaoForReturn.processo && currentProgramacaoForReturn.processo.trim());
       let deliveryId = currentProgramacaoForReturn.linkedDeliveryId;
       if (!deliveryId && deliveryNumber) {
-        const resp = await deliveryService.getMyDeliveries({ q: deliveryNumber });
+        const resp = await deliveryService.getMyDeliveries({ q: deliveryNumber, includeCanceled: true });
         const found = resp.data.deliveries && resp.data.deliveries[0];
         if (found) deliveryId = found._id;
       }

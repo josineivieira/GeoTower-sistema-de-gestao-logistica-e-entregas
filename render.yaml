@@ -22,3 +22,7 @@ services:
         value: "true"
       - key: MONGO_COLLECTION
         value: "basegeomars"
+      - key: REACT_APP_MAINTENANCE_MODE
+        value: "true"
+      - key: REACT_APP_MAINTENANCE_MESSAGE
+        value: "O sistema está em manutenção. Voltamos em breve."

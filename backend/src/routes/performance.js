@@ -10,11 +10,13 @@ router.get('/performance', auth, async (req, res) => {
     console.log('📊 [PERFORMANCE] Autenticação OK, usuário:', req.user?.username);
 
     const Delivery = require('../models/Delivery');
-    const cityCode = req.city || 'manaus';
+    const cityCode = req.city;
 
-    // Buscar todas as entregas da collection deliveries
-    const filter = { cityCode };
-    console.log('🔍 [PERFORMANCE] Buscando entregas na collection deliveries para cityCode:', cityCode);
+    // Buscar todas as entregas da collection deliveries;
+    // se não houver cidade definida pelo middleware, não filtrar por cityCode.
+    const filter = {};
+    if (cityCode) filter.cityCode = cityCode;
+    console.log('🔍 [PERFORMANCE] Buscando entregas na collection deliveries com filtro:', filter);
     const deliveries = await Delivery.find(filter).lean().exec();
     console.log('✅ [PERFORMANCE] Total de deliveries carregadas:', deliveries.length);
 

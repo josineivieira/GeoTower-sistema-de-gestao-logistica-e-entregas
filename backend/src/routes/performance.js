@@ -9,15 +9,17 @@ router.get('/performance', auth, async (req, res) => {
     console.log('📊 [PERFORMANCE] Iniciando análise de performance');
     console.log('📊 [PERFORMANCE] Autenticação OK, usuário:', req.user?.username);
 
-    const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
+    const Delivery = require('../models/Delivery');
+    const cityCode = req.city || 'manaus';
 
-    // Buscar todas programações sem filtro (igual BaseDadosGeral faz)
-    console.log('🔍 [PERFORMANCE] Buscando todas programações do banco...');
-    const programacoes = await ProgramacaoEntrega.find({}).lean().exec();
-    console.log('✅ [PERFORMANCE] Total carregado:', programacoes.length);
+    // Buscar todas as entregas da collection deliveries
+    const filter = { cityCode };
+    console.log('🔍 [PERFORMANCE] Buscando entregas na collection deliveries para cityCode:', cityCode);
+    const deliveries = await Delivery.find(filter).lean().exec();
+    console.log('✅ [PERFORMANCE] Total de deliveries carregadas:', deliveries.length);
 
-    if (!programacoes || programacoes.length === 0) {
-      console.warn('⚠️  [PERFORMANCE] Nenhuma programação encontrada!');
+    if (!deliveries || deliveries.length === 0) {
+      console.warn('⚠️  [PERFORMANCE] Nenhuma entrega encontrada na collection deliveries!');
       return res.json({
         success: true,
         data: {
@@ -49,27 +51,26 @@ router.get('/performance', auth, async (req, res) => {
       'Sábado': 0
     };
     
-    programacoes.forEach(p => {
-      const dateField = p.dtColeta || p.dataAgendamento;
+    deliveries.forEach(d => {
+      const dateField = d.deliveryDate || d.createdAt;
       if (!dateField) return;
       
-      let d;
-      // Tentar parse como DD/MM/YYYY
+      let dateValue;
       if (typeof dateField === 'string') {
         const match = dateField.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
         if (match) {
-          d = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
+          dateValue = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
         } else {
-          d = new Date(dateField);
+          dateValue = new Date(dateField);
         }
       } else {
-        d = new Date(dateField);
+        dateValue = new Date(dateField);
       }
       
-      if (isNaN(d)) return;
+      if (isNaN(dateValue)) return;
       
       const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-      const dayOfWeek = dayNames[d.getDay()];
+      const dayOfWeek = dayNames[dateValue.getDay()];
       if (dayOfWeek) deliveriesByDay[dayOfWeek]++;
     });
 
@@ -81,8 +82,8 @@ router.get('/performance', auth, async (req, res) => {
     // ═══════════════════════════════════════════════════════════
     const contractorsMap = {};
     
-    programacoes.forEach(p => {
-      const contratado = (p.contratado || 'Sem contratado').trim();
+    deliveries.forEach(d => {
+      const contratado = (d.driverName || d.userName || d.vehiclePlate || 'Sem contratado').trim();
       if (!contractorsMap[contratado]) {
         contractorsMap[contratado] = {
           contratado,
@@ -93,23 +94,22 @@ router.get('/performance', auth, async (req, res) => {
       
       contractorsMap[contratado].totalEntregas++;
       
-      const dateField = p.dtColeta || p.dataAgendamento;
+      const dateField = d.deliveryDate || d.createdAt;
       if (dateField) {
-        let d;
+        let dateValue;
         if (typeof dateField === 'string') {
           const match = dateField.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
           if (match) {
-            d = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
+            dateValue = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
           } else {
-            d = new Date(dateField);
+            dateValue = new Date(dateField);
           }
         } else {
-          d = new Date(dateField);
+          dateValue = new Date(dateField);
         }
         
-        if (!isNaN(d)) {
-          const dateStr = d.toISOString().split('T')[0];
-          contractorsMap[contratado].diasAtivos.add(dateStr);
+        if (!isNaN(dateValue)) {
+          contractorsMap[contratado].diasAtivos.add(dateValue.toISOString().split('T')[0]);
         }
       }
     });
@@ -132,21 +132,9 @@ router.get('/performance', auth, async (req, res) => {
     let countWithTime = 0;
     const faixas = { '2-4h': 0, '4-6h': 0, '+7h': 0 };
 
-    programacoes.forEach(p => {
-      // Tentar encontrar tempo: dataChegadaCliente -> dataSaidaCliente
-      let arrival = null;
-      let departure = null;
-
-      // Procurar pelos campos possíveis
-      if (p.dataChegadaCliente && p.dataSaidaCliente) {
-        arrival = new Date(p.dataChegadaCliente);
-        departure = new Date(p.dataSaidaCliente);
-      } else if (p._entrega) {
-        arrival = p._entrega.horarioChegada || p._entrega.arrivedAt;
-        departure = p._entrega.horarioFimDesova || p._entrega.desovaEndAt;
-        if (arrival) arrival = new Date(arrival);
-        if (departure) departure = new Date(departure);
-      }
+    deliveries.forEach(d => {
+      let arrival = d.arrivedAt ? new Date(d.arrivedAt) : null;
+      let departure = d.desovaEndAt ? new Date(d.desovaEndAt) : null;
 
       if (arrival && departure && !isNaN(arrival) && !isNaN(departure)) {
         const diffHours = (departure - arrival) / (1000 * 60 * 60);
@@ -165,7 +153,7 @@ router.get('/performance', auth, async (req, res) => {
     // ═══════════════════════════════════════════════════════════
     // 4️⃣  ESTATÍSTICAS GERAIS
     // ═══════════════════════════════════════════════════════════
-    const totalEntregas = programacoes.length;
+    const totalEntregas = deliveries.length;
     const totalContratados = contractorsUsage.length;
     const percentualAcima6h = totalEntregas > 0 ? Math.round((faixas['+7h'] / totalEntregas) * 100) : 0;
 

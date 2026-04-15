@@ -1,198 +1,223 @@
-// Nova rota para análise de produtividade e capacidade
+// Análise de Produtividade e Capacidade
 const express = require('express');
 const router = express.Router();
-const { MongoClient } = require('mongodb');
-
-// Conexão MongoDB (reutilizar lógica existente)
-const MONGODB_URI = process.env.MONGODB_URI;
-const DB_NAME = process.env.MONGO_DB || "delivery-docs";
-const COLLECTION = process.env.MONGO_COLLECTION || "icompany";
-
-// Middleware de autenticação (reutilizar existente)
 const auth = require('../middleware/auth');
 
 // GET /api/admin/performance
 router.get('/performance', auth, async (req, res) => {
   try {
-    const client = new MongoClient(MONGODB_URI);
-    await client.connect();
-    const db = client.db(DB_NAME);
-    const collection = db.collection(COLLECTION);
+    const { startDate, endDate } = req.query;
+    const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
+    
+    console.log('📊 [PERFORMANCE] Iniciando análise de performance');
 
-    // Filtros de data (última semana)
+    // Definir período: última semana por padrão
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    const dateStart = startDate ? new Date(startDate) : weekAgo;
+    const dateEnd = endDate ? new Date(endDate) : now;
+    
+    console.log('📅 Período:', { dateStart: dateStart.toISOString(), dateEnd: dateEnd.toISOString() });
 
-    // 1. Entregas por dia da semana
-    const deliveriesByDay = await collection.aggregate([
-      {
-        $match: {
-          dtColeta: { $gte: weekAgo, $lte: now },
-          status: { $ne: 'CANCELADO' } // Excluir cancelados
-        }
-      },
-      {
-        $group: {
-          _id: { $dayOfWeek: '$dtColeta' },
-          total: { $sum: 1 }
-        }
-      },
-      {
-        $project: {
-          dia: {
-            $switch: {
-              branches: [
-                { case: { $eq: ['$_id', 1] }, then: 'Domingo' },
-                { case: { $eq: ['$_id', 2] }, then: 'Segunda' },
-                { case: { $eq: ['$_id', 3] }, then: 'Terça' },
-                { case: { $eq: ['$_id', 4] }, then: 'Quarta' },
-                { case: { $eq: ['$_id', 5] }, then: 'Quinta' },
-                { case: { $eq: ['$_id', 6] }, then: 'Sexta' },
-                { case: { $eq: ['$_id', 7] }, then: 'Sábado' }
-              ],
-              default: 'Desconhecido'
-            }
-          },
-          total: 1
-        }
-      },
-      { $sort: { '_id': 1 } }
-    ]).toArray();
+    // Buscar todas as programações no período (sem filtro de status para análise completa)
+    const programacoes = await ProgramacaoEntrega.find({}).lean();
+    console.log('✅ Total de programações carregadas:', programacoes.length);
 
-    // 2. Utilização dos contratados
-    const contractorsUsage = await collection.aggregate([
-      {
-        $match: {
-          dtColeta: { $gte: weekAgo, $lte: now },
-          contratado: { $exists: true, $ne: null }
+    // Filtrar por data (dataAgendamento ou dtColeta)
+    const filtered = programacoes.filter(p => {
+      const dateField = p.dtColeta || p.dataAgendamento;
+      if (!dateField) return false;
+      
+      let d;
+      if (typeof dateField === 'string') {
+        // Formato DD/MM/YYYY
+        const parts = dateField.split('/');
+        if (parts.length === 3) {
+          d = new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
+        } else {
+          d = new Date(dateField);
         }
-      },
-      {
-        $group: {
-          _id: '$contratado',
-          totalEntregas: { $sum: 1 },
-          diasAtivos: { $addToSet: { $dateToString: { format: '%Y-%m-%d', date: '$dtColeta' } } }
-        }
-      },
-      {
-        $project: {
-          contratado: '$_id',
-          totalEntregas: 1,
-          diasAtivos: { $size: '$diasAtivos' },
-          diasOciosos: { $subtract: [7, { $size: '$diasAtivos' }] }
-        }
-      },
-      { $sort: { totalEntregas: -1 } }
-    ]).toArray();
-
-    // 3. Tempo no cliente
-    const timeAtClient = await collection.aggregate([
-      {
-        $match: {
-          dataChegadaCliente: { $exists: true },
-          dataSaidaCliente: { $exists: true },
-          dtColeta: { $gte: weekAgo, $lte: now }
-        }
-      },
-      {
-        $project: {
-          tempoHoras: {
-            $divide: [
-              { $subtract: ['$dataSaidaCliente', '$dataChegadaCliente'] },
-              1000 * 60 * 60 // ms para horas
-            ]
-          }
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          tempoMedioHoras: { $avg: '$tempoHoras' },
-          faixas: {
-            $push: {
-              $switch: {
-                branches: [
-                  { case: { $and: [{ $gte: ['$tempoHoras', 2] }, { $lt: ['$tempoHoras', 4] }] }, then: '2-4h' },
-                  { case: { $and: [{ $gte: ['$tempoHoras', 4] }, { $lt: ['$tempoHoras', 6] }] }, then: '4-6h' },
-                  { case: { $gte: ['$tempoHoras', 7] }, then: '+7h' }
-                ],
-                default: 'outros'
-              }
-            }
-          }
-        }
-      },
-      {
-        $project: {
-          tempoMedioHoras: { $round: ['$tempoMedioHoras', 1] },
-          faixas: {
-            $reduce: {
-              input: '$faixas',
-              initialValue: { '2-4h': 0, '4-6h': 0, '+7h': 0 },
-              in: {
-                $switch: {
-                  branches: [
-                    { case: { $eq: ['$$this', '2-4h'] }, then: { $add: ['$$value.2-4h', 1] } },
-                    { case: { $eq: ['$$this', '4-6h'] }, then: { $add: ['$$value.4-6h', 1] } },
-                    { case: { $eq: ['$$this', '+7h'] }, then: { $add: ['$$value.+7h', 1] } }
-                  ],
-                  default: '$$value'
-                }
-              }
-            }
-          }
-        }
+      } else {
+        d = new Date(dateField);
       }
-    ]).toArray();
-
-    // 4. Produtividade por dia (igual ao 1, mas garantido)
-    const productivityByDay = deliveriesByDay; // Reutilizar
-
-    // Estatísticas gerais
-    const totalDeliveries = await collection.countDocuments({
-      dtColeta: { $gte: weekAgo, $lte: now },
-      status: { $ne: 'CANCELADO' }
+      
+      d.setHours(0, 0, 0, 0);
+      return d >= dateStart && d <= dateEnd;
     });
 
-    const activeContractors = contractorsUsage.length;
+    console.log('🔍 Programações no período:', filtered.length);
 
-    const longDeliveries = timeAtClient[0]?.faixas?.['+7h'] || 0;
-    const percentLong = totalDeliveries > 0 ? Math.round((longDeliveries / totalDeliveries) * 100) : 0;
+    // ═══════════════════════════════════════════════════════════
+    // 1️⃣  ENTREGAS POR DIA DA SEMANA
+    // ═══════════════════════════════════════════════════════════
+    const deliveriesByDay = {};
+    const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    
+    dayNames.forEach((day, idx) => {
+      deliveriesByDay[day] = 0;
+    });
 
-    // Alertas automáticos
-    const alerts = [];
-    const mondayDeliveries = deliveriesByDay.find(d => d.dia === 'Segunda')?.total || 0;
-    const totalWeek = deliveriesByDay.reduce((sum, d) => sum + d.total, 0);
-    if (mondayDeliveries > totalWeek * 0.3) {
-      alerts.push('Alta concentração de entregas no início da semana');
-    }
-    const idleContractors = contractorsUsage.filter(c => c.diasOciosos > 2).length;
-    if (idleContractors > 0) {
-      alerts.push(`${idleContractors} contratados com mais de 2 dias ociosos`);
-    }
-    if (percentLong > 20) {
-      alerts.push(`Alta quantidade de entregas acima de 6h (${percentLong}%)`);
+    filtered.forEach(p => {
+      const dateField = p.dtColeta || p.dataAgendamento;
+      let d;
+      
+      if (typeof dateField === 'string') {
+        const parts = dateField.split('/');
+        if (parts.length === 3) {
+          d = new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
+        } else {
+          d = new Date(dateField);
+        }
+      } else {
+        d = new Date(dateField);
+      }
+      
+      const dayOfWeek = dayNames[d.getDay()];
+      deliveriesByDay[dayOfWeek]++;
+    });
+
+    const deliveriesByDayArray = Object.entries(deliveriesByDay).map(([dia, total]) => ({ dia, total }));
+    console.log('📊 Entregas por dia:', deliveriesByDayArray);
+
+    // ═══════════════════════════════════════════════════════════
+    // 2️⃣  UTILIZAÇÃO DOS CONTRATADOS
+    // ═══════════════════════════════════════════════════════════
+    const contractorsMap = {};
+    
+    filtered.forEach(p => {
+      const contratado = p.contratado || 'Sem contratado';
+      if (!contractorsMap[contratado]) {
+        contractorsMap[contratado] = {
+          contratado,
+          totalEntregas: 0,
+          diasAtivos: new Set()
+        };
+      }
+      
+      contractorsMap[contratado].totalEntregas++;
+      
+      const dateField = p.dtColeta || p.dataAgendamento;
+      if (dateField) {
+        let d;
+        if (typeof dateField === 'string') {
+          const parts = dateField.split('/');
+          if (parts.length === 3) {
+            d = new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
+          } else {
+            d = new Date(dateField);
+          }
+        } else {
+          d = new Date(dateField);
+        }
+        contractorsMap[contratado].diasAtivos.add(d.toISOString().split('T')[0]);
+      }
+    });
+
+    const contractorsUsage = Object.values(contractorsMap)
+      .map(c => ({
+        contratado: c.contratado,
+        totalEntregas: c.totalEntregas,
+        diasAtivos: c.diasAtivos.size,
+        diasOciosos: Math.max(0, 7 - c.diasAtivos.size)
+      }))
+      .sort((a, b) => b.totalEntregas - a.totalEntregas);
+
+    console.log('🚚 Contratados:', contractorsUsage.length);
+
+    // ═══════════════════════════════════════════════════════════
+    // 3️⃣  DISTRIBUIÇÃO DE TEMPO NO CLIENTE
+    // ═══════════════════════════════════════════════════════════
+    let totalHours = 0;
+    let countWithTime = 0;
+    const faixas = { '2-4h': 0, '4-6h': 0, '+7h': 0 };
+
+    filtered.forEach(p => {
+      if (p.dataChegadaCliente && p.dataSaidaCliente) {
+        const arrival = new Date(p.dataChegadaCliente);
+        const departure = new Date(p.dataSaidaCliente);
+        const diffHours = (departure - arrival) / (1000 * 60 * 60);
+        
+        totalHours += diffHours;
+        countWithTime++;
+        
+        if (diffHours >= 2 && diffHours < 4) faixas['2-4h']++;
+        else if (diffHours >= 4 && diffHours < 6) faixas['4-6h']++;
+        else if (diffHours >= 7) faixas['+7h']++;
+      }
+    });
+
+    const tempoMedioHoras = countWithTime > 0 ? parseFloat((totalHours / countWithTime).toFixed(1)) : 0;
+    console.log('⏱️  Tempo médio no cliente:', tempoMedioHoras, 'horas');
+
+    // ═══════════════════════════════════════════════════════════
+    // 4️⃣  ESTATÍSTICAS GERAIS
+    // ═══════════════════════════════════════════════════════════
+    const totalEntregas = filtered.length;
+    const totalContratados = contractorsUsage.length;
+    const percentualAcima6h = totalEntregas > 0 ? Math.round((faixas['+7h'] / totalEntregas) * 100) : 0;
+
+    // ═══════════════════════════════════════════════════════════
+    // 5️⃣  ALERTAS AUTOMÁTICOS
+    // ═══════════════════════════════════════════════════════════
+    const alertas = [];
+    
+    // Alerta 1: Concentração em segunda
+    const secondayDeliveries = deliveriesByDay['Segunda'] || 0;
+    const totalWeek = totalEntregas;
+    if (totalWeek > 0 && secondayDeliveries > totalWeek * 0.3) {
+      alertas.push({
+        tipo: 'warning',
+        mensagem: `⚠️  Alta concentração de entregas na segunda (${Math.round((secondayDeliveries / totalWeek) * 100)}%)`
+      });
     }
 
+    // Alerta 2: Contratados ociosos
+    const idleContractors = contractorsUsage.filter(c => c.diasOciosos > 2);
+    if (idleContractors.length > 0) {
+      alertas.push({
+        tipo: 'info',
+        mensagem: `ℹ️  ${idleContractors.length} contratado(s) com mais de 2 dias ociosos`
+      });
+    }
+
+    // Alerta 3: Entregas longas
+    if (percentualAcima6h > 20) {
+      alertas.push({
+        tipo: 'alert',
+        mensagem: `🔴 ${percentualAcima6h}% de entregas acima de 6 horas no cliente`
+      });
+    }
+
+    console.log('🚨 Alertas gerados:', alertas.length);
+
+    // ═══════════════════════════════════════════════════════════
+    // RESPOSTA
+    // ═══════════════════════════════════════════════════════════
     res.json({
       success: true,
       data: {
-        totalDeliveries,
-        tempoMedioHoras: timeAtClient[0]?.tempoMedioHoras || 0,
-        percentLongDeliveries: percentLong,
-        activeContractors,
-        deliveriesByDay,
-        contractorsUsage,
-        timeAtClient: timeAtClient[0] || { tempoMedioHoras: 0, faixas: {} },
-        productivityByDay,
-        alerts
+        entregasPorDia: deliveriesByDayArray,
+        contratadosUtilizacao: contractorsUsage,
+        tempoCliente: { tempoMedioHoras, faixas },
+        produtividadePorDia: deliveriesByDayArray,
+        estatisticasGerais: {
+          totalEntregas,
+          tempoMedioHoras,
+          percentualAcima6h,
+          totalContratados
+        },
+        alertas
       }
     });
 
-    await client.close();
   } catch (error) {
-    console.error('Erro na análise de performance:', error);
-    res.status(500).json({ success: false, message: 'Erro interno do servidor' });
+    console.error('❌ Erro na análise de performance:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      error: error.message
+    });
   }
 });
 

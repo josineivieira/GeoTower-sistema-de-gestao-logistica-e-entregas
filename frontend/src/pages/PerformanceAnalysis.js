@@ -93,9 +93,11 @@ const PerformanceAnalysis = () => {
     totalEntregas: item.totalEntregas
   })) || [];
 
-  const timeData = data.tempoCliente?.faixas?.map(item => ({
-    name: item.nome,
-    value: item.total
+  // Converter faixas de objeto para array
+  const faixasObj = data.tempoCliente?.faixas || { '2-4h': 0, '4-6h': 0, '+7h': 0 };
+  const timeData = Object.entries(faixasObj).map(([nome, total]) => ({
+    name: nome,
+    value: total || 0
   })) || [];
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
@@ -155,11 +157,14 @@ const PerformanceAnalysis = () => {
             Alertas Automáticos
           </h2>
           <div className="space-y-2">
-            {data.alertas.map((alert, index) => (
-              <div key={index} className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 rounded">
-                <p className="font-semibold">{alert}</p>
-              </div>
-            ))}
+            {data.alertas.map((alert, index) => {
+              const mensagem = typeof alert === 'string' ? alert : alert.mensagem;
+              return (
+                <div key={index} className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 rounded">
+                  <p className="font-semibold">{mensagem}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

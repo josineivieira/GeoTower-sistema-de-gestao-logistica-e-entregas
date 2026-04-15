@@ -6,89 +6,59 @@ const auth = require('../middleware/auth');
 // GET /api/admin/performance
 router.get('/performance', auth, async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
-    
     console.log('📊 [PERFORMANCE] Iniciando análise de performance');
     console.log('📊 [PERFORMANCE] Autenticação OK, usuário:', req.user?.username);
 
-    // Obter modelo via mongoose
-    let ProgramacaoEntrega;
-    try {
-      ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
-    } catch (err) {
-      console.error('❌ Erro ao carregar modelo ProgramacaoEntrega:', err.message);
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao carregar modelo',
-        error: err.message
-      });
-    }
+    const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
 
-    // Definir período: última semana por padrão
-    const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    
-    const dateStart = startDate ? new Date(startDate) : weekAgo;
-    const dateEnd = endDate ? new Date(endDate) : now;
-    
-    console.log('📅 Período:', { dateStart: dateStart.toISOString(), dateEnd: dateEnd.toISOString() });
+    // Buscar todas programações sem filtro (igual BaseDadosGeral faz)
+    console.log('🔍 [PERFORMANCE] Buscando todas programações do banco...');
+    const programacoes = await ProgramacaoEntrega.find({}).lean().exec();
+    console.log('✅ [PERFORMANCE] Total carregado:', programacoes.length);
 
-    // Buscar todas as programações no período (sem filtro de status para análise completa)
-    let programacoes = [];
-    try {
-      programacoes = await ProgramacaoEntrega.find({}).lean().exec();
-    } catch (err) {
-      console.error('❌ Erro ao buscar programacoes:', err.message);
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao buscar programações',
-        error: err.message
-      });
-    }
-    console.log('✅ Total de programações carregadas:', programacoes.length);
-
-    // Filtrar por data (dataAgendamento ou dtColeta)
-    const filtered = programacoes.filter(p => {
-      const dateField = p.dtColeta || p.dataAgendamento;
-      if (!dateField) return false;
-      
-      let d;
-      if (typeof dateField === 'string') {
-        // Formato DD/MM/YYYY
-        const parts = dateField.split('/');
-        if (parts.length === 3) {
-          d = new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
-        } else {
-          d = new Date(dateField);
+    if (!programacoes || programacoes.length === 0) {
+      console.warn('⚠️  [PERFORMANCE] Nenhuma programação encontrada!');
+      return res.json({
+        success: true,
+        data: {
+          entregasPorDia: [],
+          contratadosUtilizacao: [],
+          tempoCliente: { tempoMedioHoras: 0, faixas: { '2-4h': 0, '4-6h': 0, '+7h': 0 } },
+          produtividadePorDia: [],
+          estatisticasGerais: {
+            totalEntregas: 0,
+            tempoMedioHoras: 0,
+            percentualAcima6h: 0,
+            totalContratados: 0
+          },
+          alertas: []
         }
-      } else {
-        d = new Date(dateField);
-      }
-      
-      d.setHours(0, 0, 0, 0);
-      return d >= dateStart && d <= dateEnd;
-    });
-
-    console.log('🔍 Programações no período:', filtered.length);
+      });
+    }
 
     // ═══════════════════════════════════════════════════════════
     // 1️⃣  ENTREGAS POR DIA DA SEMANA
     // ═══════════════════════════════════════════════════════════
-    const deliveriesByDay = {};
-    const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const deliveriesByDay = {
+      'Domingo': 0,
+      'Segunda': 0,
+      'Terça': 0,
+      'Quarta': 0,
+      'Quinta': 0,
+      'Sexta': 0,
+      'Sábado': 0
+    };
     
-    dayNames.forEach((day, idx) => {
-      deliveriesByDay[day] = 0;
-    });
-
-    filtered.forEach(p => {
+    programacoes.forEach(p => {
       const dateField = p.dtColeta || p.dataAgendamento;
-      let d;
+      if (!dateField) return;
       
+      let d;
+      // Tentar parse como DD/MM/YYYY
       if (typeof dateField === 'string') {
-        const parts = dateField.split('/');
-        if (parts.length === 3) {
-          d = new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
+        const match = dateField.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (match) {
+          d = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
         } else {
           d = new Date(dateField);
         }
@@ -96,20 +66,23 @@ router.get('/performance', auth, async (req, res) => {
         d = new Date(dateField);
       }
       
+      if (isNaN(d)) return;
+      
+      const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
       const dayOfWeek = dayNames[d.getDay()];
-      deliveriesByDay[dayOfWeek]++;
+      if (dayOfWeek) deliveriesByDay[dayOfWeek]++;
     });
 
     const deliveriesByDayArray = Object.entries(deliveriesByDay).map(([dia, total]) => ({ dia, total }));
-    console.log('📊 Entregas por dia:', deliveriesByDayArray);
+    console.log('📊 [PERFORMANCE] Entregas por dia:', deliveriesByDayArray.filter(d => d.total > 0));
 
     // ═══════════════════════════════════════════════════════════
     // 2️⃣  UTILIZAÇÃO DOS CONTRATADOS
     // ═══════════════════════════════════════════════════════════
     const contractorsMap = {};
     
-    filtered.forEach(p => {
-      const contratado = p.contratado || 'Sem contratado';
+    programacoes.forEach(p => {
+      const contratado = (p.contratado || 'Sem contratado').trim();
       if (!contractorsMap[contratado]) {
         contractorsMap[contratado] = {
           contratado,
@@ -124,16 +97,20 @@ router.get('/performance', auth, async (req, res) => {
       if (dateField) {
         let d;
         if (typeof dateField === 'string') {
-          const parts = dateField.split('/');
-          if (parts.length === 3) {
-            d = new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
+          const match = dateField.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+          if (match) {
+            d = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
           } else {
             d = new Date(dateField);
           }
         } else {
           d = new Date(dateField);
         }
-        contractorsMap[contratado].diasAtivos.add(d.toISOString().split('T')[0]);
+        
+        if (!isNaN(d)) {
+          const dateStr = d.toISOString().split('T')[0];
+          contractorsMap[contratado].diasAtivos.add(dateStr);
+        }
       }
     });
 
@@ -146,7 +123,7 @@ router.get('/performance', auth, async (req, res) => {
       }))
       .sort((a, b) => b.totalEntregas - a.totalEntregas);
 
-    console.log('🚚 Contratados:', contractorsUsage.length);
+    console.log('🚚 [PERFORMANCE] Contratados únicos:', contractorsUsage.length);
 
     // ═══════════════════════════════════════════════════════════
     // 3️⃣  DISTRIBUIÇÃO DE TEMPO NO CLIENTE
@@ -155,12 +132,24 @@ router.get('/performance', auth, async (req, res) => {
     let countWithTime = 0;
     const faixas = { '2-4h': 0, '4-6h': 0, '+7h': 0 };
 
-    filtered.forEach(p => {
+    programacoes.forEach(p => {
+      // Tentar encontrar tempo: dataChegadaCliente -> dataSaidaCliente
+      let arrival = null;
+      let departure = null;
+
+      // Procurar pelos campos possíveis
       if (p.dataChegadaCliente && p.dataSaidaCliente) {
-        const arrival = new Date(p.dataChegadaCliente);
-        const departure = new Date(p.dataSaidaCliente);
+        arrival = new Date(p.dataChegadaCliente);
+        departure = new Date(p.dataSaidaCliente);
+      } else if (p._entrega) {
+        arrival = p._entrega.horarioChegada || p._entrega.arrivedAt;
+        departure = p._entrega.horarioFimDesova || p._entrega.desovaEndAt;
+        if (arrival) arrival = new Date(arrival);
+        if (departure) departure = new Date(departure);
+      }
+
+      if (arrival && departure && !isNaN(arrival) && !isNaN(departure)) {
         const diffHours = (departure - arrival) / (1000 * 60 * 60);
-        
         totalHours += diffHours;
         countWithTime++;
         
@@ -171,12 +160,12 @@ router.get('/performance', auth, async (req, res) => {
     });
 
     const tempoMedioHoras = countWithTime > 0 ? parseFloat((totalHours / countWithTime).toFixed(1)) : 0;
-    console.log('⏱️  Tempo médio no cliente:', tempoMedioHoras, 'horas');
+    console.log('⏱️  [PERFORMANCE] Tempo médio no cliente:', tempoMedioHoras, 'horas');
 
     // ═══════════════════════════════════════════════════════════
     // 4️⃣  ESTATÍSTICAS GERAIS
     // ═══════════════════════════════════════════════════════════
-    const totalEntregas = filtered.length;
+    const totalEntregas = programacoes.length;
     const totalContratados = contractorsUsage.length;
     const percentualAcima6h = totalEntregas > 0 ? Math.round((faixas['+7h'] / totalEntregas) * 100) : 0;
 
@@ -212,7 +201,7 @@ router.get('/performance', auth, async (req, res) => {
       });
     }
 
-    console.log('🚨 Alertas gerados:', alertas.length);
+    console.log('🚨 [PERFORMANCE] Alertas gerados:', alertas.length);
 
     // ═══════════════════════════════════════════════════════════
     // RESPOSTA
@@ -244,7 +233,7 @@ router.get('/performance', auth, async (req, res) => {
     res.json(responseData);
 
   } catch (error) {
-    console.error('❌ Erro na análise de performance:', error);
+    console.error('❌ [PERFORMANCE] Erro na análise de performance:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor',

@@ -2,7 +2,7 @@
 const router = express.Router();
 const auth = require('../middleware/auth');
 
-router.get('/performance', auth, async (req, res) => {
+router.get('/', auth, async (req, res) => {
   try {
     const Delivery = require('../models/Delivery');
     const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');

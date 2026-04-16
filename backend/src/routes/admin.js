@@ -2492,21 +2492,21 @@ router.get("/performance", auth, onlyAdmin, async (req, res) => {
           },
           dataAgendamentoOuColeta: {
             $cond: {
-              if: { $ne: ["$dataAgendamento", null] },
-              then: "$dataAgendamento",
+              if: { $ne: ["$dtAgendamentoDescarga", null] },
+              then: { $dateFromString: { dateString: "$dtAgendamentoDescarga" } },
               else: "$dtColeta"
             }
           },
           diaSemanaAgendado: {
             $switch: {
               branches: [
-                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dataAgendamento", null] }, "$dataAgendamento", "$dtColeta"] } }, 1] }, then: "Domingo" },
-                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dataAgendamento", null] }, "$dataAgendamento", "$dtColeta"] } }, 2] }, then: "Segunda" },
-                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dataAgendamento", null] }, "$dataAgendamento", "$dtColeta"] } }, 3] }, then: "Terça" },
-                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dataAgendamento", null] }, "$dataAgendamento", "$dtColeta"] } }, 4] }, then: "Quarta" },
-                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dataAgendamento", null] }, "$dataAgendamento", "$dtColeta"] } }, 5] }, then: "Quinta" },
-                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dataAgendamento", null] }, "$dataAgendamento", "$dtColeta"] } }, 6] }, then: "Sexta" },
-                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dataAgendamento", null] }, "$dataAgendamento", "$dtColeta"] } }, 7] }, then: "Sábado" }
+                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dtAgendamentoDescarga", null] }, { $dateFromString: { dateString: "$dtAgendamentoDescarga" } }, "$dtColeta"] } }, 1] }, then: "Domingo" },
+                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dtAgendamentoDescarga", null] }, { $dateFromString: { dateString: "$dtAgendamentoDescarga" } }, "$dtColeta"] } }, 2] }, then: "Segunda" },
+                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dtAgendamentoDescarga", null] }, { $dateFromString: { dateString: "$dtAgendamentoDescarga" } }, "$dtColeta"] } }, 3] }, then: "Terça" },
+                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dtAgendamentoDescarga", null] }, { $dateFromString: { dateString: "$dtAgendamentoDescarga" } }, "$dtColeta"] } }, 4] }, then: "Quarta" },
+                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dtAgendamentoDescarga", null] }, { $dateFromString: { dateString: "$dtAgendamentoDescarga" } }, "$dtColeta"] } }, 5] }, then: "Quinta" },
+                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dtAgendamentoDescarga", null] }, { $dateFromString: { dateString: "$dtAgendamentoDescarga" } }, "$dtColeta"] } }, 6] }, then: "Sexta" },
+                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dtAgendamentoDescarga", null] }, { $dateFromString: { dateString: "$dtAgendamentoDescarga" } }, "$dtColeta"] } }, 7] }, then: "Sábado" }
               ],
               default: "Desconhecido"
             }

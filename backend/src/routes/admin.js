@@ -2462,51 +2462,52 @@ router.get("/performance", auth, onlyAdmin, async (req, res) => {
     await mongoClient.connect();
     const db = mongoClient.db(process.env.MONGO_DB || "delivery-docs");
     const collection = db.collection(process.env.MONGO_COLLECTION || "icompany");
+    const totalDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+    const hasCityField = await collection.findOne({ city: { $exists: true } });
 
     // Pipeline de aggregation
     const pipeline = [
-      // Filtrar por cidade e período
+      // Filtrar por período (usar dtAgendamentoDescarga ou dtColeta)
       {
         $match: {
-          city: city,
-          dtColeta: { $gte: start, $lte: end },
-          status: { $ne: null }
+          contratado: { $ne: null },
+          $or: [
+            { dtAgendamentoDescarga: { $ne: null } },
+            { dtColeta: { $ne: null } }
+          ]
         }
       },
-      // Adicionar campos calculados
       {
         $addFields: {
-          diaSemana: {
-            $switch: {
-              branches: [
-                { case: { $eq: [{ $dayOfWeek: "$dtColeta" }, 1] }, then: "Domingo" },
-                { case: { $eq: [{ $dayOfWeek: "$dtColeta" }, 2] }, then: "Segunda" },
-                { case: { $eq: [{ $dayOfWeek: "$dtColeta" }, 3] }, then: "Terça" },
-                { case: { $eq: [{ $dayOfWeek: "$dtColeta" }, 4] }, then: "Quarta" },
-                { case: { $eq: [{ $dayOfWeek: "$dtColeta" }, 5] }, then: "Quinta" },
-                { case: { $eq: [{ $dayOfWeek: "$dtColeta" }, 6] }, then: "Sexta" },
-                { case: { $eq: [{ $dayOfWeek: "$dtColeta" }, 7] }, then: "Sábado" }
-              ],
-              default: "Desconhecido"
-            }
-          },
-          dataAgendamentoOuColeta: {
+          scheduleDate: {
             $cond: {
               if: { $ne: ["$dtAgendamentoDescarga", null] },
-              then: { $dateFromString: { dateString: "$dtAgendamentoDescarga" } },
+              then: { $dateFromString: { dateString: "$dtAgendamentoDescarga", format: "%Y-%m-%d %H:%M:%S" } },
               else: "$dtColeta"
             }
           },
-          diaSemanaAgendado: {
+          scheduleDateStr: {
+            $cond: {
+              if: { $ne: ["$dtAgendamentoDescarga", null] },
+              then: {
+                $dateToString: {
+                  format: "%Y-%m-%d",
+                  date: { $dateFromString: { dateString: "$dtAgendamentoDescarga", format: "%Y-%m-%d %H:%M:%S" } }
+                }
+              },
+              else: { $dateToString: { format: "%Y-%m-%d", date: "$dtColeta" } }
+            }
+          },
+          diaSemana: {
             $switch: {
               branches: [
-                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dtAgendamentoDescarga", null] }, { $dateFromString: { dateString: "$dtAgendamentoDescarga" } }, "$dtColeta"] } }, 1] }, then: "Domingo" },
-                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dtAgendamentoDescarga", null] }, { $dateFromString: { dateString: "$dtAgendamentoDescarga" } }, "$dtColeta"] } }, 2] }, then: "Segunda" },
-                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dtAgendamentoDescarga", null] }, { $dateFromString: { dateString: "$dtAgendamentoDescarga" } }, "$dtColeta"] } }, 3] }, then: "Terça" },
-                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dtAgendamentoDescarga", null] }, { $dateFromString: { dateString: "$dtAgendamentoDescarga" } }, "$dtColeta"] } }, 4] }, then: "Quarta" },
-                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dtAgendamentoDescarga", null] }, { $dateFromString: { dateString: "$dtAgendamentoDescarga" } }, "$dtColeta"] } }, 5] }, then: "Quinta" },
-                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dtAgendamentoDescarga", null] }, { $dateFromString: { dateString: "$dtAgendamentoDescarga" } }, "$dtColeta"] } }, 6] }, then: "Sexta" },
-                { case: { $eq: [{ $dayOfWeek: { $cond: [{ $ne: ["$dtAgendamentoDescarga", null] }, { $dateFromString: { dateString: "$dtAgendamentoDescarga" } }, "$dtColeta"] } }, 7] }, then: "Sábado" }
+                { case: { $eq: [{ $dayOfWeek: "$scheduleDate" }, 1] }, then: "Domingo" },
+                { case: { $eq: [{ $dayOfWeek: "$scheduleDate" }, 2] }, then: "Segunda" },
+                { case: { $eq: [{ $dayOfWeek: "$scheduleDate" }, 3] }, then: "Terça" },
+                { case: { $eq: [{ $dayOfWeek: "$scheduleDate" }, 4] }, then: "Quarta" },
+                { case: { $eq: [{ $dayOfWeek: "$scheduleDate" }, 5] }, then: "Quinta" },
+                { case: { $eq: [{ $dayOfWeek: "$scheduleDate" }, 6] }, then: "Sexta" },
+                { case: { $eq: [{ $dayOfWeek: "$scheduleDate" }, 7] }, then: "Sábado" }
               ],
               default: "Desconhecido"
             }
@@ -2524,6 +2525,11 @@ router.get("/performance", auth, onlyAdmin, async (req, res) => {
             }
           },
           contratadoNome: { $ifNull: ["$contratado", "Não informado"] }
+        }
+      },
+      {
+        $match: {
+          scheduleDate: { $gte: start, $lte: end }
         }
       },
       // Fazer facet para múltiplas agregações
@@ -2553,13 +2559,31 @@ router.get("/performance", auth, onlyAdmin, async (req, res) => {
               $group: {
                 _id: "$contratadoNome",
                 totalEntregas: { $sum: 1 },
-                diasAgendadosUnicos: { $addToSet: "$diaSemanaAgendado" }
+                datasAgendamentoUnicas: {
+                  $addToSet: {
+                    $cond: {
+                      if: { $ne: ["$dtAgendamentoDescarga", null] },
+                      then: { $dateFromString: { dateString: "$dtAgendamentoDescarga" } },
+                      else: "$dtColeta"
+                    }
+                  }
+                }
               }
             },
             {
               $addFields: {
-                diasAtivos: { $size: "$diasAgendadosUnicos" },
-                diasOciosos: { $subtract: [7, { $size: "$diasAgendadosUnicos" }] }
+                datasAgendamentoUnicas: {
+                  $filter: {
+                    input: "$datasAgendamentoUnicas",
+                    cond: { $ne: ["$$this", null] }
+                  }
+                }
+              }
+            },
+            {
+              $addFields: {
+                diasAtivos: { $size: "$datasAgendamentoUnicas" },
+                diasOciosos: { $subtract: [totalDays, { $size: "$datasAgendamentoUnicas" }] }
               }
             },
             {

@@ -2482,19 +2482,14 @@ router.get("/performance", auth, onlyAdmin, async (req, res) => {
           scheduleDate: {
             $cond: {
               if: { $ne: ["$dtAgendamentoDescarga", null] },
-              then: { $dateFromString: { dateString: "$dtAgendamentoDescarga", format: "%Y-%m-%d %H:%M:%S" } },
+              then: { $dateFromString: { dateString: "$dtAgendamentoDescarga", format: "%Y-%m-%d %H:%M:%S", onError: null } },
               else: "$dtColeta"
             }
           },
           scheduleDateStr: {
             $cond: {
               if: { $ne: ["$dtAgendamentoDescarga", null] },
-              then: {
-                $dateToString: {
-                  format: "%Y-%m-%d",
-                  date: { $dateFromString: { dateString: "$dtAgendamentoDescarga", format: "%Y-%m-%d %H:%M:%S" } }
-                }
-              },
+              then: { $substrBytes: ["$dtAgendamentoDescarga", 0, 10] },
               else: { $dateToString: { format: "%Y-%m-%d", date: "$dtColeta" } }
             }
           },
@@ -2559,15 +2554,7 @@ router.get("/performance", auth, onlyAdmin, async (req, res) => {
               $group: {
                 _id: "$contratadoNome",
                 totalEntregas: { $sum: 1 },
-                datasAgendamentoUnicas: {
-                  $addToSet: {
-                    $cond: {
-                      if: { $ne: ["$dtAgendamentoDescarga", null] },
-                      then: { $dateFromString: { dateString: "$dtAgendamentoDescarga" } },
-                      else: "$dtColeta"
-                    }
-                  }
-                }
+                datasAgendamentoUnicas: { $addToSet: "$scheduleDateStr" }
               }
             },
             {

@@ -2490,6 +2490,26 @@ router.get("/performance", auth, onlyAdmin, async (req, res) => {
               default: "Desconhecido"
             }
           },
+          diaSemanaAgendado: {
+            $cond: {
+              if: { $ne: ["$dataAgendamento", null] },
+              then: {
+                $switch: {
+                  branches: [
+                    { case: { $eq: [{ $dayOfWeek: "$dataAgendamento" }, 1] }, then: "Domingo" },
+                    { case: { $eq: [{ $dayOfWeek: "$dataAgendamento" }, 2] }, then: "Segunda" },
+                    { case: { $eq: [{ $dayOfWeek: "$dataAgendamento" }, 3] }, then: "Terça" },
+                    { case: { $eq: [{ $dayOfWeek: "$dataAgendamento" }, 4] }, then: "Quarta" },
+                    { case: { $eq: [{ $dayOfWeek: "$dataAgendamento" }, 5] }, then: "Quinta" },
+                    { case: { $eq: [{ $dayOfWeek: "$dataAgendamento" }, 6] }, then: "Sexta" },
+                    { case: { $eq: [{ $dayOfWeek: "$dataAgendamento" }, 7] }, then: "Sábado" }
+                  ],
+                  default: "Desconhecido"
+                }
+              },
+              else: null
+            }
+          },
           tempoClienteHoras: {
             $cond: {
               if: { $and: ["$dataChegadaCliente", "$dataSaidaCliente"] },
@@ -2532,13 +2552,23 @@ router.get("/performance", auth, onlyAdmin, async (req, res) => {
               $group: {
                 _id: "$contratadoNome",
                 totalEntregas: { $sum: 1 },
-                diasAtivos: { $addToSet: { $dateToString: { format: "%Y-%m-%d", date: "$dtColeta" } } }
+                diasAgendadosUnicos: { $addToSet: "$diaSemanaAgendado" }
               }
             },
             {
               $addFields: {
-                diasAtivos: { $size: "$diasAtivos" },
-                diasOciosos: { $subtract: [7, { $size: "$diasAtivos" }] }
+                diasAgendadosUnicos: {
+                  $filter: {
+                    input: "$diasAgendadosUnicos",
+                    cond: { $ne: ["$$this", null] }
+                  }
+                }
+              }
+            },
+            {
+              $addFields: {
+                diasAtivos: { $size: "$diasAgendadosUnicos" },
+                diasOciosos: { $subtract: [7, { $size: "$diasAgendadosUnicos" }] }
               }
             },
             {

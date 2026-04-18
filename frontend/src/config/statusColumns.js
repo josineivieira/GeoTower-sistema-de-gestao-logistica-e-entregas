@@ -76,8 +76,8 @@ export const getStatusColumns = (city = 'manaus') => [
   },
   {
     key: 'OPERACAO_INICIADA',
-    title: `Em ${getDesovaStepLabel(city)}`,
-    description: 'Operação iniciada',
+    title: 'Op. Iniciada',
+    description: 'Em desova/Ovação',
     icon: FaShippingFast,
     gradient: 'from-rose-500 to-red-600',
     lightBg: 'bg-rose-50',
@@ -89,7 +89,7 @@ export const getStatusColumns = (city = 'manaus') => [
   {
     key: 'OPERACAO_FINALIZADA',
     title: 'Op. Finalizada',
-    description: `${getDesovaStepLabel(city)} concluída / anexando canhotos`,
+    description: 'Operação concluída / anexando canhotos',
     icon: FaCheckCircle,
     gradient: 'from-teal-500 to-emerald-600',
     lightBg: 'bg-teal-50',

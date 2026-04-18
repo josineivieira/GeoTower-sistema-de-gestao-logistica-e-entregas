@@ -74,7 +74,7 @@ const getStatusConfig = (city = 'manaus') => {
       ring: 'ring-orange-400/30', dot: 'bg-orange-500', hex: '#f97316'
     },
     'EM DESOVA': {
-      label: `Em ${desovaLabel}`,
+      label: 'Op. iniciada',
       bg: 'bg-violet-600', light: 'bg-violet-50', text: 'text-violet-700',
       border: 'border-violet-300',
       badge: 'bg-violet-100 text-violet-800 border border-violet-300',
@@ -82,7 +82,7 @@ const getStatusConfig = (city = 'manaus') => {
       ring: 'ring-violet-400/30', dot: 'bg-violet-500', hex: '#8b5cf6'
     },
     'ANEXANDO DOCUMENTOS FINAIS': {
-      label: 'Anexando Docs',
+      label: 'Op. finalizada',
       bg: 'bg-pink-600', light: 'bg-pink-50', text: 'text-pink-700',
       border: 'border-pink-300',
       badge: 'bg-pink-100 text-pink-800 border border-pink-300',

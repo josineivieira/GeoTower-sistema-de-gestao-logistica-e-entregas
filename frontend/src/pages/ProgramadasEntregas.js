@@ -396,9 +396,15 @@ const ProgramadasEntregas = () => {
       try {
         const searchRes = await deliveryService.getMyDeliveries({ q: deliveryNumber.toUpperCase(), includeCanceled: true });
         const list = searchRes.data.deliveries || [];
-          existing = list
-            .filter(d => String(d.deliveryNumber).toUpperCase() === deliveryNumber.toUpperCase())
-            .sort((a, b) => getDeliveryTimestamp(b) - getDeliveryTimestamp(a))[0];
+        existing = list
+          .filter(d => String(d.deliveryNumber).toUpperCase() === deliveryNumber.toUpperCase())
+          .sort((a, b) => getDeliveryTimestamp(b) - getDeliveryTimestamp(a))[0];
+      } catch (_) {}
+
+      if (existing) {
+        setCurrentDelivery(existing);
+        setCurrentProgramacao(p);
+        if (existing.status === 'CONTAINER_MONTADO') {
           await deliveryService.updateDelivery(existing._id, { status: 'A_CAMINHO_DO_CLIENTE' });
           existing.status = 'A_CAMINHO_DO_CLIENTE';
           p.status = 'A_CAMINHO_DO_CLIENTE';

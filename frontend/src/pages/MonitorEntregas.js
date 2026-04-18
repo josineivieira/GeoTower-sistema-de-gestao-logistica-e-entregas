@@ -66,7 +66,7 @@ const getStatusConfig = (city = 'manaus') => {
       ring: 'ring-amber-400/30', dot: 'bg-amber-500', hex: '#f59e0b'
     },
     'AGUARDANDO DESOVA': {
-      label: 'Aguard. Desova/Ovação',
+      label: getDesovaStatusLabel('AGUARDANDO_DESOVA', city),
       bg: 'bg-orange-500', light: 'bg-orange-50', text: 'text-orange-700',
       border: 'border-orange-300',
       badge: 'bg-orange-100 text-orange-800 border border-orange-300',
@@ -74,12 +74,20 @@ const getStatusConfig = (city = 'manaus') => {
       ring: 'ring-orange-400/30', dot: 'bg-orange-500', hex: '#f97316'
     },
     'EM DESOVA': {
-      label: 'Op. iniciada',
+      label: getDesovaStatusLabel('EM_DESOVA', city),
       bg: 'bg-violet-600', light: 'bg-violet-50', text: 'text-violet-700',
       border: 'border-violet-300',
       badge: 'bg-violet-100 text-violet-800 border border-violet-300',
       icon: <FaDolly />, gradient: 'from-violet-500 to-violet-700',
       ring: 'ring-violet-400/30', dot: 'bg-violet-500', hex: '#8b5cf6'
+    },
+    'DESOVA_FINALIZADA': {
+      label: getDesovaStatusLabel('DESOVA_FINALIZADA', city),
+      bg: 'bg-purple-600', light: 'bg-purple-50', text: 'text-purple-700',
+      border: 'border-purple-300',
+      badge: 'bg-purple-100 text-purple-800 border border-purple-300',
+      icon: <FaCheckCircle />, gradient: 'from-purple-500 to-purple-700',
+      ring: 'ring-purple-400/30', dot: 'bg-purple-500', hex: '#9333ea'
     },
     'ANEXANDO DOCUMENTOS FINAIS': {
       label: 'Op. finalizada',
@@ -720,8 +728,33 @@ const MonitorEntregas = () => {
   const { city, setCity } = useCity();
   const isGeoMar = () => false; // Libera edição para geomar
   const canEdit = () => user?.role === 'manager' || user?.role === 'geomar';
-  const allowCitySwitcher = user?.city === 'both' || user?.role === 'manager';
+  const currentCity = city || 'manaus';
+  const getStatusOptions = () => [
+    { value: "all", label: "Todos" },
+    { value: "OPERACAO_FINALIZADA", label: "Operação Finalizada" },
+    { value: "DOCUMENTOS_ENTREGUES", label: "Documentos Entregues" },
+    { value: "FINALIZADO", label: "Finalizado (sem docs)" },
+    { value: "A CAMINHO DO CLIENTE", label: "A Caminho do Cliente" },
+    { value: "AGENDADO", label: "Agendado" },
+    { value: "AGUARDANDO_DESOVA", label: `Aguardando ${getDesovaStepLabel(currentCity)}` },
+    { value: "EM_DESOVA", label: `Em ${getDesovaStepLabel(currentCity)}` },
+    { value: "DESOVA_FINALIZADA", label: getDesovaStatusLabel('DESOVA_FINALIZADA', currentCity) },
+    { value: "ANEXANDO_DOCUMENTOS_FINAIS", label: "Anexando Docs Finais" },
+    { value: "CANCELADO", label: "Cancelado" }
+  ];
+  const getEditStatusOptions = () => [
+    { value: "", label: "Selecione…" },
+    { value: "ENTREGUE", label: "Operação Finalizada" },
+    { value: "pending", label: "A Caminho do Cliente" },
+    { value: "AGUARDANDO_DESOVA", label: `Aguardando ${getDesovaStepLabel(currentCity)}` },
+    { value: "EM_DESOVA", label: `Em ${getDesovaStepLabel(currentCity)}` },
+    { value: "DESOVA_FINALIZADA", label: getDesovaStatusLabel('DESOVA_FINALIZADA', currentCity) },
+    { value: "ANEXANDO_DOCUMENTOS_FINAIS", label: "Anexando Docs Finais" },
+    { value: "CANCELADO", label: "Cancelado" }
+  ];
+
   const navigate = useNavigate();
+  const allowCitySwitcher = user?.city === 'both' || user?.role === 'manager';
 
   const [viewingDocument, setViewingDocument] = useState(null);
   const [modalFotos, setModalFotos] = useState(null);

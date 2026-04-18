@@ -98,7 +98,7 @@ function isEmpty(v) {
 // ---------- FILTRO DE DATA ----------
 
 // 🔥 EDITA AQUI AS DATAS
-const DATA_INICIO_FILTRO = new Date("2026-04-16 00:00:00");
+const DATA_INICIO_FILTRO = new Date("2026-04-01 00:00:00");
 const DATA_FIM_FILTRO = new Date("2026-04-30 23:59:59");
 
 function dentroDoPeriodo(dateStr) {

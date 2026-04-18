@@ -43,7 +43,7 @@ const Badge = ({ status, city = 'manaus' }) => {
         badge: 'bg-amber-100 text-amber-800 border border-amber-300',
       },
       'AGUARDANDO DESOVA': {
-        label: `Aguard. ${desovaLabel}`,
+        label: 'Aguard. Desova/Ovação',
         badge: 'bg-orange-100 text-orange-800 border border-orange-300',
       },
       'EM DESOVA': {

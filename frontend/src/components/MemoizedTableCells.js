@@ -35,7 +35,7 @@ const getStatusConfig = (city = 'manaus') => {
       ring: 'ring-amber-400/30', dot: 'bg-amber-500', hex: '#f59e0b'
     },
     'AGUARDANDO DESOVA': {
-      label: `Aguard. ${desovaLabel}`,
+      label: 'Aguard. Desova/Ovação',
       bg: 'bg-orange-500', light: 'bg-orange-50', text: 'text-orange-700',
       border: 'border-orange-300',
       badge: 'bg-orange-100 text-orange-800 border border-orange-300',

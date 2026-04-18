@@ -313,9 +313,12 @@ const ProgramadasEntregas = () => {
       const deliveriesRes = await deliveryService.getMyDeliveries({ includeCanceled: true });
       const deliveries = deliveriesRes.data.deliveries || [];
       const map = {};
+      const deliveriesByNumber = {};
       const programacaoMap = {};
       deliveries.forEach(d => {
         const key = (d.deliveryNumber || '').toUpperCase();
+        if (!deliveriesByNumber[key]) deliveriesByNumber[key] = [];
+        deliveriesByNumber[key].push(d);
         const existing = map[key];
         if (!existing || getDeliveryTimestamp(d) >= getDeliveryTimestamp(existing)) {
           map[key] = d;
@@ -359,9 +362,12 @@ const ProgramadasEntregas = () => {
 
         // Fallback: buscar por container/processo
         const key = ((p.container || p.processo || '').toUpperCase());
-        const del = map[key];
-        if (!matchedDelivery && del) {
-          matchedDelivery = del;
+        if (!matchedDelivery) {
+          const candidates = deliveriesByNumber[key] || [];
+          if (candidates.length > 0) {
+            matchedDelivery = candidates.find(d => String(d.programacaoId) === String(p._id)) ||
+              candidates.reduce((best, next) => getDeliveryTimestamp(next) > getDeliveryTimestamp(best) ? next : best, candidates[0]);
+          }
         }
         if (matchedDelivery && matchedDelivery.documents && ((matchedDelivery.documents.devolucaoVazio && matchedDelivery.documents.devolucaoVazio.length > 0) || (matchedDelivery.documents.devolucaoContainerVazio && matchedDelivery.documents.devolucaoContainerVazio.length > 0))) {
           return false;
@@ -396,9 +402,11 @@ const ProgramadasEntregas = () => {
       try {
         const searchRes = await deliveryService.getMyDeliveries({ q: deliveryNumber.toUpperCase(), includeCanceled: true });
         const list = searchRes.data.deliveries || [];
-        existing = list
-          .filter(d => String(d.deliveryNumber).toUpperCase() === deliveryNumber.toUpperCase())
-          .sort((a, b) => getDeliveryTimestamp(b) - getDeliveryTimestamp(a))[0];
+        const exactMatches = list.filter(d => String(d.deliveryNumber).toUpperCase() === deliveryNumber.toUpperCase());
+        if (exactMatches.length > 0) {
+          existing = exactMatches.find(d => String(d.programacaoId) === String(p._id)) ||
+            exactMatches.reduce((best, next) => getDeliveryTimestamp(next) > getDeliveryTimestamp(best) ? next : best, exactMatches[0]);
+        }
       } catch (_) {}
 
       if (existing) {
@@ -513,9 +521,12 @@ const ProgramadasEntregas = () => {
       try {
         const searchRes = await deliveryService.getMyDeliveries({ q: deliveryNumber.toUpperCase(), includeCanceled: true });
         const list = searchRes.data.deliveries || [];
-        const existing = list
-          .filter(d => String(d.deliveryNumber).toUpperCase() === deliveryNumber.toUpperCase())
-          .sort((a, b) => getDeliveryTimestamp(b) - getDeliveryTimestamp(a))[0];
+        const exactMatches = list.filter(d => String(d.deliveryNumber).toUpperCase() === deliveryNumber.toUpperCase());
+        let existing = null;
+        if (exactMatches.length > 0) {
+          existing = exactMatches.find(d => String(d.programacaoId) === String(montagemProgramacao._id)) ||
+            exactMatches.reduce((best, next) => getDeliveryTimestamp(next) > getDeliveryTimestamp(best) ? next : best, exactMatches[0]);
+        }
         if (existing) {
           await deliveryService.updateDelivery(existing._id, payload);
           const refreshed = await deliveryService.getDelivery(existing._id);

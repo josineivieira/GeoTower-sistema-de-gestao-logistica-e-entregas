@@ -59,26 +59,9 @@ const normalizeStatus = (status) => {
   return key === 'EM_ROTA' ? 'A_CAMINHO_DO_CLIENTE' : key;
 };
 
-const DELIVERY_STATUS_PRIORITY = [
-  'FINALIZADO',
-  'DEVOLVENDO_CONTAINER',
-  'ENTREGUE',
-  'ANEXANDO_DOCUMENTOS_FINAIS',
-  'AGUARDANDO_AGENDAMENTO_DEVOLUCAO',
-  'DESOVA_FINALIZADA',
-  'EM_DESOVA',
-  'AGUARDANDO_DESOVA',
-  'A_CAMINHO_DO_CLIENTE',
-  'CONTAINER_MONTADO',
-  'AGENDADO',
-  'PENDING',
-  'pending'
-];
-
-const getDeliveryStatusPriority = (status) => {
-  const key = String(status || '').toUpperCase();
-  const idx = DELIVERY_STATUS_PRIORITY.findIndex((s) => s === key);
-  return idx === -1 ? DELIVERY_STATUS_PRIORITY.length : idx;
+const getDeliveryTimestamp = (delivery) => {
+  const time = new Date(delivery?.updatedAt || delivery?.createdAt || 0).getTime();
+  return Number.isFinite(time) ? time : 0;
 };
 
 const StepTimer = ({ start, label = 'Tempo esperando' }) => (
@@ -334,15 +317,16 @@ const ProgramadasEntregas = () => {
       deliveries.forEach(d => {
         const key = (d.deliveryNumber || '').toUpperCase();
         const existing = map[key];
-        const normalizedStatus = normalizeStatus(d.status);
-        if (!existing
-          || getDeliveryStatusPriority(normalizedStatus) < getDeliveryStatusPriority(normalizeStatus(existing.status))
-          || (getDeliveryStatusPriority(normalizedStatus) === getDeliveryStatusPriority(normalizeStatus(existing.status))
-              && new Date(d.updatedAt || 0).getTime() >= new Date(existing.updatedAt || 0).getTime())
-        ) {
+        if (!existing || getDeliveryTimestamp(d) >= getDeliveryTimestamp(existing)) {
           map[key] = d;
         }
-        if (d.programacaoId) programacaoMap[String(d.programacaoId)] = d;
+        if (d.programacaoId) {
+          const progKey = String(d.programacaoId);
+          const existingProg = programacaoMap[progKey];
+          if (!existingProg || getDeliveryTimestamp(d) >= getDeliveryTimestamp(existingProg)) {
+            programacaoMap[progKey] = d;
+          }
+        }
       });
       setDeliveriesMap(map);
       
@@ -364,9 +348,9 @@ const ProgramadasEntregas = () => {
           return false;
         }
 
-        // Tentar buscar o delivery por linkedDeliveryId primeiro
-        let matchedDelivery = null;
-        if (p.linkedDeliveryId) {
+        // Tentar buscar o delivery por programacaoId primeiro, depois linkedDeliveryId, e só então por número
+        let matchedDelivery = byProg || null;
+        if (!matchedDelivery && p.linkedDeliveryId) {
           matchedDelivery = deliveries.find(d => d._id === p.linkedDeliveryId);
           if (matchedDelivery && matchedDelivery.documents && ((matchedDelivery.documents.devolucaoVazio && matchedDelivery.documents.devolucaoVazio.length > 0) || (matchedDelivery.documents.devolucaoContainerVazio && matchedDelivery.documents.devolucaoContainerVazio.length > 0))) {
             return false;
@@ -412,13 +396,9 @@ const ProgramadasEntregas = () => {
       try {
         const searchRes = await deliveryService.getMyDeliveries({ q: deliveryNumber.toUpperCase(), includeCanceled: true });
         const list = searchRes.data.deliveries || [];
-        existing = list.find(d => String(d.deliveryNumber).toUpperCase() === deliveryNumber.toUpperCase());
-      } catch (_) {}
-
-      if (existing) {
-        setCurrentDelivery(existing);
-        setCurrentProgramacao(p);
-        if (existing.status === 'CONTAINER_MONTADO') {
+          existing = list
+            .filter(d => String(d.deliveryNumber).toUpperCase() === deliveryNumber.toUpperCase())
+            .sort((a, b) => getDeliveryTimestamp(b) - getDeliveryTimestamp(a))[0];
           await deliveryService.updateDelivery(existing._id, { status: 'A_CAMINHO_DO_CLIENTE' });
           existing.status = 'A_CAMINHO_DO_CLIENTE';
           p.status = 'A_CAMINHO_DO_CLIENTE';
@@ -520,10 +500,28 @@ const ProgramadasEntregas = () => {
         observations: `Montagem finalizada em ${formatarData(new Date(), city)}`,
         driverName: montagemProgramacao.motorista || user?.fullName || user?.name || '',
         containerMontadoAt: new Date().toISOString(),
-        status: 'CONTAINER_MONTADO'
+        status: 'CONTAINER_MONTADO',
+        programacaoId: montagemProgramacao._id
       };
-      const res = await deliveryService.createDelivery(payload);
-      const delivery = res.data.delivery;
+      let delivery = null;
+      try {
+        const searchRes = await deliveryService.getMyDeliveries({ q: deliveryNumber.toUpperCase(), includeCanceled: true });
+        const list = searchRes.data.deliveries || [];
+        const existing = list
+          .filter(d => String(d.deliveryNumber).toUpperCase() === deliveryNumber.toUpperCase())
+          .sort((a, b) => getDeliveryTimestamp(b) - getDeliveryTimestamp(a))[0];
+        if (existing) {
+          await deliveryService.updateDelivery(existing._id, payload);
+          const refreshed = await deliveryService.getDelivery(existing._id);
+          delivery = refreshed.data.delivery;
+        } else {
+          const res = await deliveryService.createDelivery(payload);
+          delivery = res.data.delivery;
+        }
+      } catch (err) {
+        const res = await deliveryService.createDelivery(payload);
+        delivery = res.data.delivery;
+      }
       // Enviar múltiplas fotos
       for (const file of montagemComprovas) {
         try {
@@ -531,7 +529,6 @@ const ProgramadasEntregas = () => {
           await deliveryService.uploadDocument(delivery._id, 'retiradaCheio', compressed);
         } catch (_) {}
       }
-      await deliveryService.updateDelivery(delivery._id, { status: 'CONTAINER_MONTADO' });
       setToast({ message: 'Container montado com sucesso!', type: 'success' });
       setShowMontagemModal(false); setMontagemProgramacao(null); setMontagemComprovas([]);
       loadProgramacoes();

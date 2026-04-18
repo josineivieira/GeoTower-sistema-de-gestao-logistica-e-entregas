@@ -1386,7 +1386,11 @@ const MonitorEntregas = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters, statsPeriod]);
+  }, [filters, statsPeriod, city]);
+
+  useEffect(() => {
+    setSelectedDelivery(null);
+  }, [city]);
 
   // Carregar dados da Icompany para comparações
   const loadIcompanyData = useCallback(async () => {
@@ -1626,7 +1630,7 @@ const MonitorEntregas = () => {
       }, refreshInterval * 1000);
       return () => clearInterval(t);
     }
-  }, [loadDeliveries, loadIcompanyData, loadControleProtocolosData, autoRefresh, refreshInterval]);
+  }, [loadDeliveries, loadIcompanyData, loadControleProtocolosData, autoRefresh, refreshInterval, city]);
 
   useEffect(() => {
     if (!selectedDelivery) {
@@ -1806,7 +1810,7 @@ const MonitorEntregas = () => {
     // Agrupamento por container
     const grouped = {};
     filteredDeliveries.forEach((d) => {
-      const key = d.containerNumero || d.container || d.deliveryNumber;
+      const key = `${d.city || 'unknown'}|${d.containerNumero || d.container || d.deliveryNumber}`;
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(d);
     });

@@ -717,9 +717,10 @@ const getStatusEntryTime = (delivery, city) => {
 ───────────────────────────────────────────────────────────── */
 const MonitorEntregas = () => {
   const { user } = useAuth();
-  const { city } = useCity();
+  const { city, setCity } = useCity();
   const isGeoMar = () => false; // Libera edição para geomar
   const canEdit = () => user?.role === 'manager' || user?.role === 'geomar';
+  const allowCitySwitcher = user?.city === 'both' || user?.role === 'manager';
   const navigate = useNavigate();
 
   const [viewingDocument, setViewingDocument] = useState(null);
@@ -2116,15 +2117,26 @@ const MonitorEntregas = () => {
             </h1>
           </div>
 
-          <div className="flex-1" />
+            {allowCitySwitcher && (
+              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm">
+                <span className="uppercase tracking-[0.2em] text-gray-400">Cidade</span>
+                <button
+                  type="button"
+                  onClick={() => setCity('manaus')}
+                  className={`rounded-xl px-3 py-1 font-semibold transition ${city === 'manaus' ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-200 hover:bg-white/20'}`}
+                >
+                  Manaus
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCity('itajai')}
+                  className={`rounded-xl px-3 py-1 font-semibold transition ${city === 'itajai' ? 'bg-emerald-600 text-white' : 'bg-white/10 text-gray-200 hover:bg-white/20'}`}
+                >
+                  Itajaí
+                </button>
+              </div>
+            )}
 
-          <span className="hidden lg:flex items-center gap-1.5 text-sm font-mono font-semibold text-gray-400 tabular-nums">
-            <FaClock className="text-purple-400" size={12} />
-            {formatarHora(currentTime, city)}
-          </span>
-
-          {autoRefresh && (
-            <span className="hidden sm:flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               LIVE · {refreshInterval}s
             </span>

@@ -42,13 +42,23 @@ export const AuthProvider = ({ children }) => {
       throw new Error(data?.message || 'Resposta de login inválida');
     }
 
-    // Verificar se o usuário tem permissão para acessar a cidade selecionada
     const userCity = driver.city || 'manaus';
     const isManager = driver.role === 'manager';
 
-    // Gerentes têm acesso a ambas as cidades independente da configuração
-    if (!isManager && userCity !== 'both' && userCity !== city) {
-      throw new Error(`Acesso negado. Seu usuário tem permissão apenas para ${userCity === 'manaus' ? 'Manaus' : 'Itajaí'}`);
+    // Se a cidade for fixa no perfil, usamos essa cidade automaticamente.
+    if (!isManager && userCity !== 'both') {
+      if (city && userCity !== city) {
+        throw new Error(`Acesso negado. Seu usuário tem permissão apenas para ${userCity === 'manaus' ? 'Manaus' : 'Itajaí'}`);
+      }
+      localStorage.setItem('city', userCity);
+    }
+
+    // Usuário com acesso às duas cidades mantém a seleção anterior ou usa Manaus por padrão.
+    if (!isManager && userCity === 'both') {
+      const storedCity = localStorage.getItem('city');
+      if (!storedCity || !['manaus', 'itajai'].includes(storedCity)) {
+        localStorage.setItem('city', 'manaus');
+      }
     }
 
     localStorage.setItem('token', token);

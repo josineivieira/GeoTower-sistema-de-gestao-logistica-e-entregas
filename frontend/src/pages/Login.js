@@ -39,16 +39,18 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!city) {
-      setToast({ message: 'Escolha Manaus ou Itajaí antes de entrar', type: 'error' });
-      return;
-    }
-
     setLoading(true);
 
     try {
-      await login(formData.username, formData.password, city);
+      const response = await login(formData.username, formData.password);
+      const userCity = response?.driver?.city || 'manaus';
+
+      if (userCity !== 'both') {
+        setCity(userCity);
+      } else {
+        const currentCity = localStorage.getItem('city') || 'manaus';
+        setCity(currentCity);
+      }
 
       // Salvar credenciais se "Manter conectado" estiver marcado
       if (rememberMe) {
@@ -58,7 +60,6 @@ const Login = () => {
         }));
         localStorage.setItem('rememberMe', 'true');
       } else {
-        // Se não estiver marcado, remover credenciais salvas
         localStorage.removeItem('loginCredentials');
         localStorage.removeItem('rememberMe');
       }
@@ -245,68 +246,16 @@ const Login = () => {
                 </label>
               </div>
 
-              {/* Seletor de Cidade */}
-              <div>
-                <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
-                  <FaMapMarkerAlt className="text-purple-500" />
-                  Selecione a Cidade
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setCity('manaus')}
-                    className={`relative flex flex-col items-center justify-center gap-1 py-3 px-4 rounded-xl border-2 font-semibold text-sm transition-all duration-200 ${
-                      city === 'manaus'
-                        ? 'border-purple-600 bg-purple-600 text-white shadow-lg shadow-purple-200 scale-[1.03]'
-                        : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-purple-300 hover:bg-purple-50'
-                    }`}
-                  >
-                    <span className="text-xl">🏙️</span>
-                    Manaus
-                    {city === 'manaus' && (
-                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-white rounded-full" />
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setCity('itajai')}
-                    className={`relative flex flex-col items-center justify-center gap-1 py-3 px-4 rounded-xl border-2 font-semibold text-sm transition-all duration-200 ${
-                      city === 'itajai'
-                        ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg shadow-emerald-200 scale-[1.03]'
-                        : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-emerald-300 hover:bg-emerald-50'
-                    }`}
-                  >
-                    <span className="text-xl">⚓</span>
-                    Itajaí
-                    {city === 'itajai' && (
-                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-white rounded-full" />
-                    )}
-                  </button>
-                </div>
-
-                {/* Indicador de cidade selecionada */}
-                {city && (
-                  <p className="text-xs text-center mt-2 font-medium text-gray-400">
-                    ✅ Conectando em{' '}
-                    <span className={city === 'manaus' ? 'text-purple-600' : 'text-emerald-600'}>
-                      {city === 'manaus' ? 'Manaus' : 'Itajaí'}
-                    </span>
-                  </p>
-                )}
-              </div>
 
               {/* Botão Entrar */}
               <button
                 type="submit"
-                disabled={loading || !city}
+                disabled={loading}
                 className={`
                   w-full py-3.5 px-4 rounded-xl font-extrabold text-base text-white
                   transition-all duration-200 shadow-lg active:scale-[0.98]
                   ${loading
                     ? 'bg-gray-400 cursor-not-allowed'
-                    : !city
-                    ? 'bg-gray-300 cursor-not-allowed text-gray-500 shadow-none'
                     : 'bg-gradient-to-r from-purple-700 to-blue-600 hover:from-purple-800 hover:to-blue-700 shadow-purple-200 hover:shadow-purple-300 hover:shadow-xl'
                   }
                 `}

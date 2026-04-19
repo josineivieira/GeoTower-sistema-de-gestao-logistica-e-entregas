@@ -413,14 +413,14 @@ const AdminDashboard = () => {
     let onTime = 0, late = 0, total = 0;
 
     deliveries.forEach(d => {
-      if (!d.dataAgendamento || !d.horarioFimDesova) return;
+      if (!d.dataAgendamento || !d.horarioChegada) return;
       
       const scheduled = new Date(d.dataAgendamento).getTime();
-      const finished = new Date(d.horarioFimDesova).getTime();
+      const arrived = new Date(d.horarioChegada).getTime();
       
-      if (!isNaN(scheduled) && !isNaN(finished)) {
+      if (!isNaN(scheduled) && !isNaN(arrived)) {
         total++;
-        if (finished <= scheduled) {
+        if (arrived <= scheduled) {
           onTime++;
         } else {
           late++;

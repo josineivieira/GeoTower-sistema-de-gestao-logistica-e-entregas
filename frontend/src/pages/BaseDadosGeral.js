@@ -499,7 +499,7 @@ const BaseDadosGeral = () => {
               className="overflow-x-auto overflow-y-auto flex-1 scroll-smooth"
               style={{ scrollbarWidth: 'thin' }}
             >
-              <table className="min-w-full text-sm border-collapse">
+              <table className="min-w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
                 <thead>
                   <tr className="bg-gradient-to-r from-violet-700 to-violet-800 text-white">
                     {[
@@ -625,7 +625,7 @@ const BaseDadosGeral = () => {
                           </span>
                         </td>
                         {/* Obs */}
-                        <td className="px-4 py-3 text-xs text-gray-500 max-w-[180px] truncate" title={item._entrega?.observations}>
+                        <td className="px-4 py-3 text-xs text-gray-500" style={{ maxWidth: '350px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item._entrega?.observations || '—'}>
                           {item._entrega?.observations || '—'}
                         </td>
                       </tr>

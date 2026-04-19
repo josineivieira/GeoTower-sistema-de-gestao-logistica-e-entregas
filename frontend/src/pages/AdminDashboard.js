@@ -450,6 +450,45 @@ const AdminDashboard = () => {
     return { onTime, late, total, otdPercentage, classification, color, bgColor, borderColor, dotColor };
   }, [deliveries]);
 
+  // Produtividade por Faixa de Horas
+  const productivityByHours = React.useMemo(() => {
+    const faixas = {
+      'Até 2h': { count: 0, color: '#10b981', min: 0, max: 2 },
+      '2-6h': { count: 0, color: '#3b82f6', min: 2, max: 6 },
+      '6-9h': { count: 0, color: '#eab308', min: 6, max: 9 },
+      '9h+': { count: 0, color: '#ef4444', min: 9, max: Infinity }
+    };
+
+    let validDeliveries = 0;
+
+    deliveries.forEach(d => {
+      if (!d.horarioChegada || !d.horarioFimDesova) return;
+
+      const chegada = new Date(d.horarioChegada).getTime();
+      const fim = new Date(d.horarioFimDesova).getTime();
+
+      if (isNaN(chegada) || isNaN(fim) || fim < chegada) return;
+
+      const durationMs = fim - chegada;
+      const durationHours = durationMs / (1000 * 60 * 60);
+      validDeliveries++;
+
+      if (durationHours <= 2) faixas['Até 2h'].count++;
+      else if (durationHours <= 6) faixas['2-6h'].count++;
+      else if (durationHours <= 9) faixas['6-9h'].count++;
+      else faixas['9h+'].count++;
+    });
+
+    const data = Object.entries(faixas).map(([label, info]) => ({
+      name: label,
+      count: info.count,
+      percentage: validDeliveries > 0 ? ((info.count / validDeliveries) * 100).toFixed(1) : 0,
+      fill: info.color
+    }));
+
+    return { data, total: validDeliveries };
+  }, [deliveries]);
+
   const exportPayload = () => ({
     statistics, deliveries, topRecebedores, avgCliByRecebedor,
     recebedorCountData, recebedorAvgData, fmtMin,
@@ -1038,6 +1077,76 @@ const AdminDashboard = () => {
                   />
                 </ComposedChart>
               </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Produtividade por Faixa de Horas */}
+          {productivityByHours.total > 0 && (
+            <div className="bg-gradient-to-br from-violet-500/[0.10] via-white/[0.03] to-transparent backdrop-blur-xl rounded-2xl shadow-xl border border-white/[0.08] p-6 hover:border-violet-500/30 hover:shadow-violet-500/10 transition-all duration-300">
+              <ChartHeader
+                title="Produtividade por Faixa de Horas"
+                subtitle="Distribuição do tempo total de operação (chegada até fim desova)"
+                dotColor="#a78bfa"
+              />
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart
+                  data={productivityByHours.data}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                  <XAxis
+                    dataKey="name"
+                    stroke={axisStroke}
+                    tick={{ fontSize: 12, fill: tickFill }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    stroke={axisStroke}
+                    tick={{ fontSize: 11, fill: tickFill }}
+                    axisLine={false}
+                    tickLine={false}
+                    label={{ value: 'Quantidade', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: tickFill } }}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-slate-800 border border-white/10 rounded-lg p-3 shadow-lg">
+                            <p className="text-white font-medium">{data.name}</p>
+                            <p className="text-slate-300">Entregas: {data.count}</p>
+                            <p className="text-slate-300">Percentual: {data.percentage}%</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                    cursor={{ fill: 'rgba(167, 139, 250, 0.1)' }}
+                  />
+                  <Bar
+                    dataKey="count"
+                    radius={[6, 6, 0, 0]}
+                    animationDuration={700}
+                  >
+                    {productivityByHours.data.map((item, i) => (
+                      <Cell key={i} fill={item.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="grid grid-cols-4 gap-3 mt-4">
+                {productivityByHours.data.map((item, i) => (
+                  <div key={i} className="text-center">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }} />
+                      <p className="text-xs font-medium text-slate-400">{item.name}</p>
+                    </div>
+                    <p className="text-sm font-bold text-white">{item.count}</p>
+                    <p className="text-xs text-slate-500">{item.percentage}%</p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

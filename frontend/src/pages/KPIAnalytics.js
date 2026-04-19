@@ -36,17 +36,42 @@ const KPIAnalytics = ({ onToggle }) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      // Usar filtros customizados passados como parâmetro
-      // Não usar filters do state para evitar recarregar a cada digitação
-      const filtersToUse = customFilters !== null ? customFilters : {};
-      const res = await adminService.getDeliveries(filtersToUse);
-      setDeliveries(res.data.deliveries || []);
+      // Carregar dados do Icompany em vez de deliveries
+      const res = await adminService.getIcompanyData();
+      const icompanyData = res.data?.data || [];
+      
+      // Mapear dados do Icompany para formato esperado pelo KPI
+      const mappedData = icompanyData.map(record => ({
+        _id: record._id,
+        deliveryNumber: record.processo || record.codigo || record.geomaritima,
+        processo: record.processo,
+        driverName: record.motorista || 'Sem motorista',
+        userName: record.contratado,
+        status: 'FINALIZADO', // Dados do Icompany são registros finalizados
+        dtSaida: record.dtRetiraPD || record.dtSaida,
+        dtColeta: record.dtColeta,
+        arrivedAt: record.dtChegadaPlanta || record.dtInicioDescarga,
+        horarioChegada: record.dtChegadaPlanta || record.dtInicioDescarga,
+        desovaStartAt: record.dtInicioDescarga,
+        desovaEndAt: record.dtFimDescarga,
+        horarioFimDesova: record.dtFimDescarga,
+        horarioDevolucaoVazio: record.dtDevolucaoCNTR || record.entradaDistrito,
+        dataAgendamento: record.dtColeta || record.dtAgendamentoDescarga,
+        remetente: record.remetente,
+        destinatario: record.destinatario,
+        recebedor: record.remetente || record.destinatario,
+        container: record.container || record.placa,
+        // Copiar outros campos do Icompany
+        ...record
+      }));
+      
+      setDeliveries(mappedData);
     } catch (err) {
       if (err?.response?.status === 401) {
         setToast({ message: 'Sessão expirada. Faça login novamente.', type: 'error' });
         setTimeout(() => navigate('/login'), 1200);
       } else {
-        setToast({ message: 'Erro ao carregar dados', type: 'error' });
+        setToast({ message: 'Erro ao carregar dados do Icompany', type: 'error' });
       }
     } finally {
       setLoading(false);

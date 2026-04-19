@@ -858,6 +858,7 @@ const ProgramacaoManagement = () => {
                 </tbody>
               </table>
             </div>
+          </>
           )}
         </div>
       </div>

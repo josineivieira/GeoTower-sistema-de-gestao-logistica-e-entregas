@@ -587,7 +587,10 @@ const AdminDashboard = () => {
     deliveries.forEach(delivery => {
       // Usar dtAgendamentoDescarga como data de referência para volume diário
       const dateValue = delivery.agendamentoDescarga || delivery.dataAgendamento;
-      const date = dateValue ? new Date(dateValue).toISOString().split('T')[0] : null;
+      const parsed = dateValue ? new Date(dateValue) : null;
+      const date = parsed && !isNaN(parsed)
+        ? `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`
+        : null;
       const numero = delivery.numero || delivery.processo || delivery.deliveryNumber; // Campo "Número" único da entrega
       
       if (!date || !numero) return;

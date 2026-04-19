@@ -583,9 +583,10 @@ const AdminDashboard = () => {
   const dailyVolume = React.useMemo(() => {
     const grouped = {};
     deliveries.forEach(delivery => {
-      // Usar data de entrega como referência para volume diário
-      const date = delivery.dtEntrega ? new Date(delivery.dtEntrega).toISOString().split('T')[0] : null;
-      const numero = delivery.processo; // Campo "Número" único da entrega
+      // Usar data de fim de descarga como referência para volume diário (quando a entrega foi finalizada)
+      const date = delivery.dtFimDescarga || delivery.horarioFimDesova ? 
+        new Date(delivery.dtFimDescarga || delivery.horarioFimDesova).toISOString().split('T')[0] : null;
+      const numero = delivery.processo || delivery.deliveryNumber; // Campo "Número" único da entrega
       
       if (!date || !numero) return;
       
@@ -1423,107 +1424,108 @@ const AdminDashboard = () => {
 
           {/* Volume de Entregas Diárias */}
           {dailyVolume.data.length > 0 && (
-            <div className="bg-gradient-to-br from-teal-500/[0.10] via-white/[0.03] to-transparent backdrop-blur-xl rounded-2xl shadow-xl border border-white/[0.08] p-6 hover:border-teal-500/30 hover:shadow-teal-500/10 transition-all duration-300">
-              <div className="mb-4">
-                <ChartHeader
-                  title="Volume de Entregas Diárias"
-                  subtitle="Quantidade de entregas únicas por dia (agrupadas por Número)"
-                  dotColor="#14b8a6"
-                />
-                <div className="mt-3 grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-white/[0.05] rounded-lg border border-white/[0.08]">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider">Total no Período</p>
-                    <p className="text-2xl font-bold text-teal-400 mt-1">{dailyVolume.totalDeliveries}</p>
-                    <p className="text-xs text-slate-400 mt-1">entregas únicas</p>
+              <div className="bg-gradient-to-br from-teal-500/[0.10] via-white/[0.03] to-transparent backdrop-blur-xl rounded-2xl shadow-xl border border-white/[0.08] p-6 hover:border-teal-500/30 hover:shadow-teal-500/10 transition-all duration-300">
+                <div className="mb-4">
+                  <ChartHeader
+                    title="Volume de Entregas Diárias"
+                    subtitle="Quantidade de entregas únicas por dia (agrupadas por Número)"
+                    dotColor="#14b8a6"
+                  />
+                  <div className="mt-3 grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-white/[0.05] rounded-lg border border-white/[0.08]">
+                      <p className="text-xs text-slate-500 uppercase tracking-wider">Total no Período</p>
+                      <p className="text-2xl font-bold text-teal-400 mt-1">{dailyVolume.totalDeliveries}</p>
+                      <p className="text-xs text-slate-400 mt-1">entregas únicas</p>
+                    </div>
+                    <div className="p-3 bg-white/[0.05] rounded-lg border border-white/[0.08]">
+                      <p className="text-xs text-slate-500 uppercase tracking-wider">Média Diária</p>
+                      <p className="text-2xl font-bold text-teal-400 mt-1">{dailyVolume.avgDeliveries}</p>
+                      <p className="text-xs text-slate-400 mt-1">entregas/dia</p>
+                    </div>
                   </div>
-                  <div className="p-3 bg-white/[0.05] rounded-lg border border-white/[0.08]">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider">Média Diária</p>
-                    <p className="text-2xl font-bold text-teal-400 mt-1">{dailyVolume.avgDeliveries}</p>
-                    <p className="text-xs text-slate-400 mt-1">entregas/dia</p>
+                  <div className="mt-3 p-3 bg-white/[0.05] rounded-lg border border-white/[0.08]">
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                      <span className="text-slate-300">Dias acima da média (picos)</span>
+                      <div className="w-3 h-3 rounded-full bg-slate-500 ml-4"></div>
+                      <span className="text-slate-300">Dias abaixo da média (ociosidade)</span>
+                    </div>
                   </div>
                 </div>
-                <div className="mt-3 p-3 bg-white/[0.05] rounded-lg border border-white/[0.08]">
-                  <div className="flex items-center gap-2 text-xs">
-                    <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                    <span className="text-slate-300">Dias acima da média (picos)</span>
-                    <div className="w-3 h-3 rounded-full bg-slate-500 ml-4"></div>
-                    <span className="text-slate-300">Dias abaixo da média (ociosidade)</span>
-                  </div>
-                </div>
-              </div>
-              <ResponsiveContainer width="100%" height={350}>
-                <BarChart
-                  data={dailyVolume.data}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-                  <XAxis
-                    dataKey="date"
-                    stroke={axisStroke}
-                    tick={{ fontSize: 10, fill: tickFill }}
-                    axisLine={false}
-                    tickLine={false}
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                    tickFormatter={(value) => {
-                      const date = new Date(value);
-                      return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-                    }}
-                  />
-                  <YAxis
-                    stroke={axisStroke}
-                    tick={{ fontSize: 11, fill: tickFill }}
-                    axisLine={false}
-                    tickLine={false}
-                    allowDecimals={false}
-                    label={{ value: 'Entregas Únicas', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: tickFill } }}
-                  />
-                  <Tooltip
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        const date = new Date(data.date);
-                        const formattedDate = date.toLocaleDateString('pt-BR', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          weekday: 'long'
-                        });
-                        return (
-                          <div className="bg-slate-800 border border-white/10 rounded-lg p-3 shadow-lg">
-                            <p className="text-white font-medium">{formattedDate}</p>
-                            <p className="text-teal-400">Entregas Únicas: {data.count}</p>
-                            <p className={`text-xs ${data.isAboveAverage ? 'text-emerald-400' : 'text-slate-400'}`}>
-                              {data.isAboveAverage ? 'Acima da média' : 'Abaixo da média'}
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                    cursor={{ fill: 'rgba(20, 184, 166, 0.1)' }}
-                  />
-                  <ReferenceLine
-                    y={dailyVolume.avgDeliveries}
-                    stroke="#14b8a6"
-                    strokeDasharray="4 4"
-                    strokeOpacity={0.7}
-                    label={{ value: `Média: ${dailyVolume.avgDeliveries}`, position: 'insideTopRight', fontSize: 10, fill: '#14b8a6' }}
-                  />
-                  <Bar
-                    dataKey="count"
-                    radius={[4, 4, 0, 0]}
-                    isAnimationActive
-                    animationDuration={700}
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart
+                    data={dailyVolume.data}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                   >
-                    {dailyVolume.data.map((item, i) => (
-                      <Cell key={i} fill={item.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                    <XAxis
+                      dataKey="date"
+                      stroke={axisStroke}
+                      tick={{ fontSize: 10, fill: tickFill }}
+                      axisLine={false}
+                      tickLine={false}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                      tickFormatter={(value) => {
+                        const date = new Date(value);
+                        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                      }}
+                    />
+                    <YAxis
+                      stroke={axisStroke}
+                      tick={{ fontSize: 11, fill: tickFill }}
+                      axisLine={false}
+                      tickLine={false}
+                      allowDecimals={false}
+                      label={{ value: 'Entregas Únicas', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: tickFill } }}
+                    />
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          const date = new Date(data.date);
+                          const formattedDate = date.toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            weekday: 'long'
+                          });
+                          return (
+                            <div className="bg-slate-800 border border-white/10 rounded-lg p-3 shadow-lg">
+                              <p className="text-white font-medium">{formattedDate}</p>
+                              <p className="text-teal-400">Entregas Únicas: {data.count}</p>
+                              <p className={`text-xs ${data.isAboveAverage ? 'text-emerald-400' : 'text-slate-400'}`}>
+                                {data.isAboveAverage ? 'Acima da média' : 'Abaixo da média'}
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                      cursor={{ fill: 'rgba(20, 184, 166, 0.1)' }}
+                    />
+                    <ReferenceLine
+                      y={dailyVolume.avgDeliveries}
+                      stroke="#14b8a6"
+                      strokeDasharray="4 4"
+                      strokeOpacity={0.7}
+                      label={{ value: `Média: ${dailyVolume.avgDeliveries}`, position: 'insideTopRight', fontSize: 10, fill: '#14b8a6' }}
+                    />
+                    <Bar
+                      dataKey="count"
+                      radius={[4, 4, 0, 0]}
+                      isAnimationActive
+                      animationDuration={700}
+                    >
+                      {dailyVolume.data.map((item, i) => (
+                        <Cell key={i} fill={item.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            );
           )}
 
           {/* ══════ RANKING TABLE ══════ */}

@@ -200,7 +200,7 @@ const AdminDashboard = () => {
         dataAgendamento: record.dtColeta || record.dtAgendamentoDescarga,
         remetente: record.remetente,
         destinatario: record.destinatario,
-        recebedor: record.remetente || record.destinatario,
+        recebedor: city === 'manaus' ? record.destinatario || record.remetente : record.remetente || record.destinatario,
         container: record.container || record.placa,
         contratado: record.contratado,
         ...record
@@ -222,7 +222,7 @@ const AdminDashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [navigate]);
+  }, [navigate, city]);
 
   // Handler para aplicar filtros
   const handleApplyFilters = useCallback(() => {

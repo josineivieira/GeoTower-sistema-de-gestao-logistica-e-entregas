@@ -587,10 +587,23 @@ const AdminDashboard = () => {
     deliveries.forEach(delivery => {
       // Usar dtAgendamentoDescarga como data de referência para volume diário
       const dateValue = delivery.agendamentoDescarga || delivery.dataAgendamento;
-      const parsed = dateValue ? new Date(dateValue) : null;
-      const date = parsed && !isNaN(parsed)
-        ? `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`
-        : null;
+      let date = null;
+      
+      if (dateValue) {
+        // Se for string ISO (2026-04-20T...), extrair a data direto
+        if (typeof dateValue === 'string' && dateValue.includes('T')) {
+          date = dateValue.split('T')[0]; // Pega YYYY-MM-DD
+        } else if (typeof dateValue === 'string') {
+          date = dateValue; // Já é YYYY-MM-DD
+        } else {
+          // Se for Date, converter para formato local
+          const parsed = new Date(dateValue);
+          if (!isNaN(parsed)) {
+            date = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+          }
+        }
+      }
+      
       const numero = delivery.numero || delivery.processo || delivery.deliveryNumber; // Campo "Número" único da entrega
       
       if (!date || !numero) return;

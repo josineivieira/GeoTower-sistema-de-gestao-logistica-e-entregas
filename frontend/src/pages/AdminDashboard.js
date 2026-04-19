@@ -1525,7 +1525,7 @@ const AdminDashboard = () => {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            );
+            )
           }
 
           {/* ══════ RANKING TABLE ══════ */}

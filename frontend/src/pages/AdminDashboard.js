@@ -185,8 +185,9 @@ const AdminDashboard = () => {
       // Mapear dados do Icompany para formato esperado pelo dashboard
       const mappedDeliveries = icompanyData.map(record => ({
         _id: record._id,
-        deliveryNumber: record.processo || record.codigo || record.geomaritima,
+        deliveryNumber: record.processo || record.codigo || record.geomaritima || record.numero,
         processo: record.processo,
+        numero: record.numero || record.processo || record.codigo || record.geomaritima,
         driverName: record.motorista || 'Sem motorista',
         userName: record.contratado,
         status: 'FINALIZADO',
@@ -198,6 +199,7 @@ const AdminDashboard = () => {
         desovaEndAt: record.dtFimDescarga,
         horarioFimDesova: record.dtFimDescarga,
         horarioDevolucaoVazio: record.dtDevolucaoCNTR || record.entradaDistrito,
+        agendamentoDescarga: record.dtAgendamentoDescarga,
         dataAgendamento: record.dtColeta || record.dtAgendamentoDescarga,
         remetente: record.remetente,
         destinatario: record.destinatario,
@@ -583,10 +585,10 @@ const AdminDashboard = () => {
   const dailyVolume = React.useMemo(() => {
     const grouped = {};
     deliveries.forEach(delivery => {
-      // Usar data de fim de descarga como referência para volume diário (quando a entrega foi finalizada)
-      const date = delivery.dtFimDescarga || delivery.horarioFimDesova ? 
-        new Date(delivery.dtFimDescarga || delivery.horarioFimDesova).toISOString().split('T')[0] : null;
-      const numero = delivery.processo || delivery.deliveryNumber; // Campo "Número" único da entrega
+      // Usar dtAgendamentoDescarga como data de referência para volume diário
+      const dateValue = delivery.agendamentoDescarga || delivery.dataAgendamento;
+      const date = dateValue ? new Date(dateValue).toISOString().split('T')[0] : null;
+      const numero = delivery.numero || delivery.processo || delivery.deliveryNumber; // Campo "Número" único da entrega
       
       if (!date || !numero) return;
       

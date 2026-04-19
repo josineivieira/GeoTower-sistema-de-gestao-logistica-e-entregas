@@ -550,6 +550,35 @@ const AdminDashboard = () => {
     return { data, summary };
   }, [deliveries]);
 
+  // Clientes com Maior Impacto Operacional (ordenado por impacto)
+  const clientesByImpact = React.useMemo(() => {
+    if (!clientesByAvgTime.data.length) return { data: [], summary: '' };
+
+    const sortedByImpact = [...clientesByAvgTime.data]
+      .sort((a, b) => b.impactIndex - a.impactIndex)
+      .slice(0, 10);
+
+    if (!sortedByImpact.length) return { data: [], summary: '' };
+
+    const maxImpact = Math.max(...sortedByImpact.map(item => item.impactIndex));
+    const data = sortedByImpact.map(item => {
+      let color = '#10b981'; // verde
+      if (item.impactIndex > maxImpact * 0.75) color = '#ef4444'; // vermelho
+      else if (item.impactIndex > maxImpact * 0.5) color = '#f59e0b'; // laranja
+      else if (item.impactIndex > maxImpact * 0.25) color = '#eab308'; // amarelo
+      
+      return {
+        ...item,
+        color
+      };
+    });
+
+    const top3Impact = data.slice(0, 3).reduce((sum, item) => sum + item.impactIndex, 0) / 3;
+    const summary = `Os 3 principais clientes possuem impacto médio de ${top3Impact.toFixed(1)}`;
+
+    return { data, summary };
+  }, [clientesByAvgTime.data]);
+
   const exportPayload = () => ({
     statistics, deliveries, topRecebedores, avgCliByRecebedor,
     recebedorCountData, recebedorAvgData, fmtMin,
@@ -1279,6 +1308,77 @@ const AdminDashboard = () => {
               </ResponsiveContainer>
               <div className="mt-4 text-xs text-slate-500 flex items-center gap-2">
                 <p>Impacto = Tempo Médio × Quantidade de Entregas</p>
+              </div>
+            </div>
+          )}
+
+          {/* Clientes com Maior Impacto Operacional */}
+          {clientesByImpact.data.length > 0 && (
+            <div className="bg-gradient-to-br from-orange-500/[0.10] via-white/[0.03] to-transparent backdrop-blur-xl rounded-2xl shadow-xl border border-white/[0.08] p-6 hover:border-orange-500/30 hover:shadow-orange-500/10 transition-all duration-300">
+              <div className="mb-4">
+                <ChartHeader
+                  title="Clientes com Maior Impacto Operacional"
+                  subtitle="Top 10 ordenado por índice de impacto (tempo médio × volume)"
+                  dotColor="#f97316"
+                />
+                <div className="mt-3 p-3 bg-white/[0.05] rounded-lg border border-white/[0.08]">
+                  <p className="text-sm text-slate-300">{clientesByImpact.summary}</p>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={clientesByImpact.data}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                  <XAxis
+                    dataKey="cliente"
+                    stroke={axisStroke}
+                    tick={{ fontSize: 10, fill: tickFill }}
+                    axisLine={false}
+                    tickLine={false}
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                  />
+                  <YAxis
+                    stroke={axisStroke}
+                    tick={{ fontSize: 11, fill: tickFill }}
+                    axisLine={false}
+                    tickLine={false}
+                    label={{ value: 'Índice de Impacto', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: tickFill } }}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-slate-800 border border-white/10 rounded-lg p-3 shadow-lg">
+                            <p className="text-white font-medium">{data.cliente}</p>
+                            <p className="text-cyan-400">Entregas: {data.count}</p>
+                            <p className="text-sky-400">Tempo Médio: {data.avgTime}h</p>
+                            <p className="text-orange-400">Impacto: {data.impactIndex}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                    cursor={{ fill: 'rgba(249, 115, 22, 0.1)' }}
+                  />
+                  <Bar
+                    dataKey="impactIndex"
+                    radius={[6, 6, 0, 0]}
+                    isAnimationActive
+                    animationDuration={700}
+                  >
+                    {clientesByImpact.data.map((item, i) => (
+                      <Cell key={i} fill={item.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="mt-4 text-xs text-slate-500 flex items-center justify-center">
+                <p>Maior impacto = maior tempo médio + maior volume = maior consumo de recursos operacionais</p>
               </div>
             </div>
           )}

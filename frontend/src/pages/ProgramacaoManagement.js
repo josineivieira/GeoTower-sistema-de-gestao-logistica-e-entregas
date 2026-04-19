@@ -29,6 +29,8 @@ const ProgramacaoManagement = () => {
   const [toast, setToast] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [selectedProgramacoes, setSelectedProgramacoes] = useState(new Set());
 
   const [filters, setFilters] = useState({ search: '', status: 'all', startDate: '', endDate: '' });
   const [showFilters, setShowFilters] = useState(false);
@@ -236,6 +238,54 @@ const ProgramacaoManagement = () => {
       catch (err) { showToast('Erro ao excluir', 'error'); }
     }
   };
+
+  const handleToggleSelect = (id) => {
+    setSelectedProgramacoes(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = () => {
+    setSelectedProgramacoes(prev => {
+      if (filteredProgramacoes.length > 0 && prev.size === filteredProgramacoes.length) {
+        return new Set();
+      }
+      return new Set(filteredProgramacoes.map(p => p._id));
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedProgramacoes);
+    if (!ids.length) {
+      showToast('Selecione ao menos uma programação para excluir', 'error');
+      return;
+    }
+    if (!window.confirm(`Confirmar exclusão de ${ids.length} programação(ões)?`)) return;
+
+    try {
+      setBulkDeleting(true);
+      await Promise.all(ids.map(id => adminService.deleteProgramacao(id)));
+      showToast(`${ids.length} programação(ões) excluída(s)`);
+      setSelectedProgramacoes(new Set());
+      loadProgramacoes();
+    } catch (err) {
+      showToast('Erro ao excluir programações', 'error');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedProgramacoes.size === 0) return;
+    setSelectedProgramacoes(prev => {
+      const validIds = new Set(filteredProgramacoes.map(p => p._id));
+      const next = new Set([...prev].filter(id => validIds.has(id)));
+      return next;
+    });
+  }, [filteredProgramacoes]);
 
   const statusConfig = {
     AGENDADO:           { color: '#3b82f6', bg: '#eff6ff', label: 'Agendado' },
@@ -636,10 +686,41 @@ const ProgramacaoManagement = () => {
               <p style={{ fontSize: 15, fontWeight: 500, margin: 0 }}>Nenhuma programação encontrada</p>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <>
+              <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderBottom: '1px solid #e5e7eb', backgroundColor: '#f8fafc' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={handleBulkDelete}
+                    disabled={selectedProgramacoes.size === 0 || bulkDeleting}
+                    style={{
+                      padding: '10px 16px', borderRadius: 10, border: '1px solid #e5e7eb',
+                      background: selectedProgramacoes.size === 0 ? '#f3f4f6' : '#ef4444',
+                      color: selectedProgramacoes.size === 0 ? '#9ca3af' : '#fff',
+                      cursor: selectedProgramacoes.size === 0 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {bulkDeleting ? 'Excluindo...' : 'Excluir selecionadas'}
+                  </button>
+                  {selectedProgramacoes.size > 0 && (
+                    <span style={{ fontSize: 13, color: '#4b5563' }}>{selectedProgramacoes.size} selecionada(s)</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 13, color: '#6b7280' }}>
+                  Selecione linhas para excluir várias programações de uma vez.
+                </div>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e5e7eb' }}>
+                    <th style={{ padding: '14px 16px', textAlign: 'center', borderRight: '1px solid #f1f5f9' }}>
+                      <input
+                        type="checkbox"
+                        checked={filteredProgramacoes.length > 0 && selectedProgramacoes.size === filteredProgramacoes.length}
+                        onChange={handleToggleSelectAll}
+                      />
+                    </th>
                     {[
                       { key: 'processo', label: 'Processo' },
                       { key: 'recebedor', label: getRecebedorLabel(city) },
@@ -683,6 +764,13 @@ const ProgramacaoManagement = () => {
                         onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f5f6ff'}
                         onMouseLeave={e => e.currentTarget.style.backgroundColor = idx % 2 === 0 ? '#fff' : '#fafbfc'}
                       >
+                        <td style={{ padding: '14px 16px', textAlign: 'center', borderRight: '1px solid #f1f5f9' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedProgramacoes.has(prog._id)}
+                            onChange={() => handleToggleSelect(prog._id)}
+                          />
+                        </td>
                         <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#1e1b4b' }}>
                           {prog.processo}
                         </td>

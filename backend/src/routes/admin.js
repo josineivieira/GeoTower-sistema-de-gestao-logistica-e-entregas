@@ -408,7 +408,14 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
 
     if (agendamentoStart || agendamentoEnd) {
       const sd = agendamentoStart ? parseDateTime(agendamentoStart) : null;
-      const ed = agendamentoEnd ? parseDateTime(agendamentoEnd) : null;
+      let ed = agendamentoEnd ? parseDateTime(agendamentoEnd) : null;
+      const isDateOnly = (value) => typeof value === 'string' && (
+        /^\d{4}-\d{2}-\d{2}$/.test(value.trim()) ||
+        /^\d{2}\/\d{2}\/\d{4}$/.test(value.trim())
+      );
+      if (ed && isDateOnly(agendamentoEnd)) {
+        ed = new Date(ed.getTime() + 24 * 60 * 60 * 1000 - 1);
+      }
       filtered = filtered.filter(d => {
         const scheduleStr = getProgramacaoDateString(d, city);
         const scheduleDate = parseDateTime(scheduleStr);
@@ -2449,7 +2456,26 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
     
     console.log(`[SYNC ICOMPANY] Filtrando por cidade: ${city}`, cityFilter);
 
-    // Buscar registros do Icompany filtrados por cidade
+    const { startDate, endDate } = req.query;
+
+    // Filtrar também pelo intervalo de agendamento, se informado
+    if (startDate || endDate) {
+      const dateFilter = {};
+      if (startDate) {
+        const parsedStart = new Date(`${startDate}T00:00:00.000`);
+        if (!isNaN(parsedStart.getTime())) dateFilter.$gte = parsedStart;
+      }
+      if (endDate) {
+        const parsedEnd = new Date(`${endDate}T23:59:59.999`);
+        if (!isNaN(parsedEnd.getTime())) dateFilter.$lte = parsedEnd;
+      }
+      if (Object.keys(dateFilter).length) {
+        cityFilter.dtAgendamentoDescarga = dateFilter;
+        console.log('[SYNC ICOMPANY] Aplicando filtro de período de agendamento:', { startDate, endDate, dateFilter });
+      }
+    }
+
+    // Buscar registros do Icompany filtrados por cidade e, se aplicável, por período de agendamento
     const icompanyRecords = await Icompany.find(cityFilter).lean();
     console.log(`[SYNC ICOMPANY] Encontrados ${icompanyRecords.length} registros no Icompany`);
 

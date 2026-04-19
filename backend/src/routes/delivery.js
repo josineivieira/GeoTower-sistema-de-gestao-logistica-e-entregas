@@ -24,8 +24,10 @@ if (useS3) {
       cb(null, dir);
     },
     filename: (req, file, cb) => {
-      // Nome será ajustado no handler
-      cb(null, file.originalname);
+      // Garantir nome temporário único para evitar sobrescrita de uploads múltiplos
+      const ext = path.extname(file.originalname) || '.jpg';
+      const uniqueFilename = `${Date.now()}_${Math.round(Math.random() * 1e9)}${ext}`;
+      cb(null, uniqueFilename);
     }
   });
   upload = multer({ storage });
@@ -33,6 +35,29 @@ if (useS3) {
 
 const s3 = useS3 ? require('../storage/s3') : null;
 const { normalizeDeliveryForResponse } = require('../utils/storageUtils');
+
+function normalizeDocumentEntries(entry) {
+  if (!entry) return [];
+  if (Array.isArray(entry)) {
+    return entry.flatMap(item => normalizeDocumentEntries(item));
+  }
+  if (typeof entry === 'string') {
+    try {
+      const parsed = JSON.parse(entry);
+      return normalizeDocumentEntries(parsed);
+    } catch (_) {
+      return [entry];
+    }
+  }
+  return [entry];
+}
+
+function getDocumentUniqueKey(entry) {
+  if (!entry) return '';
+  if (typeof entry === 'string') return entry;
+  if (typeof entry === 'object') return entry.url || entry.path || entry.link || JSON.stringify(entry);
+  return String(entry);
+}
 
 // Helper to normalize db (works with sync mockdb or async mongo adapter)
 async function getDb(req) {
@@ -508,9 +533,7 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
     }
 
     const docs = delivery.documents || {};
-    if (docs[type] && !Array.isArray(docs[type])) {
-      docs[type] = [docs[type]];
-    }
+    const existing = normalizeDocumentEntries(docs[type]);
 
     const savedFiles = [];
 
@@ -569,18 +592,7 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
         return res.status(500).json({ message: 'Erro ao fazer upload: nenhum arquivo salvo (verifique configuração de R2 ou armazenamento local)' });
       }
 
-      // Merge existing docs and newly saved files
-      let existing = docs[type];
-      if (existing && typeof existing === 'string') {
-        try {
-          existing = JSON.parse(existing);
-        } catch (e) {
-          existing = [existing];
-        }
-      }
-      existing = Array.isArray(existing) ? existing : (existing ? [existing] : []);
-
-      // Combine and deduplicate by unique identifier (prefer url or path)
+      // Combine existing docs and newly saved files
       const allFiles = [...existing, ...savedFiles];
       const deduped = [];
       const seen = new Set();
@@ -674,9 +686,7 @@ router.post("/:id/upload-and-update", auth, upload.array("file"), async (req, re
 
     // First, upload the documents
     const docs = delivery.documents || {};
-    if (docs[documentType] && !Array.isArray(docs[documentType])) {
-      docs[documentType] = [docs[documentType]];
-    }
+    const existing = normalizeDocumentEntries(docs[documentType]);
 
     const savedFiles = [];
 
@@ -748,23 +758,13 @@ router.post("/:id/upload-and-update", auth, upload.array("file"), async (req, re
       }
 
       // Update documents in DB
-      let existing = docs[documentType];
-      if (existing && typeof existing === 'string') {
-        try {
-          existing = JSON.parse(existing);
-        } catch (e) {
-          existing = [existing];
-        }
-      }
-      existing = Array.isArray(existing) ? existing : (existing ? [existing] : []);
-
       const allFiles = [...existing, ...savedFiles];
       const deduped = [];
       const seen = new Set();
       
       for (const item of allFiles) {
         if (!item) continue;
-        const uniqueKey = item.url || item.path || item.link || JSON.stringify(item);
+        const uniqueKey = getDocumentUniqueKey(item);
         if (seen.has(uniqueKey)) continue;
         seen.add(uniqueKey);
         deduped.push(item);

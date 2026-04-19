@@ -1938,7 +1938,31 @@ const MonitorEntregas = () => {
       return main;
     });
 
-    // Ordena por atualização - sempre coloca entregas atualizadas no topo
+    // Quando estiver em "Geral", ordena por HORA STATUS (descendente - maior para menor)
+    if (statsPeriod === 'general') {
+      const sorted = result.sort((a, b) => {
+        const aTime = getStatusEntryTime(a, city);
+        const bTime = getStatusEntryTime(b, city);
+        
+        // Converter para timestamp para comparação
+        const aTs = aTime ? new Date(aTime).getTime() : 0;
+        const bTs = bTime ? new Date(bTime).getTime() : 0;
+        
+        // Ordenar descendente (maior para menor)
+        return bTs - aTs;
+      });
+      
+      // eslint-disable-next-line no-console
+      console.log('DEBUG sorted displayList (GERAL - HORA STATUS DESC):', sorted.map(d => ({
+        id: d._id,
+        processNumber: d.processoCAB,
+        horaStatus: getStatusEntryTime(d, city)
+      })));
+      
+      return sorted;
+    }
+    
+    // Para outros períodos, ordena por atualização - sempre coloca entregas atualizadas no topo
     const sorted = result.sort((a, b) => {
       const aT = recentlyUpdated[a._id];
       const bT = recentlyUpdated[b._id];
@@ -1974,7 +1998,31 @@ const MonitorEntregas = () => {
     })));
     
     return sorted;
-  }, [filteredDeliveries, recentlyUpdated]);
+  }, [filteredDeliveries, recentlyUpdated, statsPeriod, city
+          bT,
+          cmp,
+          resultado: cmp > 0 ? 'b primeiro' : 'a primeiro'
+        });
+        return cmp;
+      }
+      
+      // Só uma foi atualizada: coloca no topo
+      if (aT && !bT) return -1;
+      if (!aT && bT) return 1;
+      
+      // Nenhuma foi atualizada: mantém ordem original
+      return 0;
+    });
+    
+    // eslint-disable-next-line no-console
+    console.log('DEBUG sorted displayList:', sorted.map(d => ({
+      id: d._id,
+      processNumber: d.processoCAB,
+      timestamp: recentlyUpdated[d._id]
+    })));
+    
+    return sorted;
+  }, [filteredDeliveries, recentlyUpdated, statsPeriod, city]);
 
   useLayoutEffect(() => {
     if (!prevPositions.current || Object.keys(prevPositions.current).length === 0) return;

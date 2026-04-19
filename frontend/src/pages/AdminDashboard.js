@@ -489,9 +489,9 @@ const AdminDashboard = () => {
     return { data, total: validDeliveries };
   }, [deliveries]);
 
-  // Pareto de Clientes por Tempo de Operação
-  const paretoClientesByTime = React.useMemo(() => {
-    const clienteTimes = {};
+  // Clientes por Tempo Médio de Operação
+  const clientesByAvgTime = React.useMemo(() => {
+    const clienteData = {};
 
     deliveries.forEach(d => {
       if (!d.horarioChegada || !d.horarioFimDesova || !d.recebedor) return;
@@ -502,36 +502,52 @@ const AdminDashboard = () => {
       if (isNaN(chegada) || isNaN(fim) || fim < chegada) return;
 
       const durationHours = (fim - chegada) / (1000 * 60 * 60);
-      clienteTimes[d.recebedor] = (clienteTimes[d.recebedor] || 0) + durationHours;
+      
+      if (!clienteData[d.recebedor]) {
+        clienteData[d.recebedor] = { totalHours: 0, count: 0 };
+      }
+      
+      clienteData[d.recebedor].totalHours += durationHours;
+      clienteData[d.recebedor].count += 1;
     });
 
-    if (Object.keys(clienteTimes).length === 0) {
-      return { data: [], summary: '', totalHours: 0 };
+    if (Object.keys(clienteData).length === 0) {
+      return { data: [], summary: '' };
     }
 
-    const sorted = Object.entries(clienteTimes)
-      .map(([cliente, horas]) => ({ cliente, horas: parseFloat(horas.toFixed(1)) }))
-      .sort((a, b) => b.horas - a.horas);
+    const processed = Object.entries(clienteData)
+      .map(([cliente, data]) => {
+        const avgTime = data.totalHours / data.count;
+        const impactIndex = avgTime * data.count;
+        return {
+          cliente: cliente || 'SEM CLIENTE',
+          avgTime: parseFloat(avgTime.toFixed(2)),
+          count: data.count,
+          totalHours: parseFloat(data.totalHours.toFixed(1)),
+          impactIndex: parseFloat(impactIndex.toFixed(1))
+        };
+      })
+      .sort((a, b) => b.avgTime - a.avgTime)
+      .slice(0, 10);
 
-    const totalHours = sorted.reduce((sum, item) => sum + item.horas, 0);
+    const top3Avg = processed.slice(0, 3).reduce((sum, item) => sum + item.avgTime, 0) / 3;
+    const summary = `Os 3 principais clientes possuem tempo médio de ${top3Avg.toFixed(2)}h por entrega`;
 
-    let cumulative = 0;
-    const data = sorted.map(item => {
-      const percentage = (item.horas / totalHours) * 100;
-      cumulative += percentage;
+    // Cores progressivas: verde (rápido) a vermelho (lento)
+    const maxAvg = Math.max(...processed.map(item => item.avgTime));
+    const data = processed.map(item => {
+      let color = '#10b981'; // verde
+      if (item.avgTime > maxAvg * 0.75) color = '#ef4444'; // vermelho
+      else if (item.avgTime > maxAvg * 0.5) color = '#f59e0b'; // laranja
+      else if (item.avgTime > maxAvg * 0.25) color = '#eab308'; // amarelo
+      
       return {
-        name: item.cliente || 'SEM CLIENTE',
-        hours: item.horas,
-        percentage: parseFloat(percentage.toFixed(1)),
-        cumulative: parseFloat(cumulative.toFixed(1))
+        ...item,
+        color
       };
     });
 
-    const top3Hours = data.slice(0, 3).reduce((sum, item) => sum + item.hours, 0);
-    const top3Percentage = data.slice(0, 3).reduce((sum, item) => sum + item.percentage, 0);
-    const summary = `Os 3 principais clientes representam ${top3Percentage.toFixed(1)}% do tempo total (${top3Hours.toFixed(1)}h)`;
-
-    return { data, summary, totalHours };
+    return { data, summary };
   }, [deliveries]);
 
   const exportPayload = () => ({
@@ -1195,87 +1211,75 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* Pareto — Clientes por Tempo de Operação */}
-          {paretoClientesByTime.data.length > 0 && (
+          {/* Clientes por Tempo Médio de Operação */}
+          {clientesByAvgTime.data.length > 0 && (
             <div className="bg-gradient-to-br from-sky-500/[0.10] via-white/[0.03] to-transparent backdrop-blur-xl rounded-2xl shadow-xl border border-white/[0.08] p-6 hover:border-sky-500/30 hover:shadow-sky-500/10 transition-all duration-300">
               <div className="mb-4">
                 <ChartHeader
-                  title="Pareto de Clientes por Tempo de Operação"
-                  subtitle="Concentração de tempo operacional por cliente"
+                  title="Clientes por Tempo Médio de Operação"
+                  subtitle="Top 10 clientes com maior tempo médio por entrega"
                   dotColor="#0ea5e9"
                 />
                 <div className="mt-3 p-3 bg-white/[0.05] rounded-lg border border-white/[0.08]">
-                  <p className="text-sm text-slate-300">{paretoClientesByTime.summary}</p>
+                  <p className="text-sm text-slate-300">{clientesByAvgTime.summary}</p>
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={350}>
-                <ComposedChart
-                  data={paretoClientesByTime.data}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                <BarChart
+                  data={clientesByAvgTime.data}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 150, bottom: 5 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} horizontal={false} />
                   <XAxis
-                    dataKey="name"
+                    type="number"
                     stroke={axisStroke}
                     tick={{ fontSize: 11, fill: tickFill }}
                     axisLine={false}
                     tickLine={false}
+                    label={{ value: 'Tempo Médio (horas)', position: 'bottom', offset: 10, style: { fill: tickFill } }}
                   />
                   <YAxis
-                    yAxisId="left"
+                    type="category"
+                    dataKey="cliente"
                     stroke={axisStroke}
-                    tick={{ fontSize: 11, fill: tickFill }}
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
                     axisLine={false}
                     tickLine={false}
-                    label={{ value: 'Tempo (horas)', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: tickFill } }}
-                  />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    stroke={axisStroke}
-                    tick={{ fontSize: 11, fill: tickFill }}
-                    axisLine={false}
-                    tickLine={false}
-                    domain={[0, 100]}
-                    label={{ value: 'Acumulado (%)', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fill: tickFill } }}
                   />
                   <Tooltip
-                    content={({ active, payload, label }) => {
+                    content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload;
                         return (
                           <div className="bg-slate-800 border border-white/10 rounded-lg p-3 shadow-lg">
-                            <p className="text-white font-medium">{label}</p>
-                            <p className="text-cyan-400">Tempo: {data.hours}h</p>
-                            <p className="text-sky-400">Percentual: {data.percentage}%</p>
-                            <p className="text-emerald-400">Acumulado: {data.cumulative}%</p>
+                            <p className="text-white font-medium">{data.cliente}</p>
+                            <p className="text-cyan-400">Tempo Médio: {data.avgTime}h</p>
+                            <p className="text-sky-400">Entregas: {data.count}</p>
+                            <p className="text-emerald-400">Total: {data.totalHours}h</p>
+                            <p className="text-yellow-400">Impacto: {data.impactIndex}</p>
                           </div>
                         );
                       }
                       return null;
                     }}
+                    cursor={{ fill: 'rgba(14, 165, 233, 0.1)' }}
                   />
                   <Bar
-                    yAxisId="left"
-                    dataKey="hours"
-                    fill="#0ea5e9"
-                    radius={[4, 4, 0, 0]}
+                    dataKey="avgTime"
+                    radius={[0, 6, 6, 0]}
                     isAnimationActive
                     animationDuration={700}
-                  />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="cumulative"
-                    stroke="#f59e0b"
-                    strokeWidth={3}
-                    dot={{ fill: '#f59e0b', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: '#f59e0b', strokeWidth: 2 }}
-                    isAnimationActive
-                    animationDuration={1000}
-                  />
-                </ComposedChart>
+                  >
+                    {clientesByAvgTime.data.map((item, i) => (
+                      <Cell key={i} fill={item.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
+              <div className="mt-4 text-xs text-slate-500 flex items-center gap-2">
+                <p>Impacto = Tempo Médio × Quantidade de Entregas</p>
+              </div>
             </div>
           )}
 

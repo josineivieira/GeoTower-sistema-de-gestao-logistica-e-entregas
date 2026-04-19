@@ -2457,8 +2457,13 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
     console.log(`[SYNC ICOMPANY] Filtrando por cidade: ${city}`, cityFilter);
 
     const { startDate, endDate } = req.query;
+    console.log('[SYNC ICOMPANY] Query params recebidos:', { startDate, endDate });
 
-    // Filtrar também pelo intervalo de agendamento, se informado
+    // Primeiro, buscar registros do Icompany apenas por cidade, ANTES de aplicar filtro de data
+    let icompanyRecords = await Icompany.find({ origem: cityFilter.origem ? cityFilter.origem : undefined }).lean();
+    console.log(`[SYNC ICOMPANY] Encontrados ${icompanyRecords.length} registros no Icompany (antes de filtro de data)`);
+
+    // Agora aplicar filtro de data se informado
     if (startDate || endDate) {
       const dateFilter = {};
       if (startDate) {
@@ -2471,14 +2476,21 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
       }
       if (Object.keys(dateFilter).length) {
         const scheduleField = city === 'itajai' ? 'dtColeta' : 'dtAgendamentoDescarga';
-        cityFilter[scheduleField] = dateFilter;
-        console.log('[SYNC ICOMPANY] Aplicando filtro de período de agendamento:', { city, scheduleField, startDate, endDate, dateFilter });
+        console.log('[SYNC ICOMPANY] Aplicando filtro de período:', { city, scheduleField, startDate, endDate, dateFilter });
+        
+        // Filtrar por data no array já carregado
+        icompanyRecords = icompanyRecords.filter(rec => {
+          const dateVal = rec[scheduleField];
+          if (!dateVal) return false;
+          const dateObj = new Date(dateVal);
+          if (isNaN(dateObj.getTime())) return false;
+          if (dateFilter.$gte && dateObj < dateFilter.$gte) return false;
+          if (dateFilter.$lte && dateObj > dateFilter.$lte) return false;
+          return true;
+        });
+        console.log(`[SYNC ICOMPANY] Após filtro de data: ${icompanyRecords.length} registros`);
       }
     }
-
-    // Buscar registros do Icompany filtrados por cidade e, se aplicável, por período de agendamento
-    const icompanyRecords = await Icompany.find(cityFilter).lean();
-    console.log(`[SYNC ICOMPANY] Encontrados ${icompanyRecords.length} registros no Icompany`);
 
     // Buscar todos os processos já existentes para evitar duplicação e permitir atualização
     const existingProgramacoes = await ProgramacaoEntrega.find({}).lean();

@@ -16,7 +16,7 @@ import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, ReferenceLine,
-  ComposedChart, Line, PieChart, Pie, Legend
+  ComposedChart, Line, PieChart, Pie
 } from 'recharts';
 
 /* ─── Paleta ─── */
@@ -581,84 +581,6 @@ const AdminDashboard = () => {
     return { data, summary };
   }, [clientesByAvgTime.data]);
 
-  // Distribuição de Entregas por Dia da Semana por Transportador
-  const weeklyDistributionByCarrier = React.useMemo(() => {
-    const grouped = {};
-    const uniqueDeliveries = new Set();
-
-    // Primeiro, agrupar por número para evitar duplicatas
-    deliveries.forEach(delivery => {
-      const numero = delivery.numero || delivery.processo || delivery.deliveryNumber;
-      const contratado = delivery.contratado || delivery.userName || 'SEM TRANSPORTADOR';
-      const dateValue = delivery.agendamentoDescarga || delivery.dataAgendamento;
-
-      if (!numero || !dateValue) return;
-
-      // Aplicar filtro de data se especificado
-      if (filters.startDate || filters.endDate) {
-        const deliveryDate = new Date(dateValue);
-        if (isNaN(deliveryDate)) return;
-
-        const startFilter = filters.startDate ? new Date(filters.startDate) : null;
-        const endFilter = filters.endDate ? new Date(filters.endDate) : null;
-
-        if (startFilter && deliveryDate < startFilter) return;
-        if (endFilter && deliveryDate > endFilter) return;
-      }
-
-      // Converter data para dia da semana
-      const parsed = new Date(dateValue);
-      if (isNaN(parsed)) return;
-
-      // Extrair data em hora local
-      const date = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
-      const dayOfWeek = parsed.getDay(); // 0 = Domingo, 1 = Segunda, etc.
-
-      const key = `${numero}-${date}`;
-      if (uniqueDeliveries.has(key)) return; // Já contou essa entrega
-      uniqueDeliveries.add(key);
-
-      const dayName = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dayOfWeek];
-
-      if (!grouped[contratado]) grouped[contratado] = {};
-      if (!grouped[contratado][dayName]) grouped[contratado][dayName] = 0;
-      grouped[contratado][dayName]++;
-    });
-
-    // Preparar dados para gráfico de barras empilhadas
-    const daysOfWeek = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
-    const carriers = Object.keys(grouped).sort();
-
-    // Calcular totais por transportador
-    const carrierTotals = carriers.map(carrier => {
-      const total = daysOfWeek.reduce((sum, day) => sum + (grouped[carrier][day] || 0), 0);
-      return { carrier, total };
-    }).sort((a, b) => b.total - a.total);
-
-    // Top 10 transportadores
-    const topCarriers = carrierTotals.slice(0, 10).map(item => item.carrier);
-
-    // Dados para o gráfico
-    const data = daysOfWeek.map(day => {
-      const entry = { day };
-      topCarriers.forEach(carrier => {
-        entry[carrier] = grouped[carrier][day] || 0;
-      });
-      return entry;
-    });
-
-    // Estatísticas
-    const totalDeliveries = uniqueDeliveries.size;
-    const summary = `Total de ${totalDeliveries} entregas únicas distribuídas entre ${carriers.length} transportadores`;
-
-    return {
-      data,
-      carriers: topCarriers,
-      summary,
-      totalDeliveries
-    };
-  }, [deliveries, filters.startDate, filters.endDate]);
-
   // Volume de Entregas Diárias (agrupado por Número único)
   const dailyVolume = React.useMemo(() => {
     const grouped = {};
@@ -1194,94 +1116,6 @@ const AdminDashboard = () => {
               </ResponsiveContainer>
               <div className="mt-4 text-xs text-slate-500 flex items-center justify-center">
                 <p>Maior impacto = maior tempo médio + maior volume = maior consumo de recursos operacionais</p>
-              </div>
-            </div>
-          )}
-
-          {/* Distribuição de Entregas por Dia da Semana por Transportador */}
-          {weeklyDistributionByCarrier.data.length > 0 && (
-            <div className="bg-gradient-to-br from-blue-500/[0.10] via-white/[0.03] to-transparent backdrop-blur-xl rounded-2xl shadow-xl border border-white/[0.08] p-6 hover:border-blue-500/30 hover:shadow-blue-500/10 transition-all duration-300">
-              <div className="mb-4">
-                <ChartHeader
-                  title="Distribuição de Entregas por Dia da Semana por Transportador"
-                  subtitle="Análise de distribuição de carga e possíveis desequilíbrios operacionais"
-                  dotColor="#3b82f6"
-                />
-                <div className="mt-3 p-3 bg-white/[0.05] rounded-lg border border-white/[0.08]">
-                  <p className="text-sm text-slate-300">{weeklyDistributionByCarrier.summary}</p>
-                </div>
-              </div>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart
-                  data={weeklyDistributionByCarrier.data}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-                  <XAxis
-                    dataKey="day"
-                    stroke={axisStroke}
-                    tick={{ fontSize: 11, fill: tickFill }}
-                    axisLine={false}
-                    tickLine={false}
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                  />
-                  <YAxis
-                    stroke={axisStroke}
-                    tick={{ fontSize: 11, fill: tickFill }}
-                    axisLine={false}
-                    tickLine={false}
-                    allowDecimals={false}
-                    label={{ value: 'Entregas Únicas', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: tickFill } }}
-                  />
-                  <Tooltip
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        const total = payload.reduce((sum, entry) => sum + entry.value, 0);
-                        return (
-                          <div className="bg-slate-800 border border-white/10 rounded-lg p-3 shadow-lg max-w-xs">
-                            <p className="text-white font-medium mb-2">{label}</p>
-                            {payload.map((entry, i) => {
-                              const percentage = total > 0 ? ((entry.value / total) * 100).toFixed(1) : 0;
-                              return (
-                                <div key={i} className="flex items-center gap-2 mt-1">
-                                  <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
-                                  <span className="text-white text-sm flex-1">{entry.dataKey}</span>
-                                  <span className="text-cyan-400 font-semibold">{entry.value}</span>
-                                  <span className="text-slate-400 text-xs">({percentage}%)</span>
-                                </div>
-                              );
-                            })}
-                            <div className="border-t border-white/10 mt-2 pt-2">
-                              <p className="text-emerald-400 text-sm font-medium">Total: {total} entregas</p>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                    cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
-                  />
-                  <Legend
-                    wrapperStyle={{ paddingTop: '20px' }}
-                    iconType="rect"
-                  />
-                  {weeklyDistributionByCarrier.carriers.map((carrier, index) => (
-                    <Bar
-                      key={carrier}
-                      dataKey={carrier}
-                      stackId="a"
-                      fill={PALETTE[index % PALETTE.length]}
-                      radius={index === weeklyDistributionByCarrier.carriers.length - 1 ? [0, 4, 4, 0] : [0, 0, 0, 0]}
-                      isAnimationActive
-                      animationDuration={700}
-                    />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
-              <div className="mt-4 text-xs text-slate-500 flex items-center justify-center">
-                <p>Gráfico empilhado mostra distribuição de carga por dia da semana - identifique concentrações e oportunidades de balanceamento</p>
               </div>
             </div>
           )}

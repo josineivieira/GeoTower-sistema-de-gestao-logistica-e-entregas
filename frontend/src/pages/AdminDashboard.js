@@ -167,6 +167,51 @@ const AdminDashboard = () => {
   // Filtros de data
   const [filters, setFilters] = useState({ startDate: '', endDate: '' });
 
+  // Helpers para conversão de data DD/MM/YYYY ←→ ISO
+  const parseDDMMYYYY = (str) => {
+    if (!str || typeof str !== 'string') return null;
+    const [d, m, y] = str.split('/');
+    if (!d || !m || !y) return null;
+    const date = new Date(y, m - 1, d);
+    return isNaN(date.getTime()) ? null : date;
+  };
+
+  const formatDDMMYYYY = (date) => {
+    if (!date) return '';
+    const d = String(date.getDate()).padStart(2, '0');
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const y = date.getFullYear();
+    return `${d}/${m}/${y}`;
+  };
+
+  // Função para filtrar entregas por data (agendamentoDescarga)
+  const filterDeliveriesByDate = (deliveries) => {
+    if (!filters.startDate && !filters.endDate) return deliveries;
+    
+    const startFilter = filters.startDate ? parseDDMMYYYY(filters.startDate) : null;
+    const endFilter = filters.endDate ? parseDDMMYYYY(filters.endDate) : null;
+    
+    return deliveries.filter(d => {
+      const dateValue = d.agendamentoDescarga || d.dataAgendamento;
+      if (!dateValue) return !startFilter && !endFilter;
+      
+      const deliveryDate = new Date(dateValue);
+      if (isNaN(deliveryDate.getTime())) return false;
+      
+      if (startFilter) {
+        startFilter.setHours(0, 0, 0, 0);
+        if (deliveryDate < startFilter) return false;
+      }
+      
+      if (endFilter) {
+        endFilter.setHours(23, 59, 59, 999);
+        if (deliveryDate > endFilter) return false;
+      }
+      
+      return true;
+    });
+  };
+
   const chartRefs = {
     area:        useRef(null),
     barDriver:   useRef(null),
@@ -262,9 +307,12 @@ const AdminDashboard = () => {
   };
 
   const dailyDeliveriesData = React.useMemo(() => {
+    // Aplicar filtro de data primeiro
+    const filteredDeliveries = filterDeliveriesByDate(deliveries);
+    
     // Base principal: mesmo que os outros gráficos (data de programação)
     const grouped = {};
-    deliveries.forEach(d => {
+    filteredDeliveries.forEach(d => {
       const dateValue = getProgramacaoDate(d, city);
       if (!dateValue) return;
 
@@ -288,13 +336,16 @@ const AdminDashboard = () => {
       return result;
     }
 
-    // Fallback para dados do backend se deliveries estiver vazio
+    // Fallback para dados do backend se filteredDeliveries estiver vazio
     return statistics?.dailyDeliveries || [];
-  }, [statistics, deliveries, city]);
+  }, [statistics, deliveries, filters, city]);
 
   const topRecebedores = React.useMemo(() => {
+    // Aplicar filtro de data
+    const filteredDeliveries = filterDeliveriesByDate(deliveries);
+    
     const counts = {};
-    deliveries.forEach(d => {
+    filteredDeliveries.forEach(d => {
       const key = d.recebedor || '-';
       counts[key] = (counts[key] || 0) + 1;
     });
@@ -302,7 +353,7 @@ const AdminDashboard = () => {
       .map(([recebedor, count]) => ({ recebedor, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
-  }, [deliveries]);
+  }, [deliveries, filters]);
 
   const topContratados = React.useMemo(() => {
     if (statistics?.deliveriesByDriver && statistics.deliveriesByDriver.length > 0) {
@@ -343,8 +394,9 @@ const AdminDashboard = () => {
   }, [deliveries, programacoes, statistics]);
 
   const avgCliByRecebedor = React.useMemo(() => {
+    const filteredDeliveries = filterDeliveriesByDate(deliveries);
     const sums = {}, cnts = {};
-    deliveries.forEach(d => {
+    filteredDeliveries.forEach(d => {
       const key = d.recebedor || '-';
       const mins = getCliMinutes(d);
       if (mins != null) {
@@ -355,7 +407,7 @@ const AdminDashboard = () => {
     const res = {};
     Object.keys(sums).forEach(k => { res[k] = sums[k] / cnts[k]; });
     return res;
-  }, [deliveries]);
+  }, [deliveries, filters]);
 
   const recebedorCountData = React.useMemo(
     () => topRecebedores.map(r => ({ name: r.recebedor, count: r.count })),
@@ -376,9 +428,10 @@ const AdminDashboard = () => {
   );
 
   const avgCliOverall = React.useMemo(() => {
-    const vals = deliveries.map(d => getCliMinutes(d)).filter(v => v != null);
+    const filteredDeliveries = filterDeliveriesByDate(deliveries);
+    const vals = filteredDeliveries.map(d => getCliMinutes(d)).filter(v => v != null);
     return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-  }, [deliveries]);
+  }, [deliveries, filters]);
 
   // Dados para gráfico de Pareto - Concentração de Transportadores
   const paretoTransportadores = React.useMemo(() => {
@@ -412,9 +465,10 @@ const AdminDashboard = () => {
 
   // Indicador de OTD (On-Time Delivery)
   const otdMetrics = React.useMemo(() => {
+    const filteredDeliveries = filterDeliveriesByDate(deliveries);
     let onTime = 0, late = 0, total = 0;
 
-    deliveries.forEach(d => {
+    filteredDeliveries.forEach(d => {
       if (!d.dataAgendamento || !d.horarioChegada) return;
       
       const scheduled = new Date(d.dataAgendamento).getTime();
@@ -450,10 +504,11 @@ const AdminDashboard = () => {
     const dotColor = otdPercentage >= 90 ? '#10b981' : otdPercentage >= 75 ? '#eab308' : '#ef4444';
 
     return { onTime, late, total, otdPercentage, classification, color, bgColor, borderColor, dotColor };
-  }, [deliveries]);
+  }, [deliveries, filters]);
 
   // Produtividade por Faixa de Horas
   const productivityByHours = React.useMemo(() => {
+    const filteredDeliveries = filterDeliveriesByDate(deliveries);
     const faixas = {
       'Até 2h': { count: 0, color: '#10b981', min: 0, max: 2 },
       '2-6h': { count: 0, color: '#3b82f6', min: 2, max: 6 },
@@ -463,7 +518,7 @@ const AdminDashboard = () => {
 
     let validDeliveries = 0;
 
-    deliveries.forEach(d => {
+    filteredDeliveries.forEach(d => {
       if (!d.horarioChegada || !d.horarioFimDesova) return;
 
       const chegada = new Date(d.horarioChegada).getTime();
@@ -489,13 +544,14 @@ const AdminDashboard = () => {
     }));
 
     return { data, total: validDeliveries };
-  }, [deliveries]);
+  }, [deliveries, filters]);
 
   // Clientes por Tempo Médio de Operação
   const clientesByAvgTime = React.useMemo(() => {
+    const filteredDeliveries = filterDeliveriesByDate(deliveries);
     const clienteData = {};
 
-    deliveries.forEach(d => {
+    filteredDeliveries.forEach(d => {
       if (!d.horarioChegada || !d.horarioFimDesova || !d.recebedor) return;
 
       const chegada = new Date(d.horarioChegada).getTime();
@@ -550,7 +606,7 @@ const AdminDashboard = () => {
     });
 
     return { data, summary };
-  }, [deliveries]);
+  }, [deliveries, filters]);
 
   // Clientes com Maior Impacto Operacional (ordenado por impacto)
   const clientesByImpact = React.useMemo(() => {
@@ -721,19 +777,39 @@ const AdminDashboard = () => {
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 mb-1">Data Inicial</label>
                     <input
-                      type="date"
+                      type="text"
+                      placeholder="DD/MM/YYYY"
                       value={filters.startDate}
-                      onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
-                      className="bg-slate-800 border border-white/10 rounded-lg px-2 py-1 text-xs text-white"
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        let formatted = val;
+                        if (val.length > 0) {
+                          if (val.length <= 2) formatted = val;
+                          else if (val.length <= 4) formatted = `${val.slice(0, 2)}/${val.slice(2)}`;
+                          else formatted = `${val.slice(0, 2)}/${val.slice(2, 4)}/${val.slice(4, 8)}`;
+                        }
+                        setFilters(f => ({ ...f, startDate: formatted }));
+                      }}
+                      className="bg-slate-800 border border-white/10 rounded-lg px-2 py-1 text-xs text-white w-28"
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 mb-1">Data Final</label>
                     <input
-                      type="date"
+                      type="text"
+                      placeholder="DD/MM/YYYY"
                       value={filters.endDate}
-                      onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
-                      className="bg-slate-800 border border-white/10 rounded-lg px-2 py-1 text-xs text-white"
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        let formatted = val;
+                        if (val.length > 0) {
+                          if (val.length <= 2) formatted = val;
+                          else if (val.length <= 4) formatted = `${val.slice(0, 2)}/${val.slice(2)}`;
+                          else formatted = `${val.slice(0, 2)}/${val.slice(2, 4)}/${val.slice(4, 8)}`;
+                        }
+                        setFilters(f => ({ ...f, endDate: formatted }));
+                      }}
+                      className="bg-slate-800 border border-white/10 rounded-lg px-2 py-1 text-xs text-white w-28"
                     />
                   </div>
                   <button

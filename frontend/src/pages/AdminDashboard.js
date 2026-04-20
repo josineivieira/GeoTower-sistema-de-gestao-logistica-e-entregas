@@ -804,9 +804,9 @@ const AdminDashboard = () => {
                 badge={`${deliveries.length} registros`}
               />
               <KpiCard
-                title="Motoristas Ativos"
-                value={deliveries.filter((d, i, arr) => arr.findIndex(x => x.driverName === d.driverName) === i).length}
-                subtitle="Contratados com entregas"
+                title="Contratados Ativos"
+                value={deliveries.filter((d, i, arr) => arr.findIndex(x => x.userName === d.userName) === i).length}
+                subtitle="Transportadores com entregas"
                 icon={FiTruck}
                 color="cyan"
                 sparkData={dailyDeliveriesData}

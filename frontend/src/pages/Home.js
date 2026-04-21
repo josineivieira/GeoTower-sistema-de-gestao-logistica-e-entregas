@@ -988,18 +988,20 @@ const Home = () => {
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-14">
-              <MonitorCard
-                onClick={() => navigate('/admin')}
-                disabled={false}
-                accentColor={B.v}
-                accentDark={B.vD}
-                icon={<FaChartBar />}
-                titleIcon={<FaChartLine />}
-                title="Dashboard Analytics"
-                description="Análise completa com KPIs, gráficos interativos e relatórios detalhados sobre todas as operações logísticas da empresa."
-                viewOnly={false}
-                delay={0}
-              />
+              {!hasAccess(['geomar']) && (
+                <MonitorCard
+                  onClick={() => navigate('/admin')}
+                  disabled={false}
+                  accentColor={B.v}
+                  accentDark={B.vD}
+                  icon={<FaChartBar />}
+                  titleIcon={<FaChartLine />}
+                  title="Dashboard Analytics"
+                  description="Análise completa com KPIs, gráficos interativos e relatórios detalhados sobre todas as operações logísticas da empresa."
+                  viewOnly={false}
+                  delay={0}
+                />
+              )}
               <MonitorCard
                 onClick={() => navigate('/monitor-entregas')}
                 disabled={false}
@@ -1012,18 +1014,34 @@ const Home = () => {
                 viewOnly={false}
                 delay={120}
               />
-              <MonitorCard
-                onClick={() => navigate('/admin/performance')}
-                disabled={false}
-                accentColor="#EC4899"
-                accentDark="#BE185D"
-                icon={<FaChartLine />}
-                titleIcon={<FaBullseye />}
-                title="Análise de Produtividade"
-                description="Análise profunda de capacidade e produtividade com visualização de imbalances no agendamento e impacto dos contratados."
-                viewOnly={false}
-                delay={240}
-              />
+              {hasAccess(['geomar']) && (
+                <MonitorCard
+                  onClick={() => navigate('/base-dados-geral')}
+                  disabled={false}
+                  accentColor="#059669"
+                  accentDark="#047857"
+                  icon={<FaTable />}
+                  titleIcon={<FaDatabase />}
+                  title="Base de Dados"
+                  description="Visualizar todos os dados das programações em formato de tabela completa."
+                  viewOnly={false}
+                  delay={240}
+                />
+              )}
+              {!hasAccess(['geomar']) && (
+                <MonitorCard
+                  onClick={() => navigate('/admin/performance')}
+                  disabled={false}
+                  accentColor="#EC4899"
+                  accentDark="#BE185D"
+                  icon={<FaChartLine />}
+                  titleIcon={<FaBullseye />}
+                  title="Análise de Produtividade"
+                  description="Análise profunda de capacidade e produtividade com visualização de imbalances no agendamento e impacto dos contratados."
+                  viewOnly={false}
+                  delay={240}
+                />
+              )}
             </div>
 
             {/* Management grid: Oculto para geomar e gestor_contratado */}
@@ -1120,30 +1138,6 @@ const Home = () => {
                       delay={480}
                     />
                   )}
-                </div>
-              </>
-            )}
-
-            {/* GeoMar Section: Base de Dados */}
-            {role && role.toLowerCase() === 'geomar' && (
-              <>
-                <SectionHeader
-                  icon={<FaTable style={{ color: '#059669', fontSize: '0.85rem' }} />}
-                  title="Dados"
-                  subtitle="Acesso à base de dados de programações"
-                  delay={60}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-14">
-                  <ManageCard
-                    onClick={() => navigate('/base-dados-geral')}
-                    accentColor="#059669"
-                    accentDark="#047857"
-                    icon={<FaTable />}
-                    titleIcon={<FaDatabase />}
-                    title="Base de Dados"
-                    description="Visualizar todos os dados das programações em formato de tabela completa."
-                    delay={0}
-                  />
                 </div>
               </>
             )}

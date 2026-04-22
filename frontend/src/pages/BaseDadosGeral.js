@@ -6,8 +6,8 @@ import {
   FaChevronLeft, FaChevronRight, FaEdit, FaTrash,
   FaDatabase, FaSearch, FaCheckCircle, FaExclamationCircle,
   FaCalendarAlt, FaTruck, FaBoxOpen, FaFileAlt, FaSave,
-  FaSort, FaSortUp, FaSortDown, FaFilterCircle, FaCheckSquare,
-  FaSquare, FaTimesCircle
+  FaSort, FaSortUp, FaSortDown, FaCheckSquare,
+  FaSquare
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useCity } from '../contexts/CityContext';
@@ -780,7 +780,7 @@ const BaseDadosGeral = () => {
           {Object.keys(columnFilters).length > 0 && (
             <div className="bg-violet-50 border-b border-violet-200 px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <FaFilterCircle size={16} className="text-violet-600" />
+                <FaFilter size={16} className="text-violet-600" />
                 <span className="text-sm font-semibold text-violet-700">
                   {Object.keys(columnFilters).reduce((sum, col) => sum + (columnFilters[col]?.length || 0), 0)} filtro(s) ativo(s)
                 </span>

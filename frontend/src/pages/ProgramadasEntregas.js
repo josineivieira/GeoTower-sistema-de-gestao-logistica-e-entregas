@@ -282,6 +282,40 @@ const ProgramadasEntregas = () => {
 
   useEffect(() => { loadProgramacoes(); }, [user]);
 
+  // Sincronização automática a cada 30 segundos para múltiplos clientes/dispositivos
+  useEffect(() => {
+    const syncInterval = setInterval(() => {
+      console.log('🔄 [ProgramadasEntregas] Sincronizando programações...');
+      loadProgramacoes();
+      // Se houver entrega aberta, sincroniza também
+      if (currentDelivery && currentDelivery._id) {
+        deliveryService.getDelivery(currentDelivery._id).then(res => {
+          const updated = res.data.delivery;
+          console.log('🔄 [ProgramadasEntregas] Status atual do servidor:', {
+            deliveryNumber: updated.deliveryNumber,
+            statusAtual: currentDelivery.status,
+            statusNoServidor: updated.status,
+            mudou: updated.status !== currentDelivery.status
+          });
+          // Só atualiza se o status mudou (detecta mudanças de outros clientes)
+          if (updated.status !== currentDelivery.status) {
+            console.log('⚠️ [ProgramadasEntregas] STATUS MUDOU! Atualizando de', currentDelivery.status, 'para', updated.status);
+            setCurrentDelivery(updated);
+            setToast({ 
+              message: `Status atualizado: ${updated.status}`, 
+              type: 'info' 
+            });
+            setTimeout(() => setToast(null), 3000);
+          }
+        }).catch((err) => {
+          console.error('❌ [ProgramadasEntregas] Erro ao sincronizar:', err.message);
+        });
+      }
+    }, 30000); // A cada 30 segundos
+
+    return () => clearInterval(syncInterval);
+  }, [currentDelivery]);
+
   useEffect(() => {
     if (!programacoes || programacoes.length === 0) return;
     const params = new URLSearchParams(location.search);
@@ -414,6 +448,12 @@ const ProgramadasEntregas = () => {
       if (existing) {
         setCurrentDelivery(existing);
         setCurrentProgramacao(p);
+        console.log('🔍 [ProgramadasEntregas] Entrega restaurada:', {
+          deliveryNumber: existing.deliveryNumber,
+          status: existing.status,
+          currentStep: existing.currentStep,
+          _id: existing._id
+        });
         if (existing.status === 'CONTAINER_MONTADO') {
           await deliveryService.updateDelivery(existing._id, { status: 'A_CAMINHO_DO_CLIENTE' });
           existing.status = 'A_CAMINHO_DO_CLIENTE';
@@ -569,9 +609,10 @@ const ProgramadasEntregas = () => {
     setCurrentStep(step);
     try {
       if (currentDelivery && currentDelivery._id) {
+        // Salva passo no backend
         await deliveryService.updateDelivery(currentDelivery._id, { currentStep: step });
-        const refreshed = await deliveryService.getDelivery(currentDelivery._id);
-        setCurrentDelivery(refreshed.data.delivery);
+        // Apenas refaz fetch se for crítico, não em cada mudança de passo
+        // Isso evita perder dados locais não salvos
       }
     } catch (_) {}
   };

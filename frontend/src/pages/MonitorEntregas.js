@@ -17,7 +17,7 @@ import {
   FaClock, FaBox, FaTruck, FaCheckCircle, FaTimesCircle, FaFilePdf,
   FaUsers, FaDolly, FaSearch, FaExpand, FaPalette, FaCog, FaSlidersH,
   FaPlus, FaMapMarkerAlt, FaShippingFast, FaUndo, FaChevronRight,
-  FaUser, FaBoxOpen, FaBuilding, FaLayerGroup
+  FaUser, FaBoxOpen, FaBuilding, FaLayerGroup, FaSort, FaSortUp, FaSortDown
 } from 'react-icons/fa';
 import { MdLocalShipping, MdDashboard } from 'react-icons/md';
 import manaConfig from '../config/cities/manaus.json';
@@ -796,6 +796,7 @@ const MonitorEntregas = () => {
     tempoStatusMin: '', tempoStatusMax: ''
   });
   const [openFilterKey, setOpenFilterKey] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ column: null, direction: 'asc' }); // 'asc', 'desc', null
   const filterHeaderRef = useRef(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [statsPeriod, setStatsPeriod] = useState('today');
@@ -910,6 +911,22 @@ const MonitorEntregas = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [openFilterKey]);
+
+  /* Handle Sort */
+  const handleSort = useCallback((colKey) => {
+    setSortConfig((prev) => {
+      if (prev.column === colKey) {
+        // Cycle: asc → desc → null
+        if (prev.direction === 'asc') {
+          return { column: colKey, direction: 'desc' };
+        } else if (prev.direction === 'desc') {
+          return { column: null, direction: 'asc' };
+        }
+      }
+      // First click on new column
+      return { column: colKey, direction: 'asc' };
+    });
+  }, []);
 
   useEffect(() => {
     const el = document.createElement('style');
@@ -1919,7 +1936,7 @@ const MonitorEntregas = () => {
       //   });
       // }, RISE_WINDOW + 500);
     }
-  }, [filteredDeliveries]);
+  }, [filteredDeliveries, sortConfig, city, statsPeriod, recentlyUpdated]);
 
   // Agrupa entregas por container
   const displayList = useMemo(() => {
@@ -1938,9 +1955,60 @@ const MonitorEntregas = () => {
       return main;
     });
 
-    // Quando estiver em "Geral", ordena por HORA STATUS (descendente - maior para menor)
-    if (statsPeriod === 'general') {
-      const sorted = result.sort((a, b) => {
+    // Apply custom sort if configured
+    let sorted = [...result];
+    if (sortConfig.column) {
+      sorted = sorted.sort((a, b) => {
+        let aVal, bVal;
+
+        switch (sortConfig.column) {
+          case 'processo':
+            aVal = (a.processoCAB || '').toLowerCase();
+            bVal = (b.processoCAB || '').toLowerCase();
+            break;
+          case 'container':
+            aVal = (a.containerNumero || a.container || '').toLowerCase();
+            bVal = (b.containerNumero || b.container || '').toLowerCase();
+            break;
+          case 'recebedor':
+            aVal = (a.recebedor || '').toLowerCase();
+            bVal = (b.recebedor || '').toLowerCase();
+            break;
+          case 'status':
+            aVal = (a.status || '').toLowerCase();
+            bVal = (b.status || '').toLowerCase();
+            break;
+          case 'horaStatus':
+            aVal = new Date(getStatusEntryTime(a, city) || 0).getTime();
+            bVal = new Date(getStatusEntryTime(b, city) || 0).getTime();
+            break;
+          case 'tempoStatus':
+            aVal = a.tempoStatusMinutos || 0;
+            bVal = b.tempoStatusMinutos || 0;
+            break;
+          case 'agendamento':
+            aVal = new Date(getProgramacaoDate(a, city) || 0).getTime();
+            bVal = new Date(getProgramacaoDate(b, city) || 0).getTime();
+            break;
+          case 'pontualidade':
+            aVal = (a.pontualidade || '').toLowerCase();
+            bVal = (b.pontualidade || '').toLowerCase();
+            break;
+          default:
+            return 0;
+        }
+
+        // Compare
+        if (typeof aVal === 'string' && typeof bVal === 'string') {
+          const cmp = aVal.localeCompare(bVal);
+          return sortConfig.direction === 'asc' ? cmp : -cmp;
+        }
+        const cmp = aVal - bVal;
+        return sortConfig.direction === 'asc' ? cmp : -cmp;
+      });
+    } else if (statsPeriod === 'general') {
+      // Default sort for "Geral": HORA STATUS (descendente)
+      sorted = sorted.sort((a, b) => {
         const aTime = getStatusEntryTime(a, city);
         const bTime = getStatusEntryTime(b, city);
         
@@ -1951,52 +2019,25 @@ const MonitorEntregas = () => {
         // Ordenar descendente (maior para menor)
         return bTs - aTs;
       });
-      
-      // eslint-disable-next-line no-console
-      console.log('DEBUG sorted displayList (GERAL - HORA STATUS DESC):', sorted.map(d => ({
-        id: d._id,
-        processNumber: d.processoCAB,
-        horaStatus: getStatusEntryTime(d, city)
-      })));
-      
+
       return sorted;
+    } else {
+      // Para outros períodos, ordena por atualização
+      sorted = sorted.sort((a, b) => {
+        const aT = recentlyUpdated[a._id];
+        const bT = recentlyUpdated[b._id];
+        
+        if (aT && bT) {
+          return bT - aT;
+        }
+        
+        if (aT && !bT) return -1;
+        if (!aT && bT) return 1;
+        
+        return 0;
+      });
     }
-    
-    // Para outros períodos, ordena por atualização - sempre coloca entregas atualizadas no topo
-    const sorted = result.sort((a, b) => {
-      const aT = recentlyUpdated[a._id];
-      const bT = recentlyUpdated[b._id];
-      
-      // Ambas foram atualizadas: ordena por timestamp (mais recente no topo)
-      if (aT && bT) {
-        const cmp = bT - aT;
-        // eslint-disable-next-line no-console
-        console.log('DEBUG sort ambas atualizadas:', {
-          a_id: a._id,
-          b_id: b._id,
-          aT,
-          bT,
-          cmp,
-          resultado: cmp > 0 ? 'b primeiro' : 'a primeiro'
-        });
-        return cmp;
-      }
-      
-      // Só uma foi atualizada: coloca no topo
-      if (aT && !bT) return -1;
-      if (!aT && bT) return 1;
-      
-      // Nenhuma foi atualizada: mantém ordem original
-      return 0;
-    });
-    
-    // eslint-disable-next-line no-console
-    console.log('DEBUG sorted displayList:', sorted.map(d => ({
-      id: d._id,
-      processNumber: d.processoCAB,
-      timestamp: recentlyUpdated[d._id]
-    })));
-    
+
     return sorted;
   }, [filteredDeliveries, recentlyUpdated, statsPeriod, city]);
 
@@ -2197,17 +2238,17 @@ const MonitorEntregas = () => {
   ].filter(Boolean).length;
 
   const HEADER_CONFIGS = [
-    { key: 'processo', name: 'Processo', type: 'text', placeholder: 'Buscar processo...' },
-    { key: 'container', name: 'Container', type: 'text', placeholder: 'Buscar container...' },
-    { key: 'recebedor', name: 'Recebedor', type: 'text', placeholder: 'Buscar recebedor...' },
-    { key: 'status', name: 'Status', type: 'select', options: getStatusOptions() },
-    { key: 'horaStatus', name: 'Hora Status', type: 'dateRange', startKey: 'horaStatusFrom', endKey: 'horaStatusTo' },
-    { key: 'tempoStatus', name: 'Tempo Status', type: 'range', minKey: 'tempoStatusMin', maxKey: 'tempoStatusMax' },
-    { key: 'progresso', name: 'Progresso', type: 'none' },
-    { key: 'agendamento', name: 'Agendamento', type: 'dateRange', startKey: 'startDate', endKey: 'endDate' },
-    { key: 'pontualidade', name: 'Pontualidade', type: 'select', options: punctualityOptions },
-    { key: 'check', name: 'Check', type: 'none' },
-    { key: 'detalhes', name: 'Detalhes', type: 'none' }
+    { key: 'processo', name: 'Processo', type: 'text', placeholder: 'Buscar processo...', sortable: true },
+    { key: 'container', name: 'Container', type: 'text', placeholder: 'Buscar container...', sortable: true },
+    { key: 'recebedor', name: 'Recebedor', type: 'text', placeholder: 'Buscar recebedor...', sortable: true },
+    { key: 'status', name: 'Status', type: 'select', options: getStatusOptions(), sortable: true },
+    { key: 'horaStatus', name: 'Hora Status', type: 'dateRange', startKey: 'horaStatusFrom', endKey: 'horaStatusTo', sortable: true },
+    { key: 'tempoStatus', name: 'Tempo Status', type: 'range', minKey: 'tempoStatusMin', maxKey: 'tempoStatusMax', sortable: true },
+    { key: 'progresso', name: 'Progresso', type: 'none', sortable: false },
+    { key: 'agendamento', name: 'Agendamento', type: 'dateRange', startKey: 'startDate', endKey: 'endDate', sortable: true },
+    { key: 'pontualidade', name: 'Pontualidade', type: 'select', options: punctualityOptions, sortable: true },
+    { key: 'check', name: 'Check', type: 'none', sortable: false },
+    { key: 'detalhes', name: 'Detalhes', type: 'none', sortable: false }
   ];
 
   return (
@@ -2417,6 +2458,27 @@ const MonitorEntregas = () => {
                           className="inline-flex items-center gap-2 text-left text-[11px] font-bold uppercase tracking-wider"
                         >
                           <span>{col.name}</span>
+                          {col.sortable && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSort(col.key);
+                              }}
+                              className="p-0.5 rounded hover:bg-white/10 transition"
+                              title="Ordenar A-Z/Z-A"
+                            >
+                              {sortConfig.column === col.key ? (
+                                sortConfig.direction === 'asc' ? (
+                                  <FaSortUp className="text-xs text-emerald-400" />
+                                ) : (
+                                  <FaSortDown className="text-xs text-emerald-400" />
+                                )
+                              ) : (
+                                <FaSort className="text-xs text-gray-400 hover:text-white" />
+                              )}
+                            </button>
+                          )}
                           {col.type !== 'none' && (
                             <FaFilter
                               className={`text-xs transition-colors duration-200 ${isFilterActive(col.key) ? 'text-emerald-300' : 'text-gray-400 hover:text-white'}`}

@@ -464,7 +464,7 @@ const ProgramadasEntregas = () => {
           case 'AGUARDANDO_DESOVA': restoredStep = 'confirmDesova'; break;
           case 'EM_DESOVA': restoredStep = 'desovaProgress'; break;
           case 'AGUARDANDO_ANEXO': case 'ANEXANDO_DOCUMENTOS_FINAIS': restoredStep = 'finalDocs'; break;
-          case 'AGUARDANDO_AGENDAMENTO_DEVOLUCAO': restoredStep = 'askSchedule'; break;
+          case 'DESOVA_FINALIZADA': case 'AGUARDANDO_AGENDAMENTO_DEVOLUCAO': restoredStep = 'askSchedule'; break;
           case 'ENTREGUE': case 'DEVOLVENDO_CONTAINER': case 'FINALIZADO': restoredStep = 'welcome'; break;
           default: restoredStep = 'welcome';
         }

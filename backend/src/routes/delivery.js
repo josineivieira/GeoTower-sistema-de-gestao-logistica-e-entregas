@@ -343,7 +343,6 @@ router.put("/:id", auth, async (req, res) => {
     }
 
     const updated = await updateDeliveryAtomic(delivery._id, updates);
-    return res.json({ delivery: normalizeDeliveryForResponse(updated) });
 
     // Se houver horário de devolução vazio agora (seja de antes ou desta chamada),
     // marca containerReturned na programação vinculada

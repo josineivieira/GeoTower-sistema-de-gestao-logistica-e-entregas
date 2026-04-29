@@ -154,8 +154,8 @@ function getCityFromEstab(estab) {
   };
 }
 
-function mapToIcompany(row) {
-  const codigo = normalizeText(firstValue(row, ["Codigo do processo", "Código do processo", "Codigo", "Código"]));
+function mapToIcompany(row, index = 0) {
+  let codigo = normalizeText(firstValue(row, ["Codigo do processo", "Código do processo", "Codigo", "Código"]));
   const processo = normalizeText(firstValue(row, [
     "Cod. processo integracao",
     "Cód. processo integração",
@@ -169,6 +169,10 @@ function mapToIcompany(row) {
   const container = normalizeText(firstValue(row, ["Nº Container", "Numero", "Número", "Container"]));
   const estab = normalizeText(firstValue(row, ["Estab."]));
   const cityInfo = getCityFromEstab(estab);
+  if (!codigo) {
+    const fallback = processo || nrProcesso || container || "SEM-IDENTIFICADOR";
+    codigo = `AUTO-${estab || "SEM"}-${fallback}-${index + 2}`;
+  }
 
   const dtRetiraPD = toLocalDateTimeString(firstValue(row, [
     "Dt. retirada P.D.",
@@ -259,7 +263,7 @@ function readExcel() {
   const rows = XLSX.utils.sheet_to_json(sheet, { defval: null }).map(cleanRow);
 
   return rows
-    .map(mapToIcompany)
+    .map((row, index) => mapToIcompany(row, index))
     .filter((doc) => hasValue(doc.codigo) || hasValue(doc.processo) || hasValue(doc.containerNumero));
 }
 

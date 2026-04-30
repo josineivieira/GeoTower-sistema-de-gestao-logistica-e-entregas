@@ -524,7 +524,7 @@ const DeliveryModal = ({
               )}
               {selectedDelivery.submissionObservation && (
                 <div className="bg-indigo-500/10 border border-indigo-400/20 rounded-xl p-4">
-                  <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-black mb-2">Observação de Submissão</p>
+                  <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-black mb-2">Observação de Canhoto Retido</p>
                   <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap break-words">{selectedDelivery.submissionObservation}</p>
                 </div>
               )}

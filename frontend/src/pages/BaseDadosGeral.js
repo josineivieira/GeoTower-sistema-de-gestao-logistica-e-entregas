@@ -1110,7 +1110,7 @@ const BaseDadosGeral = () => {
                       <textarea rows={2} className={inputCls} value={editForm.observations}
                         onChange={(e) => setEditForm({ ...editForm, observations: e.target.value })} />
                     </Field>
-                    <Field label="Obs. Submissão">
+                    <Field label="Obs. Canhoto Retido">
                       <textarea rows={2} className={inputCls} value={editForm.submissionObservation}
                         onChange={(e) => setEditForm({ ...editForm, submissionObservation: e.target.value })} />
                     </Field>

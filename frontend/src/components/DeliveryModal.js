@@ -450,7 +450,6 @@ const DeliveryModal = ({
                   </div>
                   <div className="min-w-0">
                     <p className="text-[10px] text-blue-300 uppercase tracking-widest font-black">Observações</p>
-                    <p className="text-xs text-gray-400">Base Icompany, operação e justificativas da entrega</p>
                   </div>
                 </div>
                 <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] text-gray-300 font-bold uppercase tracking-wide">
@@ -465,7 +464,6 @@ const DeliveryModal = ({
                       <FaBuilding className="text-cyan-300" size={13} />
                       <div>
                         <p className="text-[10px] text-cyan-300 uppercase tracking-widest font-black">Observação Icompany</p>
-                        <p className="text-[11px] text-cyan-100/60">Informação vinda da base sincronizada</p>
                       </div>
                     </div>
                     <p className="px-4 py-3 text-sm leading-relaxed text-gray-100 whitespace-pre-wrap break-words">
@@ -480,7 +478,6 @@ const DeliveryModal = ({
                       <FaUser className="text-violet-300" size={13} />
                       <div>
                         <p className="text-[10px] text-violet-300 uppercase tracking-widest font-black">Operação</p>
-                        <p className="text-[11px] text-violet-100/60">Anotações registradas durante o processo</p>
                       </div>
                     </div>
                     <div className="p-3 space-y-2">

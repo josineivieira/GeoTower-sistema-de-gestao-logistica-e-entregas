@@ -572,7 +572,6 @@ const Icompany = () => {
               </div>
               <div>
                 <div className="ic-title">Icompany</div>
-                <div className="ic-subtitle">Base operacional da planilha nova</div>
               </div>
             </div>
 

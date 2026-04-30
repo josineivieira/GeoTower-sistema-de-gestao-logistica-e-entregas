@@ -8,7 +8,7 @@ const Suporte = () => {
   // Ajuste aqui os dados oficiais do suporte
   const whatsappNumber = '5592982760029';
   const whatsappDisplay = '(92) 98276-0029';
-  const supportEmail = 'suportegeolog@outlook.com';
+  const supportEmail = 'geotower@geotransportes.com.br';
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">

@@ -4,7 +4,7 @@ import {
   FaBox, FaTruck, FaExclamationTriangle, FaShareAlt, FaDownload,
   FaEye, FaTrash, FaEdit, FaUndo, FaMapMarkerAlt, FaShippingFast,
   FaFilePdf, FaUsers, FaDolly, FaSearch, FaBuilding, FaLayerGroup,
-  FaUser, FaBoxOpen
+  FaUser, FaBoxOpen, FaFileAlt
 } from 'react-icons/fa';
 import { getDesovaStatusLabel, getDesovaStepLabel } from '../utils/cityLabels';
 import { formatarData, formatarAgendamento, formatarHora } from '../utils/date';
@@ -135,6 +135,62 @@ const DeliveryModal = ({
   const isControleDocumentoPresent = (value) => {
     return value === true;
   };
+
+  const parseObservationSections = () => {
+    const raw = [selectedDelivery.observations, selectedDelivery.observacoes]
+      .filter(Boolean)
+      .map((value) => String(value).trim())
+      .filter(Boolean)
+      .join('\n');
+
+    const sections = { icompany: '', operation: [] };
+    if (!raw) return sections;
+
+    const marker = 'Observação Icompany:';
+    const lines = raw.split(/\r?\n/);
+    let current = raw.includes(marker) ? null : 'operation';
+
+    lines.forEach((line) => {
+      const text = line.trim();
+      if (!text) return;
+
+      if (text.startsWith(marker)) {
+        current = 'icompany';
+        sections.icompany = text.slice(marker.length).trim();
+        return;
+      }
+
+      const startsOperationNote =
+        text.startsWith('Criada a partir') ||
+        text.startsWith('Montagem finalizada') ||
+        text.startsWith('[') ||
+        text.startsWith('(');
+
+      if (current === 'icompany' && !startsOperationNote) {
+        sections.icompany = sections.icompany ? `${sections.icompany}\n${text}` : text;
+        return;
+      }
+
+      current = 'operation';
+      sections.operation.push(text);
+    });
+
+    return sections;
+  };
+
+  const formatObservationEntry = (entry) => {
+    const match = String(entry || '').match(/^\[([^\]]+)\]\s*(.*)$/);
+    if (!match) return { time: null, text: entry };
+    return { time: match[1], text: match[2] || entry };
+  };
+
+  const observationSections = parseObservationSections();
+  const hasObservations =
+    Boolean(observationSections.icompany) ||
+    observationSections.operation.length > 0 ||
+    Boolean(selectedDelivery.documentsJustification) ||
+    Boolean(selectedDelivery.submissionObservation) ||
+    (selectedDelivery.documentCorrectionLog && selectedDelivery.documentCorrectionLog.length > 0);
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
@@ -377,24 +433,79 @@ const DeliveryModal = ({
             </div>
           )}
 
-          {(selectedDelivery.observations || selectedDelivery.observacoes || selectedDelivery.documentsJustification || selectedDelivery.submissionObservation) && (
-            <div className="space-y-3">
-              {(selectedDelivery.observations || selectedDelivery.observacoes) && (
-                <div className="bg-blue-900/20 border border-blue-500/20 rounded-xl p-4">
-                  <p className="text-[10px] text-blue-400 uppercase tracking-widest font-bold mb-2">📝 Observações</p>
-                  {selectedDelivery.observations && <p className="text-sm text-gray-300 whitespace-pre-wrap">{selectedDelivery.observations}</p>}
-                  {selectedDelivery.observacoes && <p className="text-sm text-gray-300 whitespace-pre-wrap mt-1">{selectedDelivery.observacoes}</p>}
+          {hasObservations && (
+            <div className="rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 shadow-xl">
+              <div className="px-4 py-3 border-b border-white/10 bg-white/[0.03] flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-400/20 flex items-center justify-center text-blue-300">
+                    <FaFileAlt size={14} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-blue-300 uppercase tracking-widest font-black">Observações</p>
+                    <p className="text-xs text-gray-400">Base Icompany, operação e justificativas da entrega</p>
+                  </div>
                 </div>
-              )}
+                <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] text-gray-300 font-bold uppercase tracking-wide">
+                  Registro
+                </span>
+              </div>
+
+              <div className="p-4 space-y-3">
+                {observationSections.icompany && (
+                  <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-cyan-400/10 flex items-center gap-2">
+                      <FaBuilding className="text-cyan-300" size={13} />
+                      <div>
+                        <p className="text-[10px] text-cyan-300 uppercase tracking-widest font-black">Observação Icompany</p>
+                        <p className="text-[11px] text-cyan-100/60">Informação vinda da base sincronizada</p>
+                      </div>
+                    </div>
+                    <p className="px-4 py-3 text-sm leading-relaxed text-gray-100 whitespace-pre-wrap break-words">
+                      {observationSections.icompany}
+                    </p>
+                  </div>
+                )}
+
+                {observationSections.operation.length > 0 && (
+                  <div className="rounded-xl border border-violet-400/20 bg-violet-500/10 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-violet-400/10 flex items-center gap-2">
+                      <FaUser className="text-violet-300" size={13} />
+                      <div>
+                        <p className="text-[10px] text-violet-300 uppercase tracking-widest font-black">Operação</p>
+                        <p className="text-[11px] text-violet-100/60">Anotações registradas durante o processo</p>
+                      </div>
+                    </div>
+                    <div className="p-3 space-y-2">
+                      {observationSections.operation.map((entry, idx) => {
+                        const formatted = formatObservationEntry(entry);
+                        return (
+                          <div key={idx} className="rounded-lg bg-white/[0.04] border border-white/10 px-3 py-2.5">
+                            {formatted.time && (
+                              <p className="text-[10px] text-violet-200/70 font-mono mb-1">
+                                {formatted.time}
+                              </p>
+                            )}
+                            <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap break-words">
+                              {formatted.text}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
               {selectedDelivery.documentsJustification && (
-                <div className="bg-amber-900/20 border border-amber-500/20 rounded-xl p-4">
-                  <p className="text-[10px] text-amber-400 uppercase tracking-widest font-bold mb-2">⚠️ Justificativa de Documentos</p>
-                  <p className="text-sm text-gray-300 whitespace-pre-wrap">{selectedDelivery.documentsJustification}</p>
+                <div className="bg-amber-500/10 border border-amber-400/20 rounded-xl p-4">
+                  <p className="text-[10px] text-amber-300 uppercase tracking-widest font-black mb-2 flex items-center gap-2">
+                    <FaExclamationTriangle size={12} /> Justificativa de Documentos
+                  </p>
+                  <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap break-words">{selectedDelivery.documentsJustification}</p>
                 </div>
               )}
               {selectedDelivery.documentCorrectionLog && selectedDelivery.documentCorrectionLog.length > 0 && (
-                <div className="bg-rose-900/20 border border-rose-500/20 rounded-xl p-4">
-                  <p className="text-[10px] text-rose-300 uppercase tracking-widest font-bold mb-2">🛠️ Correções de Documentos</p>
+                <div className="bg-rose-500/10 border border-rose-400/20 rounded-xl p-4">
+                  <p className="text-[10px] text-rose-300 uppercase tracking-widest font-black mb-2">Correções de Documentos</p>
                   <div className="space-y-2 text-sm text-gray-300">
                     {selectedDelivery.documentCorrectionLog.slice(-3).map((entry, idx) => (
                       <div key={idx} className="rounded-xl bg-white/5 p-3 border border-white/10">
@@ -407,11 +518,12 @@ const DeliveryModal = ({
                 </div>
               )}
               {selectedDelivery.submissionObservation && (
-                <div className="bg-indigo-900/20 border border-indigo-500/20 rounded-xl p-4">
-                  <p className="text-[10px] text-indigo-400 uppercase tracking-widest font-bold mb-2">ℹ️ Observação de Submissão</p>
-                  <p className="text-sm text-gray-300 whitespace-pre-wrap">{selectedDelivery.submissionObservation}</p>
+                <div className="bg-indigo-500/10 border border-indigo-400/20 rounded-xl p-4">
+                  <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-black mb-2">Observação de Submissão</p>
+                  <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap break-words">{selectedDelivery.submissionObservation}</p>
                 </div>
               )}
+              </div>
             </div>
           )}
 

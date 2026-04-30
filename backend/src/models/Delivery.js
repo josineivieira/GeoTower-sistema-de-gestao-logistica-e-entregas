@@ -69,6 +69,7 @@ const DeliverySchema = new mongoose.Schema(
 
     // Relacionamento com ProgramacaoEntrega
     linkedProgramacaoId: { type: mongoose.Schema.Types.ObjectId, ref: "ProgramacaoEntrega" },
+    programacaoId: { type: mongoose.Schema.Types.ObjectId, ref: "ProgramacaoEntrega" },
 
     // caminhos/urls dos documentos
     documents: {

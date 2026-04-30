@@ -64,6 +64,17 @@ const getDeliveryTimestamp = (delivery) => {
   return Number.isFinite(time) ? time : 0;
 };
 
+const buildInitialDeliveryObservation = (programacao, flowText) => {
+  const icompanyObs = String(programacao?.observacoes || '').trim();
+  const flowObs = String(flowText || '').trim();
+  const parts = [];
+
+  if (icompanyObs) parts.push(`Observação Icompany: ${icompanyObs}`);
+  if (flowObs) parts.push(flowObs);
+
+  return parts.join('\n');
+};
+
 const StepTimer = ({ start, label = 'Tempo esperando' }) => (
   <div className="flex items-center justify-between px-4 py-3 bg-blue-50 rounded-xl border border-blue-200">
     <div className="flex items-center gap-2">
@@ -477,7 +488,8 @@ const ProgramadasEntregas = () => {
         const payload = {
           deliveryNumber: deliveryNumber.toUpperCase(),
           vehiclePlate: '',
-          observations: `Criada a partir da Programação ${p.processo || ''}`,
+          observations: buildInitialDeliveryObservation(p, `Criada a partir da Programação ${p.processo || ''}`),
+          programacaoId: p._id,
           driverName: p.motorista || user?.fullName || user?.name || ''
         };
         const res = await deliveryService.createDelivery(payload);
@@ -561,7 +573,10 @@ const ProgramadasEntregas = () => {
       if (!deliveryNumber) { setToast({ message: 'Sem número de container/processo', type: 'error' }); setShowMontagemModal(false); setMontagemProgramacao(null); return; }
       const payload = {
         deliveryNumber: deliveryNumber.toUpperCase(),
-        observations: `Montagem finalizada em ${formatarData(new Date(), city)}`,
+        observations: buildInitialDeliveryObservation(
+          montagemProgramacao,
+          `Montagem finalizada em ${formatarData(new Date(), city)}`
+        ),
         driverName: montagemProgramacao.motorista || user?.fullName || user?.name || '',
         containerMontadoAt: new Date().toISOString(),
         status: 'CONTAINER_MONTADO',

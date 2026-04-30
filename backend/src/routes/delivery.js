@@ -54,6 +54,57 @@ if (useS3) {
 const s3 = useS3 ? require('../storage/s3') : null;
 const { normalizeDeliveryForResponse } = require('../utils/storageUtils');
 
+function escapeRegExp(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function buildProgramacaoLookupFilter(deliveryNumber, city, programacaoId) {
+  if (programacaoId) return { _id: programacaoId };
+  const safeDeliveryNumber = escapeRegExp(deliveryNumber);
+
+  const baseFilter = {
+    $or: [
+      { processo: new RegExp(`^${safeDeliveryNumber}$`, 'i') },
+      { container: new RegExp(`^${safeDeliveryNumber}$`, 'i') }
+    ]
+  };
+  const cityFilter = {};
+  applyProgramacaoCityFilter(cityFilter, city);
+  return { $and: [baseFilter, cityFilter] };
+}
+
+function mergeDeliveryObservations(programacao, observations) {
+  const baseObservation = String(programacao?.observacoes || '').trim();
+  const flowObservation = String(observations || '').trim();
+  const parts = [];
+
+  if (baseObservation && !flowObservation.includes(baseObservation)) {
+    parts.push(`Observação Icompany: ${baseObservation}`);
+  }
+  if (flowObservation) parts.push(flowObservation);
+
+  return parts.join('\n');
+}
+
+function preserveIcompanyObservation(existingObservations, nextObservations) {
+  const existing = String(existingObservations || '').trim();
+  const next = String(nextObservations || '').trim();
+  const marker = 'Observação Icompany:';
+
+  if (!existing.includes(marker) || next.includes(marker)) return next;
+
+  const start = existing.indexOf(marker);
+  const candidateEnds = [
+    existing.indexOf('\nCriada a partir', start),
+    existing.indexOf('\nMontagem finalizada', start),
+    existing.indexOf('\n[', start),
+  ].filter((idx) => idx > start);
+  const end = candidateEnds.length ? Math.min(...candidateEnds) : existing.length;
+  const icompanyBlock = existing.slice(start, end).trim();
+
+  return [icompanyBlock, next].filter(Boolean).join('\n');
+}
+
 function normalizeDocumentEntries(entry) {
   if (!entry) return [];
   if (Array.isArray(entry)) {
@@ -104,20 +155,29 @@ router.post("/", auth, async (req, res) => {
   try {
     const db = await getDb(req);
     const city = req.city || 'manaus';
-    const { deliveryNumber, vehiclePlate, observations, driverName, containerMontadoAt, status } = req.body;
+    const { deliveryNumber, vehiclePlate, observations, driverName, containerMontadoAt, status, programacaoId, linkedProgramacaoId } = req.body;
 
-    console.log('ðŸ“¦ Recebido no backend:', { deliveryNumber, vehiclePlate, observations, driverName, containerMontadoAt, status, city });
+    console.log('ðŸ“¦ Recebido no backend:', { deliveryNumber, vehiclePlate, observations, driverName, containerMontadoAt, status, programacaoId, linkedProgramacaoId, city });
 
     if (!deliveryNumber) {
       return res.status(400).json({ message: "NÃºmero da entrega obrigatÃ³rio" });
     }
 
     const driver = await db.findById("drivers", req.user.id);
+    let linkedProgramacao = null;
+    try {
+      const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
+      linkedProgramacao = await ProgramacaoEntrega.findOne(
+        buildProgramacaoLookupFilter(deliveryNumber, city, programacaoId || linkedProgramacaoId)
+      );
+    } catch (progErr) {
+      console.warn('[DELIVERY] Falha ao buscar programacao para observacao:', progErr.message || progErr);
+    }
 
     const delivery = await db.create("deliveries", {
       deliveryNumber,
       vehiclePlate,
-      observations,
+      observations: mergeDeliveryObservations(linkedProgramacao, observations),
       driverName: driverName || "",
       containerMontadoAt: containerMontadoAt ? new Date(containerMontadoAt) : null,
       userId: req.user.id,
@@ -125,6 +185,8 @@ router.post("/", auth, async (req, res) => {
       status: status || "pending",
       currentStep: 'welcome',
       documents: {},
+      linkedProgramacaoId: linkedProgramacao?._id || linkedProgramacaoId || programacaoId || undefined,
+      programacaoId: linkedProgramacao?._id || programacaoId || linkedProgramacaoId || undefined,
       city,
       cityCode: city
     });
@@ -133,19 +195,9 @@ router.post("/", auth, async (req, res) => {
     try {
       const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
       // Filtrar pelo origem tambÃ©m para garantir que Ã© da mesma cidade
-      let progFilter = {
-        $or: [
-          { processo: new RegExp(`^${deliveryNumber}$`, 'i') },
-          { container: new RegExp(`^${deliveryNumber}$`, 'i') }
-        ]
-      };
-      // Adicionar filtro de cidade baseado na origem
-      if (city === 'manaus') {
-        progFilter.origem = { $in: ['MANAUS', 'MANAUS - COELTA BALY'] };
-      } else if (city === 'itajai') {
-        progFilter.$or.push({ origem: { $nin: ['MANAUS', 'MANAUS - COELTA BALY'] } });
-      }
-      const prog = await ProgramacaoEntrega.findOne(progFilter);
+      const prog = linkedProgramacao || await ProgramacaoEntrega.findOne(
+        buildProgramacaoLookupFilter(deliveryNumber, city, programacaoId || linkedProgramacaoId)
+      );
       if (prog) {
         // Se status foi definido (ex: CONTAINER_MONTADO), usa esse, senÃ£o usa EM_ROTA
         prog.status = status === 'CONTAINER_MONTADO' ? 'CONTAINER_MONTADO' : 'EM_ROTA';
@@ -328,7 +380,9 @@ router.put("/:id", auth, async (req, res) => {
       if (req.body.arrivedAt !== undefined) statusUpdates.arrivedAt = req.body.arrivedAt;
       if (req.body.containerMontadoAt !== undefined) statusUpdates.containerMontadoAt = req.body.containerMontadoAt ? new Date(req.body.containerMontadoAt) : null;
       if (req.body.currentStep !== undefined) statusUpdates.currentStep = req.body.currentStep;
-      if (req.body.observations !== undefined) statusUpdates.observations = req.body.observations;
+      if (req.body.observations !== undefined) {
+        statusUpdates.observations = preserveIcompanyObservation(delivery.observations, req.body.observations);
+      }
       if (req.body.documentsJustification !== undefined) statusUpdates.documentsJustification = req.body.documentsJustification;
       if (req.body.desovaStartAt !== undefined) statusUpdates.desovaStartAt = req.body.desovaStartAt;
       if (req.body.desovaEndAt !== undefined) statusUpdates.desovaEndAt = req.body.desovaEndAt;
@@ -344,7 +398,9 @@ router.put("/:id", auth, async (req, res) => {
     if (req.body.arrivedAt !== undefined) updates.arrivedAt = req.body.arrivedAt;
     if (req.body.containerMontadoAt !== undefined) updates.containerMontadoAt = req.body.containerMontadoAt ? new Date(req.body.containerMontadoAt) : null;
     if (req.body.currentStep !== undefined) updates.currentStep = req.body.currentStep;
-    if (req.body.observations !== undefined) updates.observations = req.body.observations;
+    if (req.body.observations !== undefined) {
+      updates.observations = preserveIcompanyObservation(delivery.observations, req.body.observations);
+    }
     if (req.body.documentsJustification !== undefined) updates.documentsJustification = req.body.documentsJustification;
     if (req.body.desovaStartAt !== undefined) updates.desovaStartAt = req.body.desovaStartAt;
     if (req.body.desovaEndAt !== undefined) updates.desovaEndAt = req.body.desovaEndAt;

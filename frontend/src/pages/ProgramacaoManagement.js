@@ -17,7 +17,7 @@ const ProgramacaoManagement = () => {
   const { user } = useAuth();
   const { city } = useCity();
 
-  const isGeoMar = () => false; // Libera ediÃ§Ã£o para geomar
+  const isGeoMar = () => false; // Libera edição para geomar
   const canEdit = () => true;
 
   const [programacoes, setProgramacoes] = useState([]);
@@ -76,7 +76,7 @@ const ProgramacaoManagement = () => {
       const response = await adminService.getProgramacoes();
       setProgramacoes(response.data.programacoes || []);
     } catch (err) {
-      showToast('Erro ao carregar programaÃ§Ãµes', 'error');
+      showToast('Erro ao carregar programações', 'error');
     } finally {
       setLoading(false);
     }
@@ -89,7 +89,7 @@ const ProgramacaoManagement = () => {
       const response = await adminService.syncProgramacoesIcompany(params);
       
       if (response.data.success) {
-        showToast(`âœ… ${response.data.sincronizados} registro(s) sincronizado(s) do Icompany` + 
+        showToast(`OK ${response.data.sincronizados} registro(s) sincronizado(s) do Icompany` + 
                   (response.data.duplicados > 0 ? ` (${response.data.duplicados} duplicados ignorados)` : ''));
         loadProgramacoes();
       }
@@ -116,7 +116,7 @@ const ProgramacaoManagement = () => {
   };
 
   const getProgramacaoDate = (prog) => {
-    // ItajaÃ­ should use dtColeta when available; otherwise fall back to the agendamento field
+    // Itajaí should use dtColeta when available; otherwise fall back to the agendamento field
     if (city === 'itajai' && prog.dtColeta) return prog.dtColeta;
     return prog.dataAgendamento;
   };
@@ -186,7 +186,7 @@ const ProgramacaoManagement = () => {
 
   const handleOpen = (programacao = null) => {
     if (programacao) {
-      // Libera ediÃ§Ã£o para geomar
+      // Libera edição para geomar
       setEditingId(programacao._id);
       let dataAgendamento = city === 'itajai' ? (programacao.dtColeta || programacao.dataAgendamento || '') : (programacao.dataAgendamento || '');
       if (dataAgendamento && dataAgendamento.includes('T')) {
@@ -204,9 +204,9 @@ const ProgramacaoManagement = () => {
   };
 
   const handleSave = async () => {
-    // Libera operaÃ§Ã£o para geomar
+    // Libera operação para geomar
     if (!formData.processo || !formData.recebedor || !formData.dataAgendamento || !formData.contratado) {
-      showToast('Preencha todos os campos obrigatÃ³rios', 'error'); return;
+      showToast('Preencha todos os campos obrigatórios', 'error'); return;
     }
     try {
       let dataAgendamento = formData.dataAgendamento;
@@ -226,16 +226,16 @@ const ProgramacaoManagement = () => {
         payload.dataAgendamento = dataAgendamento;
       }
 
-      if (editingId) { await adminService.updateProgramacao(editingId, payload); showToast('ProgramaÃ§Ã£o atualizada com sucesso'); }
-      else { await adminService.createProgramacao(payload); showToast('ProgramaÃ§Ã£o criada com sucesso'); }
+      if (editingId) { await adminService.updateProgramacao(editingId, payload); showToast('Programação atualizada com sucesso'); }
+      else { await adminService.createProgramacao(payload); showToast('Programação criada com sucesso'); }
       setShowModal(false); resetForm(); loadProgramacoes();
     } catch (err) { showToast(err.response?.data?.message || 'Erro ao salvar', 'error'); }
   };
 
   const handleDelete = async (id) => {
-    // Libera exclusÃ£o para geomar
-    if (window.confirm('Confirmar exclusÃ£o desta programaÃ§Ã£o?')) {
-      try { await adminService.deleteProgramacao(id); showToast('ProgramaÃ§Ã£o excluÃ­da'); loadProgramacoes(); }
+    // Libera exclusão para geomar
+    if (window.confirm('Confirmar exclusão desta programação?')) {
+      try { await adminService.deleteProgramacao(id); showToast('Programação excluída'); loadProgramacoes(); }
       catch (err) { showToast('Erro ao excluir', 'error'); }
     }
   };
@@ -261,19 +261,19 @@ const ProgramacaoManagement = () => {
   const handleBulkDelete = async () => {
     const ids = Array.from(selectedProgramacoes);
     if (!ids.length) {
-      showToast('Selecione ao menos uma programaÃ§Ã£o para excluir', 'error');
+      showToast('Selecione ao menos uma programação para excluir', 'error');
       return;
     }
-    if (!window.confirm(`Confirmar exclusÃ£o de ${ids.length} programaÃ§Ã£o(Ãµes)?`)) return;
+    if (!window.confirm(`Confirmar exclusão de ${ids.length} programação(ões)?`)) return;
 
     try {
       setBulkDeleting(true);
       await Promise.all(ids.map(id => adminService.deleteProgramacao(id)));
-      showToast(`${ids.length} programaÃ§Ã£o(Ãµes) excluÃ­da(s)`);
+      showToast(`${ids.length} programação(ões) excluída(s)`);
       setSelectedProgramacoes(new Set());
       loadProgramacoes();
     } catch (err) {
-      showToast('Erro ao excluir programaÃ§Ãµes', 'error');
+      showToast('Erro ao excluir programações', 'error');
     } finally {
       setBulkDeleting(false);
     }
@@ -313,7 +313,7 @@ const ProgramacaoManagement = () => {
       : <FaSortDown style={{ color: '#6366f1', marginLeft: 4, fontSize: 11 }} />;
   };
 
-  // â”€â”€â”€ Import handlers (unchanged logic) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Import handlers
   const handleImportFile = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -425,15 +425,15 @@ const ProgramacaoManagement = () => {
 
       const erros = [];
       programacoesImport.forEach((prog, i) => {
-        if (!prog.processo) erros.push(`Linha ${i+2}: Processo obrigatÃ³rio`);
+        if (!prog.processo) erros.push(`Linha ${i+2}: Processo obrigatório`);
         if (!prog.recebedor) erros.push(`Linha ${i+2}: ${getRecebedorErrorMsg(city)}`);
-        if (!prog.dataAgendamento) erros.push(`Linha ${i+2}: Data obrigatÃ³ria`);
-        if (!prog.contratado) erros.push(`Linha ${i+2}: Contratado obrigatÃ³rio`);
+        if (!prog.dataAgendamento) erros.push(`Linha ${i+2}: Data obrigatória`);
+        if (!prog.contratado) erros.push(`Linha ${i+2}: Contratado obrigatório`);
       });
       if (erros.length > 0) { showToast(`Erros: ${erros.slice(0,3).join(', ')}${erros.length>3?'...':''}`, 'error'); return; }
 
       const response = await adminService.importProgramacoes(programacoesImport);
-      showToast(`${response.data.importados} programaÃ§Ãµes importadas com sucesso`);
+      showToast(`${response.data.importados} programações importadas com sucesso`);
       setShowImportModal(false); loadProgramacoes();
     } catch (err) {
       showToast(err.response?.data?.message || 'Erro ao importar arquivo', 'error');
@@ -442,17 +442,17 @@ const ProgramacaoManagement = () => {
 
   const downloadTemplate = () => {
     try {
-      const template = [{ 'Processo': 'CAB42196', [getRecebedorLabel(city)]: 'AMERICANA DIST. BEBIDAS', 'Container': 'ECMU4814297', 'Data Agendamento': '12/02/2026 10:00', 'Contratado': 'GEO', 'Motorista': 'JOÃƒO SILVA', 'Status': 'AGENDADO', 'ObservaÃ§Ãµes': '' }];
+      const template = [{ 'Processo': 'CAB42196', [getRecebedorLabel(city)]: 'AMERICANA DIST. BEBIDAS', 'Container': 'ECMU4814297', 'Data Agendamento': '12/02/2026 10:00', 'Contratado': 'GEO', 'Motorista': 'JOAO SILVA', 'Status': 'AGENDADO', 'Observações': '' }];
       const ws = XLSX.utils.json_to_sheet(template);
       ws['!cols'] = [15,30,15,20,15,20,15,30].map(w => ({ wch: w }));
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'ProgramaÃ§Ãµes');
+      XLSX.utils.book_append_sheet(wb, ws, 'Programações');
       XLSX.writeFile(wb, 'template_programacoes.xlsx');
       showToast('Template baixado com sucesso');
     } catch (err) { showToast('Erro ao gerar template', 'error'); }
   };
 
-  // â”€â”€â”€ Shared input style â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Shared input style
   const inputStyle = (disabled) => ({
     width: '100%', padding: '10px 14px', fontSize: '14px',
     border: '1.5px solid #e5e7eb', borderRadius: '8px', outline: 'none',
@@ -467,7 +467,7 @@ const ProgramacaoManagement = () => {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: "'Inter', sans-serif" }}>
 
-      {/* â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* Toast */}
       {toast && (
         <div style={{
           position: 'fixed', top: 24, right: 24, zIndex: 9999,
@@ -479,12 +479,12 @@ const ProgramacaoManagement = () => {
           display: 'flex', alignItems: 'center', gap: 10, maxWidth: 400,
           animation: 'slideIn .25s ease'
         }}>
-          <span style={{ fontSize: 18 }}>{toast.type === 'error' ? 'âœ•' : 'âœ“'}</span>
+          <span style={{ fontSize: 18 }}>{toast.type === 'error' ? 'X' : 'OK'}</span>
           {toast.message}
         </div>
       )}
 
-      {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* Header */}
       <div style={{
         background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
         padding: '0 32px', height: 72,
@@ -505,11 +505,11 @@ const ProgramacaoManagement = () => {
           </button>
           <div>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>
-              ProgramaÃ§Ã£o de Entregas
+              Programação de Entregas
             </h1>
             <p style={{ margin: 0, fontSize: 12, color: '#a5b4fc', marginTop: 2 }}>
               {filteredProgramacoes.length} registro{filteredProgramacoes.length !== 1 ? 's' : ''}
-              {isGeoMar() && <span style={{ marginLeft: 8, padding: '2px 8px', backgroundColor: '#fbbf24', color: '#78350f', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>VISUALIZAÃ‡ÃƒO</span>}
+              {isGeoMar() && <span style={{ marginLeft: 8, padding: '2px 8px', backgroundColor: '#fbbf24', color: '#78350f', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>VISUALIZAÇÃO</span>}
             </p>
           </div>
         </div>
@@ -571,7 +571,7 @@ const ProgramacaoManagement = () => {
                   boxShadow: '0 2px 12px rgba(99,102,241,.4)'
                 }}
               >
-                <FaPlus size={12} /> Nova ProgramaÃ§Ã£o
+                <FaPlus size={12} /> Nova Programação
               </button>
             </>
           )}
@@ -580,7 +580,7 @@ const ProgramacaoManagement = () => {
 
       <div style={{ padding: '28px 32px' }}>
 
-        {/* â”€â”€ Filter Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* Filter Panel */}
         {showFilters && (
           <div style={{
             background: '#fff', borderRadius: 12, padding: '20px 24px',
@@ -677,7 +677,7 @@ const ProgramacaoManagement = () => {
           </div>
         )}
 
-        {/* â”€â”€ Table Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* Table Card */}
         <div style={{
           background: '#fff', borderRadius: 14, overflow: 'hidden',
           border: '1px solid #e5e7eb',
@@ -686,12 +686,12 @@ const ProgramacaoManagement = () => {
           {loading ? (
             <div style={{ padding: '80px', textAlign: 'center', color: '#9ca3af', fontSize: 15 }}>
               <div style={{ width: 36, height: 36, border: '3px solid #e5e7eb', borderTopColor: '#6366f1', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }} />
-              Carregando programaÃ§Ãµes...
+              Carregando programações...
             </div>
           ) : filteredProgramacoes.length === 0 ? (
             <div style={{ padding: '80px', textAlign: 'center', color: '#9ca3af' }}>
               <FaCalendarAlt style={{ fontSize: 40, marginBottom: 16, opacity: 0.3 }} />
-              <p style={{ fontSize: 15, fontWeight: 500, margin: 0 }}>Nenhuma programaÃ§Ã£o encontrada</p>
+              <p style={{ fontSize: 15, fontWeight: 500, margin: 0 }}>Nenhuma programação encontrada</p>
             </div>
           ) : (
             <>
@@ -715,7 +715,7 @@ const ProgramacaoManagement = () => {
                   )}
                 </div>
                 <div style={{ fontSize: 13, color: '#6b7280' }}>
-                  Selecione linhas para excluir vÃ¡rias programaÃ§Ãµes de uma vez.
+                  Selecione linhas para excluir várias programações de uma vez.
                 </div>
               </div>
               <div style={{ overflowX: 'auto' }}>
@@ -754,7 +754,7 @@ const ProgramacaoManagement = () => {
                       </th>
                     ))}
                     <th style={{ padding: '14px 16px', fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.7px', textAlign: 'center' }}>
-                      AÃ§Ãµes
+                      Ações
                     </th>
                   </tr>
                 </thead>
@@ -791,7 +791,7 @@ const ProgramacaoManagement = () => {
                         <td style={{ padding: '14px 16px', fontSize: 13, color: '#374151', whiteSpace: 'nowrap' }}>
                           {(() => {
                             const dateString = getProgramacaoDate(prog);
-                            if (!dateString) return 'â€”';
+                            if (!dateString) return '-';
 
                             const [date, time] = dateString.split(/[T ]/);
                             const [y, m, d] = date.split('-');
@@ -816,7 +816,7 @@ const ProgramacaoManagement = () => {
                           </span>
                         </td>
                         <td style={{ padding: '14px 16px', fontSize: 13, color: '#374151' }}>
-                          {prog.motorista || <span style={{ color: '#d1d5db' }}>â€”</span>}
+                          {prog.motorista || <span style={{ color: '#d1d5db' }}>-</span>}
                         </td>
                         <td style={{ padding: '14px 16px' }}>
                           <span style={{
@@ -871,7 +871,7 @@ const ProgramacaoManagement = () => {
         </div>
       </div>
 
-      {/* â”€â”€ Form Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* Form Modal */}
       {showModal && (
         <div
           onClick={() => setShowModal(false)}
@@ -897,10 +897,10 @@ const ProgramacaoManagement = () => {
             }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#fff' }}>
-                  {editingId ? 'Editar ProgramaÃ§Ã£o' : 'Nova ProgramaÃ§Ã£o'}
+                  {editingId ? 'Editar Programação' : 'Nova Programação'}
                 </h2>
                 <p style={{ margin: 0, fontSize: 12, color: '#a5b4fc', marginTop: 3 }}>
-                  Preencha as informaÃ§Ãµes abaixo
+                  Preencha as informações abaixo
                 </p>
               </div>
               <button
@@ -917,7 +917,7 @@ const ProgramacaoManagement = () => {
             </div>
 
             {/* View-only banner */}
-            {/* Remove banner de visualizaÃ§Ã£o para geomar */}
+            {/* Remove banner de visualização para geomar */}
 
             {/* Modal Body */}
             <div style={{ padding: '24px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -978,7 +978,7 @@ const ProgramacaoManagement = () => {
                 <select disabled={false} value={formData.motorista}
                   onChange={e => setFormData({...formData, motorista: e.target.value})}
                   style={{ ...inputStyle(isGeoMar()), cursor: isGeoMar() ? 'not-allowed' : 'pointer' }}>
-                  <option value="">â€” Selecionar motorista â€”</option>
+                  <option value="">- Selecionar motorista -</option>
                   {motoristasList
                     .filter(m => {
                       const t = m.transportadora || '', c = formData.contratado || '';
@@ -995,10 +995,10 @@ const ProgramacaoManagement = () => {
               </div>
 
               <div>
-                <label style={labelStyle}>ObservaÃ§Ãµes</label>
+                <label style={labelStyle}>Observações</label>
                 <textarea disabled={false} value={formData.observacoes}
                   onChange={e => setFormData({...formData, observacoes: e.target.value})}
-                  placeholder="AnotaÃ§Ãµes adicionais..."
+                  placeholder="Anotações adicionais..."
                   rows={3}
                   style={{ ...inputStyle(isGeoMar()), resize: 'vertical', cursor: isGeoMar() ? 'not-allowed' : 'text' }}
                 />
@@ -1031,7 +1031,7 @@ const ProgramacaoManagement = () => {
                     boxShadow: '0 4px 14px rgba(99,102,241,.4)'
                   }}
                 >
-                  {editingId ? 'Salvar AlteraÃ§Ãµes' : 'Criar ProgramaÃ§Ã£o'}
+                  {editingId ? 'Salvar Alterações' : 'Criar Programação'}
                 </button>
               )}
             </div>
@@ -1039,7 +1039,7 @@ const ProgramacaoManagement = () => {
         </div>
       )}
 
-      {/* â”€â”€ Import Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* Import Modal */}
       {showImportModal && (
         <div
           onClick={() => setShowImportModal(false)}
@@ -1078,7 +1078,7 @@ const ProgramacaoManagement = () => {
                 {[
                   ['Processo', 'Processo'],
                   [getRecebedorLabel(city), getRecebedorLabel(city)],
-                  ['Container', 'Container, NÂº container'],
+                  ['Container', 'Container, Nº container'],
                   ['Data Agendamento', 'Data Agendamento, Dt. Agendamento, Data'],
                   ['Contratado', 'Contratado, Transportadora, Empresa'],
                   ['Motorista', 'Motorista (opcional)'],

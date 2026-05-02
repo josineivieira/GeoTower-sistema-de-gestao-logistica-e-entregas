@@ -128,6 +128,27 @@ function getDocumentUniqueKey(entry) {
   return String(entry);
 }
 
+function normalizePartyName(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ');
+}
+
+function safeStorageSegment(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 80);
+}
+
+function getDeliveryStorageFolder(delivery) {
+  const container = safeStorageSegment(delivery?.deliveryNumber) || 'SEM_CONTAINER';
+  const party = safeStorageSegment(delivery?.recebedor);
+  if (party) return `${container}_${party}`;
+  const fallbackId = safeStorageSegment(delivery?.programacaoId || delivery?.linkedProgramacaoId || delivery?._id);
+  return fallbackId ? `${container}_${fallbackId}` : container;
+}
+
 // Helper to normalize db (works with sync mockdb or async mongo adapter)
 async function getDb(req) {
   const db = req.mockdb;
@@ -155,7 +176,7 @@ router.post("/", auth, async (req, res) => {
   try {
     const db = await getDb(req);
     const city = req.city || 'manaus';
-    const { deliveryNumber, vehiclePlate, observations, driverName, containerMontadoAt, status, programacaoId, linkedProgramacaoId } = req.body;
+    const { deliveryNumber, vehiclePlate, observations, driverName, containerMontadoAt, status, programacaoId, linkedProgramacaoId, recebedor } = req.body;
 
     console.log('ðŸ“¦ Recebido no backend:', { deliveryNumber, vehiclePlate, observations, driverName, containerMontadoAt, status, programacaoId, linkedProgramacaoId, city });
 
@@ -177,11 +198,13 @@ router.post("/", auth, async (req, res) => {
     const programacaoKey = linkedProgramacao?._id || programacaoId || linkedProgramacaoId || undefined;
     const Delivery = require('../models/Delivery');
     const normalizedDeliveryNumber = String(deliveryNumber || '').trim().toUpperCase();
+    const partyName = normalizePartyName(recebedor || linkedProgramacao?.recebedor);
     const baseDeliveryPayload = {
       deliveryNumber: normalizedDeliveryNumber,
       vehiclePlate,
       observations: mergeDeliveryObservations(linkedProgramacao, observations),
       driverName: driverName || "",
+      recebedor: partyName,
       containerMontadoAt: containerMontadoAt ? new Date(containerMontadoAt) : null,
       userId: req.user.id,
       userName: driver?.fullName || driver?.name || driver?.username || "Unknown",
@@ -196,17 +219,21 @@ router.post("/", auth, async (req, res) => {
 
     let delivery = null;
     if (programacaoKey) {
+      const samePartyConditions = partyName ? [
+        { deliveryNumber: normalizedDeliveryNumber, recebedor: new RegExp(`^${escapeRegExp(partyName)}$`, 'i') }
+      ] : [];
       const existingByProgramacao = await Delivery.findOneAndUpdate(
         {
           cityCode: city,
           isCanceled: { $ne: true },
           $or: [
             { programacaoId: programacaoKey },
-            { linkedProgramacaoId: programacaoKey }
+            { linkedProgramacaoId: programacaoKey },
+            ...samePartyConditions
           ]
         },
         {
-          $set: { updatedAt: new Date() },
+          $set: { updatedAt: new Date(), ...(partyName ? { recebedor: partyName } : {}) },
           $setOnInsert: baseDeliveryPayload
         },
         { new: true, upsert: true, setDefaultsOnInsert: true }
@@ -225,12 +252,13 @@ router.post("/", auth, async (req, res) => {
       delivery = await Delivery.findOneAndUpdate(
         {
           deliveryNumber: normalizedDeliveryNumber,
+          ...(partyName ? { recebedor: new RegExp(`^${escapeRegExp(partyName)}$`, 'i') } : {}),
           userId: req.user.id,
           cityCode: city,
           isCanceled: { $ne: true }
         },
         {
-          $set: { updatedAt: new Date() },
+          $set: { updatedAt: new Date(), ...(partyName ? { recebedor: partyName } : {}) },
           $setOnInsert: baseDeliveryPayload
         },
         { new: true, upsert: true, setDefaultsOnInsert: true }
@@ -585,7 +613,9 @@ router.get('/programacoes/mine', auth, async (req, res) => {
     const deliveriesByNumber = new Map();
     unmatchedDeliveries.forEach(d => {
       const key = String(d.deliveryNumber || '').toUpperCase();
-      if (key) deliveriesByNumber.set(key, d);
+      if (!key) return;
+      if (!deliveriesByNumber.has(key)) deliveriesByNumber.set(key, []);
+      deliveriesByNumber.get(key).push(d);
     });
 
     // Enriquecer programaÃ§Ãµes
@@ -599,7 +629,13 @@ router.get('/programacoes/mine', auth, async (req, res) => {
       if (!matchedDelivery) {
         const procKey = String(p.processo || '').toUpperCase();
         const contKey = String(p.container || '').toUpperCase();
-        matchedDelivery = deliveriesByNumber.get(procKey) || deliveriesByNumber.get(contKey);
+        const candidates = [
+          ...(deliveriesByNumber.get(procKey) || []),
+          ...(deliveriesByNumber.get(contKey) || [])
+        ];
+        const party = normalizePartyName(p.recebedor).toUpperCase();
+        matchedDelivery = candidates.find(d => normalizePartyName(d.recebedor).toUpperCase() === party) ||
+          candidates.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))[0];
       }
       
       if (matchedDelivery) {
@@ -660,7 +696,7 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
       discoTacografo: "DISCO"
     };
     const baseName = typeNames[type] || type;
-    const containerFolder = delivery.deliveryNumber;
+    const containerFolder = getDeliveryStorageFolder(delivery);
     const containerDir = path.join(__dirname, "../uploads", city, containerFolder);
     try {
       fs.mkdirSync(containerDir, { recursive: true });
@@ -688,7 +724,7 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
           console.log(`[UPLOAD] Tentando Cloudflare R2...`);
           const r2Storage = require('../storage/r2');
           const fileBuffer = file.buffer || fs.readFileSync(file.path);
-          const r2Key = `uploads/${delivery.deliveryNumber}/${finalFilename}`;
+          const r2Key = `uploads/${city}/${containerFolder}/${finalFilename}`;
           const r2Url = await r2Storage.uploadBuffer(fileBuffer, r2Key, file.mimetype);
           fileEntry = { name: finalFilename, url: r2Url, storage: 'r2', key: r2Key };
           console.log(`[UPLOAD] âœ“ R2 OK: ${finalFilename} (URL: ${r2Url})`);
@@ -858,7 +894,7 @@ router.post("/:id/upload-and-update", auth, upload.array("file"), async (req, re
         discoTacografo: "DISCO"
       };
       const baseName = typeNames[documentType] || documentType;
-      const containerFolder = delivery.deliveryNumber;
+      const containerFolder = getDeliveryStorageFolder(delivery);
       const containerDir = path.join(__dirname, "../uploads", city, containerFolder);
       try {
         fs.mkdirSync(containerDir, { recursive: true });
@@ -880,7 +916,7 @@ router.post("/:id/upload-and-update", auth, upload.array("file"), async (req, re
           console.log(`[UPLOAD-UPDATE] Tentando Cloudflare R2...`);
           const r2Storage = require('../storage/r2');
           const fileBuffer = file.buffer || fs.readFileSync(file.path);
-          const r2Key = `uploads/${delivery.deliveryNumber}/${finalFilename}`;
+          const r2Key = `uploads/${city}/${containerFolder}/${finalFilename}`;
           const r2Url = await r2Storage.uploadBuffer(fileBuffer, r2Key, file.mimetype);
           fileEntry = { name: finalFilename, url: r2Url, storage: 'r2', key: r2Key };
           console.log(`[UPLOAD-UPDATE] âœ“ R2 OK: ${finalFilename} (URL: ${r2Url})`);

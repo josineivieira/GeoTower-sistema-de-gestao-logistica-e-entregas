@@ -132,6 +132,22 @@ function normalizePartyName(value) {
   return String(value || '').trim().replace(/\s+/g, ' ');
 }
 
+function deliveryMatchesProgramacaoContext(delivery, programacao) {
+  if (!delivery || !programacao) return false;
+
+  const linkedToProgramacao = String(delivery.programacaoId || '') === String(programacao._id) ||
+    String(delivery.linkedProgramacaoId || '') === String(programacao._id);
+  if (linkedToProgramacao) return true;
+
+  const deliveryNumber = String(delivery.deliveryNumber || '').trim().toUpperCase();
+  const sameContainer = deliveryNumber === String(programacao.container || '').trim().toUpperCase() ||
+    deliveryNumber === String(programacao.processo || '').trim().toUpperCase();
+  const deliveryParty = normalizePartyName(delivery.recebedor).toUpperCase();
+  const programacaoParty = normalizePartyName(programacao.recebedor).toUpperCase();
+
+  return sameContainer && !!deliveryParty && !!programacaoParty && deliveryParty === programacaoParty;
+}
+
 function safeStorageSegment(value) {
   return String(value || '')
     .normalize('NFD')
@@ -422,6 +438,20 @@ router.put("/:id", auth, async (req, res) => {
       return res.status(403).json({ message: 'Acesso negado' });
     }
 
+    const programacaoIdFromBody = req.body.programacaoId || req.body.linkedProgramacaoId;
+    if (programacaoIdFromBody) {
+      const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
+      const programacao = await ProgramacaoEntrega.findById(programacaoIdFromBody).lean();
+      if (!programacao) {
+        return res.status(404).json({ message: 'Programação vinculada não encontrada' });
+      }
+      if (!deliveryMatchesProgramacaoContext(delivery, programacao)) {
+        return res.status(409).json({
+          message: 'Esta entrega pertence a outra programação/cliente deste container. Reabra a card correta.'
+        });
+      }
+    }
+
     // ValidaÃ§Ã£o: verificar se o novo status requer documentos obrigatÃ³rios
     if (req.body.status) {
       const statusDocumentRequirements = {
@@ -456,8 +486,6 @@ router.put("/:id", auth, async (req, res) => {
 
     // Preparar updates
     const updates = {};
-    const programacaoIdFromBody = req.body.programacaoId || req.body.linkedProgramacaoId;
-
     // Se hÃ¡ mudanÃ§a de status, usar funÃ§Ã£o especializada com validaÃ§Ã£o de ordem
     if (req.body.status) {
       // Verificar se motorista estÃ¡ tentando fazer retrocesso
@@ -642,17 +670,7 @@ router.get('/programacoes/mine', auth, async (req, res) => {
     const hasDocumentValue = (value) => Array.isArray(value) ? value.length > 0 : !!value;
     const enrichedProgramacoes = (programacoes || []).map((p) => {
       const obj = { ...p };
-      const party = normalizePartyName(p.recebedor).toUpperCase();
-      const deliveryMatchesProgramacao = (delivery) => {
-        if (!delivery) return false;
-        const linkedToProgramacao = String(delivery.programacaoId || '') === String(p._id) ||
-          String(delivery.linkedProgramacaoId || '') === String(p._id);
-        const deliveryNumber = String(delivery.deliveryNumber || '').toUpperCase();
-        const sameContainer = deliveryNumber === String(p.container || '').toUpperCase() ||
-          deliveryNumber === String(p.processo || '').toUpperCase();
-        const sameParty = normalizePartyName(delivery.recebedor).toUpperCase() === party;
-        return linkedToProgramacao || (sameContainer && sameParty);
-      };
+      const deliveryMatchesProgramacao = (delivery) => deliveryMatchesProgramacaoContext(delivery, p);
       
       // Tentar buscar entrega vinculada
       let matchedDelivery = deliveriesByLinkedId.get(String(p.linkedDeliveryId));

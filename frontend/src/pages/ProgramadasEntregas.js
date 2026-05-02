@@ -73,10 +73,25 @@ const deliveryBelongsToProgramacao = (delivery, programacaoId) => {
 const selectDeliveryForProgramacao = (deliveries, programacaoId, programacao = null) => {
   const list = Array.isArray(deliveries) ? deliveries : [];
   const linked = list.filter(d => deliveryBelongsToProgramacao(d, programacaoId));
+  if (linked.length > 0) {
+    return linked.reduce((best, next) =>
+      !best || getDeliveryTimestamp(next) > getDeliveryTimestamp(best) ? next : best,
+      null
+    );
+  }
+
+  if (programacao) {
+    const sameContext = list.filter(d => deliveryMatchesProgramacaoContext(d, programacao));
+    return sameContext.reduce((best, next) =>
+      !best || getDeliveryTimestamp(next) > getDeliveryTimestamp(best) ? next : best,
+      null
+    );
+  }
+
   const sameParty = programacao
     ? list.filter(d => normalizeGroupValue(d.recebedor) === normalizeGroupValue(programacao.recebedor))
     : [];
-  const candidates = linked.length > 0 ? linked : (sameParty.length > 0 ? sameParty : list);
+  const candidates = sameParty.length > 0 ? sameParty : list;
   return candidates.reduce((best, next) =>
     !best || getDeliveryTimestamp(next) > getDeliveryTimestamp(best) ? next : best,
     null

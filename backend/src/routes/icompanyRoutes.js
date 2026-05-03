@@ -79,6 +79,10 @@ const FIELD_MAPPING = {
   'Dt. Descida CNTR/Carga': 'dtDescidaCNTRCarga',
   'Dt. averbação MDFE': 'dtAverbacaoMDFE',
   'Dt. Averbação MDFE': 'dtAverbacaoMDFE',
+  'Nr. do processo': 'nrProcesso',
+  'Nr do processo': 'nrProcesso',
+  'Nro. do processo': 'nrProcesso',
+  'Numero do processo': 'nrProcesso',
 };
 
 // Função para normalizar o documento mapeando campos com espaços para camelCase

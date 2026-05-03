@@ -8,6 +8,11 @@ const programacaoEntregaSchema = new mongoose.Schema({
     unique: true,
     sparse: true
   },
+  processoLog: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   recebedor: {
     type: String,
     required: [true, 'Recebedor é obrigatório'],

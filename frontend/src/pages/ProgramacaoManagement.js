@@ -132,6 +132,7 @@ const ProgramacaoManagement = () => {
       const term = filters.search.toLowerCase();
       data = data.filter(p =>
         (p.processo || '').toLowerCase().includes(term) ||
+        (p.processoLog || '').toLowerCase().includes(term) ||
         (p.recebedor || '').toLowerCase().includes(term) ||
         (p.container || '').toLowerCase().includes(term) ||
         (p.motorista || '').toLowerCase().includes(term)
@@ -327,6 +328,7 @@ const ProgramacaoManagement = () => {
 
       const normalizeColumnName = (name) => !name ? '' : name.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, '').replace(/\s+/g, '');
       const columnMapping = {
+        processoLog: ['processolog', 'nrdoprocesso', 'nroprocesso', 'numerodoprocesso'],
         processo: ['processo', 'codprocessointegracao', 'codigoprocesso', 'codigodoprocesso', 'nrdoprocesso'],
         recebedor: ['recebedor', 'destinatario', 'remetente'],
         container: ['container', 'ncontainer', 'numercontainer', 'nrcontainer', 'numerocontainer'],
@@ -411,6 +413,7 @@ const ProgramacaoManagement = () => {
       const programacoesImport = data.map(row => {
         const estab = String(row[actualColumns.estab] || (city === 'itajai' ? 'LSC' : 'LAM')).trim().toUpperCase();
         return {
+          processoLog: String(row[actualColumns.processoLog] || '').trim(),
           processo: String(row[actualColumns.processo] || '').trim(),
           recebedor: String(row[actualColumns.recebedor] || '').trim(),
           container: String(row[actualColumns.container] || '').trim(),
@@ -442,7 +445,7 @@ const ProgramacaoManagement = () => {
 
   const downloadTemplate = () => {
     try {
-      const template = [{ 'Processo': 'CAB42196', [getRecebedorLabel(city)]: 'AMERICANA DIST. BEBIDAS', 'Container': 'ECMU4814297', 'Data Agendamento': '12/02/2026 10:00', 'Contratado': 'GEO', 'Motorista': 'JOAO SILVA', 'Status': 'AGENDADO', 'Observações': '' }];
+      const template = [{ 'Processo Log': '123456', 'Processo': 'CAB42196', [getRecebedorLabel(city)]: 'AMERICANA DIST. BEBIDAS', 'Container': 'ECMU4814297', 'Data Agendamento': '12/02/2026 10:00', 'Contratado': 'GEO', 'Motorista': 'JOAO SILVA', 'Status': 'AGENDADO', 'Observações': '' }];
       const ws = XLSX.utils.json_to_sheet(template);
       ws['!cols'] = [15,30,15,20,15,20,15,30].map(w => ({ wch: w }));
       const wb = XLSX.utils.book_new();
@@ -730,6 +733,7 @@ const ProgramacaoManagement = () => {
                       />
                     </th>
                     {[
+                      { key: 'processoLog', label: 'Processo Log' },
                       { key: 'processo', label: 'Processo' },
                       { key: 'recebedor', label: getRecebedorLabel(city) },
                       { key: 'container', label: 'Container' },
@@ -778,6 +782,9 @@ const ProgramacaoManagement = () => {
                             checked={selectedProgramacoes.has(prog._id)}
                             onChange={() => handleToggleSelect(prog._id)}
                           />
+                        </td>
+                        <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#1e1b4b' }}>
+                          {prog.processoLog || <span style={{ color: '#d1d5db' }}>-</span>}
                         </td>
                         <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#1e1b4b' }}>
                           {prog.processo}
@@ -1076,6 +1083,7 @@ const ProgramacaoManagement = () => {
               <div style={{ background: '#f8fafc', borderRadius: 10, padding: '14px 18px', marginBottom: 20, fontSize: 12, color: '#4b5563', border: '1px solid #e5e7eb' }}>
                 <p style={{ margin: '0 0 10px', fontWeight: 700, color: '#374151', fontSize: 13 }}>Colunas esperadas</p>
                 {[
+                  ['Processo Log', 'Nr. do processo (opcional)'],
                   ['Processo', 'Processo'],
                   [getRecebedorLabel(city), getRecebedorLabel(city)],
                   ['Container', 'Container, Nº container'],

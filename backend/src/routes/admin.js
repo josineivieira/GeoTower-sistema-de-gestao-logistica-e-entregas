@@ -2233,7 +2233,7 @@ router.post("/programacoes", auth, managerOnly, async (req, res) => {
   try {
     const city = req.city || 'manaus';
     const cfg = cityConfigFromRequest(city);
-    const { processo, recebedor, container, dataAgendamento, dtColeta, contratado, motorista, status, observacoes, origem, estab } = req.body;
+    const { processo, processoLog, recebedor, container, dataAgendamento, dtColeta, contratado, motorista, status, observacoes, origem, estab } = req.body;
 
     console.log('[PROGRAMACAO] Criando:', { processo, recebedor, contratado, cidade: city, dtColeta });
 
@@ -2241,6 +2241,7 @@ router.post("/programacoes", auth, managerOnly, async (req, res) => {
 
     const novaProgramacao = new ProgramacaoEntrega({
       processo,
+      processoLog: processoLog || '',
       recebedor,
       container,
       dataAgendamento,
@@ -2280,7 +2281,7 @@ router.put("/programacoes/:id", auth, managerOnly, async (req, res) => {
   try {
     const city = req.city || 'manaus';
     const { id } = req.params;
-    const { processo, recebedor, container, dataAgendamento, dtColeta, contratado, motorista, status, observacoes, containerReturned, origem, estab } = req.body;
+    const { processo, processoLog, recebedor, container, dataAgendamento, dtColeta, contratado, motorista, status, observacoes, containerReturned, origem, estab } = req.body;
     // Get editor name from logged-in user
     const editorName = req.user?.name || req.user?.username || req.user?._id || 'Desconhecido';
 
@@ -2299,6 +2300,7 @@ router.put("/programacoes/:id", auth, managerOnly, async (req, res) => {
 
     // Atualizar apenas os campos fornecidos
     if (processo !== undefined) programacao.processo = processo;
+    if (processoLog !== undefined) programacao.processoLog = processoLog;
     if (recebedor !== undefined) programacao.recebedor = recebedor;
     if (container !== undefined) programacao.container = container;
     if (dataAgendamento !== undefined) programacao.dataAgendamento = dataAgendamento;
@@ -2413,7 +2415,7 @@ router.post("/programacoes/import", auth, managerOnly, async (req, res) => {
 
     for (const prog of programacoes) {
       try {
-        const { processo, container, dataAgendamento, contratado, motorista, status, observacoes, origem, estab } = prog;
+        const { processo, processoLog, container, dataAgendamento, contratado, motorista, status, observacoes, origem, estab } = prog;
         // Case-insensitive recebedor field
         const recebedorField = prog.recebedor || prog.Recebedor || prog.RECEBEDOR || '';
 
@@ -2431,6 +2433,7 @@ router.post("/programacoes/import", auth, managerOnly, async (req, res) => {
         // Tenta criar a programação
         const novaProgramacao = new ProgramacaoEntrega({
           processo,
+          processoLog: processoLog || '',
           recebedor: recebedorField,
           container: container || '',
           dataAgendamento,
@@ -2561,6 +2564,17 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
       return '';
     };
 
+
+    const pickIcompanyValue = (record, fields) => {
+      for (const field of fields) {
+        const value = record?.[field];
+        if (value !== undefined && value !== null && String(value).trim()) {
+          return String(value).trim();
+        }
+      }
+      return '';
+    };
+
     let updatedCount = 0;
     let insertedCount = 0;
     const novosRegistros = [];
@@ -2583,6 +2597,7 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
       const observacaoIcompany = String(y.observacao || y.observacoes || '').trim();
 
       const mappedData = {
+        processoLog: pickIcompanyValue(y, ['nrProcesso', 'Nr. do processo', 'Nr do processo', 'Nro. do processo', 'Numero do processo', 'N�mero do processo']),
         recebedor: recebedorValue,
         container: String(y.containerNumero || '').trim() || '',
         dataAgendamento,

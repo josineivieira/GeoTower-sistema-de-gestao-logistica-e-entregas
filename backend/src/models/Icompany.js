@@ -12,6 +12,10 @@ const icompanySchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  nrProcesso: {
+    type: String,
+    trim: true,
+  },
 
   // Datas principais
   dtInicio: {

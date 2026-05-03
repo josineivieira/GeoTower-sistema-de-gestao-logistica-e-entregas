@@ -2575,20 +2575,22 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
         if (!isNaN(parsedEnd.getTime())) dateFilter.$lte = parsedEnd;
       }
       if (Object.keys(dateFilter).length) {
-        const scheduleField = city === 'itajai' ? 'dtColeta' : 'dtAgendamentoDescarga';
-        console.log('[SYNC ICOMPANY] Aplicando filtro de período:', { city, scheduleField, startDate, endDate, dateFilter });
-        
-        // Filtrar por data no array já carregado
+        const scheduleFields = ['dtAgendamentoDescarga', 'dtColeta'];
+        console.log('[SYNC ICOMPANY] Aplicando filtro de periodo:', { city, scheduleFields, startDate, endDate, dateFilter });
+
+        // A cidade ja foi limitada pelo Estab. acima, entao ambas as cidades podem usar as duas datas sem misturar registros.
         icompanyRecords = icompanyRecords.filter(rec => {
-          const dateVal = rec[scheduleField];
-          if (!dateVal) return false;
-          const dateObj = new Date(dateVal);
-          if (isNaN(dateObj.getTime())) return false;
-          if (dateFilter.$gte && dateObj < dateFilter.$gte) return false;
-          if (dateFilter.$lte && dateObj > dateFilter.$lte) return false;
-          return true;
+          return scheduleFields.some((field) => {
+            const dateVal = rec[field];
+            if (!dateVal) return false;
+            const dateObj = new Date(dateVal);
+            if (isNaN(dateObj.getTime())) return false;
+            if (dateFilter.$gte && dateObj < dateFilter.$gte) return false;
+            if (dateFilter.$lte && dateObj > dateFilter.$lte) return false;
+            return true;
+          });
         });
-        console.log(`[SYNC ICOMPANY] Após filtro de data: ${icompanyRecords.length} registros`);
+        console.log(`[SYNC ICOMPANY] Apos filtro de data: ${icompanyRecords.length} registros`);
       }
     }
 

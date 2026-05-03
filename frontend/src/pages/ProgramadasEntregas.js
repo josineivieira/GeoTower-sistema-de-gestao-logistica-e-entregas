@@ -163,6 +163,19 @@ const isReturnedDelivery = (delivery) => (
   )
 );
 
+const getStepFromDeliveryStatus = (delivery) => {
+  let restoredStep = 'welcome';
+  switch ((delivery?.status || '').toUpperCase()) {
+    case 'AGUARDANDO_DESOVA': restoredStep = 'confirmDesova'; break;
+    case 'EM_DESOVA': restoredStep = 'desovaProgress'; break;
+    case 'AGUARDANDO_ANEXO': case 'ANEXANDO_DOCUMENTOS_FINAIS': restoredStep = 'finalDocs'; break;
+    case 'DESOVA_FINALIZADA': case 'AGUARDANDO_AGENDAMENTO_DEVOLUCAO': restoredStep = 'askSchedule'; break;
+    case 'ENTREGUE': case 'DEVOLVENDO_CONTAINER': case 'FINALIZADO': restoredStep = 'welcome'; break;
+    default: restoredStep = 'welcome';
+  }
+  return restoredStep !== 'welcome' ? restoredStep : (delivery?.currentStep || restoredStep);
+};
+
 const buildInitialDeliveryObservation = (programacao, flowText) => {
   const icompanyObs = String(programacao?.observacoes || '').trim();
   const flowObs = String(flowText || '').trim();
@@ -611,18 +624,7 @@ const ProgramadasEntregas = () => {
           existing = updated.data.delivery;
           applyDeliveryUpdate(existing, p._id);
         }
-        let restoredStep = 'welcome';
-        switch ((existing.status || '').toUpperCase()) {
-          case 'AGUARDANDO_DESOVA': restoredStep = 'confirmDesova'; break;
-          case 'EM_DESOVA': restoredStep = 'desovaProgress'; break;
-          case 'AGUARDANDO_ANEXO': case 'ANEXANDO_DOCUMENTOS_FINAIS': restoredStep = 'finalDocs'; break;
-          case 'DESOVA_FINALIZADA': case 'AGUARDANDO_AGENDAMENTO_DEVOLUCAO': restoredStep = 'askSchedule'; break;
-          case 'ENTREGUE': case 'DEVOLVENDO_CONTAINER': case 'FINALIZADO': restoredStep = 'welcome'; break;
-          default: restoredStep = 'welcome';
-        }
-        const savedStep = existing.currentStep;
-        const nextStep = restoredStep !== 'welcome' ? restoredStep : (savedStep || restoredStep);
-        setCurrentStep(nextStep);
+        setCurrentStep(getStepFromDeliveryStatus(existing));
         setPhotos([]); setObservations(''); setJustification(''); setDocumentsUpload({});
         setShowModal(true);
         setToast({ message: 'Entrega retomada', type: 'success' });
@@ -640,7 +642,7 @@ const ProgramadasEntregas = () => {
         const newDelivery = res.data.delivery;
         applyDeliveryUpdate(newDelivery, p._id);
         setCurrentProgramacao(p);
-        setCurrentStep(newDelivery.currentStep || 'welcome');
+        setCurrentStep(getStepFromDeliveryStatus(newDelivery));
         setPhotos([]); setObservations(''); setJustification(''); setDocumentsUpload({});
         setShowModal(true);
         await loadProgramacoes();

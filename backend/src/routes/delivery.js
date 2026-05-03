@@ -129,6 +129,38 @@ function getDocumentUniqueKey(entry) {
   return String(entry);
 }
 
+function getDocumentFileBaseName(documentType, city = 'manaus') {
+  const labelsByCity = {
+    manaus: {
+      canhotNF: "CANHOTO_NF",
+      canhotCTE: "CANHOTO_CTE",
+      diarioBordo: "DIARIO_DE_BORDO",
+      devolucaoVazio: "ENTREGA_CNTR_PORTO",
+      retiradaCheio: "RETIRADA_CHEIO",
+      chegadaCliente: "CHEGADA_NO_CLIENTE",
+      inicioDesova: "INICIO_DA_DESOVA",
+      fimDesova: "FINALIZACAO_DA_DESOVA",
+      saidaCliente: "SAIDA_DO_CLIENTE",
+      chegadaPorto: "CHEGADA_NO_PORTO",
+    },
+    itajai: {
+      canhotNF: "TACOGRAFO_RIC_ABASTECIMENTO",
+      canhotCTE: "CONTRATO",
+      diarioBordo: "DIARIO_DE_BORDO",
+      devolucaoVazio: "BAIXA_NO_PORTO",
+      retiradaCheio: "RETIRADA_PORTO",
+      chegadaCliente: "CHEGADA_NO_CLIENTE",
+      inicioDesova: "INICIO_DA_OVACAO",
+      fimDesova: "FINALIZACAO_DA_OVACAO",
+      saidaCliente: "SAIDA_DO_CLIENTE",
+      chegadaPorto: "CHEGADA_NO_PORTO",
+    }
+  };
+
+  const cityKey = String(city || 'manaus').toLowerCase();
+  return labelsByCity[cityKey]?.[documentType] || labelsByCity.manaus[documentType] || String(documentType || 'ARQUIVO').toUpperCase();
+}
+
 function normalizePartyName(value) {
   return String(value || '').trim().replace(/\s+/g, ' ');
 }
@@ -933,23 +965,7 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
       return res.status(403).json({ message: 'Acesso negado' });
     }
 
-    const typeNames = {
-      canhotNF: "NF",
-      canhotCTE: "CTE",
-      diarioBordo: "DIARIO",
-      devolucaoVazio: "DEVOLUCAO",
-      retiradaCheio: "RETIRADA",
-      chegadaCliente: "CHEGADA",
-      inicioDesova: "INICIO_DESOVA",
-      fimDesova: "FIM_DESOVA",
-      saidaCliente: "SAIDA_CLIENTE",
-      chegadaPorto: "CHEGADA_PORTO",
-      ricAbastecimento: "RIC_AB",
-      ricBaixa: "RIC_BAIXA",
-      ricColeta: "RIC_COLETA",
-      discoTacografo: "DISCO"
-    };
-    const baseName = typeNames[type] || type;
+    const baseName = getDocumentFileBaseName(type, city);
     const containerFolder = getDeliveryStorageFolder(delivery);
     const containerDir = path.join(__dirname, "../uploads", city, containerFolder);
     try {
@@ -1133,23 +1149,7 @@ router.post("/:id/upload-and-update", auth, upload.array("file"), async (req, re
     const savedFiles = [];
 
     if (req.files && req.files.length) {
-      const typeNames = {
-        canhotNF: "NF",
-        canhotCTE: "CTE",
-        diarioBordo: "DIARIO",
-        devolucaoVazio: "DEVOLUCAO",
-        retiradaCheio: "RETIRADA",
-        chegadaCliente: "CHEGADA",
-        inicioDesova: "INICIO_DESOVA",
-        fimDesova: "FIM_DESOVA",
-        saidaCliente: "SAIDA_CLIENTE",
-        chegadaPorto: "CHEGADA_PORTO",
-        ricAbastecimento: "RIC_AB",
-        ricBaixa: "RIC_BAIXA",
-        ricColeta: "RIC_COLETA",
-        discoTacografo: "DISCO"
-      };
-      const baseName = typeNames[documentType] || documentType;
+      const baseName = getDocumentFileBaseName(documentType, city);
       const containerFolder = getDeliveryStorageFolder(delivery);
       const containerDir = path.join(__dirname, "../uploads", city, containerFolder);
       try {

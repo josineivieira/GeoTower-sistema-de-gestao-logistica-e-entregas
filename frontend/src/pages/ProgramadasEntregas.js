@@ -16,6 +16,7 @@ import { useCity } from '../contexts/CityContext';
 import { getProgramacaoDate } from '../utils/programacaoDate';
 import { formatarData, formatarDataApenas, formatarHora, formatarAgendamento } from '../utils/date';
 import { getRecebedoresLabel, getDesovaStatusLabel } from '../utils/cityLabels';
+import { getDocumentLabel } from '../utils/documentLabels';
 import { useTheme, THEMES } from '../contexts/ThemeContext';
 
 // ─────────────────────────────────────────────
@@ -460,7 +461,7 @@ const ProgramadasEntregas = () => {
       handleStartDelivery(found).catch(() => {});
       if (step === 'finalDocs') {
         goToStep('finalDocs');
-        if (pending) setToast({ message: `Pendência de documento: ${pending}`, type: 'warning' });
+        if (pending) setToast({ message: `Pendencia de documento: ${getDocumentLabel(pending, city)}`, type: 'warning' });
       }
     }
   }, [programacoes, location.search]);

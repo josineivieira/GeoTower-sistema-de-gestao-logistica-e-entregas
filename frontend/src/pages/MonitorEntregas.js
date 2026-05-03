@@ -11,6 +11,7 @@ import { getStatusColumns } from '../config/statusColumns';
 import { MemoizedBadge, MemoizedProgressDots, MemoizedPunctualityCell, MemoizedStatusCheckmark } from '../components/MemoizedTableCells';
 import { getProgramacaoDate } from '../utils/programacaoDate';
 import { formatarData, formatarDataApenas, formatarHora, formatarAgendamento } from '../utils/date';
+import { getDocumentLabel, getDocumentLabels } from '../utils/documentLabels';
 import {
   FaArrowLeft, FaEye, FaDownload, FaSync, FaFilter, FaTimes,
   FaTrash, FaEdit, FaExclamationTriangle, FaShareAlt, FaCalendarAlt,
@@ -20,8 +21,6 @@ import {
   FaUser, FaBoxOpen, FaBuilding, FaLayerGroup, FaSort, FaSortUp, FaSortDown
 } from 'react-icons/fa';
 import { MdLocalShipping, MdDashboard } from 'react-icons/md';
-import manaConfig from '../config/cities/manaus.json';
-import itajaiConfig from '../config/cities/itajai.json';
 import jsPDF from 'jspdf';
 import { getDesovaStatusLabel, getDesovaStepLabel } from '../utils/cityLabels';
 
@@ -1271,34 +1270,13 @@ const MonitorEntregas = () => {
     const required = ['canhotCTE', 'diarioBordo', 'canhotNF', 'devolucaoVazio'];
     const docs = delivery.documents || {};
     if (required.every((k) => docs[k])) return 'COMPLETO';
-    const pending = required.filter((k) => !docs[k]).map((k) =>
-      ({ canhotCTE: 'CTE', canhotNF: 'NF', diarioBordo: 'DIÁRIO', devolucaoVazio: 'RIC' }[k] || k)
-    ).join(' + ');
+    const pending = required.filter((k) => !docs[k]).map((k) => getDocumentLabel(k, city)).join(' + ');
     return `PENDENTE ${pending}`;
   };
 
-  const defaultDocumentLabels = {
-    ...(manaConfig.documents || {}),
-    canhotNF: (manaConfig.documents || {}).canhotNF || 'NF',
-    canhotCTE: (manaConfig.documents || {}).canhotCTE || 'CTE',
-    diarioBordo: (manaConfig.documents || {}).diarioBordo || 'Diário',
-    devolucaoVazio: (manaConfig.documents || {}).devolucaoVazio || 'Vazio',
-    retiradaCheio: (manaConfig.documents || {}).retiradaCheio || 'Cheio',
-    saidaCliente: 'Saida do Cliente',
-    chegadaPorto: 'Chegada no Porto'
-  };
+  const defaultDocumentLabels = getDocumentLabels('manaus');
 
-  const itajaiDocumentLabels = {
-    ...itajaiConfig.documents,
-    retiradaCheio: 'Retirada Porto',
-    canhotCTE: 'CONTRATO',
-    canhotNF: 'TACOGRAFO/RIC ABASTECIMENTO',
-    diarioBordo: 'Diario de Bordo',
-    devolucaoVazio: 'Baixa no Porto',
-    chegadaCliente: 'Chegada no Cliente',
-    saidaCliente: 'Saida do Cliente',
-    chegadaPorto: 'Chegada no Porto'
-  };
+  const itajaiDocumentLabels = getDocumentLabels('itajai');
 
   const controleProtocolosDocumentMap = {
     retiradaCheio: 'RIC PORTO DESTINO',

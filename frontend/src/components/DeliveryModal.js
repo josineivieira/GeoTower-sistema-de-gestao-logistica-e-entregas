@@ -8,6 +8,7 @@ import {
 } from 'react-icons/fa';
 import { getDesovaStatusLabel, getDesovaStepLabel } from '../utils/cityLabels';
 import { formatarData, formatarAgendamento, formatarHora } from '../utils/date';
+import { getDocumentLabel } from '../utils/documentLabels';
 
 const Badge = ({ status, city = 'manaus' }) => {
   const getResolveConfig = (rawStatus, cityCode = 'manaus') => {
@@ -516,7 +517,7 @@ const DeliveryModal = ({
                   <div className="space-y-2 text-sm text-gray-300">
                     {selectedDelivery.documentCorrectionLog.slice(-3).map((entry, idx) => (
                       <div key={idx} className="rounded-xl bg-white/5 p-3 border border-white/10">
-                        <p className="font-semibold text-sm text-white">{entry.documentType}</p>
+                        <p className="font-semibold text-sm text-white">{getDocumentLabel(entry.documentType, city)}</p>
                         <p className="text-xs text-gray-300">{entry.reason}</p>
                         <p className="text-[10px] text-gray-400 mt-1">Removido por {entry.removedBy || entry.role} em {new Date(entry.removedAt).toLocaleString('pt-BR')}</p>
                       </div>

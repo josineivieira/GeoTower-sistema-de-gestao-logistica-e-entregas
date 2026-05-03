@@ -19,6 +19,7 @@ import { adminService, deliveryService } from '../services/authService';
 import { useAuth } from '../services/authContext';
 import { useCity } from '../contexts/CityContext';
 import { getRecebedorLabel } from '../utils/cityLabels';
+import { getDocumentLabel } from '../utils/documentLabels';
 
 /* ─── Skeleton Loader ─────────────────────────────────────── */
 const SkeletonCard = () => (
@@ -64,7 +65,7 @@ const InfoRow = ({ icon: Icon, label, value }) => (
 
 /* ─── Upload Field ─────────────────────────────────────────── */
 /* Adiciona suporte para câmera e seleção de arquivos */
-const UploadField = ({ doc, file, onChange }) => {
+const UploadField = ({ doc, label, file, onChange }) => {
   const hasFile = file && file.length > 0;
   const fileInputRef = React.useRef(null);
   const cameraInputRef = React.useRef(null);
@@ -105,7 +106,7 @@ const UploadField = ({ doc, file, onChange }) => {
               hasFile ? 'text-emerald-700' : 'text-gray-700'
             }`}
           >
-            {doc}
+            {label || doc}
           </p>
           <p
             className={`text-xs mt-1 ${
@@ -448,7 +449,7 @@ const EntregasCanhotosPendentes = () => {
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {pendingDocs.map(d => (
-                            <DocBadge key={d} label={d} />
+                            <DocBadge key={d} label={getDocumentLabel(d, city)} />
                           ))}
                         </div>
                       </div>
@@ -548,6 +549,7 @@ const EntregasCanhotosPendentes = () => {
                   <UploadField
                     key={doc}
                     doc={doc}
+                    label={getDocumentLabel(doc, city)}
                     file={modalUploadFiles[doc]}
                     onChange={e => {
                       if (e.target.files) {

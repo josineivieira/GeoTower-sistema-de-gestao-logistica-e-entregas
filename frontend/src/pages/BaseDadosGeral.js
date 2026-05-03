@@ -17,6 +17,7 @@ import {
   getRecebedorLabel,
   getDesovaStepLabel
 } from '../utils/cityLabels';
+import { getDocumentLabel } from '../utils/documentLabels';
 import Toast from '../components/Toast';
 
 /* ─────────────────────────────────────────
@@ -132,7 +133,7 @@ const buildExcelColumnWidths = (headers, rows) => {
   });
 };
 
-const getDocumentsStatus = (delivery) => {
+const getDocumentsStatus = (delivery, city = 'manaus') => {
   if (!delivery) return { label: 'PENDENTE', complete: false };
   const required = ['canhotCTE', 'diarioBordo', 'canhotNF', 'devolucaoVazio'];
   const docs = delivery.documents || {};
@@ -140,7 +141,7 @@ const getDocumentsStatus = (delivery) => {
   if (allOk) return { label: 'COMPLETO', complete: true };
   const names = required
     .filter((d) => !docs[d])
-    .map((d) => ({ canhotCTE: 'CTE', canhotNF: 'NF', diarioBordo: 'DIÁRIO', devolucaoVazio: 'RIC' }[d] ?? d))
+    .map((d) => getDocumentLabel(d, delivery.cityCode || delivery.city || city))
     .join(' + ');
   return { label: `FALTANDO ${names}`, complete: false };
 };

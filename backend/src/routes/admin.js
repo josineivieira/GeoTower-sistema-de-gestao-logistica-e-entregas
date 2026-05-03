@@ -151,16 +151,17 @@ router.get("/statistics", auth, onlyAdmin, async (req, res) => {
  */
 router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
   try {
-    const { status, q, startDate, endDate, period, periodDate, processo, container, recebedor, pontualidade, horaStatusStart, horaStatusEnd, agendamentoStart, agendamentoEnd, tempoStatusMin, tempoStatusMax } = req.query;
+    const { status, q, startDate, endDate, period, periodDate, processo, container, recebedor, sentido, pontualidade, horaStatusStart, horaStatusEnd, agendamentoStart, agendamentoEnd, tempoStatusMin, tempoStatusMax } = req.query;
     const city = req.city || 'manaus';
-    console.log('📋 GET /admin/deliveries recebido com filtros:', { status, q, processo, container, recebedor, pontualidade, horaStatusStart, horaStatusEnd, agendamentoStart, agendamentoEnd, tempoStatusMin, tempoStatusMax, startDate, endDate, period, periodDate, city });
+    console.log('📋 GET /admin/deliveries recebido com filtros:', { status, q, processo, container, recebedor, pontualidade, horaStatusStart, horaStatusEnd, agendamentoStart, agendamentoEnd, tempoStatusMin, tempoStatusMax, sentido, startDate, endDate, period, periodDate, city });
     
     // Buscar programações filtradas por cidade
     const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
     let progFilter = {};
     applyProgramacaoCityFilter(progFilter, city);
+    if (sentido && sentido !== 'all') progFilter.sentido = String(sentido || '').trim().toUpperCase();
     const programacoes = await ProgramacaoEntrega.find(progFilter)
-      .select('processo processoLog recebedor container dataAgendamento dtColeta contratado motorista status createdAt observacoes origem estab')
+      .select('processo processoLog recebedor container dataAgendamento dtColeta contratado motorista status createdAt observacoes origem estab sentido')
       .lean();
     console.log('  ℹ️  Total de programações (' + city + '):', programacoes ? programacoes.length : 0);
 
@@ -189,7 +190,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     // antes de cruzar, carregar dados do Icompany para termos placas (tracao)
     const Icompany = require('../models/Icompany');
     const icompanyRecords = await Icompany.find({})
-      .select('geomaritima processo codigo numero NUMERO NÚMERO container containerNumero tracao contratado entradaDistrito dtColeta remetente dtChegadaPlanta dtDevolucaoCNTR dtAgendamentoDescarga destinatario dtRetiraPD dtInicioDescarga dtFimDescarga')
+      .select('geomaritima processo codigo numero NUMERO NÚMERO container containerNumero tracao contratado entradaDistrito dtColeta remetente dtChegadaPlanta dtDevolucaoCNTR dtAgendamentoDescarga destinatario dtRetiraPD dtInicioDescarga dtFimDescarga sentido SENTIDO')
       .lean();
     const ycByProcess = new Map();  // processo -> [array de registros yc]
     const ycByContainer = new Map(); // container -> [array de registros yc]
@@ -271,6 +272,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
         // incluir número de processo CAB quando houver programação
         processoCAB: prog ? prog.processo || '' : delivery.processoCAB || '',
         processoLog: prog ? prog.processoLog || '' : delivery.processoLog || '',
+        sentido: prog ? prog.sentido || '' : delivery.sentido || '',
         placaIcompany: placaY,
         container: prog ? prog.container || delivery.container || '' : delivery.container || '',
         containerNumero: containerNumeros.length > 0 ? containerNumeros : (prog?.container ? [prog.container] : undefined),  // Array de containers
@@ -307,6 +309,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
           deliveryNumber: prog.container || prog.processo,
           processoCAB: prog.processo || '',
           processoLog: prog.processoLog || '',
+          sentido: prog.sentido || '',
           placaIcompany: placaY2,
           container: prog.container || '',
           containerNumero: containerNumeros2.length > 0 ? containerNumeros2 : (prog.container ? [prog.container] : undefined),  // Array de containers
@@ -483,6 +486,11 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       console.log(`  ✓ Aplicando filtro de container: ${container}`);
     }
 
+    if (sentido && sentido !== 'all') {
+      const sentidoFilter = String(sentido || '').trim().toUpperCase();
+      filtered = filtered.filter(d => String(d.sentido || '').trim().toUpperCase() === sentidoFilter);
+      console.log(`  ? Aplicando filtro de sentido: ${sentidoFilter}`);
+    }
     if (recebedor && recebedor.trim()) {
       const text = recebedor.trim().toLowerCase();
       filtered = filtered.filter(d => String(d.recebedor || '').toLowerCase().includes(text));
@@ -2268,7 +2276,7 @@ router.post("/programacoes", auth, managerOnly, async (req, res) => {
   try {
     const city = req.city || 'manaus';
     const cfg = cityConfigFromRequest(city);
-    const { processo, processoLog, recebedor, container, dataAgendamento, dtColeta, contratado, motorista, status, observacoes, origem, estab } = req.body;
+    const { processo, processoLog, recebedor, container, dataAgendamento, dtColeta, contratado, motorista, status, observacoes, origem, estab, sentido } = req.body;
 
     console.log('[PROGRAMACAO] Criando:', { processo, recebedor, contratado, cidade: city, dtColeta });
 
@@ -2286,7 +2294,8 @@ router.post("/programacoes", auth, managerOnly, async (req, res) => {
       status,
       observacoes,
       origem: origem || cfg.origem,
-      estab: estab || cfg.estab
+      estab: estab || cfg.estab,
+      sentido: String(sentido || '').trim().toUpperCase()
     });
 
     await novaProgramacao.save();
@@ -2316,7 +2325,7 @@ router.put("/programacoes/:id", auth, managerOnly, async (req, res) => {
   try {
     const city = req.city || 'manaus';
     const { id } = req.params;
-    const { processo, processoLog, recebedor, container, dataAgendamento, dtColeta, contratado, motorista, status, observacoes, containerReturned, origem, estab } = req.body;
+    const { processo, processoLog, recebedor, container, dataAgendamento, dtColeta, contratado, motorista, status, observacoes, containerReturned, origem, estab, sentido } = req.body;
     // Get editor name from logged-in user
     const editorName = req.user?.name || req.user?.username || req.user?._id || 'Desconhecido';
 
@@ -2347,6 +2356,7 @@ router.put("/programacoes/:id", auth, managerOnly, async (req, res) => {
     if (containerReturned !== undefined) programacao.containerReturned = containerReturned;
     if (origem !== undefined) programacao.origem = origem;
     if (estab !== undefined) programacao.estab = estab;
+    if (sentido !== undefined) programacao.sentido = String(sentido || '').trim().toUpperCase();
     // Register editor and time
     programacao.editedBy = editorName;
     programacao.editedAt = new Date();
@@ -2450,7 +2460,7 @@ router.post("/programacoes/import", auth, managerOnly, async (req, res) => {
 
     for (const prog of programacoes) {
       try {
-        const { processo, processoLog, container, dataAgendamento, contratado, motorista, status, observacoes, origem, estab } = prog;
+        const { processo, processoLog, container, dataAgendamento, contratado, motorista, status, observacoes, origem, estab, sentido } = prog;
         // Case-insensitive recebedor field
         const recebedorField = prog.recebedor || prog.Recebedor || prog.RECEBEDOR || '';
 
@@ -2477,7 +2487,8 @@ router.post("/programacoes/import", auth, managerOnly, async (req, res) => {
           status: status || 'AGENDADO',
           observacoes: observacoes || '',
           origem: origem || cfg.origem,
-          estab: estab || cfg.estab
+          estab: estab || cfg.estab,
+          sentido: String(sentido || '').trim().toUpperCase()
         });
 
         await novaProgramacao.save();
@@ -2641,6 +2652,7 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
         motorista: String(y.motorista || '').trim() || '',
         origem: String(y.origem || '').trim() || cfg.origem,
         estab: String(y.estab || '').trim() || cfg.estab,
+        sentido: String(y.sentido || y.SENTIDO || '').trim().toUpperCase(),
         observacoes: observacaoIcompany || `Sincronizado do Icompany - ${y.situacao || 'N/A'}`
       };
 

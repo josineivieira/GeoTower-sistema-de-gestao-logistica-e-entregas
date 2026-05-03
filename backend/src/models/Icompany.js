@@ -112,6 +112,14 @@ const icompanySchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  sentido: {
+    type: String,
+    trim: true,
+  },
+  SENTIDO: {
+    type: String,
+    trim: true,
+  },
   motorista: {
     type: String,
     trim: true,

@@ -89,6 +89,13 @@ const programacaoEntregaSchema = new mongoose.Schema({
     enum: ['', 'LAM', 'LSC'],
     default: ''
   },
+  sentido: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    enum: ['', 'ORIGEM', 'DESTINO'],
+    default: ''
+  },
   ativo: {
     type: Boolean,
     default: true
@@ -124,6 +131,7 @@ programacaoEntregaSchema.index({ dataAgendamento: 1 });
 programacaoEntregaSchema.index({ status: 1 });
 programacaoEntregaSchema.index({ origem: 1 });
 programacaoEntregaSchema.index({ estab: 1 });
+programacaoEntregaSchema.index({ sentido: 1 });
 programacaoEntregaSchema.index({ contratado: 1 });
 programacaoEntregaSchema.index({ ativo: 1 });
 
@@ -132,6 +140,9 @@ programacaoEntregaSchema.index({ origem: 1, dataAgendamento: 1 });
 programacaoEntregaSchema.index({ origem: 1, dtColeta: 1 });
 programacaoEntregaSchema.index({ estab: 1, dataAgendamento: 1 });
 programacaoEntregaSchema.index({ estab: 1, dtColeta: 1 });
+programacaoEntregaSchema.index({ estab: 1, sentido: 1, dataAgendamento: 1 });
+programacaoEntregaSchema.index({ estab: 1, sentido: 1, dtColeta: 1 });
+programacaoEntregaSchema.index({ sentido: 1, status: 1 });
 programacaoEntregaSchema.index({ contratado: 1, status: 1 });
 programacaoEntregaSchema.index({ contratado: 1, ativo: 1 });
 programacaoEntregaSchema.index({ ativo: 1, status: 1 });

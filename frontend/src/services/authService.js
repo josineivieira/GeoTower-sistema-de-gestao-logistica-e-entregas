@@ -25,6 +25,7 @@ export const adminService = {
     if (filters.processo) params.processo = filters.processo;
     if (filters.container) params.container = filters.container;
     if (filters.recebedor) params.recebedor = filters.recebedor;
+    if (filters.sentido && filters.sentido !== 'all') params.sentido = filters.sentido;
     if (filters.pontualidade) params.pontualidade = filters.pontualidade;
     if (filters.horaStatusFrom) params.horaStatusStart = filters.horaStatusFrom;
     if (filters.horaStatusTo) params.horaStatusEnd = filters.horaStatusTo;

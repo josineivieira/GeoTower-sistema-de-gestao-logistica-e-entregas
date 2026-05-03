@@ -930,7 +930,10 @@ router.get('/programacoes/mine', auth, async (req, res) => {
       }
       
       return obj;
-    }).filter(p => p.containerReturned !== true && !p.horarioDevolucaoVazio);
+    }).filter(p => {
+      const hasPendingDocuments = Array.isArray(p.missingDocumentsAtSubmit) && p.missingDocumentsAtSubmit.length > 0;
+      return hasPendingDocuments || (p.containerReturned !== true && !p.horarioDevolucaoVazio);
+    });
 
     return res.json({ success: true, programacoes: enrichedProgramacoes || [] });
   } catch (err) {

@@ -1,4 +1,4 @@
-import React, {
+﻿import React, {
   useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect, lazy, Suspense
 } from 'react';
 import { useTheme, THEMES } from '../contexts/ThemeContext';
@@ -448,7 +448,6 @@ const SettingsPanel = ({
     filters.processo?.trim() !== '' ||
     filters.container?.trim() !== '' ||
     filters.recebedor?.trim() !== '' ||
-    filters.sentido !== 'all' ||
     filters.pontualidade !== 'all' ||
     filters.startDate ||
     filters.endDate ||
@@ -827,7 +826,6 @@ const MonitorEntregas = () => {
     'minmax(200px, 2.5fr)',   // Processo
     'minmax(200px, 2.5fr)',   // Container
     'minmax(220px, 3fr)',     // Recebedor
-    'minmax(110px, 0.9fr)',    // Sentido
     'minmax(160px, 1.5fr)',   // Status
     'minmax(140px, 1fr)',     // Hora Status
     'minmax(120px, 1fr)',     // Tempo Status
@@ -879,7 +877,6 @@ const MonitorEntregas = () => {
       case 'processo': return filters.processo.trim() !== '';
       case 'container': return filters.container.trim() !== '';
       case 'recebedor': return filters.recebedor.trim() !== '';
-      case 'sentido': return filters.sentido !== 'all';
       case 'status': return filters.status !== 'all';
       case 'agendamento': return Boolean(filters.startDate || filters.endDate);
       case 'horaStatus': return Boolean(filters.horaStatusFrom || filters.horaStatusTo);
@@ -895,7 +892,6 @@ const MonitorEntregas = () => {
       case 'processo': next.processo = ''; break;
       case 'container': next.container = ''; break;
       case 'recebedor': next.recebedor = ''; break;
-      case 'sentido': next.sentido = 'all'; break;
       case 'status': next.status = 'all'; break;
       case 'agendamento': next.startDate = ''; next.endDate = ''; break;
       case 'horaStatus': next.horaStatusFrom = ''; next.horaStatusTo = ''; break;
@@ -1959,10 +1955,6 @@ const MonitorEntregas = () => {
             aVal = (a.status || '').toLowerCase();
             bVal = (b.status || '').toLowerCase();
             break;
-          case 'sentido':
-            aVal = (a.sentido || '').toLowerCase();
-            bVal = (b.sentido || '').toLowerCase();
-            break;
           case 'horaStatus':
             aVal = new Date(getStatusEntryTime(a, city) || 0).getTime();
             bVal = new Date(getStatusEntryTime(b, city) || 0).getTime();
@@ -2227,11 +2219,6 @@ const MonitorEntregas = () => {
     { key: 'processo', name: 'Processo', type: 'text', placeholder: 'Buscar processo...', sortable: true },
     { key: 'container', name: 'Container', type: 'text', placeholder: 'Buscar container...', sortable: true },
     { key: 'recebedor', name: 'Recebedor', type: 'text', placeholder: 'Buscar recebedor...', sortable: true },
-    { key: 'sentido', name: 'Sentido', type: 'select', options: [
-      { value: 'all', label: 'Todos' },
-      { value: 'ORIGEM', label: 'Origem' },
-      { value: 'DESTINO', label: 'Destino' }
-    ], sortable: true },
     { key: 'status', name: 'Status', type: 'select', options: getStatusOptions(), sortable: true },
     { key: 'horaStatus', name: 'Hora Status', type: 'dateRange', startKey: 'horaStatusFrom', endKey: 'horaStatusTo', sortable: true },
     { key: 'tempoStatus', name: 'Tempo Status', type: 'range', minKey: 'tempoStatusMin', maxKey: 'tempoStatusMax', sortable: true },
@@ -2362,6 +2349,35 @@ const MonitorEntregas = () => {
           <Pill active={statsPeriod === 'tomorrow'} onClick={() => setStatsPeriod('tomorrow')} color="blue">
             <FaCalendarAlt className="text-xs" /> <span>Amanhã</span>
           </Pill>
+
+          <div className="h-7 w-px bg-white/10 mx-1" />
+
+          <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-2 py-1">
+            <span className="text-[10px] font-black uppercase tracking-[0.22em] text-gray-500">Sentido</span>
+            <Pill
+              active={filters.sentido === 'all'}
+              onClick={() => setFilters({ ...filters, sentido: 'all' })}
+              color="gray"
+            >
+              <FaFilter className="text-xs" /> <span>Todos</span>
+            </Pill>
+
+            <Pill
+              active={filters.sentido === 'ORIGEM'}
+              onClick={() => setFilters({ ...filters, sentido: filters.sentido === 'ORIGEM' ? 'all' : 'ORIGEM' })}
+              color="blue"
+            >
+              <span>Origem</span>
+            </Pill>
+
+            <Pill
+              active={filters.sentido === 'DESTINO'}
+              onClick={() => setFilters({ ...filters, sentido: filters.sentido === 'DESTINO' ? 'all' : 'DESTINO' })}
+              color="purple"
+            >
+              <span>Destino</span>
+            </Pill>
+          </div>
 
           {activeFilterCount > 0 && (
             <button
@@ -2618,18 +2634,6 @@ const MonitorEntregas = () => {
                             </span>
                           </div>
 
-                          {/* SENTIDO */}
-                          <div className="px-2 py-3 flex items-center justify-center min-w-0">
-                            <span className={`px-2 py-1 rounded-full text-[10px] font-bold border ${
-                              d.sentido === 'ORIGEM'
-                                ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30'
-                                : d.sentido === 'DESTINO'
-                                  ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-                                  : 'bg-white/5 text-gray-400 border-white/10'
-                            }`}>
-                              {d.sentido || '-'}
-                            </span>
-                          </div>
                           {/* STATUS */}
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             {(() => {

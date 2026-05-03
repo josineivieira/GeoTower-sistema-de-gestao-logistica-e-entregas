@@ -44,6 +44,17 @@ const toDatetimeLocal = (val) => {
   return `${year}-${month}-${date}T${hours}:${minutes}`;
 };
 
+const normalizeLookupKey = (value) => String(value || '').trim().toUpperCase();
+
+const addLookup = (map, key, delivery) => {
+  const normalized = normalizeLookupKey(key);
+  if (!normalized || !delivery) return;
+  const existing = map[normalized];
+  if (!existing || new Date(delivery.updatedAt || delivery.createdAt || 0) >= new Date(existing.updatedAt || existing.createdAt || 0)) {
+    map[normalized] = delivery;
+  }
+};
+
 /* ─────────────────────────────────────────
    Status helpers
 ───────────────────────────────────────── */
@@ -452,15 +463,27 @@ const BaseDadosGeral = () => {
       const programacoes = progRes.data.programacoes || [];
       const entregas = entrRes.data.deliveries || [];
       const map = {};
+      const byProgramacao = {};
       entregas.forEach((e) => {
-        const k = (e.deliveryNumber || '').toUpperCase().trim();
-        if (k) map[k] = e;
+        addLookup(map, e.deliveryNumber, e);
+        addLookup(map, e.processoLog, e);
+        addLookup(map, e.processo, e);
+        addLookup(map, e.container, e);
+        [e.programacaoId, e.linkedProgramacaoId].filter(Boolean).forEach((id) => {
+          const key = String(id);
+          const existing = byProgramacao[key];
+          if (!existing || new Date(e.updatedAt || e.createdAt || 0) >= new Date(existing.updatedAt || existing.createdAt || 0)) {
+            byProgramacao[key] = e;
+          }
+        });
       });
       const enriched = programacoes.map((p) => ({
         ...p,
         _entrega:
-          map[(p.container || '').toUpperCase().trim()] ||
-          map[(p.processo || '').toUpperCase().trim()] ||
+          byProgramacao[String(p._id)] ||
+          map[normalizeLookupKey(p.processoLog)] ||
+          map[normalizeLookupKey(p.container)] ||
+          map[normalizeLookupKey(p.processo)] ||
           null,
       }));
       setDados(enriched);
@@ -558,9 +581,14 @@ const BaseDadosGeral = () => {
       setToast({ message: `Preencha: Processo, ${getRecebedorLabel(city)}, Data e Contratado`, type: 'error' });
       return;
     }
+    if (!editForm.observations || !editForm.observations.trim()) {
+      setToast({ message: 'Informe uma observação/motivo da edição para salvar a entrega', type: 'error' });
+      return;
+    }
     try {
       const item = dados.find((d) => d._id === editingId);
       const progPayload = {
+        processoLog: item?.processoLog,
         processo: editForm.processo,
         recebedor: editForm.recebedor,
         container: editForm.container,
@@ -573,6 +601,9 @@ const BaseDadosGeral = () => {
       await adminService.updateProgramacao(editingId, progPayload);
 
       const delPayload = {
+        deliveryNumber: item?._entrega?.deliveryNumber,
+        userName: editForm.contratado,
+        driverName: editForm.motorista,
         status: editForm.status || undefined,
         containerMontadoAt: toISO(editForm.containerMontadoAt),
         horarioChegada: toISO(editForm.horarioChegada),
@@ -605,11 +636,20 @@ const BaseDadosGeral = () => {
             ...d,
             _entrega: {
               ...(d._entrega || {}),
+              userName: editForm.contratado,
+              driverName: editForm.motorista,
+              status: editForm.status || d._entrega?.status,
               containerMontadoAt: toISO(editForm.containerMontadoAt),
               horarioChegada: toISO(editForm.horarioChegada),
+              arrivedAt: toISO(editForm.horarioChegada),
               horarioInicioDesova: toISO(editForm.horarioInicioDesova),
+              desovaStartAt: toISO(editForm.horarioInicioDesova),
               horarioFimDesova: toISO(editForm.horarioFimDesova),
+              desovaEndAt: toISO(editForm.horarioFimDesova),
               horarioDevolucaoVazio: toISO(editForm.horarioDevolucaoVazio),
+              observations: editForm.observations,
+              submissionObservation: editForm.submissionObservation,
+              documentsJustification: editForm.documentsJustification,
             }
           };
         })

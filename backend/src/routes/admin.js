@@ -1298,7 +1298,22 @@ router.put("/deliveries/:id", auth, onlyAdmin, async (req, res) => {
   try {
     const city = req.city || 'manaus';
     const { id } = req.params;
-    const { deliveryNumber, userName, driverName, vehiclePlate, observations, dataAgendamento, horarioChegada, horarioDevolucaoVazio, horarioInicioDesova, horarioFimDesova, containerMontadoAt, status } = req.body;
+    const {
+      deliveryNumber,
+      userName,
+      driverName,
+      vehiclePlate,
+      observations,
+      submissionObservation,
+      documentsJustification,
+      dataAgendamento,
+      horarioChegada,
+      horarioDevolucaoVazio,
+      horarioInicioDesova,
+      horarioFimDesova,
+      containerMontadoAt,
+      status
+    } = req.body;
 
     console.log('📝 Recebido PUT /deliveries/:id', { id, deliveryNumber, userName, driverName, vehiclePlate, observations, horarioDevolucaoVazio, city, status });
 
@@ -1331,6 +1346,9 @@ router.put("/deliveries/:id", auth, onlyAdmin, async (req, res) => {
     if (driverName !== undefined) updates.driverName = driverName;
     if (vehiclePlate !== undefined) updates.vehiclePlate = vehiclePlate.trim();
     if (observations !== undefined) updates.observations = observations;
+    if (submissionObservation !== undefined) updates.submissionObservation = submissionObservation;
+    if (documentsJustification !== undefined) updates.documentsJustification = documentsJustification;
+    if (dataAgendamento !== undefined && dataAgendamento) updates.dataAgendamento = new Date(dataAgendamento);
     if (horarioChegada !== undefined && horarioChegada) updates.arrivedAt = new Date(horarioChegada);
     if (horarioDevolucaoVazio !== undefined && horarioDevolucaoVazio) updates.horarioDevolucaoVazio = new Date(horarioDevolucaoVazio);
     if (horarioInicioDesova !== undefined && horarioInicioDesova) updates.desovaStartAt = new Date(horarioInicioDesova);

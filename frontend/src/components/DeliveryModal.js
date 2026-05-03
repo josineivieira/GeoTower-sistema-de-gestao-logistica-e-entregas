@@ -275,6 +275,8 @@ const DeliveryModal = ({
                 ['Chegada', selectedDelivery.horarioChegada ? formatarData(selectedDelivery.horarioChegada, city) : '—'],
                 [`Início ${getDesovaStepLabel(city)}`, selectedDelivery.horarioInicioDesova ? formatarData(selectedDelivery.horarioInicioDesova, city) : '—'],
                 [`Fim ${getDesovaStepLabel(city)}`, selectedDelivery.horarioFimDesova ? formatarData(selectedDelivery.horarioFimDesova, city) : '—'],
+                ['Saindo do Cliente', selectedDelivery.horarioSaidaCliente ? formatarData(selectedDelivery.horarioSaidaCliente, city) : '—'],
+                ['Chegada no Porto', selectedDelivery.horarioChegadaPorto ? formatarData(selectedDelivery.horarioChegadaPorto, city) : '—'],
               ].map(([label, value]) => {
                 const comparison = comparisons[label];
                 const isInconsistent = comparison?.isInconsistent;

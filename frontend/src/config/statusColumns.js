@@ -96,7 +96,10 @@ export const getStatusColumns = (city = 'manaus') => [
     border: 'border-teal-200',
     text: 'text-teal-700',
     badge: 'bg-teal-100 text-teal-700',
-    filter: (p) => normalizeKey(p.status) === 'ANEXANDO DOCUMENTOS FINAIS' || normalizeKey(p.status) === 'DESOVA FINALIZADA',
+    filter: (p) => {
+      const s = normalizeKey(p.status);
+      return s === 'ANEXANDO DOCUMENTOS FINAIS' || s === 'DESOVA FINALIZADA' || s === 'SAINDO CLIENTE';
+    },
   },
   {
     key: 'VIAGEM_RETORNO',
@@ -111,7 +114,7 @@ export const getStatusColumns = (city = 'manaus') => [
     filter: (p) => {
       const s = normalizeKey(p.status);
       const isPendDevolucao = s === 'PEND. DEVOLUCAO' || s === 'PEND. DEVOLUÇÃO';
-      const isRetornoEmAndamento = s === 'SAINDO CLIENTE' || s === 'CHEGOU PORTO';
+      const isRetornoEmAndamento = s === 'RETORNANDO PORTO' || s === 'CHEGOU PORTO';
       const isFinalizado = s === 'FINALIZADO';
       const semDataDevolucao = !p.dtDevolucaoCNTR && !p.horarioDevolucaoVazio;
       return (isPendDevolucao || isRetornoEmAndamento || isFinalizado) && semDataDevolucao;

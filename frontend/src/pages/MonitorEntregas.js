@@ -119,6 +119,14 @@ const getStatusConfig = (city = 'manaus') => {
       icon: <FaMapMarkerAlt />, gradient: 'from-blue-500 to-indigo-700',
       ring: 'ring-blue-400/30', dot: 'bg-blue-500', hex: '#3b82f6'
     },
+    'RETORNANDO PORTO': {
+      label: 'Retornando Porto',
+      bg: 'bg-sky-600', light: 'bg-sky-50', text: 'text-sky-700',
+      border: 'border-sky-300',
+      badge: 'bg-sky-100 text-sky-800 border border-sky-300',
+      icon: <FaRoute />, gradient: 'from-sky-500 to-cyan-700',
+      ring: 'ring-sky-400/30', dot: 'bg-sky-500', hex: '#0ea5e9'
+    },
     ENTREGUE: {
       label: 'Entregue',
       bg: 'bg-emerald-600', light: 'bg-emerald-50', text: 'text-emerald-700',
@@ -621,6 +629,7 @@ const SettingsPanel = ({
                   <option value="DESOVA_FINALIZADA" className="bg-gray-900">Desova/Ovação Finalizada</option>
                   <option value="ANEXANDO_DOCUMENTOS_FINAIS" className="bg-gray-900">Anexando Docs Finais</option>
                   <option value="SAINDO_CLIENTE" className="bg-gray-900">Saindo do Cliente</option>
+                  <option value="RETORNANDO_PORTO" className="bg-gray-900">Retornando Porto</option>
                   <option value="CHEGOU_PORTO" className="bg-gray-900">Chegou no Porto</option>
                   <option value="CANCELADO" className="bg-gray-900">Cancelado</option>
                 </select>
@@ -758,6 +767,7 @@ const getStatusEntryTime = (delivery, city) => {
   if (status === 'EM DESOVA') return delivery.desovaStartedAt || delivery.horarioInicioDesova;
   if (status === 'ANEXANDO DOCUMENTOS FINAIS') return delivery.docsStartedAt || delivery.horarioFimDesova;
   if (status === 'SAINDO CLIENTE') return delivery.horarioSaidaCliente || delivery.horarioFimDesova;
+  if (status === 'RETORNANDO PORTO') return delivery.horarioSaidaCliente || delivery.horarioFimDesova;
   if (status === 'CHEGOU PORTO') return delivery.horarioChegadaPorto || delivery.horarioSaidaCliente;
   if (status === 'FINALIZADO' || status === 'ENTREGUE' || status === 'DOCUMENTOS ENTREGUES') return delivery.finalizedAt || delivery.horarioFimDesova || delivery.horarioChegada;
   if (status === 'CANCELADO') return delivery.cancelledAt || delivery.createdAt;
@@ -785,6 +795,7 @@ const MonitorEntregas = () => {
     { value: "DESOVA_FINALIZADA", label: getDesovaStatusLabel('DESOVA_FINALIZADA', currentCity) },
     { value: "ANEXANDO_DOCUMENTOS_FINAIS", label: "Anexando Docs Finais" },
     { value: "SAINDO_CLIENTE", label: "Saindo do Cliente" },
+    { value: "RETORNANDO_PORTO", label: "Retornando Porto" },
     { value: "CHEGOU_PORTO", label: "Chegou no Porto" },
     { value: "CANCELADO", label: "Cancelado" }
   ];
@@ -796,6 +807,9 @@ const MonitorEntregas = () => {
     { value: "EM_DESOVA", label: `Em ${getDesovaStepLabel(currentCity)}` },
     { value: "DESOVA_FINALIZADA", label: getDesovaStatusLabel('DESOVA_FINALIZADA', currentCity) },
     { value: "ANEXANDO_DOCUMENTOS_FINAIS", label: "Anexando Docs Finais" },
+    { value: "SAINDO_CLIENTE", label: "Saindo do Cliente" },
+    { value: "RETORNANDO_PORTO", label: "Retornando Porto" },
+    { value: "CHEGOU_PORTO", label: "Chegou no Porto" },
     { value: "CANCELADO", label: "Cancelado" }
   ];
 
@@ -872,7 +886,7 @@ const MonitorEntregas = () => {
   const userName = user?.name || 'Usuário Desconhecido';
 
   const statusMapToBackend = {
-    OPERACAO_FINALIZADA: ['ENTREGUE', 'submitted', 'FINALIZADO'],
+    OPERACAO_FINALIZADA: ['ENTREGUE', 'submitted', 'FINALIZADO', 'SAINDO_CLIENTE'],
     'A CAMINHO DO CLIENTE': ['A_CAMINHO_DO_CLIENTE', 'pending', 'PENDING'],
     DOCUMENTOS_ENTREGUES: ['FINALIZADO'],
     FINALIZADO: ['FINALIZADO'],
@@ -881,6 +895,7 @@ const MonitorEntregas = () => {
     DESOVA_FINALIZADA: ['DESOVA_FINALIZADA'],
     ANEXANDO_DOCUMENTOS_FINAIS: ['ANEXANDO_DOCUMENTOS_FINAIS'],
     SAINDO_CLIENTE: ['SAINDO_CLIENTE'],
+    RETORNANDO_PORTO: ['RETORNANDO_PORTO'],
     CHEGOU_PORTO: ['CHEGOU_PORTO'],
     AGENDADO: ['AGENDADO'],
     CANCELADO: ['CANCELADO']
@@ -1215,7 +1230,7 @@ const MonitorEntregas = () => {
       d.horarioChegadaPorto ||
       getDocumentUrlsArray(d.documents?.saidaCliente).length ||
       getDocumentUrlsArray(d.documents?.chegadaPorto).length ||
-      ['SAINDO_CLIENTE', 'CHEGOU_PORTO'].includes(String(d.status || '').toUpperCase())
+      ['SAINDO_CLIENTE', 'RETORNANDO_PORTO', 'CHEGOU_PORTO'].includes(String(d.status || '').toUpperCase())
     );
     if (newFlowStarted) keys.push('saidaCliente', 'chegadaPorto');
     return keys.every((k) => getDocumentUrlsArray(d.documents?.[k]).length > 0);
@@ -2955,6 +2970,7 @@ const MonitorEntregas = () => {
                   <option value="DESOVA_FINALIZADA" className="bg-gray-900">Desova/Ovação Finalizada</option>
                   <option value="ANEXANDO_DOCUMENTOS_FINAIS" className="bg-gray-900">Anexando Docs Finais</option>
                   <option value="SAINDO_CLIENTE" className="bg-gray-900">Saindo do Cliente</option>
+                  <option value="RETORNANDO_PORTO" className="bg-gray-900">Retornando Porto</option>
                   <option value="CHEGOU_PORTO" className="bg-gray-900">Chegou no Porto</option>
                   <option value="CANCELADO" className="bg-gray-900">Cancelado</option>
                 </select>

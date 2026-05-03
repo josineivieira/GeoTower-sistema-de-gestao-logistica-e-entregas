@@ -454,7 +454,8 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     if (status && status !== "all") {
       console.log('  ✓ Aplicando filtro de status:', status);
       filtered = filtered.filter(d => {
-        if (status === 'OPERACAO_FINALIZADA') return d.status === 'ENTREGUE' || d.status === 'submitted' || d.status === 'FINALIZADO';
+        if (status === 'OPERACAO_FINALIZADA') return d.status === 'ENTREGUE' || d.status === 'submitted' || d.status === 'FINALIZADO' || d.status === 'SAINDO_CLIENTE';
+        if (status === 'RETORNO') return d.status === 'RETORNANDO_PORTO' || d.status === 'CHEGOU_PORTO';
         if (status === 'A CAMINHO DO CLIENTE') return d.status === 'A_CAMINHO_DO_CLIENTE' || d.status === 'pending' || d.status === 'PENDING';
         return d.status === status;
       });

@@ -171,6 +171,7 @@ const getStepFromDeliveryStatus = (delivery) => {
     case 'AGUARDANDO_ANEXO': case 'ANEXANDO_DOCUMENTOS_FINAIS': restoredStep = 'finalDocs'; break;
     case 'DESOVA_FINALIZADA': case 'AGUARDANDO_AGENDAMENTO_DEVOLUCAO': restoredStep = 'finalDocs'; break;
     case 'SAINDO_CLIENTE': restoredStep = delivery?.currentStep || 'leavingClient'; break;
+    case 'RETORNANDO_PORTO': restoredStep = delivery?.currentStep || 'arrivingPort'; break;
     case 'CHEGOU_PORTO': restoredStep = delivery?.currentStep || 'arrivingPort'; break;
     case 'ENTREGUE': case 'DEVOLVENDO_CONTAINER': case 'FINALIZADO': restoredStep = 'welcome'; break;
     default: restoredStep = 'welcome';
@@ -214,6 +215,7 @@ const STATUS_CONFIG = {
   AGUARDANDO_AGENDAMENTO_DEVOLUCAO: { label: 'AGUARD. AGEND. DEVOLUÇÃO', color: 'bg-pink-100 text-pink-700 border-pink-300', dot: 'bg-pink-500', icon: FaCalendarAlt },
   ANEXANDO_DOCUMENTOS_FINAIS: { label: 'ANEXANDO DOCUMENTOS', color: 'bg-teal-100 text-teal-700 border-teal-300', dot: 'bg-teal-500', icon: FaFileAlt },
   SAINDO_CLIENTE: { label: 'SAINDO DO CLIENTE', color: 'bg-cyan-100 text-cyan-700 border-cyan-300', dot: 'bg-cyan-500', icon: FaRoute },
+  RETORNANDO_PORTO: { label: 'RETORNANDO PORTO', color: 'bg-blue-100 text-blue-700 border-blue-300', dot: 'bg-blue-500', icon: FaRoute },
   CHEGOU_PORTO: { label: 'CHEGOU NO PORTO', color: 'bg-blue-100 text-blue-700 border-blue-300', dot: 'bg-blue-500', icon: FaMapMarkerAlt },
   ENTREGUE: { label: 'DEVOLVENDO CONTAINER', color: 'bg-yellow-100 text-yellow-700 border-yellow-300', dot: 'bg-yellow-500', icon: FaTruck },
   DEVOLVENDO_CONTAINER: { label: 'DEVOLVENDO CONTAINER', color: 'bg-yellow-100 text-yellow-700 border-yellow-300', dot: 'bg-yellow-500', icon: FaTruck },
@@ -2227,7 +2229,7 @@ const ProgramadasEntregas = () => {
                   <StepTimer start={currentDelivery?.arrivedAt || currentDelivery?.createdAt} label="Tempo no cliente" />
                   <p className="text-gray-500 text-sm">Registre com foto a saida do cliente.</p>
                   <PhotoSection
-                    onConfirm={() => compressAndUpload('saidaCliente', 'SAINDO_CLIENTE', 'arrivingPort', { saidaClienteAt: new Date().toISOString() })}
+                    onConfirm={() => compressAndUpload('saidaCliente', 'RETORNANDO_PORTO', 'arrivingPort', { saidaClienteAt: new Date().toISOString() })}
                     onBack={() => goToStep('finalDocs')}
                     buttonLabel="Confirmar saida do cliente"
                     buttonColor="bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700"

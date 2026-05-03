@@ -773,6 +773,7 @@ router.get('/programacoes/mine', auth, async (req, res) => {
       if (matchedDelivery) {
         obj.linkedDeliveryId = matchedDelivery._id;
         obj.missingDocumentsAtSubmit = matchedDelivery.missingDocumentsAtSubmit || [];
+        obj.status = matchedDelivery.status || obj.status;
         if (isReturnedDelivery(matchedDelivery)) {
           obj.horarioDevolucaoVazio = matchedDelivery.horarioDevolucaoVazio;
           obj.containerReturned = true;

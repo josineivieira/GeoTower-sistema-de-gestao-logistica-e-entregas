@@ -568,16 +568,25 @@ const ProgramadasEntregas = () => {
     try {
       setSubmitting(true);
       let existing = null;
+      if (p.linkedDeliveryId) {
+        try {
+          const linked = await deliveryService.getDelivery(p.linkedDeliveryId);
+          const linkedDelivery = linked.data.delivery;
+          existing = deliveryMatchesProgramacaoContext(linkedDelivery, p) ? linkedDelivery : null;
+        } catch (_) {}
+      }
       try {
-        const searchNumbers = [deliveryNumber, ...getProgramacaoLegacyDeliveryNumbers(p)];
-        const results = await Promise.all(searchNumbers.map(number =>
-          deliveryService.getMyDeliveries({ q: number.toUpperCase(), includeCanceled: true }).catch(() => ({ data: { deliveries: [] } }))
-        ));
-        const list = results.flatMap(result => result.data.deliveries || []);
-        const validNumbers = searchNumbers.map(normalizeGroupValue);
-        const exactMatches = list.filter(d => validNumbers.includes(normalizeGroupValue(d.deliveryNumber)));
-        if (exactMatches.length > 0) {
-          existing = selectDeliveryForProgramacao(exactMatches, p._id, p);
+        if (!existing) {
+          const searchNumbers = [deliveryNumber, ...getProgramacaoLegacyDeliveryNumbers(p)];
+          const results = await Promise.all(searchNumbers.map(number =>
+            deliveryService.getMyDeliveries({ q: number.toUpperCase(), includeCanceled: true }).catch(() => ({ data: { deliveries: [] } }))
+          ));
+          const list = results.flatMap(result => result.data.deliveries || []);
+          const validNumbers = searchNumbers.map(normalizeGroupValue);
+          const exactMatches = list.filter(d => validNumbers.includes(normalizeGroupValue(d.deliveryNumber)));
+          if (exactMatches.length > 0) {
+            existing = selectDeliveryForProgramacao(exactMatches, p._id, p);
+          }
         }
       } catch (_) {}
 

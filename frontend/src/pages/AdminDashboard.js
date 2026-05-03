@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import KPIAnalytics from './KPIAnalytics';
@@ -551,10 +551,10 @@ const AdminDashboard = () => {
   const productivityByHours = React.useMemo(() => {
     const filteredDeliveries = filterDeliveriesByDate(deliveries);
     const faixas = {
-      'Até 2h': { count: 0, color: '#10b981', min: 0, max: 2 },
-      '2-6h': { count: 0, color: '#3b82f6', min: 2, max: 6 },
-      '6-9h': { count: 0, color: '#eab308', min: 6, max: 9 },
-      '9h+': { count: 0, color: '#ef4444', min: 9, max: Infinity }
+      'Até 5h': { count: 0, color: '#10b981', min: 0, max: 5 },
+      '5-8h': { count: 0, color: '#3b82f6', min: 5, max: 8 },
+      '8-12h': { count: 0, color: '#eab308', min: 8, max: 12 },
+      '12h+': { count: 0, color: '#ef4444', min: 12, max: Infinity }
     };
 
     let validDeliveries = 0;
@@ -572,10 +572,10 @@ const AdminDashboard = () => {
       if (durationHours > 24) return;
       validDeliveries++;
 
-      if (durationHours <= 2) faixas['Até 2h'].count++;
-      else if (durationHours <= 6) faixas['2-6h'].count++;
-      else if (durationHours <= 9) faixas['6-9h'].count++;
-      else faixas['9h+'].count++;
+      if (durationHours <= 5) faixas['Até 5h'].count++;
+      else if (durationHours <= 8) faixas['5-8h'].count++;
+      else if (durationHours <= 12) faixas['8-12h'].count++;
+      else faixas['12h+'].count++;
     });
 
     const data = Object.entries(faixas).map(([label, info]) => ({
@@ -767,10 +767,10 @@ const AdminDashboard = () => {
   const getProductivityDetailRows = (band) => getFilteredDeliveries().filter(d => {
     const hours = getProductivityHours(d);
     if (hours == null) return false;
-    if (band === 'Até 2h') return hours <= 2;
-    if (band === '2-6h') return hours > 2 && hours <= 6;
-    if (band === '6-9h') return hours > 6 && hours <= 9;
-    return hours > 9;
+    if (band === 'Até 5h') return hours <= 5;
+    if (band === '5-8h') return hours > 5 && hours <= 8;
+    if (band === '8-12h') return hours > 8 && hours <= 12;
+    return hours > 12;
   });
 
   const getDailyVolumeRows = (date) => getFilteredDeliveries().filter(d => {

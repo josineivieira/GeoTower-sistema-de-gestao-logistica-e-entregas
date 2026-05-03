@@ -314,11 +314,26 @@ const AdminDashboard = () => {
 
   // Dados já vêm filtrados do backend, não precisa mais de useMemo
   const getCliMinutes = (d) => {
-    if (!d.horarioChegada) return null;
-    const chegada = new Date(d.horarioChegada);
+    const start = getProductivityStartTime(d);
+    if (!start) return null;
+    const chegada = new Date(start);
     const ref = d.horarioFimDesova ? new Date(d.horarioFimDesova) : new Date();
     const diff = ref - chegada;
     return diff < 0 ? null : diff / 60000;
+  };
+
+  const getProductivityStartTime = (delivery) => {
+    if (!delivery?.horarioChegada) return null;
+    const chegada = new Date(delivery.horarioChegada).getTime();
+    if (isNaN(chegada)) return null;
+
+    const scheduledValue = getProgramacaoDate(delivery, city) || delivery.dataAgendamento;
+    const scheduled = scheduledValue ? new Date(scheduledValue).getTime() : NaN;
+
+    if (!isNaN(scheduled) && chegada < scheduled) {
+      return scheduled;
+    }
+    return chegada;
   };
 
   const fmtDate = (date) => {
@@ -545,7 +560,7 @@ const AdminDashboard = () => {
     filteredDeliveries.forEach(d => {
       if (!d.horarioChegada || !d.horarioFimDesova) return;
 
-      const chegada = new Date(d.horarioChegada).getTime();
+      const chegada = getProductivityStartTime(d);
       const fim = new Date(d.horarioFimDesova).getTime();
 
       if (isNaN(chegada) || isNaN(fim) || fim < chegada) return;
@@ -578,7 +593,7 @@ const AdminDashboard = () => {
     filteredDeliveries.forEach(d => {
       if (!d.horarioChegada || !d.horarioFimDesova || !d.recebedor) return;
 
-      const chegada = new Date(d.horarioChegada).getTime();
+      const chegada = getProductivityStartTime(d);
       const fim = new Date(d.horarioFimDesova).getTime();
 
       if (isNaN(chegada) || isNaN(fim) || fim < chegada) return;

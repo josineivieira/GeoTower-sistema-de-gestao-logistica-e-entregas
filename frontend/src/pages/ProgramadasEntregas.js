@@ -620,7 +620,9 @@ const ProgramadasEntregas = () => {
           case 'ENTREGUE': case 'DEVOLVENDO_CONTAINER': case 'FINALIZADO': restoredStep = 'welcome'; break;
           default: restoredStep = 'welcome';
         }
-        setCurrentStep(existing.currentStep || restoredStep);
+        const savedStep = existing.currentStep;
+        const nextStep = restoredStep !== 'welcome' ? restoredStep : (savedStep || restoredStep);
+        setCurrentStep(nextStep);
         setPhotos([]); setObservations(''); setJustification(''); setDocumentsUpload({});
         setShowModal(true);
         setToast({ message: 'Entrega retomada', type: 'success' });

@@ -160,7 +160,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     let progFilter = {};
     applyProgramacaoCityFilter(progFilter, city);
     const programacoes = await ProgramacaoEntrega.find(progFilter)
-      .select('processo recebedor container dataAgendamento dtColeta contratado motorista status createdAt observacoes origem estab')
+      .select('processo processoLog recebedor container dataAgendamento dtColeta contratado motorista status createdAt observacoes origem estab')
       .lean();
     console.log('  ℹ️  Total de programações (' + city + '):', programacoes ? programacoes.length : 0);
 
@@ -233,19 +233,32 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       }
     });
 
-    const programacoesByContainer = new Map();
+    const programacoesByLookup = new Map();
+    const programacoesById = new Map();
+    const addProgramacaoLookup = (prog, value) => {
+      const key = cleanLookupKey(value);
+      if (key && !programacoesByLookup.has(key)) programacoesByLookup.set(key, prog);
+    };
     programacoes.forEach((prog) => {
-      const key = cleanLookupKey(prog.container);
-      if (key && !programacoesByContainer.has(key)) programacoesByContainer.set(key, prog);
+      if (prog._id) programacoesById.set(String(prog._id), prog);
+      addProgramacaoLookup(prog, prog.processoLog);
+      addProgramacaoLookup(prog, prog.processo);
+      addProgramacaoLookup(prog, prog.container);
     });
+
+    const findProgramacaoForDelivery = (delivery) => {
+      const linkedId = delivery.programacaoId || delivery.linkedProgramacaoId;
+      if (linkedId && programacoesById.has(String(linkedId))) return programacoesById.get(String(linkedId));
+      return programacoesByLookup.get(cleanLookupKey(delivery.deliveryNumber)) || null;
+    };
 
     const deliveryNumbers = new Set();
     normalizedDeliveries.forEach((delivery) => addLookupKey(deliveryNumbers, delivery.deliveryNumber));
 
     let deliveriesWithProgramacao = normalizedDeliveries.map(delivery => {
-      const prog = programacoesByContainer.get(cleanLookupKey(delivery.deliveryNumber));
-      const keyProc = (delivery.processoCAB || '').toUpperCase();
-      const keyCont = (delivery.deliveryNumber || '').toUpperCase();
+      const prog = findProgramacaoForDelivery(delivery);
+      const keyProc = cleanLookupKey(prog?.processo || delivery.processoCAB || delivery.deliveryNumber);
+      const keyCont = cleanLookupKey(prog?.container || delivery.container || delivery.deliveryNumber);
       const yrecArray = ycByProcess.get(keyProc) || ycByContainer.get(keyCont) || [];
       const yrec = Array.isArray(yrecArray) ? yrecArray[0] : yrecArray;  // pega o primeiro para placa
       const placaY = yrec ? (yrec.tracao || '') : '';
@@ -257,11 +270,13 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
         ...delivery,
         // incluir número de processo CAB quando houver programação
         processoCAB: prog ? prog.processo || '' : delivery.processoCAB || '',
+        processoLog: prog ? prog.processoLog || '' : delivery.processoLog || '',
         placaIcompany: placaY,
-        containerNumero: containerNumeros.length > 0 ? containerNumeros : undefined,  // Array de containers
-        recebedor: prog ? prog.recebedor : '',
-        dataAgendamento: prog ? prog.dataAgendamento : '',
-        dtColeta: prog ? prog.dtColeta : '',  // Itajaí: data de coleta
+        container: prog ? prog.container || delivery.container || '' : delivery.container || '',
+        containerNumero: containerNumeros.length > 0 ? containerNumeros : (prog?.container ? [prog.container] : undefined),  // Array de containers
+        recebedor: prog ? prog.recebedor : delivery.recebedor || '',
+        dataAgendamento: prog ? prog.dataAgendamento : delivery.dataAgendamento || '',
+        dtColeta: prog ? prog.dtColeta : delivery.dtColeta || '',  // Itajaí: data de coleta
         horarioChegada: delivery.arrivedAt || '',
         horarioDevolucaoVazio: delivery.horarioDevolucaoVazio || '',
         horarioInicioDesova: delivery.desovaStartAt || '',
@@ -272,8 +287,8 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
 
     // adicionar programações que não têm entrega correspondente
     programacoes.forEach(prog => {
-      const key = cleanLookupKey(prog.container);
-      const exists = deliveryNumbers.has(key);
+      const programacaoKeys = [prog.processoLog, prog.processo, prog.container].map(cleanLookupKey).filter(Boolean);
+      const exists = programacaoKeys.some(key => deliveryNumbers.has(key));
       if (!exists) {
         // também incluir placaIcompany se existir
         const keyProc = (prog.processo || '').toUpperCase();
@@ -291,8 +306,10 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
           _id: prog._id,
           deliveryNumber: prog.container || prog.processo,
           processoCAB: prog.processo || '',
+          processoLog: prog.processoLog || '',
           placaIcompany: placaY2,
-          containerNumero: containerNumeros2.length > 0 ? containerNumeros2 : undefined,  // Array de containers
+          container: prog.container || '',
+          containerNumero: containerNumeros2.length > 0 ? containerNumeros2 : (prog.container ? [prog.container] : undefined),  // Array de containers
           userName: prog.contratado || '',
           driverName: prog.motorista || '-',
           recebedor: prog.recebedor || '',

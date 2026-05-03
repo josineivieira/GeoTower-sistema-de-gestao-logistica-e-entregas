@@ -35,6 +35,12 @@ const normalizeKey = (s) => {
   return String(s).replace(/_/g, ' ').toUpperCase().trim();
 };
 
+const getDisplayContainer = (delivery) => {
+  const value = delivery?.containerNumero;
+  if (Array.isArray(value)) return value.filter(Boolean).join(', ');
+  return value || delivery?.container || delivery?.deliveryNumber || '';
+};
+
 /* ─────────────────────────────────────────────────────────────
    DESIGN TOKENS
 ───────────────────────────────────────────────────────────── */
@@ -305,10 +311,10 @@ const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime, city = 'man
           )}
 
           {/* mostramos número do container no lugar do motorista */}
-          {delivery.containerNumero && (
+          {getDisplayContainer(delivery) && (
             <div className={`flex items-center gap-1 text-[9px] font-medium ${column.text}`}>
               <FaBoxOpen className="shrink-0 text-[8px]" />
-              <span className="truncate">{delivery.containerNumero}</span>
+              <span className="truncate">{getDisplayContainer(delivery)}</span>
             </div>
           )}
 
@@ -1529,15 +1535,23 @@ const MonitorEntregas = () => {
       return value.toString().replace(/^#/, '').trim().toUpperCase();
     };
 
-    const target = getClean(delivery.deliveryNumber || delivery.processo || delivery.codigo || '');
-    if (!target) return null;
+    const targets = [
+      delivery.processoCAB,
+      delivery.processo,
+      delivery.codigo,
+      delivery.processoLog,
+      delivery.deliveryNumber,
+      delivery.container,
+      Array.isArray(delivery.containerNumero) ? delivery.containerNumero[0] : delivery.containerNumero
+    ].map(getClean).filter(Boolean);
+    if (!targets.length) return null;
 
-    const keys = ['geomaritima', 'processo', 'codigo', 'numero', 'NUMERO', 'NÚMERO', 'container', 'containerNumero'];
+    const keys = ['geomaritima', 'processo', 'codigo', 'nrProcesso', 'numero', 'NUMERO', 'NÚMERO', 'container', 'containerNumero'];
 
     return icompanyData.find((record) => {
       return keys.some((k) => {
         const val = getClean(record[k]);
-        return val && val === target;
+        return val && targets.includes(val);
       });
     }) || null;
   }, [icompanyData]);
@@ -1573,29 +1587,35 @@ const MonitorEntregas = () => {
     };
 
     // Procurar registro correspondente na Icompany
-    const processoRaw = (delivery.deliveryNumber || delivery.processo || delivery.codigo || '').toString();
-    const processoClean = processoRaw.replace(/^#/, '').toUpperCase().trim();
-
     const normalizeRecordKey = (value) => {
       if (!value && value !== 0) return '';
       const str = value.toString();
       return str.replace(/^#/, '').trim().toUpperCase();
     };
 
-    const lookupKeys = ['geomaritima', 'processo', 'codigo', 'numero', 'NUMERO', 'NÚMERO', 'container', 'containerNumero'];
+    const processoKeys = [
+      delivery.processoCAB,
+      delivery.processo,
+      delivery.codigo,
+      delivery.processoLog,
+      delivery.deliveryNumber,
+      delivery.container,
+      Array.isArray(delivery.containerNumero) ? delivery.containerNumero[0] : delivery.containerNumero
+    ].map(normalizeRecordKey).filter(Boolean);
 
+    const lookupKeys = ['geomaritima', 'processo', 'codigo', 'nrProcesso', 'numero', 'NUMERO', 'NÚMERO', 'container', 'containerNumero'];
     const icompanyRecord = icompanyData.find((record) => {
       return lookupKeys.some((key) => {
         const v = normalizeRecordKey(record[key]);
-        return v && v === processoClean;
+        return v && processoKeys.includes(v);
       });
     });
 
 
     if (!icompanyRecord) {
       // DEBUG: não encontrado; pode ser que esteja em outro formato no iCompany
-      console.debug('[Icompany compare] no match for', { deliveryNumber: processoClean, rowCount: icompanyData.length });
-      return { __notFound: true, mensagem: `Nenhum registro iCompany encontrado para ${processoClean}` };
+      console.debug('[Icompany compare] no match for', { deliveryKeys: processoKeys, rowCount: icompanyData.length });
+      return { __notFound: true, mensagem: `Nenhum registro iCompany encontrado para ${processoKeys[0] || 'N/D'}` };
     }
 
     const comparisons = {};
@@ -1916,7 +1936,7 @@ const MonitorEntregas = () => {
     // Agrupamento por container
     const grouped = {};
     filteredDeliveries.forEach((d) => {
-      const key = `${d.city || 'unknown'}|${d.containerNumero || d.container || d.deliveryNumber}`;
+      const key = `${d.city || 'unknown'}|${getDisplayContainer(d) || d.deliveryNumber}`;
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(d);
     });
@@ -1940,8 +1960,8 @@ const MonitorEntregas = () => {
             bVal = (b.processoCAB || '').toLowerCase();
             break;
           case 'container':
-            aVal = (a.containerNumero || a.container || '').toLowerCase();
-            bVal = (b.containerNumero || b.container || '').toLowerCase();
+            aVal = (getDisplayContainer(a) || '').toLowerCase();
+            bVal = (getDisplayContainer(b) || '').toLowerCase();
             break;
           case 'recebedor':
             aVal = (a.recebedor || '').toLowerCase();
@@ -2588,10 +2608,8 @@ const MonitorEntregas = () => {
 
                           {/* CONTAINER */}
                           <div className="px-4 py-3 flex items-center min-w-0" style={{ whiteSpace: 'normal', overflow: 'visible', textOverflow: 'clip' }}>
-                            <span className="text-gray-300 text-[11px]" style={{ whiteSpace: 'normal', wordBreak: 'break-all' }} title={d.containerNumero || d.container || d.deliveryNumber}>
-                              {Array.isArray(d.containerNumero)
-                                ? d.containerNumero.join(', ')
-                                : (d.containerNumero || d.container || d.deliveryNumber || '—')}
+                            <span className="text-gray-300 text-[11px]" style={{ whiteSpace: 'normal', wordBreak: 'break-all' }} title={getDisplayContainer(d) || d.deliveryNumber}>
+                              {getDisplayContainer(d) || '—'}
                             </span>
                           </div>
 

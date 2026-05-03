@@ -219,20 +219,44 @@ const AdminDashboard = () => {
     barCli:      useRef(null),
   };
 
+  const normalizeProcessKey = (value) => String(value || '')
+    .replace(/^#/, '')
+    .trim()
+    .toUpperCase();
+
+  const getIcompanyProcessNumber = (record) =>
+    normalizeProcessKey(record?.nrProcesso || record?.['Nr. do processo'] || record?.['Nr do processo']);
+
+  const dedupeByNrProcesso = (items) => {
+    const seen = new Set();
+    return (items || []).filter((item) => {
+      const key = getIcompanyProcessNumber(item);
+      if (!key) return true;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
   const loadData = useCallback(async (silent = false, customFilters = null) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
       // Carregar dados do Icompany em vez de deliveries
       const icompanyRes = await adminService.getIcompanyData();
-      const icompanyData = icompanyRes.data?.data || [];
+      const icompanyData = dedupeByNrProcesso(icompanyRes.data?.data || []);
       
       // Mapear dados do Icompany para formato esperado pelo dashboard
-      const mappedDeliveries = icompanyData.map(record => ({
+      const mappedDeliveries = icompanyData.map(record => {
+        const nrProcesso = getIcompanyProcessNumber(record);
+        return {
+        ...record,
         _id: record._id,
-        deliveryNumber: record.processo || record.codigo || record.geomaritima || record.numero,
+        deliveryNumber: nrProcesso || record.nrProcesso || record.processo || record.codigo || record.geomaritima || record.numero,
+        nrProcesso,
+        processoLog: nrProcesso,
         processo: record.processo,
-        numero: record.numero || record.processo || record.codigo || record.geomaritima,
+        numero: nrProcesso || record.nrProcesso || record.numero || record.processo || record.codigo || record.geomaritima,
         driverName: record.motorista || 'Sem motorista',
         userName: record.contratado,
         status: 'FINALIZADO',
@@ -250,9 +274,9 @@ const AdminDashboard = () => {
         destinatario: record.destinatario,
         recebedor: city === 'manaus' ? record.destinatario || record.remetente : record.remetente || record.destinatario,
         container: record.container || record.placa,
-        contratado: record.contratado,
-        ...record
-      }));
+        contratado: record.contratado
+      };
+      });
       
       setDeliveries(mappedDeliveries);
       // Manter as estruturas de statistics e programacoes vazias para compatibilidade
@@ -654,7 +678,7 @@ const AdminDashboard = () => {
         }
       }
       
-      const numero = delivery.numero || delivery.processo || delivery.deliveryNumber; // Campo "Número" único da entrega
+      const numero = delivery.nrProcesso || delivery.processoLog || delivery.deliveryNumber;
       
       if (!date || !numero) return;
       

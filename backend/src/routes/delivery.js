@@ -259,6 +259,10 @@ function requesterNames(req, requesterRecord) {
   ].map(value => normalizePartyName(value).toUpperCase()).filter(Boolean);
 }
 
+function requesterNameRegexes(req, requesterRecord) {
+  return requesterNames(req, requesterRecord).map(name => new RegExp(`^${escapeRegExp(name)}$`, 'i'));
+}
+
 function requesterContractors(req, requesterRecord) {
   return [
     req.user?.contratado,
@@ -266,6 +270,10 @@ function requesterContractors(req, requesterRecord) {
     requesterRecord?.contratado,
     requesterRecord?.transportadora
   ].map(value => normalizePartyName(value).toUpperCase()).filter(Boolean);
+}
+
+function requesterContractorRegexes(req, requesterRecord) {
+  return requesterContractors(req, requesterRecord).map(name => new RegExp(`^${escapeRegExp(name)}$`, 'i'));
 }
 
 async function canAccessDelivery(req, delivery, db) {
@@ -276,6 +284,8 @@ async function canAccessDelivery(req, delivery, db) {
   const requesterRecord = await getRequesterRecord(req, db);
   const names = requesterNames(req, requesterRecord);
   const contractors = requesterContractors(req, requesterRecord);
+  const nameRegexes = requesterNameRegexes(req, requesterRecord);
+  const contractorRegexes = requesterContractorRegexes(req, requesterRecord);
   const deliveryDriver = normalizePartyName(delivery.driverName).toUpperCase();
   const deliveryContractor = normalizePartyName(delivery.userName || delivery.vehiclePlate).toUpperCase();
 
@@ -293,6 +303,30 @@ async function canAccessDelivery(req, delivery, db) {
         if (programacaoDriver && names.includes(programacaoDriver)) return true;
         if (programacaoContractor && contractors.includes(programacaoContractor)) return true;
       }
+    } catch (_) {}
+  }
+
+  if (delivery.deliveryNumber && (nameRegexes.length > 0 || contractorRegexes.length > 0)) {
+    try {
+      const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
+      const cityFilter = {};
+      applyProgramacaoCityFilter(cityFilter, delivery.cityCode || req.city || 'manaus');
+      const number = String(delivery.deliveryNumber || '').trim();
+      const numberRegex = new RegExp(`^${escapeRegExp(number)}$`, 'i');
+      const accessOr = [];
+      if (nameRegexes.length > 0) accessOr.push({ motorista: { $in: nameRegexes } });
+      if (contractorRegexes.length > 0) accessOr.push({ contratado: { $in: contractorRegexes } });
+
+      const programacao = await ProgramacaoEntrega.findOne({
+        ...cityFilter,
+        ativo: { $ne: false },
+        $and: [
+          { $or: [{ processoLog: numberRegex }, { processo: numberRegex }, { container: numberRegex }] },
+          { $or: accessOr }
+        ]
+      }).lean();
+
+      if (programacao && legacyDeliveryMatchesProgramacao(delivery, programacao)) return true;
     } catch (_) {}
   }
 

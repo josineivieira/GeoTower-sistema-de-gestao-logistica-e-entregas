@@ -164,6 +164,7 @@ const AdminDashboard = () => {
   const [toast,       setToast]       = useState(null);
   const [activeBar,   setActiveBar]   = useState(null);
   const [viewMode,    setViewMode]    = useState('dashboard'); // 'dashboard' ou 'kpi'
+  const [detailModal, setDetailModal] = useState(null);
   // Filtros de data
   const [filters, setFilters] = useState({ startDate: '', endDate: '' });
 
@@ -682,7 +683,7 @@ const AdminDashboard = () => {
   // Volume de Entregas Diárias (agrupado por Número único)
   const dailyVolume = React.useMemo(() => {
     const grouped = {};
-    deliveries.forEach(delivery => {
+    filterDeliveriesByDate(deliveries).forEach(delivery => {
       // Usar dtAgendamentoDescarga como data de referência para volume diário
       const dateValue = delivery.agendamentoDescarga || delivery.dataAgendamento;
       let date = null;
@@ -726,13 +727,96 @@ const AdminDashboard = () => {
       totalDeliveries,
       avgDeliveries: parseFloat(avgDeliveries.toFixed(1))
     };
-  }, [deliveries]);
+  }, [deliveries, filters]);
 
   const exportPayload = () => ({
     statistics, deliveries, topRecebedores, avgCliByRecebedor,
     recebedorCountData, recebedorAvgData, fmtMin,
     period: filters.startDate || filters.endDate ? 'custom' : 'all',
   });
+
+  const getFilteredDeliveries = () => filterDeliveriesByDate(deliveries);
+
+  const getDeliveryDateLabel = (value) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? String(value) : formatarData(date, city);
+  };
+
+  const openDetailModal = (title, rows) => {
+    setDetailModal({ title, rows: rows || [] });
+  };
+
+  const getOtdDetailRows = (type) => getFilteredDeliveries().filter(d => {
+    if (!d.dataAgendamento || !d.horarioChegada) return false;
+    const scheduled = new Date(d.dataAgendamento).getTime();
+    const arrived = new Date(d.horarioChegada).getTime();
+    if (isNaN(scheduled) || isNaN(arrived)) return false;
+    return type === 'late' ? arrived > scheduled : arrived <= scheduled;
+  });
+
+  const getProductivityHours = (delivery) => {
+    if (!delivery?.horarioChegada || !delivery?.horarioFimDesova) return null;
+    const start = getProductivityStartTime(delivery);
+    const end = new Date(delivery.horarioFimDesova).getTime();
+    if (isNaN(start) || isNaN(end) || end < start) return null;
+    const hours = (end - start) / (1000 * 60 * 60);
+    return hours > 24 ? null : hours;
+  };
+
+  const getProductivityDetailRows = (band) => getFilteredDeliveries().filter(d => {
+    const hours = getProductivityHours(d);
+    if (hours == null) return false;
+    if (band === 'Até 2h') return hours <= 2;
+    if (band === '2-6h') return hours > 2 && hours <= 6;
+    if (band === '6-9h') return hours > 6 && hours <= 9;
+    return hours > 9;
+  });
+
+  const getDailyVolumeRows = (date) => getFilteredDeliveries().filter(d => {
+    const dateValue = d.agendamentoDescarga || d.dataAgendamento;
+    if (!dateValue) return false;
+    const parsed = new Date(dateValue);
+    if (isNaN(parsed)) return false;
+    const rowDate = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+    return rowDate === date;
+  });
+
+  const getRowsByField = (field, value) => getFilteredDeliveries().filter(d => {
+    const fieldValue = field === 'contratado'
+      ? (d.contratado || d.userName || d.driverName)
+      : d[field];
+    return String(fieldValue || '-') === String(value || '-');
+  });
+
+  const getDetailIdentity = (delivery) => (
+    delivery?.nrProcesso ||
+    delivery?.processoLog ||
+    delivery?.processo ||
+    delivery?.codigo ||
+    delivery?.deliveryNumber ||
+    delivery?._id ||
+    '-'
+  );
+
+  const getDetailContainer = (delivery) => (
+    delivery?.containerNumero ||
+    delivery?.container ||
+    delivery?.containerNumber ||
+    '-'
+  );
+
+  const getDetailProcess = (delivery) => (
+    delivery?.processo ||
+    delivery?.processoCAB ||
+    delivery?.codigo ||
+    '-'
+  );
+
+  const getDetailHoursLabel = (delivery) => {
+    const hours = getProductivityHours(delivery);
+    return hours == null ? '-' : `${hours.toFixed(2)}h`;
+  };
 
   const handleExportPDF = async () => {
     if (!statistics) return;
@@ -958,16 +1042,24 @@ const AdminDashboard = () => {
                     dotColor={otdMetrics.dotColor}
                   />
                   <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="bg-white/[0.05] rounded-lg p-4 border border-green-500/20">
+                    <button
+                      type="button"
+                      onClick={() => openDetailModal('OTD - Entregas no prazo', getOtdDetailRows('onTime'))}
+                      className="text-left bg-white/[0.05] rounded-lg p-4 border border-green-500/20 hover:bg-green-500/10 transition"
+                    >
                       <p className="text-xs text-slate-500 uppercase tracking-wider">No Prazo</p>
                       <p className="text-2xl font-bold text-green-400 mt-1">{otdMetrics.onTime}</p>
                       <p className="text-xs text-slate-400 mt-1">{((otdMetrics.onTime / otdMetrics.total) * 100).toFixed(1)}% do total</p>
-                    </div>
-                    <div className="bg-white/[0.05] rounded-lg p-4 border border-red-500/20">
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openDetailModal('OTD - Entregas atrasadas', getOtdDetailRows('late'))}
+                      className="text-left bg-white/[0.05] rounded-lg p-4 border border-red-500/20 hover:bg-red-500/10 transition"
+                    >
                       <p className="text-xs text-slate-500 uppercase tracking-wider">Atrasadas</p>
                       <p className="text-2xl font-bold text-red-400 mt-1">{otdMetrics.late}</p>
                       <p className="text-xs text-slate-400 mt-1">{((otdMetrics.late / otdMetrics.total) * 100).toFixed(1)}% do total</p>
-                    </div>
+                    </button>
                   </div>
                 </div>
                 <div className="flex items-center justify-center">
@@ -978,6 +1070,10 @@ const AdminDashboard = () => {
                           { name: 'No Prazo', value: otdMetrics.onTime },
                           { name: 'Atrasadas', value: otdMetrics.late }
                         ]}
+                        onClick={(data) => {
+                          const isLate = data?.name === 'Atrasadas';
+                          openDetailModal(isLate ? 'OTD - Entregas atrasadas' : 'OTD - Entregas no prazo', getOtdDetailRows(isLate ? 'late' : 'onTime'));
+                        }}
                         cx="50%"
                         cy="50%"
                         innerRadius={60}
@@ -1076,6 +1172,7 @@ const AdminDashboard = () => {
                     dataKey="count"
                     fill="#a855f7"
                     radius={[4, 4, 0, 0]}
+                    onClick={(data) => openDetailModal(`Transportador - ${data?.name || '-'}`, getRowsByField('contratado', data?.name))}
                     isAnimationActive
                     animationDuration={700}
                   />
@@ -1142,6 +1239,7 @@ const AdminDashboard = () => {
                   <Bar
                     dataKey="count"
                     radius={[6, 6, 0, 0]}
+                    onClick={(data) => openDetailModal(`Produtividade - ${data?.name || '-'}`, getProductivityDetailRows(data?.name))}
                     animationDuration={700}
                   >
                     {productivityByHours.data.map((item, i) => (
@@ -1152,14 +1250,19 @@ const AdminDashboard = () => {
               </ResponsiveContainer>
               <div className="grid grid-cols-4 gap-3 mt-4">
                 {productivityByHours.data.map((item, i) => (
-                  <div key={i} className="text-center">
+                  <button
+                    type="button"
+                    key={i}
+                    onClick={() => openDetailModal(`Produtividade - ${item.name}`, getProductivityDetailRows(item.name))}
+                    className="text-center rounded-lg hover:bg-white/[0.06] transition p-1"
+                  >
                     <div className="flex items-center justify-center gap-1 mb-1">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }} />
                       <p className="text-xs font-medium text-slate-400">{item.name}</p>
                     </div>
                     <p className="text-sm font-bold text-white">{item.count}</p>
                     <p className="text-xs text-slate-500">{item.percentage}%</p>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -1223,6 +1326,7 @@ const AdminDashboard = () => {
                   <Bar
                     dataKey="impactIndex"
                     radius={[6, 6, 0, 0]}
+                    onClick={(data) => openDetailModal(`Cliente - ${data?.cliente || '-'}`, getRowsByField('recebedor', data?.cliente))}
                     isAnimationActive
                     animationDuration={700}
                   >
@@ -1339,6 +1443,7 @@ const AdminDashboard = () => {
                     <Bar
                       dataKey="count"
                       radius={[4, 4, 0, 0]}
+                      onClick={(data) => openDetailModal(`Volume diário - ${data?.date || '-'}`, getDailyVolumeRows(data?.date))}
                       isAnimationActive
                       animationDuration={700}
                     >
@@ -1388,7 +1493,11 @@ const AdminDashboard = () => {
                       const avgMin = avgCliByRecebedor[rec.recebedor];
                       const medals = ['bg-amber-500', 'bg-slate-500', 'bg-orange-700'];
                       return (
-                        <tr key={i} className="hover:bg-white/[0.04] transition-colors duration-150">
+                        <tr
+                          key={i}
+                          onClick={() => openDetailModal(`${getRecebedorLabel(city)} - ${rec.recebedor}`, getRowsByField('recebedor', rec.recebedor))}
+                          className="hover:bg-white/[0.04] transition-colors duration-150 cursor-pointer"
+                        >
                           <td className="py-3.5 pr-4">
                             <div
                               className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white ${medals[i] ?? 'bg-slate-700 !text-slate-300'}`}
@@ -1437,6 +1546,71 @@ const AdminDashboard = () => {
           <div className="h-4" />
         </div>
       </div>
+
+      {detailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-7xl max-h-[88vh] overflow-hidden rounded-2xl border border-white/10 bg-slate-950 shadow-2xl">
+            <div className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-4">
+              <div className="min-w-0">
+                <h3 className="truncate text-base font-bold text-white">{detailModal.title}</h3>
+                <p className="mt-0.5 text-xs text-slate-400">{detailModal.rows.length} entrega(s)</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailModal(null)}
+                className="rounded-lg border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/[0.12]"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <div className="max-h-[calc(88vh-76px)] overflow-auto">
+              <table className="w-full min-w-[1100px] text-left text-sm">
+                <thead className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur">
+                  <tr className="border-b border-white/10 text-xs font-bold uppercase tracking-widest text-slate-500">
+                    <th className="px-4 py-3">Nr. processo</th>
+                    <th className="px-4 py-3">Processo</th>
+                    <th className="px-4 py-3">Container</th>
+                    <th className="px-4 py-3">{getRecebedorLabel(city)}</th>
+                    <th className="px-4 py-3">Contratado</th>
+                    <th className="px-4 py-3">Agendamento</th>
+                    <th className="px-4 py-3">Chegada</th>
+                    <th className="px-4 py-3">Fim</th>
+                    <th className="px-4 py-3">Tempo</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.06]">
+                  {detailModal.rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="px-4 py-10 text-center text-sm text-slate-400">
+                        Nenhuma entrega encontrada para este indicador.
+                      </td>
+                    </tr>
+                  ) : (
+                    detailModal.rows.map((delivery, index) => (
+                      <tr key={delivery._id || `${getDetailIdentity(delivery)}-${index}`} className="text-slate-200 hover:bg-white/[0.04]">
+                        <td className="px-4 py-3 font-semibold text-cyan-300">{getDetailIdentity(delivery)}</td>
+                        <td className="px-4 py-3 text-slate-300">{getDetailProcess(delivery)}</td>
+                        <td className="px-4 py-3 font-semibold text-white">{getDetailContainer(delivery)}</td>
+                        <td className="max-w-[220px] truncate px-4 py-3 text-slate-300" title={delivery.recebedor || '-'}>
+                          {delivery.recebedor || '-'}
+                        </td>
+                        <td className="max-w-[220px] truncate px-4 py-3 text-slate-300" title={delivery.contratado || delivery.userName || '-'}>
+                          {delivery.contratado || delivery.userName || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-slate-300">{getDeliveryDateLabel(delivery.dataAgendamento || delivery.agendamentoDescarga)}</td>
+                        <td className="px-4 py-3 text-slate-300">{getDeliveryDateLabel(delivery.horarioChegada)}</td>
+                        <td className="px-4 py-3 text-slate-300">{getDeliveryDateLabel(delivery.horarioFimDesova)}</td>
+                        <td className="px-4 py-3 font-semibold text-violet-300">{getDetailHoursLabel(delivery)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>

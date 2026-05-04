@@ -42,6 +42,12 @@ export const adminService = {
   updateDelivery: (id, data) => api.put(`/admin/deliveries/${id}`, data),
   getCanhotosPendentes: () => api.get('/admin/canhotos-pendentes'),
   updateCanhotoRetornos: (id, data) => api.put(`/admin/canhotos-pendentes/${id}/retornos`, data),
+  uploadCanhotoDocumento: (id, documentType, files) => {
+    const formData = new FormData();
+    const arr = Array.isArray(files) ? files : files instanceof FileList ? Array.from(files) : [files];
+    arr.forEach((file) => formData.append('file', file));
+    return api.post(`/admin/canhotos-pendentes/${id}/documentos/${documentType}`, formData);
+  },
   downloadDocument: (deliveryId, documentType, index) => {
     const params = index !== undefined ? { params: { index } } : {};
     // Some downloads can be large; allow more time for the server to respond

@@ -9,6 +9,7 @@ import {
   FaSearch,
   FaSync,
   FaTruck,
+  FaUpload,
   FaUser,
 } from 'react-icons/fa';
 import Toast from '../components/Toast';
@@ -24,12 +25,41 @@ const Field = ({ label, value }) => (
   </div>
 );
 
-const PendingBadge = ({ doc, city }) => (
-  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-black">
-    <FaExclamationTriangle size={10} />
-    {getDocumentLabel(doc, city)}
-  </span>
-);
+const PendingDocumentControl = ({ doc, city, disabled, onUpload }) => {
+  const inputId = `pending-doc-${doc}-${Math.random().toString(36).slice(2)}`;
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5">
+      <div className="flex items-center gap-1.5 text-amber-700 text-[11px] font-black">
+        <FaExclamationTriangle size={10} />
+        {getDocumentLabel(doc, city)}
+      </div>
+      <div className="mt-2">
+        <input
+          id={inputId}
+          type="file"
+          accept="image/*,application/pdf"
+          multiple
+          className="hidden"
+          onChange={(event) => {
+            onUpload(event.target.files);
+            event.target.value = '';
+          }}
+        />
+        <label
+          htmlFor={inputId}
+          className={`inline-flex items-center justify-center gap-1.5 w-full px-2.5 py-2 rounded-md text-[11px] font-black transition ${
+            disabled
+              ? 'bg-slate-200 text-slate-400 cursor-wait'
+              : 'bg-white text-amber-700 border border-amber-200 hover:bg-amber-100 cursor-pointer'
+          }`}
+        >
+          <FaUpload size={10} />
+          {disabled ? 'Anexando...' : 'Anexar'}
+        </label>
+      </div>
+    </div>
+  );
+};
 
 const EntregasCanhotosPendentes = () => {
   const navigate = useNavigate();
@@ -38,6 +68,7 @@ const EntregasCanhotosPendentes = () => {
   const [drafts, setDrafts] = useState({});
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
+  const [uploadingDoc, setUploadingDoc] = useState(null);
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState('');
 
@@ -51,8 +82,8 @@ const EntregasCanhotosPendentes = () => {
         const next = {};
         deliveries.forEach((item) => {
           next[item._id] = prev[item._id] || {
-            retornoGeoMar: item.retornoGeoMar || '',
-            retornoGeoLog: item.retornoGeoLog || '',
+            retornoGeoMar: '',
+            retornoGeoLog: '',
           };
         });
         return next;
@@ -106,6 +137,10 @@ const EntregasCanhotosPendentes = () => {
 
   const saveRetornos = async (item) => {
     const draft = drafts[item._id] || {};
+    if (!String(draft.retornoGeoMar || '').trim() && !String(draft.retornoGeoLog || '').trim()) {
+      setToast({ type: 'warning', message: 'Digite uma nova observação antes de salvar' });
+      return;
+    }
     setSavingId(item._id);
     try {
       const res = await adminService.updateCanhotoRetornos(item._id, {
@@ -124,6 +159,10 @@ const EntregasCanhotosPendentes = () => {
             }
           : row
       )));
+      setDrafts((prev) => ({
+        ...prev,
+        [item._id]: { retornoGeoMar: '', retornoGeoLog: '' },
+      }));
       setToast({ type: 'success', message: 'Retornos salvos com sucesso' });
     } catch (err) {
       setToast({
@@ -132,6 +171,46 @@ const EntregasCanhotosPendentes = () => {
       });
     } finally {
       setSavingId(null);
+    }
+  };
+
+  const uploadDocumento = async (item, doc, files) => {
+    const selected = Array.from(files || []);
+    if (!selected.length) return;
+
+    const uploadKey = `${item._id}:${doc}`;
+    setUploadingDoc(uploadKey);
+    try {
+      const res = await adminService.uploadCanhotoDocumento(item._id, doc, selected);
+      const updated = res.data?.delivery || {};
+      const remaining = updated.missingDocumentsAtSubmit || [];
+
+      setItems((prev) => {
+        if (remaining.length === 0) return prev.filter((row) => row._id !== item._id);
+        return prev.map((row) => (
+          row._id === item._id
+            ? {
+                ...row,
+                ...updated,
+                missingDocumentsAtSubmit: remaining,
+              }
+            : row
+        ));
+      });
+
+      setToast({
+        type: 'success',
+        message: remaining.length === 0
+          ? 'Todos os documentos foram anexados. Entrega removida da pendência.'
+          : `${getDocumentLabel(doc, city)} anexado com sucesso`,
+      });
+    } catch (err) {
+      setToast({
+        type: 'error',
+        message: err.response?.data?.message || 'Erro ao anexar documento',
+      });
+    } finally {
+      setUploadingDoc(null);
     }
   };
 
@@ -248,9 +327,15 @@ const EntregasCanhotosPendentes = () => {
                           <Field label="Recebedor" value={item.recebedor || item.destinatario || item.remetente} />
                         </div>
 
-                        <div className="flex flex-wrap gap-2 mt-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
                           {pendingDocs.map((doc) => (
-                            <PendingBadge key={doc} doc={doc} city={city} />
+                            <PendingDocumentControl
+                              key={doc}
+                              doc={doc}
+                              city={city}
+                              disabled={uploadingDoc === `${item._id}:${doc}`}
+                              onUpload={(files) => uploadDocumento(item, doc, files)}
+                            />
                           ))}
                         </div>
 
@@ -270,12 +355,17 @@ const EntregasCanhotosPendentes = () => {
                             <FaUser size={11} />
                             Retorno GeoMar
                           </span>
+                          {item.retornoGeoMar && (
+                            <div className="mb-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 whitespace-pre-wrap max-h-28 overflow-y-auto">
+                              {item.retornoGeoMar}
+                            </div>
+                          )}
                           <textarea
                             value={draft.retornoGeoMar ?? ''}
                             onChange={(e) => updateDraft(item._id, 'retornoGeoMar', e.target.value)}
-                            rows={6}
+                            rows={4}
                             className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-amber-300 resize-y"
-                            placeholder="Registre o retorno da GeoMar..."
+                            placeholder="Adicionar nova observação da GeoMar..."
                           />
                         </label>
 
@@ -284,12 +374,17 @@ const EntregasCanhotosPendentes = () => {
                             <FaTruck size={11} />
                             Retorno GeoLog
                           </span>
+                          {item.retornoGeoLog && (
+                            <div className="mb-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 whitespace-pre-wrap max-h-28 overflow-y-auto">
+                              {item.retornoGeoLog}
+                            </div>
+                          )}
                           <textarea
                             value={draft.retornoGeoLog ?? ''}
                             onChange={(e) => updateDraft(item._id, 'retornoGeoLog', e.target.value)}
-                            rows={6}
+                            rows={4}
                             className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-amber-300 resize-y"
-                            placeholder="Registre o retorno da GeoLog..."
+                            placeholder="Adicionar nova observação da GeoLog..."
                           />
                         </label>
 

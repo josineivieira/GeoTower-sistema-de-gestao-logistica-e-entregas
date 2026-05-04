@@ -11,6 +11,7 @@ const managerOnly = require("../middleware/managerOnly");
 const { normalizeDeliveryForResponse } = require("../utils/storageUtils");
 
 const router = express.Router();
+const canhotoUpload = multer({ storage: multer.memoryStorage() });
 
 // Helper to normalize db calls (sync mockdb or async mongo adapter)
 async function getDb(req) {
@@ -180,6 +181,107 @@ router.get("/canhotos-pendentes", auth, onlyCanhotosPendentes, async (req, res) 
 });
 
 /**
+ * POST /api/admin/canhotos-pendentes/:id/documentos/:documentType
+ * Anexa um documento faltante e remove apenas este item da lista de pendencias.
+ */
+router.post("/canhotos-pendentes/:id/documentos/:documentType", auth, onlyCanhotosPendentes, canhotoUpload.array("file"), async (req, res) => {
+  try {
+    const city = req.city || 'manaus';
+    const { id, documentType } = req.params;
+    const Delivery = require('../models/Delivery');
+
+    const delivery = await Delivery.findById(id);
+    if (!delivery) return res.status(404).json({ message: 'Entrega nao encontrada' });
+    if (delivery.cityCode !== city) {
+      return res.status(403).json({ message: 'Acesso negado - dados de outra cidade' });
+    }
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: 'Nenhum arquivo enviado' });
+    }
+
+    const safeSegment = (value) => String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9._-]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 80);
+
+    const baseNames = {
+      canhotNF: city === 'itajai' ? 'TACOGRAFO_RIC_ABASTECIMENTO' : 'CANHOTO_NF',
+      canhotCTE: city === 'itajai' ? 'CONTRATO' : 'CANHOTO_CTE',
+      diarioBordo: 'DIARIO_DE_BORDO',
+      devolucaoVazio: city === 'itajai' ? 'BAIXA_NO_PORTO' : 'ENTREGA_CNTR_PORTO',
+      retiradaCheio: city === 'itajai' ? 'RETIRADA_PORTO' : 'RETIRADA_CHEIO'
+    };
+    const baseName = baseNames[documentType] || String(documentType || 'ARQUIVO').toUpperCase();
+    const container = safeSegment(delivery.deliveryNumber) || 'SEM_CONTAINER';
+    const party = safeSegment(delivery.recebedor);
+    const fallbackId = safeSegment(delivery.programacaoId || delivery.linkedProgramacaoId || delivery._id);
+    const folder = party ? `${container}_${party}` : (fallbackId ? `${container}_${fallbackId}` : container);
+    const containerDir = path.join(__dirname, '..', 'uploads', city, folder);
+    fs.mkdirSync(containerDir, { recursive: true });
+
+    const normalizeEntries = (entry) => {
+      if (!entry) return [];
+      if (Array.isArray(entry)) return entry.flatMap(item => normalizeEntries(item));
+      if (typeof entry === 'string') {
+        try { return normalizeEntries(JSON.parse(entry)); } catch (_) { return [entry]; }
+      }
+      return [entry];
+    };
+
+    const docs = delivery.documents || {};
+    const existing = normalizeEntries(docs[documentType]);
+    const savedFiles = [];
+
+    for (let idx = 0; idx < req.files.length; idx += 1) {
+      const file = req.files[idx];
+      const originalExt = path.extname(file.originalname) || '.jpg';
+      const finalFilename = `${baseName}_${delivery.deliveryNumber}_${Date.now()}_${idx}${originalExt}`;
+      let fileEntry = null;
+
+      try {
+        const r2Storage = require('../storage/r2');
+        const r2Key = `uploads/${city}/${folder}/${finalFilename}`;
+        const r2Url = await r2Storage.uploadBuffer(file.buffer, r2Key, file.mimetype);
+        fileEntry = { name: finalFilename, url: r2Url, storage: 'r2', key: r2Key };
+      } catch (_) {}
+
+      if (!fileEntry) {
+        const dest = path.join(containerDir, finalFilename);
+        fs.writeFileSync(dest, file.buffer);
+        fileEntry = { name: finalFilename, path: path.join(city, folder, finalFilename), storage: 'local' };
+      }
+
+      savedFiles.push(fileEntry);
+    }
+
+    const allFiles = [...existing, ...savedFiles];
+    const seen = new Set();
+    const deduped = allFiles.filter((item) => {
+      const key = item?.url || item?.path || item?.link || JSON.stringify(item);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    docs[documentType] = JSON.stringify(deduped);
+    delivery.documents = docs;
+    delivery.missingDocumentsAtSubmit = Array.isArray(delivery.missingDocumentsAtSubmit)
+      ? delivery.missingDocumentsAtSubmit.filter((doc) => doc !== documentType)
+      : [];
+    if (Array.isArray(delivery.documentCorrectionLog)) {
+      delivery.documentCorrectionLog = delivery.documentCorrectionLog.filter((log) => log.documentType !== documentType);
+    }
+    await delivery.save();
+
+    return res.json({ success: true, delivery: normalizeDeliveryForResponse(delivery.toObject()) });
+  } catch (err) {
+    console.error('[CANHOTOS_PENDENTES] Erro ao anexar documento:', err);
+    return res.status(500).json({ message: 'Erro ao anexar documento pendente' });
+  }
+});
+/**
  * PUT /api/admin/canhotos-pendentes/:id/retornos
  * Atualiza os retornos de acompanhamento da pendencia.
  */
@@ -195,10 +297,24 @@ router.put("/canhotos-pendentes/:id/retornos", auth, onlyCanhotosPendentes, asyn
       return res.status(403).json({ message: 'Acesso negado - dados de outra cidade' });
     }
 
-    delivery.retornoGeoMar = retornoGeoMar !== undefined ? String(retornoGeoMar || '') : delivery.retornoGeoMar;
-    delivery.retornoGeoLog = retornoGeoLog !== undefined ? String(retornoGeoLog || '') : delivery.retornoGeoLog;
-    delivery.retornosPendenciaUpdatedAt = new Date();
-    delivery.retornosPendenciaUpdatedBy = req.user?.name || req.user?.username || req.user?.email || 'unknown';
+    const editor = req.user?.name || req.user?.username || req.user?.email || 'unknown';
+    const now = new Date();
+    const appendRetorno = (current, next, label) => {
+      const text = String(next || '').trim();
+      if (!text) return current || '';
+      const stamp = now.toLocaleString('pt-BR');
+      const entry = `[${stamp}] ${editor}: ${text}`;
+      return [String(current || '').trim(), entry].filter(Boolean).join('\n\n');
+    };
+
+    if (retornoGeoMar !== undefined) {
+      delivery.retornoGeoMar = appendRetorno(delivery.retornoGeoMar, retornoGeoMar, 'GeoMar');
+    }
+    if (retornoGeoLog !== undefined) {
+      delivery.retornoGeoLog = appendRetorno(delivery.retornoGeoLog, retornoGeoLog, 'GeoLog');
+    }
+    delivery.retornosPendenciaUpdatedAt = now;
+    delivery.retornosPendenciaUpdatedBy = editor;
     await delivery.save();
 
     return res.json({ success: true, delivery: normalizeDeliveryForResponse(delivery.toObject()) });

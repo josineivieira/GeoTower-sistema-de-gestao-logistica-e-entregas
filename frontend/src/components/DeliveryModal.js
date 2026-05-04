@@ -80,6 +80,7 @@ const DeliveryModal = ({
   selectedDelivery,
   onClose,
   city = 'manaus',
+  selectedSentido = 'DESTINO',
   icompanyVerified,
   setIcompanyVerified,
   icompanyRemoteRecord,
@@ -118,6 +119,17 @@ const DeliveryModal = ({
   setConfirmRemoveVerification
 }) => {
   if (!selectedDelivery) return null;
+
+  const getPartyBySentido = (delivery, sentido = 'DESTINO') => {
+    const sentidoKey = String(sentido || '').trim().toUpperCase();
+    const remetenteValue = String(delivery?.remetente || '').trim();
+    const destinatarioValue = String(delivery?.destinatario || delivery?.recebedor || '').trim();
+    if (sentidoKey === 'ORIGEM') return remetenteValue || destinatarioValue || '—';
+    return destinatarioValue || remetenteValue || '—';
+  };
+
+  const getPartyLabelBySentido = (sentido = 'DESTINO') =>
+    String(sentido || '').trim().toUpperCase() === 'ORIGEM' ? 'Remetente' : 'Recebedor';
 
   const flowHistory = getFlowHistory(selectedDelivery);
   const normalizeKey = (s) => {
@@ -270,7 +282,7 @@ const DeliveryModal = ({
                 ['Motorista', selectedDelivery.driverName || '—'],
                 ['Placa', selectedDelivery.placaIcompany || selectedDelivery.vehiclePlate || '—'],
                 ['Entrega CNTR Porto', selectedDelivery.horarioDevolucaoVazio ? formatarData(selectedDelivery.horarioDevolucaoVazio, city) : '—'],
-                ['Recebedor', selectedDelivery.recebedor || '—'],
+                [getPartyLabelBySentido(selectedSentido), getPartyBySentido(selectedDelivery, selectedSentido)],
                 ['Agendamento', getProgramacaoDate(selectedDelivery, city) ? formatarAgendamento(getProgramacaoDate(selectedDelivery, city)) : '—'],
                 ['Montagem Container', selectedDelivery.containerMontadoAt ? formatarData(selectedDelivery.containerMontadoAt, city) : '—'],
                 ['Chegada', selectedDelivery.horarioChegada ? formatarData(selectedDelivery.horarioChegada, city) : '—'],

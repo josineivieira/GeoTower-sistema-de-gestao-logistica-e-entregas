@@ -759,7 +759,6 @@ const ProgramacaoManagement = () => {
                       { key: 'processo', label: 'Processo' },
                       { key: 'remetente', label: 'Remetente' },
                       { key: 'destinatario', label: 'Recebedor' },
-                      { key: 'recebedor', label: 'Cliente' },
                       { key: 'container', label: 'Container' },
                       { key: 'dataAgendamento', label: 'Data / Hora' },
                       { key: 'contratado', label: 'Contratado' },
@@ -818,9 +817,6 @@ const ProgramacaoManagement = () => {
                         </td>
                         <td style={{ padding: '14px 16px', fontSize: 13, color: '#374151', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {prog.destinatario || <span style={{ color: '#d1d5db' }}>-</span>}
-                        </td>
-                        <td style={{ padding: '14px 16px', fontSize: 13, color: '#374151', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {prog.recebedor || <span style={{ color: '#d1d5db' }}>-</span>}
                         </td>
                         <td style={{ padding: '14px 16px', fontSize: 13, color: '#374151', fontFamily: 'monospace' }}>
                           {prog.container}

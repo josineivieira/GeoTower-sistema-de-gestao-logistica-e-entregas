@@ -276,7 +276,18 @@ const getPunctualityStatus = (d, now = new Date(), city = 'manaus') => {
   return { label: 'No prazo', type: 'ok', eta, lateBy: null };
 };
 
-const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime, city = 'manaus' }) => (
+const getPartyBySentido = (delivery, sentido = 'DESTINO') => {
+  const sentidoKey = String(sentido || '').trim().toUpperCase();
+  const remetenteValue = String(delivery?.remetente || '').trim();
+  const destinatarioValue = String(delivery?.destinatario || delivery?.recebedor || '').trim();
+  if (sentidoKey === 'ORIGEM') return remetenteValue || destinatarioValue || '—';
+  return destinatarioValue || remetenteValue || '—';
+};
+
+const getPartyLabelBySentido = (sentido = 'DESTINO') =>
+  String(sentido || '').trim().toUpperCase() === 'ORIGEM' ? 'Remetente' : 'Recebedor';
+
+const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime, city = 'manaus', sentido = 'DESTINO' }) => (
     <button
       type="button"
       onClick={() => onOpen(delivery)}
@@ -319,10 +330,10 @@ const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime, city = 'man
         </div>
 
         <div className="space-y-0.5">
-          {delivery.recebedor && (
+          {getPartyBySentido(delivery, sentido) && (
             <div className="flex items-center gap-1 text-[9px] text-gray-500">
               <FaBuilding className="text-gray-400 shrink-0 text-[8px]" />
-              <span className="truncate">{delivery.recebedor}</span>
+              <span className="truncate">{getPartyBySentido(delivery, sentido)}</span>
             </div>
           )}
 
@@ -372,7 +383,7 @@ const KanbanColumnHeader = ({ column, count }) => {
   );
 };
 
-const DeliveryKanbanColumn = ({ column, deliveries, onOpen, currentTime, city = 'manaus' }) => {
+const DeliveryKanbanColumn = ({ column, deliveries, onOpen, currentTime, city = 'manaus', sentido = 'DESTINO' }) => {
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? deliveries : deliveries.slice(0, 4);
 
@@ -396,6 +407,7 @@ const DeliveryKanbanColumn = ({ column, deliveries, onOpen, currentTime, city = 
                 onOpen={onOpen}
                 currentTime={currentTime}
                 city={city}
+                sentido={sentido}
               />
             ))}
 
@@ -599,6 +611,7 @@ const SettingsPanel = ({
                   onClick={() => setFilters({
                     status: 'all', searchTerm: '', startDate: '', endDate: '',
                     processo: '', container: '', recebedor: '',
+                    sentido: filters.sentido || 'DESTINO',
                     pontualidade: 'all', horaStatusFrom: '', horaStatusTo: '',
                     tempoStatusMin: '', tempoStatusMax: ''
                   })}
@@ -682,7 +695,7 @@ const SettingsPanel = ({
 ───────────────────────────────────────────────────────────── */
 const MobileDeliveryCard = ({
   d, currentTime, allModalDocsComplete, getDocumentsStatus,
-  getPunctualityStatus, recentlyUpdated, RISE_WINDOW, setSelectedDelivery, city
+  getPunctualityStatus, recentlyUpdated, RISE_WINDOW, setSelectedDelivery, city, sentido = 'DESTINO'
 }) => {
   const now = Date.now();
   const updatedAt = recentlyUpdated[d._id];
@@ -718,8 +731,8 @@ const MobileDeliveryCard = ({
 
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div>
-          <p className="text-gray-600 text-[10px] uppercase font-bold">Contratado</p>
-          <p className="text-gray-200 font-semibold truncate">{d.userName || '—'}</p>
+          <p className="text-gray-600 text-[10px] uppercase font-bold">{getPartyLabelBySentido(sentido)}</p>
+          <p className="text-gray-200 font-semibold truncate">{getPartyBySentido(d, sentido)}</p>
         </div>
         <div>
           <p className="text-gray-600 text-[10px] uppercase font-bold">Motorista</p>
@@ -834,7 +847,7 @@ const MonitorEntregas = () => {
   const [filters, setFilters] = useState({
     status: 'all', searchTerm: '', startDate: '', endDate: '',
     processo: '', container: '', recebedor: '',
-    sentido: 'all',
+    sentido: 'DESTINO',
     pontualidade: 'all', horaStatusFrom: '', horaStatusTo: '',
     tempoStatusMin: '', tempoStatusMax: ''
   });
@@ -1408,7 +1421,7 @@ const MonitorEntregas = () => {
       ['Contratado', safe(delivery.userName)],
       ['Motorista', safe(delivery.driverName)],
       ['Placa', safe(delivery.placaIcompany || delivery.vehiclePlate)],
-      ['Recebedor', safe(delivery.recebedor)],
+      [getPartyLabelBySentido(filters.sentido), safe(getPartyBySentido(delivery, filters.sentido))],
       ['Status', safe(formatStatus(delivery.status, delivery))],
       ['Agendamento', formatDT(getProgramacaoDate(delivery, city))],
       ['Montagem Container', formatDT(delivery.containerMontadoAt)],
@@ -1640,11 +1653,12 @@ const MonitorEntregas = () => {
     // Mapeamento dos campos conforme o modelo Icompany (var nomes reais do banco)
     // Cliente agora é definido pelo SENTIDO: ORIGEM=remetente, DESTINO=recebedor/destinatario.
     const isItajai = city.toLowerCase() === 'itajai';
+    const partyLabel = getPartyLabelBySentido(filters.sentido);
     const fieldMapping = isItajai ? {
       'Contratado': { deliveryField: 'userName', icompanyField: 'contratado' },
       'Entrega CNTR Porto': { deliveryField: 'horarioDevolucaoVazio', icompanyField: 'entradaDistrito' },
       'Agendamento': { deliveryField: 'dataAgendamento', icompanyField: 'dtColeta' },
-      'Recebedor': { deliveryField: 'recebedor', icompanyField: 'clientePorSentido' },
+      [partyLabel]: { deliveryField: 'recebedor', icompanyField: 'clientePorSentido' },
       'Montagem Container': { deliveryField: 'containerMontadoAt', icompanyField: 'dtRetiraPD' },
       'Chegada': { deliveryField: 'horarioChegada', icompanyField: 'dtChegadaPlanta' },
       'Fim Desova': { deliveryField: 'horarioFimDesova', icompanyField: 'dtFimDescarga' }
@@ -1652,7 +1666,7 @@ const MonitorEntregas = () => {
       'Contratado': { deliveryField: 'userName', icompanyField: 'contratado' },
       'Entrega CNTR Porto': { deliveryField: 'horarioDevolucaoVazio', icompanyField: 'dtDevolucaoCNTR' },
       'Agendamento': { deliveryField: 'dataAgendamento', icompanyField: 'dtAgendamentoDescarga' },
-      'Recebedor': { deliveryField: 'recebedor', icompanyField: 'clientePorSentido' },
+      [partyLabel]: { deliveryField: 'recebedor', icompanyField: 'clientePorSentido' },
       'Montagem Container': { deliveryField: 'containerMontadoAt', icompanyField: 'dtRetiraPD' },
       'Chegada': { deliveryField: 'horarioChegada', icompanyField: 'dtInicioDescarga' },
       'Fim Desova': { deliveryField: 'horarioFimDesova', icompanyField: 'dtFimDescarga' }
@@ -1723,7 +1737,9 @@ const MonitorEntregas = () => {
     };
 
     Object.entries(fieldMapping).forEach(([displayName, mapping]) => {
-      const deliveryValue = delivery[mapping.deliveryField];
+      const deliveryValue = mapping.icompanyField === 'clientePorSentido'
+        ? getPartyBySentido(delivery, filters.sentido)
+        : delivery[mapping.deliveryField];
       const icompanyValue = mapping.icompanyField === 'clientePorSentido'
         ? getClienteBySentido(icompanyRecord)
         : icompanyRecord[mapping.icompanyField];
@@ -1748,7 +1764,7 @@ const MonitorEntregas = () => {
     });
 
     return comparisons;
-  }, [icompanyData, city]);
+  }, [icompanyData, city, filters.sentido]);
 
   const findControleProtocolosInCache = useCallback((delivery) => {
     if (!delivery || !controleProtocolosData.length) return null;
@@ -2021,8 +2037,8 @@ const MonitorEntregas = () => {
             bVal = (getDisplayContainer(b) || '').toLowerCase();
             break;
           case 'recebedor':
-            aVal = (a.recebedor || '').toLowerCase();
-            bVal = (b.recebedor || '').toLowerCase();
+            aVal = getPartyBySentido(a, filters.sentido).toLowerCase();
+            bVal = getPartyBySentido(b, filters.sentido).toLowerCase();
             break;
           case 'status':
             aVal = (a.status || '').toLowerCase();
@@ -2089,7 +2105,7 @@ const MonitorEntregas = () => {
     }
 
     return sorted;
-  }, [filteredDeliveries, sortConfig, recentlyUpdated, statsPeriod, city]);
+  }, [filteredDeliveries, sortConfig, recentlyUpdated, statsPeriod, city, filters.sentido]);
 
   useLayoutEffect(() => {
     if (!prevPositions.current || Object.keys(prevPositions.current).length === 0) return;
@@ -2292,7 +2308,7 @@ const MonitorEntregas = () => {
   const HEADER_CONFIGS = [
     { key: 'processo', name: 'Processo', type: 'text', placeholder: 'Buscar processo...', sortable: true },
     { key: 'container', name: 'Container', type: 'text', placeholder: 'Buscar container...', sortable: true },
-    { key: 'recebedor', name: 'Recebedor', type: 'text', placeholder: 'Buscar recebedor...', sortable: true },
+    { key: 'recebedor', name: getPartyLabelBySentido(filters.sentido), type: 'text', placeholder: `Buscar ${getPartyLabelBySentido(filters.sentido).toLowerCase()}...`, sortable: true },
     { key: 'status', name: 'Status', type: 'select', options: getStatusOptions(), sortable: true },
     { key: 'horaStatus', name: 'Hora Status', type: 'dateRange', startKey: 'horaStatusFrom', endKey: 'horaStatusTo', sortable: true },
     { key: 'tempoStatus', name: 'Tempo Status', type: 'range', minKey: 'tempoStatusMin', maxKey: 'tempoStatusMax', sortable: true },
@@ -2430,13 +2446,6 @@ const MonitorEntregas = () => {
             <span className="uppercase tracking-[0.2em] text-gray-400">Sentido</span>
             <button
               type="button"
-              onClick={() => setFilters({ ...filters, sentido: 'all' })}
-              className={`rounded-xl px-3 py-1 font-semibold transition ${filters.sentido === 'all' ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-200 hover:bg-white/20'}`}
-            >
-              Todos
-            </button>
-            <button
-              type="button"
               onClick={() => setFilters({ ...filters, sentido: 'ORIGEM' })}
               className={`rounded-xl px-3 py-1 font-semibold transition ${filters.sentido === 'ORIGEM' ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-200 hover:bg-white/20'}`}
             >
@@ -2482,6 +2491,7 @@ const MonitorEntregas = () => {
                   onOpen={setSelectedDelivery}
                   currentTime={currentTime}
                   city={city}
+                  sentido={filters.sentido}
                 />
               ))}
             </div>
@@ -2513,6 +2523,7 @@ const MonitorEntregas = () => {
                   RISE_WINDOW={RISE_WINDOW}
                   setSelectedDelivery={setSelectedDelivery}
                   city={city}
+                  sentido={filters.sentido}
                 />
               ))}
             </div>
@@ -2701,8 +2712,8 @@ const MonitorEntregas = () => {
 
                           {/* RECEBEDOR */}
                           <div className="px-4 py-3 flex items-center min-w-0" style={{ whiteSpace: 'normal', overflow: 'visible', textOverflow: 'clip' }}>
-                            <span className="text-gray-300 text-[11px]" style={{ whiteSpace: 'normal', wordBreak: 'break-all' }} title={d.recebedor}>
-                              {d.recebedor || '—'}
+                            <span className="text-gray-300 text-[11px]" style={{ whiteSpace: 'normal', wordBreak: 'break-all' }} title={getPartyBySentido(d, filters.sentido)}>
+                              {getPartyBySentido(d, filters.sentido)}
                             </span>
                           </div>
 
@@ -2815,6 +2826,7 @@ const MonitorEntregas = () => {
             selectedDelivery={selectedDelivery}
             onClose={() => setSelectedDelivery(null)}
             city={city}
+            selectedSentido={filters.sentido}
             icompanyVerified={icompanyVerified}
             setIcompanyVerified={setIcompanyVerified}
             icompanyRemoteRecord={icompanyRemoteRecord}

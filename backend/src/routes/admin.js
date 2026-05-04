@@ -757,7 +757,9 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       let mismatchCount = 0;
 
       Object.entries(fieldMapping).forEach(([displayName, mapping]) => {
-        const deliveryValue = delivery[mapping.deliveryField];
+        const deliveryValue = mapping.icompanyField === 'clientePorSentido'
+          ? getClienteBySentido(delivery)
+          : delivery[mapping.deliveryField];
         const icompanyValue = mapping.icompanyField === 'clientePorSentido'
           ? getClienteBySentido(icompanyRecord)
           : icompanyRecord[mapping.icompanyField];

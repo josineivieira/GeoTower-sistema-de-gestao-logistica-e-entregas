@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/authContext';
 import { deliveryService } from '../services/authService';
@@ -1110,6 +1110,18 @@ const Home = () => {
                       title="Relatório Contratado"
                       description="Consulte entregas por contratado com filtros de datas e valores de frete."
                       delay={400}
+                    />
+                  )}
+                  {hasAccess(['manager','admin']) && (
+                    <ManageCard
+                      onClick={() => navigate('/controle-protocolos')}
+                      accentColor="#8B5CF6"
+                      accentDark="#6D28D9"
+                      icon={<FaClipboardList />}
+                      titleIcon={<FaClipboardList />}
+                      title="Controle de Protocolos"
+                      description="Monitore documentos e protocolos das operações com status dos documentos obrigatórios."
+                      delay={480}
                     />
                   )}
                 </div>

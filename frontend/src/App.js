@@ -13,6 +13,7 @@ import Suporte from './pages/Suporte';
 import BaseDadosGeral from './pages/BaseDadosGeral';
 import Icompany from './pages/Icompany';
 import RelatorioContratado from './pages/RelatorioContratado';
+import ControleProtocolos from './pages/ControleProtocolos';
 
 // Pages
 import Login from './pages/Login';
@@ -256,6 +257,17 @@ function AppContent() {
           <PrivateRoute allowedRoles={['admin', 'manager', 'geomar']}>
             <AppLayout>
               <RelatorioContratado />
+            </AppLayout>
+          </PrivateRoute>
+        }
+      />
+
+      <Route
+        path="/controle-protocolos"
+        element={
+          <PrivateRoute allowedRoles={['admin', 'manager', 'geomar']}>
+            <AppLayout>
+              <ControleProtocolos />
             </AppLayout>
           </PrivateRoute>
         }

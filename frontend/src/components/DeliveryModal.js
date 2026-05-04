@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   FaTimes, FaCheckCircle, FaTimesCircle, FaCalendarAlt, FaClock, 
   FaBox, FaTruck, FaExclamationTriangle, FaShareAlt, FaDownload,
@@ -85,6 +85,8 @@ const DeliveryModal = ({
   setIcompanyVerified,
   icompanyRemoteRecord,
   icompanyLookupStatus,
+  controleProtocolosRecord,
+  controleProtocolosLookupStatus,
   findIcompanyInCache,
   compareWithIcompany,
   allModalDocsComplete,
@@ -133,6 +135,18 @@ const DeliveryModal = ({
   const normalizeKey = (s) => {
     if (!s) return '';
     return String(s).replace(/_/g, ' ').toUpperCase().trim();
+  };
+
+  const controleProtocolosDocumentMap = {
+    retiradaCheio: 'RIC PORTO DESTINO',
+    canhotCTE: 'COMPROVANTE DE DESOVA',
+    diarioBordo: 'DIARIO DE BORDO',
+    canhotNF: 'CANHOTO DE DANFE',
+    devolucaoVazio: 'RIC DEPOT DESTINO'
+  };
+
+  const isControleDocumentoPresent = (value) => {
+    return value === true;
   };
 
   const getIcompanyDocumentMap = (sentido = 'DESTINO') => {
@@ -590,19 +604,19 @@ const DeliveryModal = ({
             </div>
 
             <div className="space-y-2">
-              {icompanyLookupStatus === 'searching' && (
+              {controleProtocolosLookupStatus === 'searching' && (
                 <div className="rounded-xl p-3 bg-blue-900/20 border border-blue-700/50 text-blue-200 text-xs font-semibold">
-                  Buscando registro na base Icompany para comparar documentos...
+                  🔍 Buscando protocolo no Controle de Protocolos por processo/código...
                 </div>
               )}
-              {icompanyLookupStatus === 'notfound' && (
+              {controleProtocolosLookupStatus === 'notfound' && (
                 <div className="rounded-xl p-3 bg-yellow-900/20 border border-yellow-700/50 text-yellow-200 text-xs font-semibold">
-                  Nenhum registro encontrado na base Icompany para comparar os documentos desta entrega.
+                  ⚠️ Nenhum protocolo encontrado no Controle de Protocolos para o código/processo exibido no modal.
                 </div>
               )}
-              {icompanyLookupStatus === 'error' && (
+              {controleProtocolosLookupStatus === 'error' && (
                 <div className="rounded-xl p-3 bg-red-900/20 border border-red-700/50 text-red-200 text-xs font-semibold">
-                  Erro ao buscar registro na base Icompany. Verifique o console.
+                  ❌ Erro ao buscar protocolo no Controle de Protocolos. Verifique o console.
                 </div>
               )}
 

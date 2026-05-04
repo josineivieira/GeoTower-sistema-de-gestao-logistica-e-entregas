@@ -604,7 +604,51 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       };
     });
 
+    // NOVO: Carregar dados de controle de protocolos para comparações
+    let controleProtocolosData = [];
+    try {
+      const mongoose = require('mongoose');
+      const controleKeys = new Set();
+      deliveriesWithFiles.forEach((delivery) => {
+        addLookupKey(controleKeys, delivery.processoCAB);
+        addLookupKey(controleKeys, delivery.deliveryNumber);
+        addLookupKey(controleKeys, delivery.processo);
+        addLookupKey(controleKeys, delivery.container);
+      });
+
+      if (controleKeys.size > 0) {
+        const keys = Array.from(controleKeys);
+        controleProtocolosData = await mongoose.connection
+          .collection("controle_protocolos")
+          .find({
+            $or: [
+              { processo: { $in: keys } },
+              { container: { $in: keys } },
+              { destinatario: { $in: keys } },
+              { embarcador: { $in: keys } }
+            ]
+          })
+          .collation({ locale: 'pt', strength: 2 })
+          .toArray();
+      }
+      console.log(`📋 Carregados ${controleProtocolosData.length} registros de controle de protocolos`);
+    } catch (error) {
+      console.error('Erro ao carregar controle de protocolos:', error);
+    }
+
     // HELPER FUNCTIONS para comparações
+    const controleProtocolosDocumentMap = {
+      retiradaCheio: 'RIC PORTO DESTINO',
+      canhotCTE: 'COMPROVANTE DE DESOVA',
+      diarioBordo: 'DIARIO DE BORDO',
+      canhotNF: 'CANHOTO DE DANFE',
+      devolucaoVazio: 'RIC DEPOT DESTINO'
+    };
+
+    const isControleDocumentoPresent = (value) => {
+      return value === true;
+    };
+
     const parseDateValue = (val) => {
       if (!val) return null;
       if (val instanceof Date) return val;
@@ -627,6 +671,41 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
         && da.getMonth() === db.getMonth()
         && da.getDate() === db.getDate();
     };
+
+    const controleProtocolosByAny = new Map();
+    controleProtocolosData.forEach((record) => {
+      ['processo', 'container', 'destinatario', 'embarcador'].forEach((key) => {
+        addRecordToLookupMap(controleProtocolosByAny, record[key], record);
+      });
+    });
+
+    const findControleProtocolosRecord = (delivery) => {
+      if (!delivery || !controleProtocolosData.length) return null;
+
+      const records = getRecordsByLookupKeys(controleProtocolosByAny, [
+        delivery.processoCAB,
+        delivery.deliveryNumber,
+        delivery.processo,
+        delivery.container
+      ]);
+      return records[0] || null;
+    };
+
+    const getControleProtocolosMismatchCount = (delivery) => {
+      if (!delivery) return 0;
+      if (!controleProtocolosData.length) return 0;
+
+      const controleRecord = findControleProtocolosRecord(delivery);
+      if (!controleRecord) return 1;
+      if (!controleRecord.documentos) return 1;
+
+      return Object.entries(controleProtocolosDocumentMap).reduce((count, [deliveryKey, protocoloKey]) => {
+        const deliveryPresent = !!delivery.documents?.[deliveryKey];
+        const controlePresent = isControleDocumentoPresent(controleRecord.documentos[protocoloKey]);
+        return count + (deliveryPresent !== controlePresent ? 1 : 0);
+      }, 0);
+    };
+
     const findIcompanyRecord = (delivery, icompanyRecords) => {
       if (!delivery || !icompanyRecords.length) return null;
 
@@ -704,11 +783,14 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     // Adicionar comparações a cada entrega
     const deliveriesWithComparisons = deliveriesWithFiles.map(delivery => {
       const icompanyMismatchCount = getIcompanyMismatchCount(delivery, icompanyRecords, city);
+      const controleMismatchCount = getControleProtocolosMismatchCount(delivery);
+
       return {
         ...delivery,
         docsComparison: {
-          total: icompanyMismatchCount,
-          icompanyMismatchCount
+          total: icompanyMismatchCount + controleMismatchCount,
+          icompanyMismatchCount,
+          controleMismatchCount
         }
       };
     });

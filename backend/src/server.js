@@ -139,9 +139,6 @@ app.use("/api/meta", require("./routes/meta"));
 app.use("/api", require("./routes/uploadR2"));
 // Icompany - Maritime Logistics Database
 app.use("/api/icompany", require("./routes/icompanyRoutes"));
-// Controle de Protocolos - Protocol Management
-app.use("/api/controle-protocolos", require("./routes/controleProtocolos"));
-
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({ success: true, message: "Server is running" });

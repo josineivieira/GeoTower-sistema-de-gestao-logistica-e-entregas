@@ -101,15 +101,7 @@ export const adminService = {
   getVerificationsList: () => api.get('/deliveries/verifications/list'),
   // Icompany
   getIcompanyData: () => api.get('/icompany'),
-  searchIcompanyByProcess: (processo) => api.get(`/icompany/search?q=${encodeURIComponent(processo)}`),
-  
-  // Controle de Protocolos
-  getControleProtocolos: (searchTerm) => {
-    const params = {};
-    if (searchTerm) params.q = searchTerm;
-    return api.get('/controle-protocolos', { params });
-  },
-  getControleProtocoloById: (id) => api.get(`/controle-protocolos/${id}`)
+  searchIcompanyByProcess: (processo) => api.get(`/icompany/search?q=${encodeURIComponent(processo)}`)
 };
 
 // Adiciona métodos do deliveryService para iniciar entrega

@@ -26,9 +26,9 @@ import { getDesovaStatusLabel, getDesovaStepLabel } from '../utils/cityLabels';
 
 const DeliveryModal = lazy(() => import('../components/DeliveryModal'));
 
-/* ─────────────────────────────────────────────────────────────
-   KANBAN - MESMA LÓGICA DO MONITOR DE PROCESSOS
-───────────────────────────────────────────────────────────── */
+/* -------------------------------------------------------------
+   KANBAN - MESMA L�GICA DO MONITOR DE PROCESSOS
+------------------------------------------------------------- */
 const normalizeKey = (s) => {
   if (!s) return '';
   return String(s).replace(/_/g, ' ').toUpperCase().trim();
@@ -40,14 +40,14 @@ const getDisplayContainer = (delivery) => {
   return value || delivery?.container || delivery?.deliveryNumber || '';
 };
 
-/* ─────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------
    DESIGN TOKENS
-───────────────────────────────────────────────────────────── */
+------------------------------------------------------------- */
 const getStatusConfig = (city = 'manaus') => {
   const desovaLabel = getDesovaStepLabel(city);
   return {
     AGENDADO: {
-      label: 'Não Iniciado',
+      label: 'N�o Iniciado',
       bg: 'bg-indigo-600', light: 'bg-indigo-50', text: 'text-indigo-700',
       border: 'border-indigo-300',
       badge: 'bg-indigo-100 text-indigo-800 border border-indigo-300',
@@ -157,9 +157,9 @@ const getResolveConfig = (rawStatus, city = 'manaus') => {
   return statusConfig[key] || null;
 };
 
-/* ─────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------
    GLOBAL ANIMATION STYLES
-───────────────────────────────────────────────────────────── */
+------------------------------------------------------------- */
 const GLOBAL_STYLES = `
 @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
@@ -171,9 +171,9 @@ const GLOBAL_STYLES = `
 .cell-trunc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 `;
 
-/* ─────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------
    SMALL COMPONENTS
-───────────────────────────────────────────────────────────── */
+------------------------------------------------------------- */
 // Badge agora importado como MemoizedBadge
 const Badge = MemoizedBadge;
 
@@ -200,11 +200,11 @@ const Pill = ({ active, onClick, children, color = 'purple' }) => {
   );
 };
 
-/* ─────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------
    KANBAN UI
-───────────────────────────────────────────────────────────── */
+------------------------------------------------------------- */
 const formatBoardDate = (value, city) => {
-  if (!value) return '—';
+  if (!value) return '�';
   try {
     return formatarAgendamento(value);
   } catch {
@@ -223,13 +223,13 @@ const getPunctualityStatus = (d, now = new Date(), city = 'manaus') => {
 
     raw = raw.replace(' ', 'T');
 
-    // Se já tem timezone explícito, usa diretamente
+    // Se j� tem timezone expl�cito, usa diretamente
     if (/[zZ]$/.test(raw) || /[+-]\d{2}:\d{2}$/.test(raw)) {
       const parsed = new Date(raw);
       return Number.isNaN(parsed.getTime()) ? null : parsed;
     }
 
-    // Se não tem hora, assume meia-noite
+    // Se n�o tem hora, assume meia-noite
     if (!raw.includes('T')) raw += 'T00:00:00';
 
     const tz = cityCode === 'itajai' ? '-03:00' : '-04:00';
@@ -270,9 +270,9 @@ const getPunctualityStatus = (d, now = new Date(), city = 'manaus') => {
 
   const eta = computeEta();
   if (nowInstant.getTime() >= scheduled.getTime()) return { label: 'Atrasado', type: 'late', eta: eta || 0, lateBy: null };
-  if (!start) return { label: 'Sem início', type: 'unknown', eta, lateBy: null };
+  if (!start) return { label: 'Sem in�cio', type: 'unknown', eta, lateBy: null };
   const timeLeft = Math.round((scheduled.getTime() - nowInstant.getTime()) / 60000);
-  if (timeLeft <= travel) return { label: 'Possível atraso', type: 'possible', eta, lateBy: null };
+  if (timeLeft <= travel) return { label: 'Poss�vel atraso', type: 'possible', eta, lateBy: null };
   return { label: 'No prazo', type: 'ok', eta, lateBy: null };
 };
 
@@ -280,8 +280,8 @@ const getPartyBySentido = (delivery, sentido = 'DESTINO') => {
   const sentidoKey = String(sentido || '').trim().toUpperCase();
   const remetenteValue = String(delivery?.remetente || '').trim();
   const destinatarioValue = String(delivery?.destinatario || delivery?.recebedor || '').trim();
-  if (sentidoKey === 'ORIGEM') return remetenteValue || destinatarioValue || '—';
-  return destinatarioValue || remetenteValue || '—';
+  if (sentidoKey === 'ORIGEM') return remetenteValue || destinatarioValue || '�';
+  return destinatarioValue || remetenteValue || '�';
 };
 
 const getPartyLabelBySentido = (sentido = 'DESTINO') =>
@@ -301,7 +301,7 @@ const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime, city = 'man
         } else if (punct.label === 'Pontual' || punct.label === 'No prazo') {
           bgClass = 'bg-green-50';
           shadowClass = 'shadow-green-500/50';
-        } else if (punct.label === 'Possível atraso') {
+        } else if (punct.label === 'Poss�vel atraso') {
           bgClass = 'bg-yellow-50';
           shadowClass = 'shadow-yellow-500/50';
         }
@@ -313,18 +313,18 @@ const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime, city = 'man
           const punct = getPunctualityStatus(delivery, currentTime, city);
           if (punct.label === 'Atrasado') return 'from-red-400 to-red-600';
           if (punct.label === 'Pontual' || punct.label === 'No prazo') return 'from-green-400 to-green-600';
-          if (punct.label === 'Possível atraso') return 'from-yellow-400 to-yellow-600';
+          if (punct.label === 'Poss�vel atraso') return 'from-yellow-400 to-yellow-600';
           return column.gradient;
         })()}`}
       />
       <div className="pl-2.5 pr-2 pt-2 pb-2">
         <div className="flex items-start justify-between gap-1.5 mb-1.5">
           <span className="font-bold text-gray-800 text-xs leading-tight truncate">
-            {/* sempre mostrar o processo CAB, não o número do container */}
-            {delivery.processoCAB || '—'}
+            {/* sempre mostrar o processo CAB, n�o o n�mero do container */}
+            {delivery.processoCAB || '�'}
           </span>
           <span className={`shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${column.badge} border ${column.border}`}>
-            {/* Exibe placa, buscando da base icompany se disponível */}
+            {/* Exibe placa, buscando da base icompany se dispon�vel */}
             {delivery.placaIcompany || delivery.vehiclePlate || 'Placa'}
           </span>
         </div>
@@ -344,7 +344,7 @@ const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime, city = 'man
             </div>
           )}
 
-          {/* mostramos número do container no lugar do motorista */}
+          {/* mostramos n�mero do container no lugar do motorista */}
           {getDisplayContainer(delivery) && (
             <div className={`flex items-center gap-1 text-[9px] font-medium ${column.text}`}>
               <FaBoxOpen className="shrink-0 text-[8px]" />
@@ -428,9 +428,9 @@ const DeliveryKanbanColumn = ({ column, deliveries, onOpen, currentTime, city = 
   );
 };
 
-/* ─────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------
    PROGRESS
-───────────────────────────────────────────────────────────── */
+------------------------------------------------------------- */
 const progressStatuses = [
   'AGENDADO', 'CONTAINER MONTADO', 'A CAMINHO DO CLIENTE',
   'AGUARDANDO DESOVA', 'EM DESOVA', 'ANEXANDO DOCUMENTOS FINAIS', 'ENTREGUE'
@@ -457,9 +457,9 @@ const PunctualityCell = MemoizedPunctualityCell;
 const DEFAULT_COL_TEMPLATE = 'repeat(15, minmax(0, 1fr))';
 const sharedInputCls = `w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-600`;
 
-/* ─────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------
    SETTINGS PANEL
-───────────────────────────────────────────────────────────── */
+------------------------------------------------------------- */
 const SettingsPanel = ({
   open, onClose, theme, setTheme,
   autoRefresh, setAutoRefresh, refreshInterval, setRefreshInterval,
@@ -509,7 +509,7 @@ const SettingsPanel = ({
             <span className="w-7 h-7 rounded-lg bg-purple-600/30 flex items-center justify-center">
               <FaSlidersH className="text-purple-400 text-sm" />
             </span>
-            <h3 className="text-sm font-black text-white uppercase tracking-widest">Configurações</h3>
+            <h3 className="text-sm font-black text-white uppercase tracking-widest">Configura��es</h3>
           </div>
 
           <button
@@ -556,7 +556,7 @@ const SettingsPanel = ({
             <div className="bg-white/[0.03] border border-white/8 rounded-xl p-4 space-y-4">
               <label className="flex items-center justify-between cursor-pointer select-none">
                 <div>
-                  <p className="text-sm font-semibold text-gray-200">Atualização automática</p>
+                  <p className="text-sm font-semibold text-gray-200">Atualiza��o autom�tica</p>
                   <p className="text-xs text-gray-500 mt-0.5">Recarrega dados periodicamente</p>
                 </div>
 
@@ -631,14 +631,14 @@ const SettingsPanel = ({
                   className={sharedInputCls}
                 >
                   <option value="all" className="bg-gray-900">Todos</option>
-                  <option value="OPERACAO_FINALIZADA" className="bg-gray-900">Operação Finalizada</option>
+                  <option value="OPERACAO_FINALIZADA" className="bg-gray-900">Opera��o Finalizada</option>
                   <option value="DOCUMENTOS_ENTREGUES" className="bg-gray-900">Documentos Entregues</option>
                   <option value="FINALIZADO" className="bg-gray-900">Finalizado (sem docs)</option>
                   <option value="A CAMINHO DO CLIENTE" className="bg-gray-900">A Caminho do Cliente</option>
                   <option value="AGENDADO" className="bg-gray-900">Agendado</option>
-                  <option value="AGUARDANDO_DESOVA" className="bg-gray-900">Aguardando Desova/Ovação</option>
-                  <option value="EM_DESOVA" className="bg-gray-900">Em Desova/Ovação</option>
-                  <option value="DESOVA_FINALIZADA" className="bg-gray-900">Desova/Ovação Finalizada</option>
+                  <option value="AGUARDANDO_DESOVA" className="bg-gray-900">Aguardando Desova/Ova��o</option>
+                  <option value="EM_DESOVA" className="bg-gray-900">Em Desova/Ova��o</option>
+                  <option value="DESOVA_FINALIZADA" className="bg-gray-900">Desova/Ova��o Finalizada</option>
                   <option value="ANEXANDO_DOCUMENTOS_FINAIS" className="bg-gray-900">Anexando Docs Finais</option>
                   <option value="SAINDO_CLIENTE" className="bg-gray-900">Saindo do Cliente</option>
                   <option value="RETORNANDO_PORTO" className="bg-gray-900">Retornando Porto</option>
@@ -653,7 +653,7 @@ const SettingsPanel = ({
                   <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs" />
                   <input
                     type="text"
-                    placeholder="Número, motorista, placa…"
+                    placeholder="N�mero, motorista, placa�"
                     value={filters.searchTerm}
                     onChange={(e) => setFilters({ ...filters, searchTerm: e.target.value })}
                     className={`${sharedInputCls} pl-8`}
@@ -690,9 +690,9 @@ const SettingsPanel = ({
   );
 };
 
-/* ─────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------
    MOBILE CARD
-───────────────────────────────────────────────────────────── */
+------------------------------------------------------------- */
 const MobileDeliveryCard = ({
   d, currentTime, allModalDocsComplete, getDocumentsStatus,
   getPunctualityStatus, recentlyUpdated, RISE_WINDOW, setSelectedDelivery, city, sentido = 'DESTINO'
@@ -736,18 +736,18 @@ const MobileDeliveryCard = ({
         </div>
         <div>
           <p className="text-gray-600 text-[10px] uppercase font-bold">Motorista</p>
-          <p className="text-gray-200 font-semibold truncate">{d.driverName || '—'}</p>
+          <p className="text-gray-200 font-semibold truncate">{d.driverName || '�'}</p>
         </div>
         <div>
           <p className="text-gray-600 text-[10px] uppercase font-bold">Agendamento</p>
           <p className="text-gray-300 font-mono text-[11px]">
-            {getProgramacaoDate(d, city) ? formatarAgendamento(getProgramacaoDate(d, city)) : '—'}
+            {getProgramacaoDate(d, city) ? formatarAgendamento(getProgramacaoDate(d, city)) : '�'}
           </p>
         </div>
         <div>
           <p className="text-gray-600 text-[10px] uppercase font-bold">Chegada</p>
           <p className="text-gray-300 font-mono text-[11px]">
-            {d.horarioChegada ? formatarData(d.horarioChegada, city) : '—'}
+            {d.horarioChegada ? formatarData(d.horarioChegada, city) : '�'}
           </p>
         </div>
       </div>
@@ -763,18 +763,18 @@ const MobileDeliveryCard = ({
   );
 };
 
-/* ─────────────────────────────────────────────────────────────
-   FUNÇÃO PARA OBTER HORA DE ENTRADA NO STATUS ATUAL
-───────────────────────────────────────────────────────────── */
+/* -------------------------------------------------------------
+   FUN��O PARA OBTER HORA DE ENTRADA NO STATUS ATUAL
+------------------------------------------------------------- */
 const getStatusEntryTime = (delivery, city) => {
   const status = normalizeKey(delivery.status);
   if (status === 'AGENDADO') {
-    // Usar getProgramacaoDate para considerar a cidade (Itajaí = dtColeta, Manaus = dataAgendamento)
+    // Usar getProgramacaoDate para considerar a cidade (Itaja� = dtColeta, Manaus = dataAgendamento)
     const progDate = getProgramacaoDate(delivery, city);
     return progDate || delivery.scheduledAt || delivery.dataAgendamento || delivery.createdAt;
   }
   if (status === 'CONTAINER MONTADO') return delivery.containerMontadoAt;
-  if (status === 'A CAMINHO DO CLIENTE' || status === 'PENDING') return delivery.tripStartedAt || delivery.createdAt; // fallback para createdAt se tripStartedAt não existir
+  if (status === 'A CAMINHO DO CLIENTE' || status === 'PENDING') return delivery.tripStartedAt || delivery.createdAt; // fallback para createdAt se tripStartedAt n�o existir
   if (status === 'AGUARDANDO DESOVA') return delivery.arrivedAt || delivery.horarioChegada;
   if (status === 'EM DESOVA') return delivery.desovaStartedAt || delivery.horarioInicioDesova;
   if (status === 'ANEXANDO DOCUMENTOS FINAIS') return delivery.docsStartedAt || delivery.horarioFimDesova;
@@ -786,18 +786,18 @@ const getStatusEntryTime = (delivery, city) => {
   return null;
 };
 
-/* ─────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------
    MAIN COMPONENT
-───────────────────────────────────────────────────────────── */
+------------------------------------------------------------- */
 const MonitorEntregas = () => {
   const { user } = useAuth();
   const { city, setCity } = useCity();
-  const isGeoMar = () => false; // Libera edição para geomar
+  const isGeoMar = () => false; // Libera edi��o para geomar
   const canEdit = () => user?.role === 'manager' || user?.role === 'geomar';
   const currentCity = city || 'manaus';
   const getStatusOptions = () => [
     { value: "all", label: "Todos" },
-    { value: "OPERACAO_FINALIZADA", label: "Operação Finalizada" },
+    { value: "OPERACAO_FINALIZADA", label: "Opera��o Finalizada" },
     { value: "DOCUMENTOS_ENTREGUES", label: "Documentos Entregues" },
     { value: "FINALIZADO", label: "Finalizado (sem docs)" },
     { value: "A CAMINHO DO CLIENTE", label: "A Caminho do Cliente" },
@@ -812,8 +812,8 @@ const MonitorEntregas = () => {
     { value: "CANCELADO", label: "Cancelado" }
   ];
   const getEditStatusOptions = () => [
-    { value: "", label: "Selecione…" },
-    { value: "ENTREGUE", label: "Operação Finalizada" },
+    { value: "", label: "Selecione�" },
+    { value: "ENTREGUE", label: "Opera��o Finalizada" },
     { value: "pending", label: "A Caminho do Cliente" },
     { value: "AGUARDANDO_DESOVA", label: `Aguardando ${getDesovaStepLabel(currentCity)}` },
     { value: "EM_DESOVA", label: `Em ${getDesovaStepLabel(currentCity)}` },
@@ -865,11 +865,7 @@ const MonitorEntregas = () => {
   const [icompanyComparisons, setIcompanyComparisons] = useState({});
   const [icompanyRemoteRecord, setIcompanyRemoteRecord] = useState(null);
   const [icompanyLookupStatus, setIcompanyLookupStatus] = useState('idle');
-  const [controleProtocolosData, setControleProtocolosData] = useState([]);
-  const [controleProtocolosRecord, setControleProtocolosRecord] = useState(null);
-  const [controleProtocolosLookupStatus, setControleProtocolosLookupStatus] = useState('idle');
   const lastIcompanyQueryRef = useRef('');
-  const lastControleProtocolosQueryRef = useRef('');
   // Novo template para expandir a tabela e mostrar colunas completas
   const EXPANDED_COL_TEMPLATE = [
     'minmax(200px, 2.5fr)',   // Processo
@@ -895,7 +891,7 @@ const MonitorEntregas = () => {
 
   const { theme, setTheme } = useTheme();
   const themeConfig = THEMES[theme] || THEMES.dark;
-  const userName = user?.name || 'Usuário Desconhecido';
+  const userName = user?.name || 'Usu�rio Desconhecido';
 
   const statusMapToBackend = {
     OPERACAO_FINALIZADA: ['ENTREGUE', 'submitted', 'FINALIZADO', 'SAINDO_CLIENTE'],
@@ -920,8 +916,8 @@ const MonitorEntregas = () => {
     { value: 'ok', label: 'No prazo' },
     { value: 'late', label: 'Atrasado' },
     { value: 'sem_agendamento', label: 'Sem agendamento' },
-    { value: 'no_start', label: 'Sem início' },
-    { value: 'possible', label: 'Possível atraso' }
+    { value: 'no_start', label: 'Sem in�cio' },
+    { value: 'possible', label: 'Poss�vel atraso' }
   ];
 
   const isFilterActive = (key) => {
@@ -975,7 +971,7 @@ const MonitorEntregas = () => {
   const handleSort = useCallback((colKey) => {
     setSortConfig((prev) => {
       if (prev.column === colKey) {
-        // Cycle: asc → desc → null
+        // Cycle: asc ? desc ? null
         if (prev.direction === 'asc') {
           return { column: colKey, direction: 'desc' };
         } else if (prev.direction === 'desc') {
@@ -1091,7 +1087,7 @@ const MonitorEntregas = () => {
     return () => document.head.removeChild(el4);
   }, [theme]);
 
-  // Sincronizar verificações com o servidor ao carregar
+  // Sincronizar verifica��es com o servidor ao carregar
   useEffect(() => {
     const syncVerificationsFromServer = async () => {
       try {
@@ -1099,13 +1095,13 @@ const MonitorEntregas = () => {
         const payload = response?.data;
         if (payload?.success && payload?.data) {
           setIcompanyVerified(payload.data);
-          // Também salvamos no localStorage como backup
+          // Tamb�m salvamos no localStorage como backup
           localStorage.setItem('icompanyVerified', JSON.stringify(payload.data));
           // Trigger para outras abas/navegadores
           localStorage.setItem('icompanyVerifiedRefresh', Date.now().toString());
         }
       } catch (e) {
-        console.warn('Aviso ao sincronizar verificações do servidor:', e);
+        console.warn('Aviso ao sincronizar verifica��es do servidor:', e);
         // Se falhar, carregar do localStorage como fallback
         try {
           const saved = localStorage.getItem('icompanyVerified');
@@ -1113,7 +1109,7 @@ const MonitorEntregas = () => {
             setIcompanyVerified(JSON.parse(saved));
           }
         } catch (e2) {
-          console.error('Erro ao carregar verificações do localStorage:', e2);
+          console.error('Erro ao carregar verifica��es do localStorage:', e2);
         }
       }
     };
@@ -1128,7 +1124,7 @@ const MonitorEntregas = () => {
 
     syncVerificationsFromServer();
 
-    // Polling a cada 30 segundos para sincronizar mudanças (otimizado de 10s)
+    // Polling a cada 30 segundos para sincronizar mudan�as (otimizado de 10s)
     const syncInterval = setInterval(syncVerificationsFromServer, 30000);
 
     return () => {
@@ -1137,21 +1133,21 @@ const MonitorEntregas = () => {
     };
   }, []);
 
-  // Função para atualizar verificação no servidor
+  // Fun��o para atualizar verifica��o no servidor
   const updateVerificationWithServer = async (deliveryId, verified, notes = '') => {
     try {
       const response = await adminService.updateDeliveryVerification(deliveryId, { verified, notes });
       const data = response?.data;
       if (data?.success) {
-        console.log(`✅ Verificação do servidor atualizada para entrega ${deliveryId}`);
+        console.log(`? Verifica��o do servidor atualizada para entrega ${deliveryId}`);
         return data.verification;
       }
 
       const message = data?.message || 'Resposta inesperada do servidor';
-      console.error('❌ updateVerificationWithServer inesperado:', data);
+      console.error('? updateVerificationWithServer inesperado:', data);
       throw new Error(message);
     } catch (e) {
-      console.error('Erro ao atualizar verificação no servidor:', e);
+      console.error('Erro ao atualizar verifica��o no servidor:', e);
       setToast({
         type: 'error',
         message: 'Erro ao sincronizar com servidor. Tente novamente.',
@@ -1197,8 +1193,8 @@ const MonitorEntregas = () => {
     const ev = [];
     if (d.containerMontadoAt) ev.push({ label: 'Montagem do container', date: d.containerMontadoAt });
     if (d.horarioChegada) ev.push({ label: 'Chegada', date: d.horarioChegada });
-    if (d.horarioInicioDesova) ev.push({ label: city === 'itajai' ? 'Inicio da ovação' : 'Início da desova', date: d.horarioInicioDesova });
-    if (d.horarioFimDesova) ev.push({ label: city === 'itajai' ? 'Fim da ovação' : 'Fim da desova', date: d.horarioFimDesova });
+    if (d.horarioInicioDesova) ev.push({ label: city === 'itajai' ? 'Inicio da ova��o' : 'In�cio da desova', date: d.horarioInicioDesova });
+    if (d.horarioFimDesova) ev.push({ label: city === 'itajai' ? 'Fim da ova��o' : 'Fim da desova', date: d.horarioFimDesova });
     if (d.horarioSaidaCliente) ev.push({ label: 'Saida do cliente', date: d.horarioSaidaCliente });
     if (d.horarioChegadaPorto) ev.push({ label: 'Chegada no porto', date: d.horarioChegadaPorto });
     if (d.horarioDevolucaoVazio) ev.push({ label: 'Devolucao CNTR Porto', date: d.horarioDevolucaoVazio });
@@ -1273,7 +1269,7 @@ const MonitorEntregas = () => {
       if (allModalDocsComplete(delivery)) return 'DOCUMENTOS ENTREGUES';
       return 'FINALIZADO';
     }
-    if (s === 'ENTREGUE' || s === 'submitted') return 'OPERAÇÃO FINALIZADA';
+    if (s === 'ENTREGUE' || s === 'submitted') return 'OPERA��O FINALIZADA';
     if (s === 'pending' || s === 'PENDING') return 'A CAMINHO DO CLIENTE';
     return String(s).replace(/_/g, ' ');
   };
@@ -1291,30 +1287,16 @@ const MonitorEntregas = () => {
 
   const itajaiDocumentLabels = getDocumentLabels('itajai');
 
-  const controleProtocolosDocumentMap = {
-    retiradaCheio: 'RIC PORTO DESTINO',
-    canhotCTE: 'COMPROVANTE DE DESOVA',
-    diarioBordo: 'DIARIO DE BORDO',
-    canhotNF: 'CANHOTO DE DANFE',
-    devolucaoVazio: 'RIC DEPOT DESTINO',
-    saidaCliente: 'SAIDA DO CLIENTE',
-    chegadaPorto: 'CHEGADA NO PORTO'
-  };
-
-  const isControleDocumentoPresent = (value) => {
-    return value === true;
-  };
-
   const getLabelsForDelivery = (d) => {
     if (!d) return defaultDocumentLabels;
-    // Usar city do contexto se o delivery não tiver, ou verificar ambos
+    // Usar city do contexto se o delivery n�o tiver, ou verificar ambos
     const deliveryCity = (d.city || city || '').toLowerCase();
     // eslint-disable-next-line no-console
     console.log('DEBUG getLabelsForDelivery:', { d_city: d.city, context_city: city, deliveryCity, isItajai: deliveryCity === 'itajai' });
     return deliveryCity === 'itajai' ? itajaiDocumentLabels : defaultDocumentLabels;
   };
 
-  const removeProgramacaoInfo = (obs) => obs ? obs.replace(/Criada a partir da Programação [A-Z0-9]+/g, '').trim() : '';
+  const removeProgramacaoInfo = (obs) => obs ? obs.replace(/Criada a partir da Programa��o [A-Z0-9]+/g, '').trim() : '';
 
   const urlToDataUrl = async (url) => {
     try {
@@ -1340,7 +1322,7 @@ const MonitorEntregas = () => {
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
   };
 
-  const formatDT = (v) => v ? formatarData(v, city) : '—';
+  const formatDT = (v) => v ? formatarData(v, city) : '�';
 
   const generateDeliveryReceiptPdf = async (delivery) => {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
@@ -1356,7 +1338,7 @@ const MonitorEntregas = () => {
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     const pdfMargin = 40;
-    const safe = (v) => (v == null || v === '' ? '—' : String(v));
+    const safe = (v) => (v == null || v === '' ? '�' : String(v));
 
     const normalizeUrl = (u) => {
       if (!u) return u;
@@ -1387,7 +1369,7 @@ const MonitorEntregas = () => {
         const imgProps = doc.getImageProperties(logoDataUrl);
         const targetH = 50; // Aumentado de 34 para 50 para destacar mais
         const targetW = (imgProps.width * targetH) / imgProps.height;
-        doc.addImage(logoDataUrl, 'PNG', pdfMargin, 21, targetW, targetH); // Ajustado posição Y de 26 para 21
+        doc.addImage(logoDataUrl, 'PNG', pdfMargin, 21, targetW, targetH); // Ajustado posi��o Y de 26 para 21
       } catch {}
     }
 
@@ -1402,17 +1384,17 @@ const MonitorEntregas = () => {
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.text(`Entrega #${delivery.deliveryNumber || '—'}`, pageW - pdfMargin, 80, { align: 'right' }); // Ajustado de 74 para 80
+    doc.text(`Entrega #${delivery.deliveryNumber || '�'}`, pageW - pdfMargin, 80, { align: 'right' }); // Ajustado de 74 para 80
 
     doc.setTextColor(20, 20, 20);
     doc.setFontSize(10);
 
-    let y = 130; // Ajustado de 120 para 130 para compensar cabeçalho maior
+    let y = 130; // Ajustado de 120 para 130 para compensar cabe�alho maior
 
     // Basic Information
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.text('INFORMAÇÕES GERAIS', pdfMargin, y);
+    doc.text('INFORMA��ES GERAIS', pdfMargin, y);
     y += 20;
 
     doc.setFont('helvetica', 'normal');
@@ -1426,7 +1408,7 @@ const MonitorEntregas = () => {
       ['Agendamento', formatDT(getProgramacaoDate(delivery, city))],
       ['Montagem Container', formatDT(delivery.containerMontadoAt)],
       ['Chegada', formatDT(delivery.horarioChegada)],
-      [`Início ${getDesovaStepLabel(city)}`, formatDT(delivery.horarioInicioDesova)],
+      [`In�cio ${getDesovaStepLabel(city)}`, formatDT(delivery.horarioInicioDesova)],
       [`Fim ${getDesovaStepLabel(city)}`, formatDT(delivery.horarioFimDesova)],
       ['Saida do Cliente', formatDT(delivery.horarioSaidaCliente)],
       ['Chegada no Porto', formatDT(delivery.horarioChegadaPorto)],
@@ -1443,13 +1425,13 @@ const MonitorEntregas = () => {
     if (flowHistory.length > 0) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
-      doc.text('HISTÓRICO DO FLUXO', pdfMargin, y);
+      doc.text('HIST�RICO DO FLUXO', pdfMargin, y);
       y += 20;
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       flowHistory.forEach((ev) => {
-        doc.text(`• ${ev.label}: ${formatarData(ev.date, city)}`, pdfMargin, y);
+        doc.text(`� ${ev.label}: ${formatarData(ev.date, city)}`, pdfMargin, y);
         y += 16;
       });
       y += 10;
@@ -1460,8 +1442,8 @@ const MonitorEntregas = () => {
     const docKeys = Object.keys(delivery.documents || {}).filter(k => !['chegadaCliente', 'inicioDesova', 'fimDesova', 'saidaCliente', 'chegadaPorto'].includes(k));
     const fotoFields = [
       { key: 'chegadaCliente', label: 'Chegada no Cliente' },
-      { key: 'inicioDesova', label: `Início da ${getDesovaStepLabel(city)}` },
-      { key: 'fimDesova', label: `Finalização da ${getDesovaStepLabel(city)}` },
+      { key: 'inicioDesova', label: `In�cio da ${getDesovaStepLabel(city)}` },
+      { key: 'fimDesova', label: `Finaliza��o da ${getDesovaStepLabel(city)}` },
       { key: 'saidaCliente', label: 'Saida do Cliente' },
       { key: 'chegadaPorto', label: 'Chegada no Porto' }
     ];
@@ -1491,7 +1473,7 @@ const MonitorEntregas = () => {
           });
           y += 4;
         } else {
-          doc.text(`${label}: Não anexado`, pdfMargin, y);
+          doc.text(`${label}: N�o anexado`, pdfMargin, y);
           y += 16;
         }
       });
@@ -1503,7 +1485,7 @@ const MonitorEntregas = () => {
     doc.setFontSize(9);
     doc.setTextColor(90);
     doc.text('Este comprovante foi gerado automaticamente pela Torre de Controle.', pdfMargin, footerY);
-    doc.text(`ID interno: ${delivery._id || '—'} • Criado em: ${formatDT(delivery.createdAt)}`, pdfMargin, footerY + 14);
+    doc.text(`ID interno: ${delivery._id || '�'} � Criado em: ${formatDT(delivery.createdAt)}`, pdfMargin, footerY + 14);
 
     const fileName = `Comprovante_Entrega_${delivery.deliveryNumber || delivery._id || 'sem_numero'}.pdf`;
     const blob = doc.output('blob');
@@ -1547,10 +1529,10 @@ const MonitorEntregas = () => {
           documents: Object.keys(sampleDelivery.documents || {})
         });
       }
-      // Enriquecer com city do contexto se não houver
+      // Enriquecer com city do contexto se n�o houver
       const enrichedWithCity = normalized.map(d => ({
         ...d,
-        city: d.city || city // Adiciona city do contexto se não tiver
+        city: d.city || city // Adiciona city do contexto se n�o tiver
       }));
       setDeliveries(enrichedWithCity);
 
@@ -1565,7 +1547,7 @@ const MonitorEntregas = () => {
       setToast(null);
     } catch (err) {
       if (err?.response?.status === 401) {
-        setToast({ message: 'Sessão expirada. Faça login novamente.', type: 'error' });
+        setToast({ message: 'Sess�o expirada. Fa�a login novamente.', type: 'error' });
         setTimeout(() => { window.location.href = '/login'; }, 1200);
       } else {
         setToast({ message: 'Erro ao carregar entregas.', type: 'error' });
@@ -1580,7 +1562,7 @@ const MonitorEntregas = () => {
     setSelectedDelivery(null);
   }, [city]);
 
-  // Carregar dados da Icompany para comparações
+  // Carregar dados da Icompany para compara��es
   const loadIcompanyData = useCallback(async () => {
     try {
       const response = await adminService.getIcompanyData();
@@ -1589,17 +1571,6 @@ const MonitorEntregas = () => {
       }
     } catch (error) {
       console.error('Erro ao carregar dados Icompany:', error);
-    }
-  }, []);
-
-  const loadControleProtocolosData = useCallback(async () => {
-    try {
-      const response = await adminService.getControleProtocolos();
-      if (response.data?.success) {
-        setControleProtocolosData(response.data.data || []);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar dados de controle de protocolos:', error);
     }
   }, []);
 
@@ -1622,7 +1593,7 @@ const MonitorEntregas = () => {
     ].map(getClean).filter(Boolean);
     if (!targets.length) return null;
 
-    const keys = ['geomaritima', 'processo', 'codigo', 'nrProcesso', 'numero', 'NUMERO', 'NÚMERO', 'container', 'containerNumero'];
+    const keys = ['geomaritima', 'processo', 'codigo', 'nrProcesso', 'numero', 'NUMERO', 'N�MERO', 'container', 'containerNumero'];
 
     const expectedParty = getClean(getPartyBySentido(delivery, delivery.sentido || filters.sentido));
     const expectedSentido = getClean(delivery.sentido || filters.sentido);
@@ -1643,13 +1614,13 @@ const MonitorEntregas = () => {
         if (getClean(record.codigo) && targets.includes(getClean(record.codigo))) score += 20;
         if (expectedSentido && getClean(record.sentido || record.SENTIDO) === expectedSentido) score += 20;
         if (expectedParty && getClean(getPartyBySentido(record, expectedSentido || record.sentido || record.SENTIDO)) === expectedParty) score += 20;
-        if (getClean(record.numero || record.NUMERO || record['NÚMERO'] || record.containerNumero) && targets.includes(getClean(record.numero || record.NUMERO || record['NÚMERO'] || record.containerNumero))) score += 5;
+        if (getClean(record.numero || record.NUMERO || record['N�MERO'] || record.containerNumero) && targets.includes(getClean(record.numero || record.NUMERO || record['N�MERO'] || record.containerNumero))) score += 5;
         return { record, score };
       })
       .sort((a, b) => b.score - a.score)[0].record;
   }, [icompanyData, filters.sentido]);
 
-  // Função para comparar dados do delivery com Icompany
+  // Fun��o para comparar dados do delivery com Icompany
   const compareWithIcompany = useCallback((delivery, icompanyMatch) => {
     if (!delivery) return {};
 
@@ -1676,7 +1647,7 @@ const MonitorEntregas = () => {
       'Montagem Container': { deliveryField: 'containerMontadoAt', icompanyField: 'dtRetiraPD' },
       'Chegada': { deliveryField: 'horarioChegada', icompanyField: 'dtChegadaPlanta' },
       'Saindo do Cliente': { deliveryField: 'horarioSaidaCliente', icompanyField: 'dtSaidaPlanta' },
-      [`Início ${getDesovaStepLabel(city)}`]: { deliveryField: 'horarioInicioDesova', icompanyField: 'dtInicioCarregamento' },
+      [`In�cio ${getDesovaStepLabel(city)}`]: { deliveryField: 'horarioInicioDesova', icompanyField: 'dtInicioCarregamento' },
       [`Fim ${getDesovaStepLabel(city)}`]: { deliveryField: 'horarioFimDesova', icompanyField: 'dtFimCarregamento' },
       'Entrega CNTR Porto': { deliveryField: 'horarioDevolucaoVazio', icompanyField: 'dtFimAgendamento' }
     };
@@ -1707,7 +1678,7 @@ const MonitorEntregas = () => {
       Array.isArray(delivery.containerNumero) ? delivery.containerNumero[0] : delivery.containerNumero
     ].map(normalizeRecordKey).filter(Boolean);
 
-    const lookupKeys = ['geomaritima', 'processo', 'codigo', 'nrProcesso', 'numero', 'NUMERO', 'NÚMERO', 'container', 'containerNumero'];
+    const lookupKeys = ['geomaritima', 'processo', 'codigo', 'nrProcesso', 'numero', 'NUMERO', 'N�MERO', 'container', 'containerNumero'];
     const icompanyRecord = recordToUse || icompanyData.find((record) => {
       return lookupKeys.some((key) => {
         const v = normalizeRecordKey(record[key]);
@@ -1717,7 +1688,7 @@ const MonitorEntregas = () => {
 
 
     if (!icompanyRecord) {
-      // DEBUG: não encontrado; pode ser que esteja em outro formato no iCompany
+      // DEBUG: n�o encontrado; pode ser que esteja em outro formato no iCompany
       console.debug('[Icompany compare] no match for', { deliveryKeys: processoKeys, rowCount: icompanyData.length });
       return { __notFound: true, mensagem: `Nenhum registro iCompany encontrado para ${processoKeys[0] || 'N/D'}` };
     }
@@ -1739,7 +1710,7 @@ const MonitorEntregas = () => {
     };
 
     const formatDisplay = (val) => {
-      if (val === null || val === undefined || val === '') return '—';
+      if (val === null || val === undefined || val === '') return '�';
       const date = parseDateValue(val);
       if (date) return formatarData(date, city);
       return val.toString();
@@ -1783,58 +1754,6 @@ const MonitorEntregas = () => {
 
     return comparisons;
   }, [icompanyData, city, filters.sentido]);
-
-  const findControleProtocolosInCache = useCallback((delivery) => {
-    if (!delivery || !controleProtocolosData.length) return null;
-
-    const getClean = (value) => {
-      if (value === null || value === undefined) return '';
-      return value.toString().replace(/^#/, '').trim().toUpperCase();
-    };
-
-    // Primeiro tenta encontrar pelo código Icompany (como no modal)
-    const icompanyRecord = findIcompanyInCache(delivery);
-    if (icompanyRecord?.codigo) {
-      const icompanyCode = getClean(icompanyRecord.codigo);
-      if (icompanyCode) {
-        const foundByIcompanyCode = controleProtocolosData.find((record) => {
-          return getClean(record.processo) === icompanyCode ||
-                 getClean(record.container) === icompanyCode ||
-                 getClean(record.destinatario) === icompanyCode ||
-                 getClean(record.embarcador) === icompanyCode;
-        });
-        if (foundByIcompanyCode) return foundByIcompanyCode;
-      }
-    }
-
-    // Fallback: busca pelos campos tradicionais
-    const target = getClean(delivery.codigo || delivery.processoCAB || delivery.deliveryNumber || delivery.processo || delivery.container || '');
-    if (!target) return null;
-
-    const lookupKeys = ['processo', 'container', 'destinatario', 'embarcador'];
-
-    return controleProtocolosData.find((record) => {
-      return lookupKeys.some((key) => {
-        const val = getClean(record[key]);
-        return val && val === target;
-      });
-    }) || null;
-  }, [controleProtocolosData, findIcompanyInCache]);
-
-  const getControleProtocolosMismatchCount = (delivery) => {
-    if (!delivery) return 0;
-    if (!controleProtocolosData.length) return 0;
-
-    const controleRecord = findControleProtocolosInCache(delivery);
-    if (!controleRecord || !controleRecord.documentos) return 0;
-
-    return Object.entries(controleProtocolosDocumentMap).reduce((count, [deliveryKey, protocoloKey]) => {
-      const deliveryPresent = !!delivery.documents?.[deliveryKey];
-      const controlePresent = isControleDocumentoPresent(controleRecord.documentos[protocoloKey]);
-      return count + (deliveryPresent !== controlePresent ? 1 : 0);
-    }, 0);
-  };
-
   const getDocsComparisonSummary = (delivery) => {
     const icompanyResult = compareWithIcompany(delivery);
     const icompanyMismatchCount = icompanyData.length === 0
@@ -1842,29 +1761,25 @@ const MonitorEntregas = () => {
       : icompanyResult.__notFound
         ? 1
         : Object.values(icompanyResult).filter((item) => item.isInconsistent).length;
-    const controleMismatchCount = getControleProtocolosMismatchCount(delivery);
 
     return {
-      total: icompanyMismatchCount + controleMismatchCount,
-      icompanyMismatchCount,
-      controleMismatchCount
+      total: icompanyMismatchCount,
+      icompanyMismatchCount
     };
   };
 
   useEffect(() => {
     loadDeliveries();
-    loadIcompanyData(); // Carregar dados da Icompany na inicialização
-    loadControleProtocolosData();
+    loadIcompanyData(); // Carregar dados da Icompany na inicializa��o
     if (autoRefresh) {
       const t = setInterval(() => {
         // eslint-disable-next-line no-console
         console.log('DEBUG autoRefresh triggered, filters:', filters);
         loadDeliveries();
-        loadControleProtocolosData();
       }, refreshInterval * 1000);
       return () => clearInterval(t);
     }
-  }, [loadDeliveries, loadIcompanyData, loadControleProtocolosData, autoRefresh, refreshInterval, city]);
+  }, [loadDeliveries, loadIcompanyData, autoRefresh, refreshInterval, city]);
 
   useEffect(() => {
     if (!selectedDelivery) {
@@ -1915,64 +1830,20 @@ const MonitorEntregas = () => {
   }, [selectedDelivery, findIcompanyInCache, icompanyLookupStatus]);
 
   useEffect(() => {
-    if (!selectedDelivery) {
-      setControleProtocolosRecord(null);
-      setControleProtocolosLookupStatus('idle');
-      lastControleProtocolosQueryRef.current = '';
-      return;
-    }
-
-    const modalCodigo = (icompanyRemoteRecord?.codigo || findIcompanyInCache(selectedDelivery)?.codigo || selectedDelivery.codigo || selectedDelivery.processoCAB || selectedDelivery.processo || '').toString().replace(/^#/, '').trim();
-    if (!modalCodigo) {
-      setControleProtocolosRecord(null);
-      setControleProtocolosLookupStatus('notfound');
-      lastControleProtocolosQueryRef.current = '';
-      return;
-    }
-
-    if (modalCodigo === lastControleProtocolosQueryRef.current && controleProtocolosLookupStatus !== 'idle') {
-      return;
-    }
-
-    lastControleProtocolosQueryRef.current = modalCodigo;
-    setControleProtocolosLookupStatus('searching');
-    adminService.getControleProtocolos(modalCodigo)
-      .then((res) => {
-        const records = res.data?.data || [];
-        if (records.length > 0) {
-          const exactMatch = records.find((record) => {
-            const proc = (record.processo || '').toString().replace(/^#/, '').trim().toUpperCase();
-            return proc === modalCodigo.toUpperCase();
-          });
-          setControleProtocolosRecord(exactMatch || records[0]);
-          setControleProtocolosLookupStatus('found');
-        } else {
-          setControleProtocolosRecord(null);
-          setControleProtocolosLookupStatus('notfound');
-        }
-      })
-      .catch((err) => {
-        console.error('Erro ao buscar controle de protocolos:', err);
-        setControleProtocolosRecord(null);
-        setControleProtocolosLookupStatus('error');
-      });
-  }, [selectedDelivery, icompanyRemoteRecord, findIcompanyInCache, controleProtocolosLookupStatus]);
-
-  useEffect(() => {
     let r = [...deliveries];
 
-    // Aplicar apenas filtros que o backend não consegue fazer
+    // Aplicar apenas filtros que o backend n�o consegue fazer
     if (statsPeriod === 'general' && filters.status !== 'all') {
-      // Filtros especiais que dependem de lógica do frontend
+      // Filtros especiais que dependem de l�gica do frontend
       if (filters.status === 'DOCUMENTOS_ENTREGUES') {
         r = r.filter(d => d.status === 'FINALIZADO' && allModalDocsComplete(d));
       } else if (filters.status === 'FINALIZADO') {
         r = r.filter(d => d.status === 'FINALIZADO' && !allModalDocsComplete(d));
       }
-      // Outros status já são filtrados pelo backend
+      // Outros status j� s�o filtrados pelo backend
     }
 
-    // Busca adicional por campos que o backend não filtra
+    // Busca adicional por campos que o backend n�o filtra
     if (filters.searchTerm.trim()) {
       const q = filters.searchTerm.toLowerCase();
       r = r.filter((d) =>
@@ -2003,7 +1874,7 @@ const MonitorEntregas = () => {
     filteredDeliveries.forEach((d) => {
       const prev = prevStatusRef.current[d._id];
       if (prev !== undefined && prev !== d.status) {
-        // Usa um contador incremental para garantir ordenação determinística
+        // Usa um contador incremental para garantir ordena��o determin�stica
         updates[d._id] = updateCounter + Object.keys(updates).length + 1;
         // eslint-disable-next-line no-console
         console.log('DEBUG status changed:', {
@@ -2019,7 +1890,7 @@ const MonitorEntregas = () => {
 
     if (Object.keys(updates).length > 0) {
       prevPositions.current = capturedPositions;
-      // Incrementa o contador para próximas atualizações
+      // Incrementa o contador para pr�ximas atualiza��es
       setUpdateCounter((prev) => prev + Object.keys(updates).length);
       setRecentlyUpdated((prev) => {
         const next = { ...prev, ...updates };
@@ -2028,7 +1899,7 @@ const MonitorEntregas = () => {
         return next;
       });
       
-      // Remove apenas a animação visual após RISE_WINDOW, mas mantém no topo via recentlyUpdated
+      // Remove apenas a anima��o visual ap�s RISE_WINDOW, mas mant�m no topo via recentlyUpdated
       // setTimeout(() => {
       //   setRecentlyUpdated((prev) => {
       //     const next = { ...prev };
@@ -2096,7 +1967,7 @@ const MonitorEntregas = () => {
         const aTime = getStatusEntryTime(a, city);
         const bTime = getStatusEntryTime(b, city);
         
-        // Converter para timestamp para comparação
+        // Converter para timestamp para compara��o
         const aTs = aTime ? new Date(aTime).getTime() : 0;
         const bTs = bTime ? new Date(bTime).getTime() : 0;
         
@@ -2106,7 +1977,7 @@ const MonitorEntregas = () => {
 
       return sorted;
     } else {
-      // Para outros períodos, ordena por atualização
+      // Para outros per�odos, ordena por atualiza��o
       sorted = sorted.sort((a, b) => {
         const aT = recentlyUpdated[a._id];
         const bT = recentlyUpdated[b._id];
@@ -2198,7 +2069,7 @@ const MonitorEntregas = () => {
   const handleShareDelivery = async () => {
     if (!selectedDelivery) return;
     try {
-      setToast({ type: 'success', message: 'Gerando comprovante…' });
+      setToast({ type: 'success', message: 'Gerando comprovante�' });
       const { blob, fileName } = await generateDeliveryReceiptPdf(selectedDelivery);
 
       // Download direto do PDF
@@ -2223,7 +2094,7 @@ const MonitorEntregas = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Deletar esta entrega? Ação irreversível.')) return;
+    if (!window.confirm('Deletar esta entrega? A��o irrevers�vel.')) return;
     try {
       await adminService.deleteDelivery(id);
       setToast({ message: 'Entrega deletada', type: 'success' });
@@ -2235,13 +2106,13 @@ const MonitorEntregas = () => {
   };
 
   const handleRemoveDocument = async (deliveryId, documentType) => {
-    if (!window.confirm('Remover este documento e marcá-lo como pendência para correção?')) return;
+    if (!window.confirm('Remover este documento e marc�-lo como pend�ncia para corre��o?')) return;
     try {
       setToast({ message: 'Removendo documento...', type: 'info' });
-      const res = await adminService.removeInvalidDocument(deliveryId, documentType, 'Documento inválido removido pelo ADM');
+      const res = await adminService.removeInvalidDocument(deliveryId, documentType, 'Documento inv�lido removido pelo ADM');
       const updatedDelivery = res.data.delivery;
       setSelectedDelivery(updatedDelivery);
-      setToast({ message: 'Documento removido e pendência registrada', type: 'success' });
+      setToast({ message: 'Documento removido e pend�ncia registrada', type: 'success' });
       loadDeliveries();
     } catch (err) {
       setToast({ message: err.response?.data?.message || err.message || 'Erro ao remover documento', type: 'error' });
@@ -2249,7 +2120,7 @@ const MonitorEntregas = () => {
   };
 
   const handleEditStart = (d) => {
-    // Libera edição para geomar
+    // Libera edi��o para geomar
 
     // Some data sources may not include an _id field; try fallback to deliveryNumber/id.
     const editId = d._id || d.id || d.deliveryNumber;
@@ -2274,12 +2145,12 @@ const MonitorEntregas = () => {
 
   const handleEditSave = async () => {
     if (!editForm.observations?.trim()) {
-      setToast({ message: 'Motivo da edição obrigatório', type: 'error' });
+      setToast({ message: 'Motivo da edi��o obrigat�rio', type: 'error' });
       return;
     }
 
-    const motivo = editForm.observations.replace(/Criada a partir da Programação [A-Z0-9]+/g, '').trim();
-    const prog = (editForm.observations.match(/Criada a partir da Programação [A-Z0-9]+/) || []).join(' ');
+    const motivo = editForm.observations.replace(/Criada a partir da Programa��o [A-Z0-9]+/g, '').trim();
+    const prog = (editForm.observations.match(/Criada a partir da Programa��o [A-Z0-9]+/) || []).join(' ');
 
     const payload = {
       ...editForm,
@@ -2290,7 +2161,7 @@ const MonitorEntregas = () => {
 
     const deliveryId = editingDelivery || selectedDelivery?._id || selectedDelivery?.deliveryNumber;
     if (!deliveryId) {
-      setToast({ message: 'ID da entrega inválido para atualização', type: 'error' });
+      setToast({ message: 'ID da entrega inv�lido para atualiza��o', type: 'error' });
       return;
     }
 
@@ -2309,7 +2180,7 @@ const MonitorEntregas = () => {
         message: serverMessage
           ? `Erro ao atualizar: ${serverMessage}`
           : status === 404
-            ? 'Entrega não encontrada (404) ao tentar atualizar.'
+            ? 'Entrega n�o encontrada (404) ao tentar atualizar.'
             : 'Erro ao atualizar',
         type: 'error'
       });
@@ -2389,7 +2260,7 @@ const MonitorEntregas = () => {
                   onClick={() => setCity('itajai')}
                   className={`rounded-xl px-3 py-1 font-semibold transition ${city === 'itajai' ? 'bg-emerald-600 text-white' : 'bg-white/10 text-gray-200 hover:bg-white/20'}`}
                 >
-                  Itajaí
+                  Itaja�
                 </button>
               </div>
             )}
@@ -2404,7 +2275,7 @@ const MonitorEntregas = () => {
           {autoRefresh && (
             <span className="hidden sm:flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              LIVE · {refreshInterval}s
+              LIVE � {refreshInterval}s
             </span>
           )}
 
@@ -2427,7 +2298,7 @@ const MonitorEntregas = () => {
 
           <button
             onClick={() => setSettingsOpen((v) => !v)}
-            title="Configurações, Filtros & Tema"
+            title="Configura��es, Filtros & Tema"
             className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition ${settingsOpen ? 'bg-purple-600 text-white' : 'hover:bg-white/10 text-gray-400 hover:text-white'}`}
           >
             <FaCog size={15} className={settingsOpen ? 'animate-spin' : ''} style={{ animationDuration: '3s' }} />
@@ -2455,7 +2326,7 @@ const MonitorEntregas = () => {
           </Pill>
 
           <Pill active={statsPeriod === 'tomorrow'} onClick={() => setStatsPeriod('tomorrow')} color="blue">
-            <FaCalendarAlt className="text-xs" /> <span>Amanhã</span>
+            <FaCalendarAlt className="text-xs" /> <span>Amanh�</span>
           </Pill>
 
           <div className="h-7 w-px bg-white/10 mx-1" />
@@ -2495,7 +2366,7 @@ const MonitorEntregas = () => {
 
         {/* KANBAN NO LUGAR DOS CARDS */}
         <div>
-          <SectionTitle sub="Acompanhe o andamento de cada entrega em tempo real através de cada etapa do processo">
+          <SectionTitle sub="Acompanhe o andamento de cada entrega em tempo real atrav�s de cada etapa do processo">
             Fluxo de Entregas
           </SectionTitle>
 
@@ -2520,12 +2391,12 @@ const MonitorEntregas = () => {
           <div className="bg-white/5 rounded-2xl border border-white/10 p-12 sm:p-16 text-center">
             <MdLocalShipping className="mx-auto text-5xl text-gray-600 mb-4" />
             <p className="text-gray-400 text-lg font-semibold">Nenhuma entrega encontrada</p>
-            <p className="text-gray-600 text-sm mt-1">Ajuste os filtros ou período nas configurações</p>
+            <p className="text-gray-600 text-sm mt-1">Ajuste os filtros ou per�odo nas configura��es</p>
           </div>
         ) : (
           <div>
             <SectionTitle>
-              Monitor Tático
+              Monitor T�tico
             </SectionTitle>
 
             <div className="md:hidden space-y-3">
@@ -2643,7 +2514,7 @@ const MonitorEntregas = () => {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-[10px] text-gray-400 mb-1">Até</label>
+                                  <label className="block text-[10px] text-gray-400 mb-1">At�</label>
                                   <input
                                     type="date"
                                     value={filters[col.endKey]}
@@ -2717,14 +2588,14 @@ const MonitorEntregas = () => {
                           {/* PROCESSO */}
                           <div className="px-4 py-3 flex items-center gap-1.5 min-w-0" style={{ whiteSpace: 'normal', overflow: 'visible', textOverflow: 'clip' }}>
                             <span className="font-black text-blue-300 text-[13px] leading-tight" style={{ whiteSpace: 'normal', wordBreak: 'break-all' }}>
-                              {d.processoCAB || '—'}
+                              {d.processoCAB || '�'}
                             </span>
                           </div>
 
                           {/* CONTAINER */}
                           <div className="px-4 py-3 flex items-center min-w-0" style={{ whiteSpace: 'normal', overflow: 'visible', textOverflow: 'clip' }}>
                             <span className="text-gray-300 text-[11px]" style={{ whiteSpace: 'normal', wordBreak: 'break-all' }} title={getDisplayContainer(d) || d.deliveryNumber}>
-                              {getDisplayContainer(d) || '—'}
+                              {getDisplayContainer(d) || '�'}
                             </span>
                           </div>
 
@@ -2750,7 +2621,7 @@ const MonitorEntregas = () => {
                             <span className="text-gray-400 text-[11px] tabular-nums" style={{ whiteSpace: 'normal', wordBreak: 'break-all' }}>
                               {(() => {
                                 const entryTime = getStatusEntryTime(d, city);
-                                return entryTime ? formatarData(entryTime, city) : '—';
+                                return entryTime ? formatarData(entryTime, city) : '�';
                               })()}
                             </span>
                           </div>
@@ -2763,10 +2634,10 @@ const MonitorEntregas = () => {
                                 return <FaCheckCircle className="text-emerald-400" size={15} title="Status finalizado" />;
                               }
                               const entryTime = getStatusEntryTime(d, city);
-                              if (!entryTime) return <span className="text-gray-400 text-[11px]">—</span>;
+                              if (!entryTime) return <span className="text-gray-400 text-[11px]">�</span>;
                               const now = currentTime;
                               const diffMs = now - new Date(entryTime);
-                              if (diffMs < 0) return <span className="text-gray-400 text-[11px]">—</span>;
+                              if (diffMs < 0) return <span className="text-gray-400 text-[11px]">�</span>;
                               const totalMin = Math.floor(diffMs / 60000);
                               const h = Math.floor(totalMin / 60);
                               const m = totalMin % 60;
@@ -2782,7 +2653,7 @@ const MonitorEntregas = () => {
 
                           <div className="px-2 py-3 flex items-center justify-center min-w-0">
                             <span className="text-gray-400 text-[11px] tabular-nums" style={{ whiteSpace: 'normal', wordBreak: 'break-all' }}>
-                              {getProgramacaoDate(d, city) ? formatarAgendamento(getProgramacaoDate(d, city)) : '—'}
+                              {getProgramacaoDate(d, city) ? formatarAgendamento(getProgramacaoDate(d, city)) : '�'}
                             </span>
                           </div>
 
@@ -2849,8 +2720,6 @@ const MonitorEntregas = () => {
             setIcompanyVerified={setIcompanyVerified}
             icompanyRemoteRecord={icompanyRemoteRecord}
             icompanyLookupStatus={icompanyLookupStatus}
-            controleProtocolosRecord={controleProtocolosRecord}
-            controleProtocolosLookupStatus={controleProtocolosLookupStatus}
             findIcompanyInCache={findIcompanyInCache}
             compareWithIcompany={compareWithIcompany}
             allModalDocsComplete={allModalDocsComplete}
@@ -2947,7 +2816,7 @@ const MonitorEntregas = () => {
                   ))}
                 </div>
               ) : (
-                <div className="p-8 text-center text-gray-500">Nenhum documento disponível</div>
+                <div className="p-8 text-center text-gray-500">Nenhum documento dispon�vel</div>
               )}
             </div>
           </div>
@@ -2959,7 +2828,7 @@ const MonitorEntregas = () => {
           <div className="bg-[#1a1a2e] rounded-3xl w-full max-w-lg border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
             <div className="flex items-center justify-between px-6 py-5 border-b border-white/10 flex-shrink-0">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-widest mb-0.5">Edição</p>
+                <p className="text-xs text-gray-500 uppercase tracking-widest mb-0.5">Edi��o</p>
                 <h2 className="text-lg font-black text-white">Editar Entrega</h2>
               </div>
               <button
@@ -2970,11 +2839,11 @@ const MonitorEntregas = () => {
               </button>
             </div>
 
-            {/* Remove banner de visualização para geomar */}
+            {/* Remove banner de visualiza��o para geomar */}
 
             <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
               {[
-                ['Número do Container', 'deliveryNumber', 'text', true],
+                ['N�mero do Container', 'deliveryNumber', 'text', true],
                 ['Contratado', 'userName', 'text', false],
                 ['Motorista', 'driverName', 'text', false],
                 ['Recebedor', 'recebedor', 'text', false],
@@ -2999,12 +2868,12 @@ const MonitorEntregas = () => {
                   onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                   className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <option value="" className="bg-gray-900">Selecione…</option>
-                  <option value="ENTREGUE" className="bg-gray-900">Operação Finalizada</option>
+                  <option value="" className="bg-gray-900">Selecione�</option>
+                  <option value="ENTREGUE" className="bg-gray-900">Opera��o Finalizada</option>
                   <option value="pending" className="bg-gray-900">A Caminho do Cliente</option>
-                  <option value="AGUARDANDO_DESOVA" className="bg-gray-900">Aguardando Desova/Ovação</option>
-                  <option value="EM_DESOVA" className="bg-gray-900">Em Desova/Ovação</option>
-                  <option value="DESOVA_FINALIZADA" className="bg-gray-900">Desova/Ovação Finalizada</option>
+                  <option value="AGUARDANDO_DESOVA" className="bg-gray-900">Aguardando Desova/Ova��o</option>
+                  <option value="EM_DESOVA" className="bg-gray-900">Em Desova/Ova��o</option>
+                  <option value="DESOVA_FINALIZADA" className="bg-gray-900">Desova/Ova��o Finalizada</option>
                   <option value="ANEXANDO_DOCUMENTOS_FINAIS" className="bg-gray-900">Anexando Docs Finais</option>
                   <option value="SAINDO_CLIENTE" className="bg-gray-900">Saindo do Cliente</option>
                   <option value="RETORNANDO_PORTO" className="bg-gray-900">Retornando Porto</option>
@@ -3015,10 +2884,10 @@ const MonitorEntregas = () => {
 
               {[
                 ['Data Agendamento', 'dataAgendamento'],
-                ['Data Devolução Container Vazio', 'horarioDevolucaoVazio'],
-                ['Horário Chegada', 'horarioChegada'],
-                [`Horário Início ${getDesovaStepLabel(city)}`, 'horarioInicioDesova'],
-                [`Horário Fim ${getDesovaStepLabel(city)}`, 'horarioFimDesova'],
+                ['Data Devolu��o Container Vazio', 'horarioDevolucaoVazio'],
+                ['Hor�rio Chegada', 'horarioChegada'],
+                [`Hor�rio In�cio ${getDesovaStepLabel(city)}`, 'horarioInicioDesova'],
+                [`Hor�rio Fim ${getDesovaStepLabel(city)}`, 'horarioFimDesova'],
                 ['Saida do Cliente', 'horarioSaidaCliente'],
                 ['Chegada no Porto', 'horarioChegadaPorto'],
               ].map(([label, field]) => (
@@ -3036,14 +2905,14 @@ const MonitorEntregas = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase mb-1.5">
-                  Motivo da Edição <span className="text-red-400">*</span>
+                  Motivo da Edi��o <span className="text-red-400">*</span>
                 </label>
                 <textarea
                   disabled={isGeoMar()}
                   value={editForm.observations}
                   onChange={(e) => setEditForm({ ...editForm, observations: e.target.value })}
                   rows={3}
-                  placeholder="Explique o motivo da edição (obrigatório)"
+                  placeholder="Explique o motivo da edi��o (obrigat�rio)"
                   className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none placeholder-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
                 />
               </div>
@@ -3055,7 +2924,7 @@ const MonitorEntregas = () => {
                 disabled={isGeoMar()}
                 className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Salvar Alterações
+                Salvar Altera��es
               </button>
 
               <button
@@ -3069,19 +2938,19 @@ const MonitorEntregas = () => {
         </div>
       )}
 
-      {/* Modal de Confirmação para Remover Verificação Icompany */}
+      {/* Modal de Confirma��o para Remover Verifica��o Icompany */}
       {confirmRemoveVerification && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-3">
           <div className="bg-[#1a1a2e] rounded-2xl border border-amber-500/30 shadow-2xl max-w-sm w-full overflow-hidden">
             <div className="px-6 py-5 bg-gradient-to-r from-amber-900/40 to-orange-900/40 border-b border-amber-500/30">
               <h3 className="text-lg font-bold text-amber-200 flex items-center gap-2">
-                <FaExclamationTriangle className="text-amber-400" /> Remover Verificação?
+                <FaExclamationTriangle className="text-amber-400" /> Remover Verifica��o?
               </h3>
             </div>
 
             <div className="px-6 py-5 space-y-4">
               <p className="text-sm text-gray-300">
-                Você tem certeza que deseja <strong>remover a confirmação de verificação</strong> desta entrega?
+                Voc� tem certeza que deseja <strong>remover a confirma��o de verifica��o</strong> desta entrega?
               </p>
               
               {icompanyVerified?.[deliveryToUnverify] && (
@@ -3096,7 +2965,7 @@ const MonitorEntregas = () => {
               )}
 
               <p className="text-xs text-amber-300">
-                ⚠️ Esta ação não pode ser desfeita rapidamente. A próxima sincronização poderá recriar este status.
+                ?? Esta a��o n�o pode ser desfeita rapidamente. A pr�xima sincroniza��o poder� recriar este status.
               </p>
             </div>
 
@@ -3128,16 +2997,16 @@ const MonitorEntregas = () => {
                     
                     setToast({
                       type: 'success',
-                      message: '✓ Verificação removida',
+                      message: '? Verifica��o removida',
                       duration: 3000
                     });
                   } catch (err) {
-                    // Erro já foi tratado em updateVerificationWithServer
+                    // Erro j� foi tratado em updateVerificationWithServer
                   }
                 }}
                 className="px-4 py-2.5 rounded-xl bg-red-600/30 hover:bg-red-600/50 text-red-300 hover:text-red-200 font-semibold text-sm transition border border-red-500/30"
               >
-                Remover Confirmação
+                Remover Confirma��o
               </button>
             </div>
           </div>

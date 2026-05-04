@@ -865,7 +865,6 @@ const MonitorEntregas = () => {
   const [icompanyComparisons, setIcompanyComparisons] = useState({});
   const [icompanyRemoteRecord, setIcompanyRemoteRecord] = useState(null);
   const [icompanyLookupStatus, setIcompanyLookupStatus] = useState('idle');
-  const [controleProtocolosData, setControleProtocolosData] = useState([]);
   const [controleProtocolosRecord, setControleProtocolosRecord] = useState(null);
   const [controleProtocolosLookupStatus, setControleProtocolosLookupStatus] = useState('idle');
   const lastIcompanyQueryRef = useRef('');
@@ -1291,18 +1290,41 @@ const MonitorEntregas = () => {
 
   const itajaiDocumentLabels = getDocumentLabels('itajai');
 
-  const controleProtocolosDocumentMap = {
-    retiradaCheio: 'RIC PORTO DESTINO',
-    canhotCTE: 'COMPROVANTE DE DESOVA',
-    diarioBordo: 'DIARIO DE BORDO',
-    canhotNF: 'CANHOTO DE DANFE',
-    devolucaoVazio: 'RIC DEPOT DESTINO',
-    saidaCliente: 'SAIDA DO CLIENTE',
-    chegadaPorto: 'CHEGADA NO PORTO'
+  const getIcompanyDocumentMap = (sentido = 'DESTINO') => {
+    const sentidoKey = String(sentido || '').trim().toUpperCase();
+    if (sentidoKey === 'ORIGEM') {
+      return {
+        retiradaCheio: ['ricPorto', 'RIC PORTO'],
+        diarioBordo: ['diarioBordo', 'DIARIO DE BORDO'],
+        devolucaoVazio: ['ricDepot', 'RIC DEPOT']
+      };
+    }
+
+    return {
+      retiradaCheio: ['ricPortoDestino', 'RIC PORTO DESTINO'],
+      devolucaoVazio: ['ricDepotDestino', 'RIC DEPOT DESTINO'],
+      canhotCTE: ['comprovanteDesova', 'COMPROVANTE DE DESOVA'],
+      diarioBordo: ['diarioBordo', 'DIARIO DE BORDO'],
+      canhotNF: ['canhotoDanfe', 'CANHOTO DE DANFE']
+    };
   };
 
-  const isControleDocumentoPresent = (value) => {
-    return value === true;
+  const isIcompanyDocumentPresent = (record, fields = []) => {
+    if (!record) return false;
+    return fields.some((field) => {
+      const value = record[field];
+      if (value === true) return true;
+      if (typeof value === 'number') return value > 0;
+      if (value instanceof Date) return true;
+      if (typeof value === 'string') {
+        const text = value.trim();
+        if (!text) return false;
+        const numeric = Number(text.replace(',', '.'));
+        if (!Number.isNaN(numeric)) return numeric > 0;
+        return !['NAO', 'NÃO', 'NO', 'FALSE', 'X', '0'].includes(text.toUpperCase());
+      }
+      return Boolean(value);
+    });
   };
 
   const getLabelsForDelivery = (d) => {
@@ -1592,17 +1614,6 @@ const MonitorEntregas = () => {
     }
   }, []);
 
-  const loadControleProtocolosData = useCallback(async () => {
-    try {
-      const response = await adminService.getControleProtocolos();
-      if (response.data?.success) {
-        setControleProtocolosData(response.data.data || []);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar dados de controle de protocolos:', error);
-    }
-  }, []);
-
   const findIcompanyInCache = useCallback((delivery) => {
     if (!delivery || !icompanyData.length) return null;
 
@@ -1784,54 +1795,20 @@ const MonitorEntregas = () => {
     return comparisons;
   }, [icompanyData, city, filters.sentido]);
 
-  const findControleProtocolosInCache = useCallback((delivery) => {
-    if (!delivery || !controleProtocolosData.length) return null;
-
-    const getClean = (value) => {
-      if (value === null || value === undefined) return '';
-      return value.toString().replace(/^#/, '').trim().toUpperCase();
-    };
-
-    // Primeiro tenta encontrar pelo código Icompany (como no modal)
-    const icompanyRecord = findIcompanyInCache(delivery);
-    if (icompanyRecord?.codigo) {
-      const icompanyCode = getClean(icompanyRecord.codigo);
-      if (icompanyCode) {
-        const foundByIcompanyCode = controleProtocolosData.find((record) => {
-          return getClean(record.processo) === icompanyCode ||
-                 getClean(record.container) === icompanyCode ||
-                 getClean(record.destinatario) === icompanyCode ||
-                 getClean(record.embarcador) === icompanyCode;
-        });
-        if (foundByIcompanyCode) return foundByIcompanyCode;
-      }
-    }
-
-    // Fallback: busca pelos campos tradicionais
-    const target = getClean(delivery.codigo || delivery.processoCAB || delivery.deliveryNumber || delivery.processo || delivery.container || '');
-    if (!target) return null;
-
-    const lookupKeys = ['processo', 'container', 'destinatario', 'embarcador'];
-
-    return controleProtocolosData.find((record) => {
-      return lookupKeys.some((key) => {
-        const val = getClean(record[key]);
-        return val && val === target;
-      });
-    }) || null;
-  }, [controleProtocolosData, findIcompanyInCache]);
-
-  const getControleProtocolosMismatchCount = (delivery) => {
+  const getIcompanyDocumentsMismatchCount = (delivery) => {
     if (!delivery) return 0;
-    if (!controleProtocolosData.length) return 0;
+    if (!icompanyData.length) return 0;
 
-    const controleRecord = findControleProtocolosInCache(delivery);
-    if (!controleRecord || !controleRecord.documentos) return 0;
+    const icompanyRecord = findIcompanyInCache(delivery);
+    const docMap = getIcompanyDocumentMap(delivery.sentido || filters.sentido);
 
-    return Object.entries(controleProtocolosDocumentMap).reduce((count, [deliveryKey, protocoloKey]) => {
-      const deliveryPresent = !!delivery.documents?.[deliveryKey];
-      const controlePresent = isControleDocumentoPresent(controleRecord.documentos[protocoloKey]);
-      return count + (deliveryPresent !== controlePresent ? 1 : 0);
+    return Object.keys(delivery.documents || {})
+      .filter((key) => !['chegadaCliente', 'inicioDesova', 'fimDesova'].includes(key))
+      .reduce((count, deliveryKey) => {
+        const deliveryPresent = !!delivery.documents?.[deliveryKey];
+        const icompanyFields = docMap[deliveryKey] || [];
+        const icompanyPresent = isIcompanyDocumentPresent(icompanyRecord, icompanyFields);
+        return count + (deliveryPresent && icompanyFields.length > 0 && !icompanyPresent ? 1 : 0);
     }, 0);
   };
 
@@ -1842,29 +1819,27 @@ const MonitorEntregas = () => {
       : icompanyResult.__notFound
         ? 1
         : Object.values(icompanyResult).filter((item) => item.isInconsistent).length;
-    const controleMismatchCount = getControleProtocolosMismatchCount(delivery);
+    const documentMismatchCount = getIcompanyDocumentsMismatchCount(delivery);
 
     return {
-      total: icompanyMismatchCount + controleMismatchCount,
+      total: icompanyMismatchCount + documentMismatchCount,
       icompanyMismatchCount,
-      controleMismatchCount
+      documentMismatchCount
     };
   };
 
   useEffect(() => {
     loadDeliveries();
     loadIcompanyData(); // Carregar dados da Icompany na inicialização
-    loadControleProtocolosData();
     if (autoRefresh) {
       const t = setInterval(() => {
         // eslint-disable-next-line no-console
         console.log('DEBUG autoRefresh triggered, filters:', filters);
         loadDeliveries();
-        loadControleProtocolosData();
       }, refreshInterval * 1000);
       return () => clearInterval(t);
     }
-  }, [loadDeliveries, loadIcompanyData, loadControleProtocolosData, autoRefresh, refreshInterval, city]);
+  }, [loadDeliveries, loadIcompanyData, autoRefresh, refreshInterval, city]);
 
   useEffect(() => {
     if (!selectedDelivery) {

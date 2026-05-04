@@ -25,6 +25,38 @@ const Field = ({ label, value }) => (
   </div>
 );
 
+const formatScheduleValue = (value, city) => {
+  if (!value) return '-';
+  const text = String(value).trim();
+  if (!text) return '-';
+
+  const dateOnly = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnly) return `${dateOnly[3]}/${dateOnly[2]}/${dateOnly[1]}`;
+
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) return text;
+
+  return formatarData(text, city, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const getScheduleInfo = (item, city) => {
+  const isItajai = city === 'itajai';
+  const value = isItajai
+    ? (item.dtColeta || item.dataAgendamento)
+    : (item.dataAgendamento || item.dtColeta);
+
+  return {
+    label: isItajai && item.dtColeta ? 'Dt. coleta' : 'Agendamento',
+    value: formatScheduleValue(value, city),
+  };
+};
+
 const PendingDocumentControl = ({ doc, city, disabled, onUpload }) => {
   const inputId = `pending-doc-${doc}-${Math.random().toString(36).slice(2)}`;
   return (
@@ -302,6 +334,7 @@ const EntregasCanhotosPendentes = () => {
               const draft = drafts[item._id] || {};
               const pendingDocs = item.missingDocumentsAtSubmit || [];
               const isSaving = savingId === item._id;
+              const scheduleInfo = getScheduleInfo(item, city);
 
               return (
                 <div key={item._id} className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -322,6 +355,7 @@ const EntregasCanhotosPendentes = () => {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                           <Field label="Container" value={Array.isArray(item.containerNumero) ? item.containerNumero.join(', ') : item.container || item.deliveryNumber} />
+                          <Field label={scheduleInfo.label} value={scheduleInfo.value} />
                           <Field label="Contratado" value={item.userName} />
                           <Field label="Motorista" value={item.driverName} />
                           <Field label="Recebedor" value={item.recebedor || item.destinatario || item.remetente} />

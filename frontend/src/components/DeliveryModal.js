@@ -258,13 +258,14 @@ const DeliveryModal = ({
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
       <div className="bg-[#1a1a2e] rounded-3xl w-full max-w-2xl max-h-[92vh] overflow-hidden shadow-2xl border border-white/10 flex flex-col">
         <div className="flex items-center justify-between px-5 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-purple-700/60 to-indigo-700/60 border-b border-white/10 flex-shrink-0">
-          <div>
+          <div className="min-w-0 [&>p:not(:first-child)]:sr-only">
             <p className="text-xs text-purple-300 uppercase tracking-widest font-semibold mb-0.5">Entrega</p>
-            <h2 className="text-xl font-black text-white tracking-wide flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span>#{selectedDelivery.deliveryNumber}</span>
+            <h2 className="flex flex-wrap items-center gap-2 text-white">
+              <span className="text-2xl font-black leading-none tracking-wide">#{selectedDelivery.deliveryNumber}</span>
               {containerNumber && (
-                <span className="text-sm font-bold text-purple-100 tracking-normal">
-                  Container: {containerNumber}
+                <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-extrabold uppercase tracking-wide text-purple-50 shadow-sm">
+                  <span className="text-purple-200">Container</span>
+                  <span className="truncate">{containerNumber}</span>
                 </span>
               )}
             </h2>

@@ -324,12 +324,14 @@ async function canAccessDelivery(req, delivery, db) {
   if (deliveryDriver && names.includes(deliveryDriver)) return true;
   if (deliveryContractor && contractors.includes(deliveryContractor)) return true;
 
-  const programacaoId = delivery.programacaoId || delivery.linkedProgramacaoId;
+  const requestedProgramacaoId = req.body?.programacaoId || req.body?.linkedProgramacaoId;
+  const programacaoId = requestedProgramacaoId || delivery.programacaoId || delivery.linkedProgramacaoId;
   if (programacaoId) {
     try {
       const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
       const programacao = await ProgramacaoEntrega.findById(programacaoId).lean();
       if (programacao) {
+        if (requestedProgramacaoId && !legacyDeliveryMatchesProgramacao(delivery, programacao)) return false;
         const programacaoDriver = normalizePartyName(programacao.motorista).toUpperCase();
         const programacaoContractor = normalizePartyName(programacao.contratado).toUpperCase();
         if (programacaoDriver && names.includes(programacaoDriver)) return true;
@@ -1250,6 +1252,11 @@ router.post("/:id/upload-and-update", auth, upload.array("file"), async (req, re
           }
           safeUpdates[field] = value;
         }
+      }
+      const programacaoIdFromBody = req.body.programacaoId || req.body.linkedProgramacaoId;
+      if (programacaoIdFromBody && !delivery.programacaoId && !delivery.linkedProgramacaoId) {
+        safeUpdates.programacaoId = programacaoIdFromBody;
+        safeUpdates.linkedProgramacaoId = programacaoIdFromBody;
       }
 
       // Now, update the delivery with documents and status

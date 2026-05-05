@@ -508,6 +508,46 @@ const ProgramadasEntregas = () => {
           }
         });
       });
+
+      const resolveDeliveryForProgramacao = (p) => {
+        const byProgRaw = programacaoMap[String(p._id)];
+        const byProg = deliveryMatchesProgramacaoContext(byProgRaw, p) ? byProgRaw : null;
+        if (byProg) return byProg;
+
+        if (p.linkedDeliveryId) {
+          const linkedDelivery = deliveries.find(d => String(d._id) === String(p.linkedDeliveryId));
+          if (deliveryMatchesProgramacaoContext(linkedDelivery, p)) return linkedDelivery;
+        }
+
+        const key = normalizeGroupValue(getProgramacaoDeliveryNumber(p));
+        const legacyCandidates = getProgramacaoLegacyDeliveryNumbers(p)
+          .flatMap(number => deliveriesByNumber[normalizeGroupValue(number)] || []);
+        const candidates = [
+          ...(deliveriesByNumber[key] || []),
+          ...legacyCandidates
+        ];
+        if (candidates.length > 0) {
+          return selectDeliveryForProgramacao(candidates, p._id, p);
+        }
+        return null;
+      };
+
+      const groupDeliveryMap = {};
+      const programacoesByGroup = {};
+      filtradas.forEach((p) => {
+        const groupKey = getProgramacaoGroupKey(p);
+        if (!programacoesByGroup[groupKey]) programacoesByGroup[groupKey] = [];
+        programacoesByGroup[groupKey].push(p);
+      });
+      Object.entries(programacoesByGroup).forEach(([groupKey, group]) => {
+        const candidates = group.map(resolveDeliveryForProgramacao).filter(Boolean);
+        if (candidates.length > 0) {
+          groupDeliveryMap[groupKey] = candidates.reduce((best, next) =>
+            !best || getDeliveryTimestamp(next) > getDeliveryTimestamp(best) ? next : best,
+            null
+          );
+        }
+      });
       setDeliveriesMap(map);
       
       // Remover apenas programações canceladas ou que já tiveram o container vazio devolvido
@@ -522,13 +562,13 @@ const ProgramadasEntregas = () => {
         // Se o delivery indexado por programacaoId já tem comprovante, não mostra
         const byProgRaw = programacaoMap[String(p._id)];
         const byProg = deliveryMatchesProgramacaoContext(byProgRaw, p) ? byProgRaw : null;
-        if (isReturnedDelivery(byProg)) {
+        if (!groupDeliveryMap[getProgramacaoGroupKey(p)] && isReturnedDelivery(byProg)) {
           return false;
         }
 
         // Tentar buscar o delivery por programacaoId primeiro, depois linkedDeliveryId, e só então por número
-        let matchedDelivery = byProg || null;
-        if (!matchedDelivery && p.linkedDeliveryId) {
+        let matchedDelivery = groupDeliveryMap[getProgramacaoGroupKey(p)] || byProg || null;
+        if (!groupDeliveryMap[getProgramacaoGroupKey(p)] && !matchedDelivery && p.linkedDeliveryId) {
           const linkedDelivery = deliveries.find(d => String(d._id) === String(p.linkedDeliveryId));
           matchedDelivery = deliveryMatchesProgramacaoContext(linkedDelivery, p) ? linkedDelivery : null;
           if (isReturnedDelivery(matchedDelivery)) {
@@ -538,7 +578,7 @@ const ProgramadasEntregas = () => {
 
         // Fallback: buscar por container/processo
         const key = normalizeGroupValue(getProgramacaoDeliveryNumber(p));
-        if (!matchedDelivery) {
+        if (!groupDeliveryMap[getProgramacaoGroupKey(p)] && !matchedDelivery) {
           const legacyCandidates = getProgramacaoLegacyDeliveryNumbers(p)
             .flatMap(number => deliveriesByNumber[normalizeGroupValue(number)] || []);
           const candidates = [
@@ -556,6 +596,7 @@ const ProgramadasEntregas = () => {
         // Se houver delivery associado, atualizar o status exibido na programação
         if (matchedDelivery) {
           p.status = normalizeStatus(matchedDelivery.status) || p.status;
+          p.linkedDeliveryId = matchedDelivery._id || p.linkedDeliveryId;
           if (matchedDelivery.containerReturned !== undefined) {
             p.containerReturned = matchedDelivery.containerReturned;
           }
@@ -585,6 +626,19 @@ const ProgramadasEntregas = () => {
     );
   };
 
+  const updateProgramacaoGroupInList = (programacao, updates) => {
+    if (!programacao) return;
+    const groupKey = getProgramacaoGroupKey(programacao);
+    const applyUpdates = (items) => items.map(item =>
+      getProgramacaoGroupKey(item) === groupKey ? { ...item, ...updates } : item
+    );
+    setProgramacoes(applyUpdates);
+    setAllProgramacoes(applyUpdates);
+    setCurrentProgramacao(prev =>
+      prev && getProgramacaoGroupKey(prev) === groupKey ? { ...prev, ...updates } : prev
+    );
+  };
+
   const applyDeliveryUpdate = (delivery, programacaoId = currentProgramacao?._id) => {
     if (!delivery) return;
     setCurrentDelivery(delivery);
@@ -601,19 +655,28 @@ const ProgramadasEntregas = () => {
         containerReturned: !!delivery.horarioDevolucaoVazio
       });
     }
+    if (currentProgramacao) {
+      updateProgramacaoGroupInList(currentProgramacao, {
+        linkedDeliveryId: delivery._id,
+        status: normalizeStatus(delivery.status),
+        containerReturned: !!delivery.horarioDevolucaoVazio
+      });
+    }
   };
 
   const handleStartDelivery = async (p) => {
+    const group = Array.isArray(p.fracionadas) && p.fracionadas.length > 0 ? p.fracionadas : [p];
+    const groupLinkedDeliveryId = group.find(item => item.linkedDeliveryId)?.linkedDeliveryId || p.linkedDeliveryId;
     const deliveryNumber = getProgramacaoDeliveryNumber(p);
     if (!deliveryNumber) { setToast({ message: 'Sem Processo Log/container/processo', type: 'error' }); return; }
     try {
       setSubmitting(true);
       let existing = null;
-      if (p.linkedDeliveryId) {
+      if (groupLinkedDeliveryId) {
         try {
-          const linked = await deliveryService.getDelivery(p.linkedDeliveryId);
+          const linked = await deliveryService.getDelivery(groupLinkedDeliveryId);
           const linkedDelivery = linked.data.delivery;
-          existing = deliveryMatchesProgramacaoContext(linkedDelivery, p) ? linkedDelivery : null;
+          existing = group.some(item => deliveryMatchesProgramacaoContext(linkedDelivery, item)) ? linkedDelivery : null;
         } catch (_) {}
       }
       try {
@@ -626,7 +689,13 @@ const ProgramadasEntregas = () => {
           const validNumbers = searchNumbers.map(normalizeGroupValue);
           const exactMatches = list.filter(d => validNumbers.includes(normalizeGroupValue(d.deliveryNumber)));
           if (exactMatches.length > 0) {
-            existing = selectDeliveryForProgramacao(exactMatches, p._id, p);
+            const groupMatches = exactMatches.filter(delivery =>
+              group.some(item => deliveryMatchesProgramacaoContext(delivery, item))
+            );
+            existing = (groupMatches.length > 0 ? groupMatches : exactMatches).reduce((best, next) =>
+              !best || getDeliveryTimestamp(next) > getDeliveryTimestamp(best) ? next : best,
+              null
+            );
           }
         }
       } catch (_) {}
@@ -956,7 +1025,13 @@ const ProgramadasEntregas = () => {
         compressedFiles.push(compressed);
         setUploadProgress(Math.round(((i + 1) / photos.length) * 60));
       }
-      const updated = await deliveryService.uploadDocumentAndUpdate(currentDelivery._id, docKey, compressedFiles, { status, currentStep: nextStep, ...timestamps });
+      const updated = await deliveryService.uploadDocumentAndUpdate(currentDelivery._id, docKey, compressedFiles, {
+        status,
+        currentStep: nextStep,
+        programacaoId: currentProgramacao?._id || currentDelivery.programacaoId || currentDelivery.linkedProgramacaoId || '',
+        linkedProgramacaoId: currentProgramacao?._id || currentDelivery.linkedProgramacaoId || currentDelivery.programacaoId || '',
+        ...timestamps
+      });
       applyDeliveryUpdate(updated.data.delivery);
       setUploadProgress(100);
       goToStep(nextStep);
@@ -964,7 +1039,7 @@ const ProgramadasEntregas = () => {
       // Polling automático (30s) sincroniza lista - não precisa recarregar aqui
     } catch (err) {
       console.error(err);
-      setToast({ message: 'Erro ao enviar fotos', type: 'error' });
+      setToast({ message: err.response?.data?.message || 'Erro ao enviar fotos', type: 'error' });
     } finally {
       setSubmitting(false);
       setTimeout(() => setUploadProgress(0), 1000);

@@ -401,6 +401,11 @@ const ProgramadasEntregas = () => {
   const [processingPhoto, setProcessingPhoto] = useState(false);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const cameraStreamRef = useRef(null);
+  const [showNativeCamera, setShowNativeCamera] = useState(false);
+  const [startingCamera, setStartingCamera] = useState(false);
 
   const [showMontagemModal, setShowMontagemModal] = useState(false);
   const [montagemProgramacao, setMontagemProgramacao] = useState(null);
@@ -424,7 +429,21 @@ const ProgramadasEntregas = () => {
   const [sortBy, setSortBy] = useState('data');
   const [sortOrder, setSortOrder] = useState('desc');
 
+  const stopNativeCamera = () => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach(track => track.stop());
+      cameraStreamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setShowNativeCamera(false);
+    setStartingCamera(false);
+  };
+
   useEffect(() => { loadProgramacoes(); }, [user]);
+
+  useEffect(() => () => stopNativeCamera(), []);
 
   // Sincronização automática a cada 30 segundos para múltiplos clientes/dispositivos
   useEffect(() => {
@@ -677,6 +696,7 @@ const ProgramadasEntregas = () => {
 
   const closeModal = () => {
     console.log('🔙 [ProgramadasEntregas] Fechando modal de entrega');
+    stopNativeCamera();
     setShowModal(false); 
     setCurrentStep('welcome'); 
     setCurrentDelivery(null); 
@@ -862,13 +882,98 @@ const ProgramadasEntregas = () => {
 
   const removePhoto = (id) => setPhotos(prev => prev.filter(photo => photo.id !== id));
 
+  const addPhotoDataUrls = (photoDataUrls) => {
+    const maxPhotos = 2;
+    const validPhotos = photoDataUrls.filter(Boolean);
+
+    if (validPhotos.length === 0) return;
+
+    const newPhotos = validPhotos.map(data => ({
+      id: Date.now() + Math.random(),
+      data
+    }));
+
+    flushSync(() => {
+      setPhotos(prev => {
+        if (prev.length >= maxPhotos) {
+          setToast({
+            message: `Maximo de ${maxPhotos} fotos permitidas. Remova uma para adicionar outra.`,
+            type: 'warning'
+          });
+          return prev;
+        }
+        return [...prev, ...newPhotos].slice(0, maxPhotos);
+      });
+    });
+  };
+
+  const openCameraCapture = async () => {
+    const maxPhotos = 2;
+    if (photos.length >= maxPhotos) {
+      setToast({
+        message: `Maximo de ${maxPhotos} fotos permitidas. Remova uma para adicionar outra.`,
+        type: 'warning'
+      });
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      if (cameraInputRef.current) cameraInputRef.current.value = null;
+      cameraInputRef.current?.click();
+      return;
+    }
+
+    try {
+      setStartingCamera(true);
+      flushSync(() => setShowNativeCamera(true));
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+
+      cameraStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+    } catch (err) {
+      console.error('Erro ao abrir camera', err);
+      stopNativeCamera();
+      setToast({
+        message: 'Nao foi possivel abrir a camera. Verifique a permissao do navegador.',
+        type: 'error'
+      });
+    } finally {
+      setStartingCamera(false);
+    }
+  };
+
+  const captureNativePhoto = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || !video.videoWidth || !video.videoHeight) {
+      setToast({ message: 'Camera ainda carregando, tente novamente.', type: 'warning' });
+      return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    addPhotoDataUrls([canvas.toDataURL('image/jpeg', 0.85)]);
+    stopNativeCamera();
+  };
+
   const handleCameraCapture = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     setProcessingPhoto(true);
 
     try {
-      const maxPhotos = 2;
       const photoPromises = files.map(file =>
         new Promise((resolve) => {
           const reader = new FileReader();
@@ -882,27 +987,7 @@ const ProgramadasEntregas = () => {
       );
 
       const photoDataUrls = await Promise.all(photoPromises);
-      const validPhotos = photoDataUrls.filter(data => data !== null);
-
-      if (validPhotos.length > 0) {
-        const newPhotos = validPhotos.map(data => ({
-          id: Date.now() + Math.random(),
-          data
-        }));
-
-        flushSync(() => {
-          setPhotos(prev => {
-            if (prev.length >= maxPhotos) {
-              setToast({
-                message: `Maximo de ${maxPhotos} fotos permitidas. Remova uma para adicionar outra.`,
-                type: 'warning'
-              });
-              return prev;
-            }
-            return [...prev, ...newPhotos].slice(0, maxPhotos);
-          });
-        });
-      }
+      addPhotoDataUrls(photoDataUrls);
     } finally {
       setProcessingPhoto(false);
       e.target.value = null;
@@ -1266,14 +1351,45 @@ const ProgramadasEntregas = () => {
           Processando foto...
         </div>
       )}
+      {showNativeCamera && (
+        <div className="fixed inset-0 z-[70] bg-black flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-950 text-white">
+            <span className="text-sm font-bold">Camera</span>
+            <button
+              onClick={stopNativeCamera}
+              className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center"
+              type="button"
+            >
+              <FaTimes />
+            </button>
+          </div>
+          <div className="relative flex-1 bg-black">
+            {startingCamera && (
+              <div className="absolute inset-0 flex items-center justify-center text-white text-sm font-semibold">
+                Abrindo camera...
+              </div>
+            )}
+            <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
+          <div className="p-4 bg-gray-950">
+            <button
+              onClick={captureNativePhoto}
+              disabled={startingCamera}
+              className="w-full py-4 rounded-2xl bg-white text-gray-950 font-black text-base active:scale-95 transition disabled:opacity-50"
+              type="button"
+            >
+              Capturar Foto
+            </button>
+          </div>
+        </div>
+      )}
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleCameraCapture} className="hidden" />
       <button
-        onClick={() => {
-          if (cameraInputRef.current) cameraInputRef.current.value = null;
-          cameraInputRef.current?.click();
-        }}
+        onClick={openCameraCapture}
         disabled={processingPhoto}
         className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-base shadow-lg hover:shadow-xl active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        type="button"
       >
         <FaCamera size={18} />
         {photos.length === 0 ? 'Tirar Foto' : 'Tirar Mais Fotos'}

@@ -466,6 +466,30 @@ const SettingsPanel = ({
   filters, setFilters
 }) => {
   const [visible, setVisible] = useState(false);
+  const selectedStatuses = Array.isArray(filters.status)
+    ? filters.status
+    : (filters.status && filters.status !== 'all' ? [filters.status] : []);
+  const statusOptions = [
+    { value: "OPERACAO_FINALIZADA", label: "Operação Finalizada" },
+    { value: "DOCUMENTOS_ENTREGUES", label: "Documentos Entregues" },
+    { value: "FINALIZADO", label: "Finalizado (sem docs)" },
+    { value: "A CAMINHO DO CLIENTE", label: "A Caminho do Cliente" },
+    { value: "AGENDADO", label: "Agendado" },
+    { value: "AGUARDANDO_DESOVA", label: "Aguardando Desova/Ovação" },
+    { value: "EM_DESOVA", label: "Em Desova/Ovação" },
+    { value: "DESOVA_FINALIZADA", label: "Desova/Ovação Finalizada" },
+    { value: "ANEXANDO_DOCUMENTOS_FINAIS", label: "Anexando Docs Finais" },
+    { value: "SAINDO_CLIENTE", label: "Saindo do Cliente" },
+    { value: "RETORNANDO_PORTO", label: "Retornando Porto" },
+    { value: "CHEGOU_PORTO", label: "Chegou no Porto" },
+    { value: "CANCELADO", label: "Cancelado" }
+  ];
+  const toggleStatusFilter = (status) => {
+    const next = selectedStatuses.includes(status)
+      ? selectedStatuses.filter((item) => item !== status)
+      : [...selectedStatuses, status];
+    setFilters({ ...filters, status: next });
+  };
 
   useEffect(() => {
     if (open) setVisible(true);
@@ -479,7 +503,7 @@ const SettingsPanel = ({
 
   const hasAnyFilters = () => (
     filters.searchTerm.trim() !== '' ||
-    filters.status !== 'all' ||
+    selectedStatuses.length > 0 ||
     filters.processo?.trim() !== '' ||
     filters.container?.trim() !== '' ||
     filters.recebedor?.trim() !== '' ||
@@ -609,7 +633,7 @@ const SettingsPanel = ({
               {hasAnyFilters() && (
                 <button
                   onClick={() => setFilters({
-                    status: 'all', searchTerm: '', startDate: '', endDate: '',
+                    status: [], searchTerm: '', startDate: '', endDate: '',
                     processo: '', container: '', recebedor: '',
                     sentido: filters.sentido || 'DESTINO',
                     pontualidade: 'all', horaStatusFrom: '', horaStatusTo: '',
@@ -625,26 +649,19 @@ const SettingsPanel = ({
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">Status</label>
-                <select
-                  value={filters.status}
-                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                  className={sharedInputCls}
-                >
-                  <option value="all" className="bg-gray-900">Todos</option>
-                  <option value="OPERACAO_FINALIZADA" className="bg-gray-900">Operação Finalizada</option>
-                  <option value="DOCUMENTOS_ENTREGUES" className="bg-gray-900">Documentos Entregues</option>
-                  <option value="FINALIZADO" className="bg-gray-900">Finalizado (sem docs)</option>
-                  <option value="A CAMINHO DO CLIENTE" className="bg-gray-900">A Caminho do Cliente</option>
-                  <option value="AGENDADO" className="bg-gray-900">Agendado</option>
-                  <option value="AGUARDANDO_DESOVA" className="bg-gray-900">Aguardando Desova/Ovação</option>
-                  <option value="EM_DESOVA" className="bg-gray-900">Em Desova/Ovação</option>
-                  <option value="DESOVA_FINALIZADA" className="bg-gray-900">Desova/Ovação Finalizada</option>
-                  <option value="ANEXANDO_DOCUMENTOS_FINAIS" className="bg-gray-900">Anexando Docs Finais</option>
-                  <option value="SAINDO_CLIENTE" className="bg-gray-900">Saindo do Cliente</option>
-                  <option value="RETORNANDO_PORTO" className="bg-gray-900">Retornando Porto</option>
-                  <option value="CHEGOU_PORTO" className="bg-gray-900">Chegou no Porto</option>
-                  <option value="CANCELADO" className="bg-gray-900">Cancelado</option>
-                </select>
+                <div className="max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-2 space-y-1">
+                  {statusOptions.map((option) => (
+                    <label key={option.value} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 cursor-pointer text-xs text-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={selectedStatuses.includes(option.value)}
+                        onChange={() => toggleStatusFilter(option.value)}
+                        className="accent-purple-500"
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div>
@@ -845,7 +862,7 @@ const MonitorEntregas = () => {
     horarioSaidaCliente: '', horarioChegadaPorto: '', observations: ''
   });
   const [filters, setFilters] = useState({
-    status: 'all', searchTerm: '', startDate: '', endDate: '',
+    status: [], searchTerm: '', startDate: '', endDate: '',
     processo: '', container: '', recebedor: '',
     sentido: 'DESTINO',
     pontualidade: 'all', horaStatusFrom: '', horaStatusTo: '',
@@ -914,6 +931,26 @@ const MonitorEntregas = () => {
 
   const inputCls = `w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-600`;
 
+  const getSelectedStatuses = () => (
+    Array.isArray(filters.status)
+      ? filters.status.filter((status) => status && status !== 'all')
+      : (filters.status && filters.status !== 'all' ? [filters.status] : [])
+  );
+
+  const matchesStatusFilter = (delivery, selectedStatuses = getSelectedStatuses()) => {
+    if (!selectedStatuses.length) return true;
+    return selectedStatuses.some((status) => {
+      if (status === 'DOCUMENTOS_ENTREGUES') {
+        return delivery.status === 'FINALIZADO' && allModalDocsComplete(delivery);
+      }
+      if (status === 'FINALIZADO') {
+        return delivery.status === 'FINALIZADO' && !allModalDocsComplete(delivery);
+      }
+      const mappedStatuses = statusMapToBackend[status];
+      return mappedStatuses ? mappedStatuses.includes(delivery.status) : delivery.status === status;
+    });
+  };
+
   const punctualityOptions = [
     { value: 'all', label: 'Todos' },
     { value: 'ok', label: 'No prazo' },
@@ -928,7 +965,7 @@ const MonitorEntregas = () => {
       case 'processo': return filters.processo.trim() !== '';
       case 'container': return filters.container.trim() !== '';
       case 'recebedor': return filters.recebedor.trim() !== '';
-      case 'status': return filters.status !== 'all';
+      case 'status': return getSelectedStatuses().length > 0;
       case 'agendamento': return Boolean(filters.startDate || filters.endDate);
       case 'horaStatus': return Boolean(filters.horaStatusFrom || filters.horaStatusTo);
       case 'pontualidade': return filters.pontualidade !== 'all';
@@ -943,7 +980,7 @@ const MonitorEntregas = () => {
       case 'processo': next.processo = ''; break;
       case 'container': next.container = ''; break;
       case 'recebedor': next.recebedor = ''; break;
-      case 'status': next.status = 'all'; break;
+      case 'status': next.status = []; break;
       case 'agendamento': next.startDate = ''; next.endDate = ''; break;
       case 'horaStatus': next.horaStatusFrom = ''; next.horaStatusTo = ''; break;
       case 'pontualidade': next.pontualidade = 'all'; break;
@@ -1537,9 +1574,11 @@ const MonitorEntregas = () => {
       setLoading(true);
 
       let backendFilters = { ...filters };
-      if (filters.status && filters.status !== 'all') {
-        const bs = statusMapToBackend[filters.status];
-        if (bs) backendFilters.status = bs[0];
+      const selectedStatuses = getSelectedStatuses();
+      if (selectedStatuses.length === 1 && selectedStatuses[0] === 'CANCELADO') {
+        backendFilters.status = 'CANCELADO';
+      } else {
+        delete backendFilters.status;
       }
 
       let periodDate = '';
@@ -1935,16 +1974,10 @@ const MonitorEntregas = () => {
 
   useEffect(() => {
     let r = [...deliveries];
+    const selectedStatuses = getSelectedStatuses();
 
-    // Aplicar apenas filtros que o backend não consegue fazer
-    if (statsPeriod === 'general' && filters.status !== 'all') {
-      // Filtros especiais que dependem de lógica do frontend
-      if (filters.status === 'DOCUMENTOS_ENTREGUES') {
-        r = r.filter(d => d.status === 'FINALIZADO' && allModalDocsComplete(d));
-      } else if (filters.status === 'FINALIZADO') {
-        r = r.filter(d => d.status === 'FINALIZADO' && !allModalDocsComplete(d));
-      }
-      // Outros status já são filtrados pelo backend
+    if (selectedStatuses.length > 0) {
+      r = r.filter((delivery) => matchesStatusFilter(delivery, selectedStatuses));
     }
 
     // Busca adicional por campos que o backend não filtra
@@ -2292,7 +2325,7 @@ const MonitorEntregas = () => {
   };
 
   const activeFilterCount = [
-    filters.status !== 'all',
+    getSelectedStatuses().length > 0,
     !!filters.searchTerm,
     !!filters.startDate,
     !!filters.endDate
@@ -2302,7 +2335,7 @@ const MonitorEntregas = () => {
     { key: 'processo', name: 'Processo', type: 'text', placeholder: 'Buscar processo...', sortable: true },
     { key: 'container', name: 'Container', type: 'text', placeholder: 'Buscar container...', sortable: true },
     { key: 'recebedor', name: getPartyLabelBySentido(filters.sentido), type: 'text', placeholder: `Buscar ${getPartyLabelBySentido(filters.sentido).toLowerCase()}...`, sortable: true },
-    { key: 'status', name: 'Status', type: 'select', options: getStatusOptions(), sortable: true },
+    { key: 'status', name: 'Status', type: 'multiSelect', options: getStatusOptions().filter((option) => option.value !== 'all'), sortable: true },
     { key: 'horaStatus', name: 'Hora Status', type: 'dateRange', startKey: 'horaStatusFrom', endKey: 'horaStatusTo', sortable: true },
     { key: 'tempoStatus', name: 'Tempo Status', type: 'range', minKey: 'tempoStatusMin', maxKey: 'tempoStatusMax', sortable: true },
     { key: 'progresso', name: 'Progresso', type: 'none', sortable: false },
@@ -2604,6 +2637,36 @@ const MonitorEntregas = () => {
                                   </option>
                                 ))}
                               </select>
+                            )}
+
+                            {col.type === 'multiSelect' && (
+                              <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
+                                {(col.options || []).map((option) => {
+                                  const selectedStatuses = getSelectedStatuses();
+                                  const checked = selectedStatuses.includes(option.value);
+                                  return (
+                                    <label
+                                      key={option.value}
+                                      className={`flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer text-xs transition ${
+                                        checked ? 'bg-purple-500/20 text-white' : 'text-gray-300 hover:bg-white/5'
+                                      }`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={() => {
+                                          const next = checked
+                                            ? selectedStatuses.filter((item) => item !== option.value)
+                                            : [...selectedStatuses, option.value];
+                                          setFilters({ ...filters, [col.key]: next });
+                                        }}
+                                        className="accent-purple-500"
+                                      />
+                                      <span>{option.label}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
                             )}
 
                             {col.type === 'dateRange' && (

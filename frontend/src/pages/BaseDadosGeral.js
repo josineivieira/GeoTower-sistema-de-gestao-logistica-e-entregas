@@ -182,7 +182,6 @@ const BaseDadosGeral = () => {
   const { city } = useCity();
   const { user } = useAuth();
   const tableRef = useRef(null);
-  const topScrollRef = useRef(null);
   const isGeomar = user?.role && user.role.toLowerCase() === 'geomar';
 
   const [dados, setDados] = useState([]);
@@ -193,7 +192,6 @@ const BaseDadosGeral = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
-  const [tableScrollWidth, setTableScrollWidth] = useState(0);
 
   const [editForm, setEditForm] = useState({
     processo: '', recebedor: '', container: '',
@@ -221,7 +219,6 @@ const BaseDadosGeral = () => {
     if (!el) return;
     setCanScrollLeft(el.scrollLeft > 10);
     setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
-    setTableScrollWidth(el.scrollWidth);
   }, []);
 
   useEffect(() => {
@@ -238,20 +235,6 @@ const BaseDadosGeral = () => {
 
   const scroll = (dir) => {
     tableRef.current?.scrollBy({ left: dir * 320, behavior: 'smooth' });
-  };
-
-  const syncHorizontalScroll = (source) => {
-    const top = topScrollRef.current;
-    const table = tableRef.current;
-    if (!top || !table) return;
-
-    if (source === 'top' && table.scrollLeft !== top.scrollLeft) {
-      table.scrollLeft = top.scrollLeft;
-    }
-    if (source === 'table' && top.scrollLeft !== table.scrollLeft) {
-      top.scrollLeft = table.scrollLeft;
-    }
-    updateScrollButtons();
   };
 
   /* ── Helper functions ── */
@@ -728,10 +711,10 @@ const BaseDadosGeral = () => {
      RENDER
   ═══════════════════════════════════════════ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900 flex flex-col">
+    <div className="h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900 flex flex-col">
 
       {/* ── TOP BAR ── */}
-      <header className="flex items-center justify-between px-6 py-4 bg-white/5 backdrop-blur border-b border-white/10">
+      <header className="shrink-0 flex items-center justify-between px-6 py-4 bg-white/5 backdrop-blur border-b border-white/10">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate(-1)}
@@ -769,7 +752,7 @@ const BaseDadosGeral = () => {
       </header>
 
       {/* ── STATS ── */}
-      <div className="px-6 py-4 flex gap-3 flex-wrap">
+      <div className="shrink-0 px-6 py-4 flex gap-3 flex-wrap">
         <StatCard icon={FaDatabase} label="Total" value={dados.length} color="bg-violet-500" />
         <StatCard icon={FaFilter} label="Filtrados" value={filteredData.length} color="bg-blue-500" />
         <StatCard icon={FaCheckCircle} label="Finalizados" value={totalFinalizado} color="bg-emerald-500" />
@@ -777,7 +760,7 @@ const BaseDadosGeral = () => {
       </div>
 
       {/* ── FILTER BAR ── */}
-      <div className="px-6 pb-4">
+      <div className="shrink-0 px-6 pb-4">
         <div className="bg-white/10 backdrop-blur rounded-2xl border border-white/10 overflow-hidden">
           <div className="flex items-center gap-4 px-5 py-3">
             <button
@@ -850,7 +833,7 @@ const BaseDadosGeral = () => {
       </div>
 
       {/* ── TABLE AREA ── */}
-      <div className="flex-1 px-6 pb-6 flex flex-col min-h-0">
+      <div className="flex-1 px-6 pb-6 flex flex-col min-h-0 overflow-hidden">
         <div className="relative flex-1 flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden">
 
           {/* Advanced Filters Bar */}
@@ -903,20 +886,11 @@ const BaseDadosGeral = () => {
               <p className="font-medium">Nenhum registro encontrado</p>
             </div>
           ) : (
-            <>
-            <div
-              ref={topScrollRef}
-              className="overflow-x-auto overflow-y-hidden bg-gray-50 border-b border-gray-200 h-4 shrink-0"
-              style={{ scrollbarWidth: 'thin' }}
-              onScroll={() => syncHorizontalScroll('top')}
-            >
-              <div style={{ width: tableScrollWidth || 2200, height: 1 }} />
-            </div>
             <div
               ref={tableRef}
-              className="overflow-x-auto overflow-y-auto flex-1 scroll-smooth"
+              className="overflow-auto flex-1 scroll-smooth"
               style={{ scrollbarWidth: 'thin' }}
-              onScroll={() => syncHorizontalScroll('table')}
+              onScroll={updateScrollButtons}
             >
               <table className="text-sm border-collapse" style={{ tableLayout: 'fixed', minWidth: isGeomar ? 2100 : 2200 }}>
                 <thead>
@@ -1091,7 +1065,6 @@ const BaseDadosGeral = () => {
                 </tbody>
               </table>
             </div>
-            </>
           )}
         </div>
       </div>

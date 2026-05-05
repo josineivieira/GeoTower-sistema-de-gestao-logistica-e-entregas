@@ -52,6 +52,8 @@ const cleanLookupKey = (value) => {
   return value.toString().replace(/^#/, '').trim().toUpperCase();
 };
 
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const addLookupKey = (set, value) => {
   const key = cleanLookupKey(value);
   if (key) set.add(key);
@@ -135,30 +137,72 @@ router.get("/canhotos-pendentes", auth, onlyCanhotosPendentes, async (req, res) 
       missingDocumentsAtSubmit: { $exists: true, $ne: [] }
     }).sort({ updatedAt: -1, submittedAt: -1, createdAt: -1 }).lean();
 
+    const normalizedDeliveries = deliveries.map((delivery) => normalizeDeliveryForResponse(delivery));
     const programacaoIds = deliveries
       .flatMap(d => [d.programacaoId, d.linkedProgramacaoId])
       .filter(Boolean)
       .map(id => String(id));
+    const programacaoLookupValues = new Set();
+    normalizedDeliveries.forEach((delivery) => {
+      addLookupKey(programacaoLookupValues, delivery.deliveryNumber);
+      addLookupKey(programacaoLookupValues, delivery.processoCAB);
+      addLookupKey(programacaoLookupValues, delivery.processoLog);
+      addLookupKey(programacaoLookupValues, delivery.container);
+    });
 
     const programacoesById = new Map();
-    if (programacaoIds.length > 0) {
-      const programacoes = await ProgramacaoEntrega.find({ _id: { $in: programacaoIds } })
-        .select('processo processoLog container recebedor remetente destinatario contratado motorista dataAgendamento dtColeta sentido origem estab')
-        .lean();
-      programacoes.forEach(p => programacoesById.set(String(p._id), p));
+    const programacoesByLookup = new Map();
+    const addProgramacaoLookup = (prog, value) => {
+      const key = cleanLookupKey(value);
+      if (key && !programacoesByLookup.has(key)) programacoesByLookup.set(key, prog);
+    };
+    const programacaoQuery = [];
+    if (programacaoIds.length > 0) programacaoQuery.push({ _id: { $in: programacaoIds } });
+    if (programacaoLookupValues.size > 0) {
+      const lookupValues = Array.from(programacaoLookupValues);
+      const lookupRegex = lookupValues.map(value => new RegExp(`^${escapeRegex(value)}$`, 'i'));
+      programacaoQuery.push(
+        { processo: { $in: lookupRegex } },
+        { processoLog: { $in: lookupRegex } },
+        { container: { $in: lookupRegex } }
+      );
     }
 
-    const items = deliveries.map((delivery) => {
-      const normalized = normalizeDeliveryForResponse(delivery);
+    if (programacaoQuery.length > 0) {
+      const programacoes = await ProgramacaoEntrega.find({ $or: programacaoQuery })
+        .select('processo processoLog container recebedor remetente destinatario contratado motorista dataAgendamento dtColeta sentido origem estab')
+        .lean();
+      programacoes.forEach((p) => {
+        programacoesById.set(String(p._id), p);
+        addProgramacaoLookup(p, p.processo);
+        addProgramacaoLookup(p, p.processoLog);
+        addProgramacaoLookup(p, p.container);
+      });
+    }
+
+    const findProgramacaoForDelivery = (delivery, rawDelivery) => {
+      const linkedId = rawDelivery.programacaoId || rawDelivery.linkedProgramacaoId;
+      if (linkedId && programacoesById.has(String(linkedId))) return programacoesById.get(String(linkedId));
+      return programacoesByLookup.get(cleanLookupKey(delivery.deliveryNumber)) ||
+        programacoesByLookup.get(cleanLookupKey(delivery.processoCAB)) ||
+        programacoesByLookup.get(cleanLookupKey(delivery.processoLog)) ||
+        programacoesByLookup.get(cleanLookupKey(delivery.container)) ||
+        null;
+    };
+
+    const items = deliveries.map((delivery, index) => {
+      const normalized = normalizedDeliveries[index];
       const prog = programacoesById.get(String(delivery.programacaoId || '')) ||
-        programacoesById.get(String(delivery.linkedProgramacaoId || '')) || null;
+        programacoesById.get(String(delivery.linkedProgramacaoId || '')) ||
+        findProgramacaoForDelivery(normalized, delivery);
+      const cliente = getClienteBySentido(prog || normalized);
 
       return {
         ...normalized,
         processoCAB: prog?.processo || normalized.processoCAB || normalized.deliveryNumber,
         processoLog: prog?.processoLog || normalized.processoLog || '',
         container: prog?.container || normalized.container || normalized.deliveryNumber,
-        recebedor: prog?.recebedor || normalized.recebedor || '',
+        recebedor: cliente || prog?.recebedor || normalized.recebedor || '',
         remetente: prog?.remetente || normalized.remetente || '',
         destinatario: prog?.destinatario || normalized.destinatario || '',
         userName: normalized.userName || prog?.contratado || '',

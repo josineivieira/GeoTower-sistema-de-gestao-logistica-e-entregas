@@ -57,6 +57,13 @@ const getScheduleInfo = (item, city) => {
   };
 };
 
+const getPartyLabel = (item, city) => {
+  const sentido = String(item?.sentido || '').trim().toUpperCase();
+  if (sentido === 'ORIGEM') return 'Remetente';
+  if (sentido === 'DESTINO') return 'Recebedor';
+  return city === 'itajai' ? 'Remetente' : 'Recebedor';
+};
+
 const PendingDocumentControl = ({ doc, city, disabled, onUpload }) => {
   const inputId = `pending-doc-${doc}-${Math.random().toString(36).slice(2)}`;
   return (
@@ -358,7 +365,7 @@ const EntregasCanhotosPendentes = () => {
                           <Field label={scheduleInfo.label} value={scheduleInfo.value} />
                           <Field label="Contratado" value={item.userName} />
                           <Field label="Motorista" value={item.driverName} />
-                          <Field label="Recebedor" value={item.recebedor || item.destinatario || item.remetente} />
+                          <Field label={getPartyLabel(item, city)} value={item.recebedor || item.destinatario || item.remetente} />
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">

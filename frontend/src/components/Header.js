@@ -325,6 +325,7 @@ const Header = () => {
   }, [user]);
 
   const handleNotificationClick = () => {
+    setNotificationCount(0);
     setNotificationPanelOpen(true);
   };
 
@@ -438,7 +439,11 @@ const Header = () => {
       {/* Painel de Notificações */}
       <NotificationPanel
         isOpen={notificationPanelOpen}
-        onClose={() => setNotificationPanelOpen(false)}
+        onClose={() => {
+          setNotificationCount(0);
+          setNotificationPanelOpen(false);
+        }}
+        onReadChange={() => setNotificationCount(0)}
       />
     </>
   );

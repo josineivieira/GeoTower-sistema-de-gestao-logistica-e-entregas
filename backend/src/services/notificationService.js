@@ -89,18 +89,18 @@ class NotificationService {
 
   // Buscar notificações de um usuário baseado em sua role e cidade
   static async getUserNotifications(userRole, userCity, userId, options = {}) {
-    const { limit = 50, offset = 0 } = options;
+    const { limit = 50, offset = 0, includeRead = false } = options;
 
     // Buscar notificações que contêm a role do usuário e coincidem com sua cidade
     const query = {
       recipientRoles: { $in: [userRole, 'all'] },
       'deletedBy.userId': { $ne: userId }, // Excluir notificações deletadas pelo usuário
-      'readBy.userId': { $ne: userId }, // Excluir notificações lidas pelo usuário
       $or: [
         { city: userCity },
         { city: 'both' }
       ]
     };
+    if (!includeRead) query['readBy.userId'] = { $ne: userId };
 
     return Notification.find(query)
       .sort({ createdAt: -1 })

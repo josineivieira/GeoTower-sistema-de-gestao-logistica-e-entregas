@@ -167,7 +167,7 @@ export const deliveryService = {
 
 // Serviço de notificações
 export const notificationService = {
-  getNotifications: () => api.get('/notifications'),
+  getNotifications: (params = {}) => api.get('/notifications', { params }),
   markAsRead: (id) => api.put(`/notifications/${id}/read`),
   deleteNotification: (id) => api.delete(`/notifications/${id}`),
   markAllAsRead: () => api.put('/notifications/mark-all-read'),

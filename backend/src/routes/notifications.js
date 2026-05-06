@@ -6,7 +6,7 @@ const NotificationService = require('../services/notificationService');
 // Buscar notificações do usuário logado
 router.get('/', auth, async (req, res) => {
   try {
-    const { limit = 50, offset = 0 } = req.query;
+    const { limit = 50, offset = 0, includeRead = false } = req.query;
     const userRole = req.user.role || 'driver';
     const userCity = req.city || 'manaus';
     const userId = req.user.id;
@@ -17,7 +17,8 @@ router.get('/', auth, async (req, res) => {
       userId,
       {
         limit: parseInt(limit),
-        offset: parseInt(offset)
+        offset: parseInt(offset),
+        includeRead: includeRead === true || includeRead === 'true'
       }
     );
 

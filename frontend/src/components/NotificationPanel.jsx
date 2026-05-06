@@ -12,7 +12,7 @@ import {
 } from 'react-icons/fa';
 import { notificationService } from '../services/authService';
 
-const NotificationPanel = ({ isOpen, onClose }) => {
+const NotificationPanel = ({ isOpen, onClose, onReadChange }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -28,7 +28,7 @@ const NotificationPanel = ({ isOpen, onClose }) => {
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      const response = await notificationService.getNotifications();
+      const response = await notificationService.getNotifications({ includeRead: true });
       setNotifications(response?.data?.notifications || []);
     } catch (error) {
       console.error('Erro ao buscar notificações:', error);
@@ -40,7 +40,20 @@ const NotificationPanel = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (!isOpen) return;
 
-    fetchNotifications();
+    const openPanel = async () => {
+      await fetchNotifications();
+      try {
+        await notificationService.markAllAsRead();
+        onReadChange?.();
+        setNotifications((prev) =>
+          prev.map((notification) => ({ ...notification, isRead: true }))
+        );
+      } catch (error) {
+        console.error('Erro ao marcar notificacoes como lidas:', error);
+      }
+    };
+
+    openPanel();
 
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') onClose();
@@ -54,11 +67,12 @@ const NotificationPanel = ({ isOpen, onClose }) => {
       document.body.style.overflow = originalOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, onReadChange]);
 
   const handleMarkAsRead = async (notificationId) => {
     try {
       await notificationService.markAsRead(notificationId);
+      onReadChange?.();
 
       setNotifications((prev) =>
         prev.map((notification) =>
@@ -75,6 +89,7 @@ const NotificationPanel = ({ isOpen, onClose }) => {
   const handleDeleteNotification = async (notificationId) => {
     try {
       await notificationService.deleteNotification(notificationId);
+      onReadChange?.();
 
       setNotifications((prev) =>
         prev.filter((notification) => notification._id !== notificationId)
@@ -87,6 +102,7 @@ const NotificationPanel = ({ isOpen, onClose }) => {
   const handleMarkAllAsRead = async () => {
     try {
       await notificationService.markAllAsRead();
+      onReadChange?.();
 
       setNotifications((prev) =>
         prev.map((notification) => ({ ...notification, isRead: true }))
@@ -248,6 +264,20 @@ const NotificationPanel = ({ isOpen, onClose }) => {
                 >
                   Atualizar
                 </button>
+
+                {notifications.length > 0 && (
+                  <button
+                    onClick={async () => {
+                      await Promise.all(notifications.map((notification) =>
+                        handleDeleteNotification(notification._id)
+                      ));
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+                  >
+                    <FaTrash size={13} />
+                    Apagar todas
+                  </button>
+                )}
 
                 {unreadCount > 0 && (
                   <button

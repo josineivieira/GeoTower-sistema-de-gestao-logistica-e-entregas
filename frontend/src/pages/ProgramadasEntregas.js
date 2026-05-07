@@ -314,7 +314,7 @@ const PhotoGrid = ({ photos, onRemove }) => (
     <div className="grid grid-cols-3 gap-2">
       {photos.map((photo, idx) => (
         <div key={photo.id} className="relative rounded-xl overflow-hidden shadow-md aspect-square">
-          <img src={photo.data} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+          <img src={photo.preview || photo.data} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
           <button
             onClick={() => onRemove(photo.id)}
             className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition"
@@ -401,6 +401,7 @@ const ProgramadasEntregas = () => {
   const [processingPhoto, setProcessingPhoto] = useState(false);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const photosRef = useRef([]);
 
   const [showMontagemModal, setShowMontagemModal] = useState(false);
   const [montagemProgramacao, setMontagemProgramacao] = useState(null);
@@ -425,6 +426,14 @@ const ProgramadasEntregas = () => {
   const [sortOrder, setSortOrder] = useState('desc');
 
   useEffect(() => { loadProgramacoes(); }, [user]);
+
+  useEffect(() => {
+    photosRef.current = photos;
+  }, [photos]);
+
+  useEffect(() => () => {
+    revokePhotoPreviews(photosRef.current);
+  }, []);
 
   // Sincronização automática a cada 30 segundos para múltiplos clientes/dispositivos
   useEffect(() => {
@@ -664,6 +673,20 @@ const ProgramadasEntregas = () => {
     }
   };
 
+  function revokePhotoPreviews(photoList) {
+    (photoList || []).forEach(photo => {
+      if (photo?.preview) URL.revokeObjectURL(photo.preview);
+    });
+  }
+
+  function clearPhotos() {
+    setPhotos(prev => {
+      revokePhotoPreviews(prev);
+      return [];
+    });
+    if (cameraInputRef.current) cameraInputRef.current.value = null;
+  }
+
   const handleStartDelivery = async (p) => {
     const group = Array.isArray(p.fracionadas) && p.fracionadas.length > 0 ? p.fracionadas : [p];
     const groupLinkedDeliveryId = group.find(item => item.linkedDeliveryId)?.linkedDeliveryId || p.linkedDeliveryId;
@@ -715,7 +738,7 @@ const ProgramadasEntregas = () => {
           applyDeliveryUpdate(existing, p._id);
         }
         setCurrentStep(getStepFromDeliveryStatus(existing));
-        setPhotos([]); setObservations(''); setJustification(''); setDocumentsUpload({});
+        clearPhotos(); setObservations(''); setJustification(''); setDocumentsUpload({});
         setShowModal(true);
         setToast({ message: 'Entrega retomada', type: 'success' });
         await loadProgramacoes();
@@ -733,7 +756,7 @@ const ProgramadasEntregas = () => {
         applyDeliveryUpdate(newDelivery, p._id);
         setCurrentProgramacao(p);
         setCurrentStep(getStepFromDeliveryStatus(newDelivery));
-        setPhotos([]); setObservations(''); setJustification(''); setDocumentsUpload({});
+        clearPhotos(); setObservations(''); setJustification(''); setDocumentsUpload({});
         setShowModal(true);
         await loadProgramacoes();
       }
@@ -750,7 +773,7 @@ const ProgramadasEntregas = () => {
     setCurrentStep('welcome'); 
     setCurrentDelivery(null); 
     setCurrentProgramacao(null);
-    setPhotos([]); 
+    clearPhotos(); 
     setObservations(''); 
     setJustification(''); 
     setDocumentsUpload({}); 
@@ -885,7 +908,7 @@ const ProgramadasEntregas = () => {
   const closeMontagemModal = () => { setShowMontagemModal(false); setMontagemProgramacao(null); setMontagemComprovas([]); };
 
   const goToStep = async (step) => {
-    setPhotos([]);
+    clearPhotos();
     if (step === 'arrival') {
       setArrivalDelayReason('');
       setArrivalDelayError('');
@@ -929,29 +952,45 @@ const ProgramadasEntregas = () => {
     );
   };
 
-  const removePhoto = (id) => setPhotos(prev => prev.filter(photo => photo.id !== id));
+  const removePhoto = (id) => setPhotos(prev => {
+    const removed = prev.find(photo => photo.id === id);
+    if (removed?.preview) URL.revokeObjectURL(removed.preview);
+    return prev.filter(photo => photo.id !== id);
+  });
 
-  const addPhotoDataUrls = (photoDataUrls) => {
+  const addPhotoFiles = (files) => {
     const maxPhotos = 2;
-    const validPhotos = photoDataUrls.filter(Boolean);
+    const validFiles = files.filter(file => file && file.type?.startsWith('image/'));
 
-    if (validPhotos.length === 0) return;
+    if (validFiles.length === 0) return;
 
-    const newPhotos = validPhotos.map(data => ({
+    const newPhotos = validFiles.map(file => ({
       id: Date.now() + Math.random(),
-      data
+      file,
+      preview: URL.createObjectURL(file)
     }));
 
     flushSync(() => {
       setPhotos(prev => {
         if (prev.length >= maxPhotos) {
+          revokePhotoPreviews(newPhotos);
           setToast({
             message: `Maximo de ${maxPhotos} fotos permitidas. Remova uma para adicionar outra.`,
             type: 'warning'
           });
           return prev;
         }
-        return [...prev, ...newPhotos].slice(0, maxPhotos);
+        const available = maxPhotos - prev.length;
+        const accepted = newPhotos.slice(0, available);
+        const rejected = newPhotos.slice(available);
+        revokePhotoPreviews(rejected);
+        if (rejected.length > 0) {
+          setToast({
+            message: `Apenas ${accepted.length} foto(s) adicionada(s). Limite de ${maxPhotos} atingido.`,
+            type: 'info'
+          });
+        }
+        return [...prev, ...accepted];
       });
     });
   };
@@ -962,20 +1001,7 @@ const ProgramadasEntregas = () => {
     setProcessingPhoto(true);
 
     try {
-      const photoPromises = files.map(file =>
-        new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = () => {
-            console.error(`Failed to read ${file.name}`);
-            resolve(null);
-          };
-          reader.readAsDataURL(file);
-        })
-      );
-
-      const photoDataUrls = await Promise.all(photoPromises);
-      addPhotoDataUrls(photoDataUrls);
+      addPhotoFiles(files);
     } finally {
       setProcessingPhoto(false);
       e.target.value = null;
@@ -1020,7 +1046,7 @@ const ProgramadasEntregas = () => {
     try {
       const compressedFiles = [];
       for (let i = 0; i < photos.length; i++) {
-        const file = dataURLtoFile(photos[i].data, `foto_${i}.jpg`);
+        const file = photos[i].file || dataURLtoFile(photos[i].data, `foto_${i}.jpg`);
         const compressed = await compressPhotoFile(file);
         compressedFiles.push(compressed);
         setUploadProgress(Math.round(((i + 1) / photos.length) * 60));

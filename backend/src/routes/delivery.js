@@ -24,6 +24,8 @@ const path = require("path");
 const fs = require("fs");
 const NotificationService = require("../services/notificationService");
 const { updateDeliveryAtomic, updateDeliveryStatus } = require("../utils/deliveryConcurrency");
+const { enqueueR2Retry } = require("../utils/r2RetryQueue");
+const { getUploadsBaseDir } = require("../utils/uploadPaths");
 
 // =======================
 // Upload config (disk by default, memory for S3)
@@ -37,7 +39,7 @@ if (useS3) {
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
       // DinÃ¢mico por cidade
-      const dir = path.join(__dirname, "../uploads", req.city || 'manaus');
+      const dir = path.join(getUploadsBaseDir(), req.city || 'manaus');
       fs.mkdirSync(dir, { recursive: true });
       cb(null, dir);
     },
@@ -972,7 +974,7 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
 
     const baseName = getDocumentFileBaseName(type, city);
     const containerFolder = getDeliveryStorageFolder(delivery);
-    const containerDir = path.join(__dirname, "../uploads", city, containerFolder);
+    const containerDir = path.join(getUploadsBaseDir(), city, containerFolder);
     try {
       fs.mkdirSync(containerDir, { recursive: true });
     } catch (err) {
@@ -1014,7 +1016,14 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
             const dest = path.join(containerDir, finalFilename);
             const fileBuffer = file.buffer || fs.readFileSync(file.path);
             fs.writeFileSync(dest, fileBuffer);
-            fileEntry = { name: finalFilename, path: path.join(city, containerFolder, finalFilename), storage: 'local' };
+            fileEntry = {
+              name: finalFilename,
+              path: path.join(city, containerFolder, finalFilename),
+              storage: 'local',
+              pendingR2: true,
+              r2Key: `uploads/${city}/${containerFolder}/${finalFilename}`,
+              mimetype: file.mimetype
+            };
             console.log(`[UPLOAD] âœ“ Arquivo salvo LOCALMENTE (fallback): ${finalFilename}`);
           } catch (err) {
             console.error(`[UPLOAD] âœ— Local save falhou:`, err && err.message ? err.message : err);
@@ -1098,6 +1107,14 @@ router.post("/:id/documents/:type", auth, upload.array("file"), async (req, res)
       return res.status(400).json({ message: "Nenhum arquivo enviado" });
     }
     const updated = await db.findById("deliveries", id);
+    savedFiles
+      .filter(file => file && file.pendingR2 && file.path)
+      .forEach(fileEntry => enqueueR2Retry({
+        deliveryId: updated._id || id,
+        documentType: type,
+        fileEntry,
+        localFilePath: path.join(getUploadsBaseDir(), fileEntry.path)
+      }));
     if (type === 'devolucaoVazio' || type === 'devolucaoContainerVazio') {
       try {
         const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
@@ -1156,7 +1173,7 @@ router.post("/:id/upload-and-update", auth, upload.array("file"), async (req, re
     if (req.files && req.files.length) {
       const baseName = getDocumentFileBaseName(documentType, city);
       const containerFolder = getDeliveryStorageFolder(delivery);
-      const containerDir = path.join(__dirname, "../uploads", city, containerFolder);
+      const containerDir = path.join(getUploadsBaseDir(), city, containerFolder);
       try {
         fs.mkdirSync(containerDir, { recursive: true });
       } catch (err) {
@@ -1188,7 +1205,14 @@ router.post("/:id/upload-and-update", auth, upload.array("file"), async (req, re
             const dest = path.join(containerDir, finalFilename);
             const fileBuffer = file.buffer || fs.readFileSync(file.path);
             fs.writeFileSync(dest, fileBuffer);
-            fileEntry = { name: finalFilename, path: path.join(city, containerFolder, finalFilename), storage: 'local' };
+            fileEntry = {
+              name: finalFilename,
+              path: path.join(city, containerFolder, finalFilename),
+              storage: 'local',
+              pendingR2: true,
+              r2Key: `uploads/${city}/${containerFolder}/${finalFilename}`,
+              mimetype: file.mimetype
+            };
             console.log(`[UPLOAD-UPDATE] âœ“ Arquivo salvo LOCALMENTE: ${finalFilename}`);
           } catch (err) {
             console.error(`[UPLOAD-UPDATE] âœ— Local save falhou:`, err && err.message ? err.message : err);
@@ -1268,6 +1292,14 @@ router.post("/:id/upload-and-update", auth, upload.array("file"), async (req, re
           statusUpdates[field] = value;
         }
         const updated = await updateDeliveryStatus(delivery._id, status, statusUpdates);
+        savedFiles
+          .filter(file => file && file.pendingR2 && file.path)
+          .forEach(fileEntry => enqueueR2Retry({
+            deliveryId: updated._id || delivery._id,
+            documentType,
+            fileEntry,
+            localFilePath: path.join(getUploadsBaseDir(), fileEntry.path)
+          }));
         if (updated.horarioDevolucaoVazio) {
           const programacaoToUpdate = updated.programacaoId || updated.linkedProgramacaoId;
           if (programacaoToUpdate) {
@@ -1290,6 +1322,14 @@ router.post("/:id/upload-and-update", auth, upload.array("file"), async (req, re
         }
 
         const updated = await updateDeliveryAtomic(delivery._id, updates);
+        savedFiles
+          .filter(file => file && file.pendingR2 && file.path)
+          .forEach(fileEntry => enqueueR2Retry({
+            deliveryId: updated._id || delivery._id,
+            documentType,
+            fileEntry,
+            localFilePath: path.join(getUploadsBaseDir(), fileEntry.path)
+          }));
         return res.json({ delivery: normalizeDeliveryForResponse(updated) });
       }
     } else {

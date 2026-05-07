@@ -225,15 +225,13 @@ table tbody tr td:last-child {
 }
 
 .mobile-modal-scroll {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 104px);
+  padding-bottom: 1.25rem;
   overscroll-behavior: contain;
 }
 
 .mobile-action-bar {
-  position: sticky;
-  bottom: 0;
+  flex-shrink: 0;
   z-index: 20;
-  margin: 1rem -1.25rem -1.25rem;
   padding: 0.75rem 1.25rem calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
   background: linear-gradient(180deg, rgba(255,255,255,0.72), #ffffff 24%);
   border-top: 1px solid rgba(226, 232, 240, 0.9);
@@ -256,9 +254,7 @@ table tbody tr td:last-child {
   }
 
   .mobile-action-bar {
-    position: static;
-    margin: 1rem 0 0;
-    padding: 0;
+    padding: 1rem 1.25rem;
     background: transparent;
     border-top: 0;
     box-shadow: none;

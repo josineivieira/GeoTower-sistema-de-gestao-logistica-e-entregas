@@ -4,6 +4,7 @@ const helmet = require("helmet");
 const dotenv = require("dotenv");
 const path = require("path");
 const fs = require("fs");
+const { getUploadsBaseDir } = require('./utils/uploadPaths');
 
 dotenv.config({ path: path.join(__dirname, "../../.env") });
 
@@ -82,7 +83,7 @@ app.use(require('./middleware/city'));
 app.use(require('./middleware/validateUserCity'));
 
 // ✅ Serve uploads (para abrir imagens no navegador)
-const staticUploadsPath = process.env.BACKEND_UPLOADS_DIR ? path.resolve(process.env.BACKEND_UPLOADS_DIR) : path.join(__dirname, '../uploads');
+const staticUploadsPath = getUploadsBaseDir();
 console.log('✓ Serving uploads from:', staticUploadsPath);
 app.use('/uploads', express.static(staticUploadsPath));
 
@@ -213,6 +214,7 @@ const PORT = process.env.PORT || 3000;
 // NOTE: Single listen handled by startServer() below to ensure binding to 0.0.0.0 and avoid duplicate listens.
 
 const { connectIfNeeded } = require('./db/mongo');
+const { scheduleStartupR2RetryScan } = require('./utils/r2RetryQueue');
 
 async function startServer() {
   try {
@@ -220,6 +222,7 @@ async function startServer() {
     if (process.env.MONGODB_URI) {
       try {
         await connectIfNeeded();
+        scheduleStartupR2RetryScan();
         console.log('✓ Using MongoDB for persistence');
       } catch (err) {
         console.error('⚠️ Failed to connect to MongoDB:', err.message);

@@ -402,6 +402,9 @@ const ProgramadasEntregas = () => {
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const photosRef = useRef([]);
+  const submittingRef = useRef(false);
+  const processingPhotoRef = useRef(false);
+  const [cameraInputKey, setCameraInputKey] = useState(0);
 
   const [showMontagemModal, setShowMontagemModal] = useState(false);
   const [montagemProgramacao, setMontagemProgramacao] = useState(null);
@@ -431,6 +434,14 @@ const ProgramadasEntregas = () => {
     photosRef.current = photos;
   }, [photos]);
 
+  useEffect(() => {
+    submittingRef.current = submitting;
+  }, [submitting]);
+
+  useEffect(() => {
+    processingPhotoRef.current = processingPhoto;
+  }, [processingPhoto]);
+
   useEffect(() => () => {
     revokePhotoPreviews(photosRef.current);
   }, []);
@@ -438,6 +449,7 @@ const ProgramadasEntregas = () => {
   // Sincronização automática a cada 30 segundos para múltiplos clientes/dispositivos
   useEffect(() => {
     const syncInterval = setInterval(() => {
+      if (submittingRef.current || processingPhotoRef.current) return;
       console.log('🔄 [ProgramadasEntregas] Sincronizando programações...');
       loadProgramacoes({ silent: true });
       // Se houver entrega aberta, sincroniza também
@@ -684,6 +696,8 @@ const ProgramadasEntregas = () => {
       revokePhotoPreviews(prev);
       return [];
     });
+    setProcessingPhoto(false);
+    setCameraInputKey(prev => prev + 1);
     if (cameraInputRef.current) cameraInputRef.current.value = null;
   }
 
@@ -997,7 +1011,10 @@ const ProgramadasEntregas = () => {
 
   const handleCameraCapture = async (e) => {
     const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+    if (files.length === 0 || processingPhotoRef.current || submittingRef.current) {
+      e.target.value = null;
+      return;
+    }
     setProcessingPhoto(true);
 
     try {
@@ -1006,6 +1023,58 @@ const ProgramadasEntregas = () => {
       setProcessingPhoto(false);
       e.target.value = null;
     }
+  };
+
+  const openNativeCamera = async () => {
+    if (processingPhotoRef.current || submittingRef.current) return false;
+
+    try {
+      setProcessingPhoto(true);
+      const [{ Camera, CameraResultType, CameraSource }, { Capacitor }] = await Promise.all([
+        import('@capacitor/camera'),
+        import('@capacitor/core')
+      ]);
+
+      if (!Capacitor.isNativePlatform()) return false;
+
+      const image = await Camera.getPhoto({
+        quality: 70,
+        allowEditing: false,
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Camera,
+        correctOrientation: true,
+        saveToGallery: false
+      });
+
+      if (!image?.webPath) return true;
+
+      const response = await fetch(image.webPath);
+      const blob = await response.blob();
+      if (!blob || blob.size === 0) throw new Error('Foto capturada sem dados');
+
+      const extension = image.format ? `.${image.format}` : '.jpg';
+      const file = new File([blob], `foto_${Date.now()}${extension}`, {
+        type: blob.type || `image/${image.format || 'jpeg'}`
+      });
+
+      addPhotoFiles([file]);
+      return true;
+    } catch (err) {
+      if (err?.message && !String(err.message).toLowerCase().includes('cancel')) {
+        console.warn('[ProgramadasEntregas] Camera nativa falhou, usando fallback web:', err);
+      }
+      return false;
+    } finally {
+      setProcessingPhoto(false);
+    }
+  };
+
+  const openCamera = async () => {
+    const handledByNativeCamera = await openNativeCamera();
+    if (handledByNativeCamera) return;
+    if (submitting || processingPhoto) return;
+    if (cameraInputRef.current) cameraInputRef.current.value = null;
+    cameraInputRef.current?.click();
   };
 
   function dataURLtoFile(dataurl, filename) {
@@ -1023,7 +1092,12 @@ const ProgramadasEntregas = () => {
       initialQuality: 0.7,
       maxIteration: 10
     };
-    return await imageCompression(file, options);
+    try {
+      return await imageCompression(file, options);
+    } catch (err) {
+      console.warn('[ProgramadasEntregas] Falha ao comprimir foto, enviando original:', err);
+      return file;
+    }
   };
 
   const compressUploadFile = async (file) => {
@@ -1041,15 +1115,19 @@ const ProgramadasEntregas = () => {
   };
 
   const compressAndUpload = async (docKey, status, nextStep, timestamps = {}) => {
-    if (!photos || photos.length === 0) { setToast({ message: 'Tire ao menos uma foto', type: 'error' }); return; }
+    if (submittingRef.current || processingPhotoRef.current) return;
+    const photosToUpload = (photosRef.current || photos || []).filter(photo => photo?.file || photo?.data);
+    if (photosToUpload.length === 0) { setToast({ message: 'Tire ao menos uma foto', type: 'error' }); return; }
+    if (!currentDelivery?._id) { setToast({ message: 'Entrega nao encontrada. Feche e abra o fluxo novamente.', type: 'error' }); return; }
     setSubmitting(true); setUploadProgress(0);
     try {
       const compressedFiles = [];
-      for (let i = 0; i < photos.length; i++) {
-        const file = photos[i].file || dataURLtoFile(photos[i].data, `foto_${i}.jpg`);
+      for (let i = 0; i < photosToUpload.length; i++) {
+        const file = photosToUpload[i].file || dataURLtoFile(photosToUpload[i].data, `foto_${i}.jpg`);
+        if (!file || file.size === 0) throw new Error('Foto capturada sem dados. Tire a foto novamente.');
         const compressed = await compressPhotoFile(file);
         compressedFiles.push(compressed);
-        setUploadProgress(Math.round(((i + 1) / photos.length) * 60));
+        setUploadProgress(Math.round(((i + 1) / photosToUpload.length) * 60));
       }
       const updated = await deliveryService.uploadDocumentAndUpdate(currentDelivery._id, docKey, compressedFiles, {
         status,
@@ -1435,19 +1513,16 @@ const ProgramadasEntregas = () => {
           Processando foto...
         </div>
       )}
-      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleCameraCapture} className="hidden" />
+      <input key={`${currentStep}-${cameraInputKey}`} ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleCameraCapture} className="hidden" />
       <button
-        onClick={() => {
-          if (cameraInputRef.current) cameraInputRef.current.value = null;
-          cameraInputRef.current?.click();
-        }}
-        disabled={processingPhoto}
+        onClick={openCamera}
+        disabled={processingPhoto || submitting}
         className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-base shadow-lg hover:shadow-xl active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <FaCamera size={18} />
         {photos.length === 0 ? 'Tirar Foto' : 'Tirar Mais Fotos'}
       </button>
-      <div className="mobile-action-bar flex gap-3">
+      <div className="flex gap-3">
         <button
           onClick={onConfirm}
           disabled={submitting || processingPhoto || photos.length === 0 || confirmDisabled}
@@ -2387,11 +2462,11 @@ const ProgramadasEntregas = () => {
                     </div>
                   )}
 
-                  <div className="mobile-action-bar flex gap-3">
+                  <div className="flex gap-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
                     <button
                       onClick={handleFinalUploadAndSubmit}
                       disabled={submitting}
-                      className="action-btn flex-1 px-3 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold text-base shadow-lg active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="action-btn flex-1 px-3 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold text-sm shadow-lg active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {submitting ? (
                         <span className="flex items-center justify-center gap-2">
@@ -2401,10 +2476,10 @@ const ProgramadasEntregas = () => {
                           </svg>
                           Enviando...
                         </span>
-                      ) : '✓ Documentos enviados'}
+                      ) : 'Enviar docs'}
                     </button>
                     <button onClick={() => goToStep('desovaProgress')} disabled={submitting}
-                      className="action-btn flex-1 px-3 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-base active:scale-95 transition disabled:opacity-50">
+                      className="action-btn flex-1 px-3 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm active:scale-95 transition disabled:opacity-50">
                       Voltar
                     </button>
                   </div>

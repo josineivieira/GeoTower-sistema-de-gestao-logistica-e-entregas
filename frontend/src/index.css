@@ -219,3 +219,49 @@ table tbody tr td:last-child {
          focus:border-transparent transition
          disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed;
 }
+
+.mobile-modal-panel {
+  max-height: 100dvh;
+}
+
+.mobile-modal-scroll {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 104px);
+  overscroll-behavior: contain;
+}
+
+.mobile-action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  margin: 1rem -1.25rem -1.25rem;
+  padding: 0.75rem 1.25rem calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+  background: linear-gradient(180deg, rgba(255,255,255,0.72), #ffffff 24%);
+  border-top: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 -18px 32px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.mobile-action-bar .action-btn {
+  min-height: 56px;
+  border-radius: 18px;
+}
+
+@media (min-width: 640px) {
+  .mobile-modal-panel {
+    max-height: min(92vh, 860px);
+  }
+
+  .mobile-modal-scroll {
+    padding-bottom: 1.25rem;
+  }
+
+  .mobile-action-bar {
+    position: static;
+    margin: 1rem 0 0;
+    padding: 0;
+    background: transparent;
+    border-top: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+}

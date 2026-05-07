@@ -1,7 +1,7 @@
 import EntregasEmAndamento from './pages/EntregasEmAndamento';
 import Maintenance from './pages/Maintenance';
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './services/authContext';
 import PrivateRoute from './components/PrivateRoute';
 import AppLayout from './components/AppLayout';
@@ -35,10 +35,41 @@ import EntregaEmRota from './pages/EntregaEmRota';
 function AppContent() {
   const { isAuthenticated } = useAuth();
   const { city } = useCity();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const maintenanceMode = process.env.REACT_APP_MAINTENANCE_MODE === 'true';
   const maintenanceMessage = process.env.REACT_APP_MAINTENANCE_MESSAGE ||
     'O sistema está em manutenção. Em breve voltaremos com o serviço normal.';
+
+  useEffect(() => {
+    let listener;
+    let active = true;
+
+    import('@capacitor/app').then(({ App: CapacitorApp }) => {
+      if (!active) return;
+      CapacitorApp.addListener('backButton', () => {
+        const backEvent = new Event('appBackButton', { cancelable: true });
+        window.dispatchEvent(backEvent);
+        if (backEvent.defaultPrevented) return;
+
+        if (location.pathname !== '/home' && location.pathname !== '/') {
+          navigate(-1);
+          return;
+        }
+
+        CapacitorApp.minimizeApp();
+      }).then(handle => {
+        listener = handle;
+        if (!active) handle.remove();
+      });
+    }).catch(() => {});
+
+    return () => {
+      active = false;
+      if (listener) listener.remove();
+    };
+  }, [location.pathname, navigate]);
 
   if (maintenanceMode) {
     return (

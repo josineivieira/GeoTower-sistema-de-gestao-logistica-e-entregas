@@ -1241,6 +1241,70 @@ const ProgramadasEntregas = () => {
     setContainerVazioProof(null);
   };
 
+  useEffect(() => {
+    const flowBackSteps = {
+      obs: 'welcome',
+      arrival: 'welcome',
+      confirmDesova: 'welcome',
+      desovaJustify: 'confirmDesova',
+      desovaStart: 'confirmDesova',
+      desovaProgress: 'confirmDesova',
+      desovaNotYet: 'desovaProgress',
+      desovaNotYetObs: 'desovaProgress',
+      desovaNotYetMsg: 'desovaProgress',
+      desovaFinal: 'desovaProgress',
+      finalDocs: 'desovaProgress',
+      leavingClient: 'finalDocs',
+      arrivingPort: 'leavingClient',
+      portReturn: 'arrivingPort'
+    };
+
+    const handleAppBack = (event) => {
+      const hasOpenModal = showModal || showMontagemModal || showReturnModal || showContainerReturnModal;
+      if (!hasOpenModal) return;
+
+      event.preventDefault();
+
+      if (submitting || montagemSubmitting || returnSubmitting || containerVazioSubmitting) {
+        setToast({ message: 'Aguarde a operacao terminar', type: 'info' });
+        return;
+      }
+
+      if (showMontagemModal) {
+        closeMontagemModal();
+        return;
+      }
+      if (showReturnModal) {
+        closeReturnModal();
+        return;
+      }
+      if (showContainerReturnModal) {
+        closeContainerReturnModal();
+        return;
+      }
+      if (showModal) {
+        if (currentStep === 'welcome' || currentStep === 'agradecimento') {
+          closeModal();
+          return;
+        }
+        goToStep(flowBackSteps[currentStep] || 'welcome');
+      }
+    };
+
+    window.addEventListener('appBackButton', handleAppBack);
+    return () => window.removeEventListener('appBackButton', handleAppBack);
+  }, [
+    showModal,
+    showMontagemModal,
+    showReturnModal,
+    showContainerReturnModal,
+    currentStep,
+    submitting,
+    montagemSubmitting,
+    returnSubmitting,
+    containerVazioSubmitting
+  ]);
+
   const getFilteredAndSorted = () => {
     let result = programacoes;
     if (searchTerm.trim()) {
@@ -1383,11 +1447,11 @@ const ProgramadasEntregas = () => {
         <FaCamera size={18} />
         {photos.length === 0 ? 'Tirar Foto' : 'Tirar Mais Fotos'}
       </button>
-      <div className="flex gap-3">
+      <div className="mobile-action-bar flex gap-3">
         <button
           onClick={onConfirm}
           disabled={submitting || processingPhoto || photos.length === 0 || confirmDisabled}
-          className={`flex-1 py-3.5 rounded-xl text-white font-bold text-base shadow-md active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed ${buttonColor}`}
+          className={`action-btn flex-1 px-3 py-3.5 text-white font-bold text-base shadow-md active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed ${buttonColor}`}
         >
           {submitting ? (
             <span className="flex items-center justify-center gap-2">
@@ -1399,7 +1463,7 @@ const ProgramadasEntregas = () => {
             </span>
           ) : buttonLabel}
         </button>
-        <button onClick={onBack} className="flex-1 py-3.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-base active:scale-95 transition">
+        <button onClick={onBack} className="action-btn flex-1 px-3 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-base active:scale-95 transition">
           Voltar
         </button>
       </div>
@@ -1601,7 +1665,7 @@ const ProgramadasEntregas = () => {
           ════════════════════════════════════════════ */}
       {showReturnModal && currentProgramacao && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl shadow-2xl overflow-hidden">
+          <div className="mobile-modal-panel bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl shadow-2xl overflow-hidden flex flex-col">
             {/* Modal header */}
             <div className="bg-gradient-to-r from-pink-500 to-rose-600 p-5">
               <div className="flex items-center justify-between">
@@ -1620,7 +1684,7 @@ const ProgramadasEntregas = () => {
               </div>
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="mobile-modal-scroll overflow-y-auto flex-1 p-5 space-y-4">
               <p className="text-gray-600 text-sm">Anexe o comprovante de Entrega CNTR Porto para concluir o processo.</p>
 
               <div className={`rounded-2xl border-2 p-4 transition-all ${returnProof ? 'border-pink-400 bg-pink-50' : 'border-dashed border-gray-300 bg-gray-50'}`}>
@@ -1660,15 +1724,15 @@ const ProgramadasEntregas = () => {
                 </div>
               )}
 
-              <div className="flex gap-3">
+              <div className="mobile-action-bar flex gap-3">
                 <button
                   onClick={handleReturn}
                   disabled={returnSubmitting || !returnProof}
-                  className="flex-1 py-4 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-xl font-bold text-base shadow-lg active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="action-btn flex-1 px-3 py-4 bg-gradient-to-r from-pink-500 to-rose-600 text-white font-bold text-base shadow-lg active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   ✅ Enviar Entrega CNTR Porto
                 </button>
-                <button onClick={closeReturnModal} className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-base active:scale-95 transition">
+                <button onClick={closeReturnModal} className="action-btn flex-1 px-3 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-base active:scale-95 transition">
                   Cancelar
                 </button>
               </div>
@@ -1682,7 +1746,7 @@ const ProgramadasEntregas = () => {
           ════════════════════════════════════════════ */}
       {showMontagemModal && montagemProgramacao && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl shadow-2xl overflow-hidden">
+          <div className="mobile-modal-panel bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl shadow-2xl overflow-hidden flex flex-col">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1700,7 +1764,7 @@ const ProgramadasEntregas = () => {
               </div>
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="mobile-modal-scroll overflow-y-auto flex-1 p-5 space-y-4">
               {/* Info card */}
               <div className="grid grid-cols-3 gap-3">
                 {[
@@ -1792,7 +1856,7 @@ const ProgramadasEntregas = () => {
           ════════════════════════════════════════════ */}
       {showContainerReturnModal && currentProgramacaoForReturn && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl shadow-2xl overflow-hidden">
+          <div className="mobile-modal-panel bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl shadow-2xl overflow-hidden flex flex-col">
             {/* Modal header */}
             <div className="bg-gradient-to-r from-yellow-500 to-amber-600 p-5">
               <div className="flex items-center justify-between">
@@ -1811,7 +1875,7 @@ const ProgramadasEntregas = () => {
               </div>
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="mobile-modal-scroll overflow-y-auto flex-1 p-5 space-y-4">
               <p className="text-gray-600 text-sm">Anexe o comprovante de Entrega CNTR Porto para finalizar o processo.</p>
 
               <div className={`rounded-2xl border-2 p-4 transition-all ${containerVazioProof ? 'border-yellow-400 bg-yellow-50' : 'border-dashed border-gray-300 bg-gray-50'}`}>
@@ -1851,15 +1915,15 @@ const ProgramadasEntregas = () => {
                 </div>
               )}
 
-              <div className="flex gap-3">
+              <div className="mobile-action-bar flex gap-3">
                 <button
                   onClick={handleContainerReturn}
                   disabled={containerVazioSubmitting || !containerVazioProof}
-                  className="flex-1 py-4 bg-gradient-to-r from-yellow-500 to-amber-600 text-white rounded-xl font-bold text-base shadow-lg active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="action-btn flex-1 px-3 py-4 bg-gradient-to-r from-yellow-500 to-amber-600 text-white font-bold text-base shadow-lg active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   ✅ Confirmar Entrega CNTR Porto
                 </button>
-                <button onClick={closeContainerReturnModal} className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-base active:scale-95 transition">
+                <button onClick={closeContainerReturnModal} className="action-btn flex-1 px-3 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-base active:scale-95 transition">
                   Cancelar
                 </button>
               </div>
@@ -1873,7 +1937,7 @@ const ProgramadasEntregas = () => {
           ════════════════════════════════════════════ */}
       {showModal && currentDelivery && currentProgramacao && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-white w-full h-full sm:max-w-xl sm:rounded-3xl sm:h-auto rounded-none shadow-2xl overflow-hidden flex flex-col">
+          <div className="mobile-modal-panel bg-white w-full h-full sm:max-w-xl sm:rounded-3xl sm:h-auto rounded-none shadow-2xl overflow-hidden flex flex-col">
 
             {/* Modal header */}
             <div className="bg-gradient-to-r from-emerald-600 to-teal-700 p-5 flex-shrink-0">
@@ -1895,7 +1959,7 @@ const ProgramadasEntregas = () => {
             </div>
 
             {/* Modal body */}
-            <div className="overflow-y-auto flex-1 p-5">
+            <div className="mobile-modal-scroll overflow-y-auto flex-1 p-5">
 
               {/* ── STEP: welcome ── */}
               {currentStep === 'welcome' && (
@@ -2323,11 +2387,11 @@ const ProgramadasEntregas = () => {
                     </div>
                   )}
 
-                  <div className="flex gap-3">
+                  <div className="mobile-action-bar flex gap-3">
                     <button
                       onClick={handleFinalUploadAndSubmit}
                       disabled={submitting}
-                      className="flex-1 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl font-bold text-base shadow-lg active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="action-btn flex-1 px-3 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold text-base shadow-lg active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {submitting ? (
                         <span className="flex items-center justify-center gap-2">
@@ -2340,7 +2404,7 @@ const ProgramadasEntregas = () => {
                       ) : '✓ Documentos enviados'}
                     </button>
                     <button onClick={() => goToStep('desovaProgress')} disabled={submitting}
-                      className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl font-bold text-base active:scale-95 transition disabled:opacity-50">
+                      className="action-btn flex-1 px-3 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-base active:scale-95 transition disabled:opacity-50">
                       Voltar
                     </button>
                   </div>

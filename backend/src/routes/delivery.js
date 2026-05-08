@@ -1548,7 +1548,20 @@ router.post("/:id/submit", auth, async (req, res) => {
         submittedAt: new Date(),
         missingDocumentsAtSubmit: missingDocs,
         submissionForce: true,
-        submissionObservation: observation ? String(observation).trim() : ''
+        submissionObservation: observation ? String(observation).trim() : '',
+        pendenciaResponsavel: 'geolog',
+        pendenciaStatus: 'AGUARDANDO_GEOLOG',
+        pendenciaHistorico: [
+          {
+            from: 'motorista',
+            to: 'geolog',
+            by: req.user?.name || req.user?.username || req.user?.email || 'motorista',
+            role: req.user?.role || 'driver',
+            message: observation || 'Documentos obrigatorios nao anexados',
+            action: 'pendencia_criada',
+            createdAt: new Date()
+          }
+        ]
       };
       await db.updateOne('deliveries', { _id: req.params.id }, updates);
 
@@ -1570,7 +1583,12 @@ router.post("/:id/submit", auth, async (req, res) => {
     }
 
     // No missing docs, mark as submitted and limpar pendÃªncias
-    await db.updateOne('deliveries', { _id: req.params.id }, { status: 'submitted', submittedAt: new Date(), missingDocumentsAtSubmit: [] });
+    await db.updateOne('deliveries', { _id: req.params.id }, {
+      status: 'submitted',
+      submittedAt: new Date(),
+      missingDocumentsAtSubmit: [],
+      pendenciaStatus: 'RESOLVIDA'
+    });
     const deliveryAfterUpdate = await db.findById('deliveries', req.params.id);
     return res.json({ success: true, message: 'Entrega enviada com sucesso', delivery: deliveryAfterUpdate });
   } catch (err) {

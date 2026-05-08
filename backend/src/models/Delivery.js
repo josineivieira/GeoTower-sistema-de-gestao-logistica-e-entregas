@@ -44,6 +44,30 @@ const DeliverySchema = new mongoose.Schema(
     documentsJustification: { type: String, default: "" },
     retornoGeoMar: { type: String, default: "" },
     retornoGeoLog: { type: String, default: "" },
+    pendenciaResponsavel: {
+      type: String,
+      enum: ['geolog', 'geomar'],
+      default: 'geolog'
+    },
+    pendenciaStatus: {
+      type: String,
+      enum: ['AGUARDANDO_GEOLOG', 'AGUARDANDO_GEOMAR', 'RESOLVIDA'],
+      default: 'RESOLVIDA'
+    },
+    pendenciaHistorico: {
+      type: [
+        {
+          from: { type: String, default: "" },
+          to: { type: String, default: "" },
+          by: { type: String, default: "" },
+          role: { type: String, default: "" },
+          message: { type: String, default: "" },
+          action: { type: String, default: "repasse" },
+          createdAt: { type: Date, default: Date.now }
+        }
+      ],
+      default: []
+    },
     retornosPendenciaUpdatedAt: { type: Date },
     retornosPendenciaUpdatedBy: { type: String, default: "" },
     documentCorrectionLog: {

@@ -268,11 +268,25 @@ exports.submitDelivery = async (req, res) => {
       submissionUpdates.submissionObservation = observation ? String(observation).trim() : '';
       submissionUpdates.submissionForce = true;
       submissionUpdates.missingDocumentsAtSubmit = missingDocs;
+      submissionUpdates.pendenciaResponsavel = 'geolog';
+      submissionUpdates.pendenciaStatus = 'AGUARDANDO_GEOLOG';
+      submissionUpdates.pendenciaHistorico = [
+        {
+          from: 'motorista',
+          to: 'geolog',
+          by: req.user?.name || req.user?.username || req.user?.email || 'motorista',
+          role: req.user?.role || 'driver',
+          message: observation || 'Documentos obrigatorios nao anexados',
+          action: 'pendencia_criada',
+          createdAt: new Date()
+        }
+      ];
     } else {
       // Limpar possível pendência anterior
       submissionUpdates.missingDocumentsAtSubmit = [];
       submissionUpdates.submissionForce = false;
       submissionUpdates.submissionObservation = '';
+      submissionUpdates.pendenciaStatus = 'RESOLVIDA';
     }
 
     // Atualizar status atomicamente com validação

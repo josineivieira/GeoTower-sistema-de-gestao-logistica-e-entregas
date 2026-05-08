@@ -42,6 +42,7 @@ export const adminService = {
   updateDelivery: (id, data) => api.put(`/admin/deliveries/${id}`, data),
   getCanhotosPendentes: () => api.get('/admin/canhotos-pendentes'),
   updateCanhotoRetornos: (id, data) => api.put(`/admin/canhotos-pendentes/${id}/retornos`, data),
+  concluirCanhotoPendencia: (id, data) => api.put(`/admin/canhotos-pendentes/${id}/concluir`, data),
   uploadCanhotoDocumento: (id, documentType, files) => {
     const formData = new FormData();
     const arr = Array.isArray(files) ? files : files instanceof FileList ? Array.from(files) : [files];

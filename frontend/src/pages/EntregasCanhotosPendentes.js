@@ -6,7 +6,6 @@ import {
   FaClipboardList,
   FaExclamationTriangle,
   FaFileUpload,
-  FaSave,
   FaSearch,
   FaSync,
   FaTruck,
@@ -16,9 +15,13 @@ import {
   FaBoxes,
   FaBuilding,
   FaRegCommentDots,
+  FaExchangeAlt,
+  FaHistory,
+  FaLock,
 } from 'react-icons/fa';
 import Toast from '../components/Toast';
 import { adminService } from '../services/authService';
+import { useAuth } from '../services/authContext';
 import { useCity } from '../contexts/CityContext';
 import { getDocumentLabel } from '../utils/documentLabels';
 import { formatarData } from '../utils/date';
@@ -152,7 +155,41 @@ const getPartyLabel = (item, city) => {
   return city === 'itajai' ? 'Remetente' : 'Recebedor';
 };
 
-const PendingDocumentControl = ({ doc, city, disabled, onUpload }) => {
+const RESPONSAVEL_CONFIG = {
+  geolog: {
+    label: 'GeoLog',
+    field: 'retornoGeoLog',
+    icon: FaTruck,
+    badge: 'bg-blue-100 text-blue-700 border-blue-200',
+    panel: 'border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50',
+    button: 'bg-blue-600 hover:bg-blue-700',
+    ring: 'focus:border-blue-300 focus:ring-blue-100',
+  },
+  geomar: {
+    label: 'GeoMar',
+    field: 'retornoGeoMar',
+    icon: FaUser,
+    badge: 'bg-cyan-100 text-cyan-700 border-cyan-200',
+    panel: 'border-cyan-200 bg-gradient-to-br from-cyan-50 to-teal-50',
+    button: 'bg-cyan-600 hover:bg-cyan-700',
+    ring: 'focus:border-cyan-300 focus:ring-cyan-100',
+  },
+};
+
+const getPendenciaResponsavel = (item) =>
+  ['geomar', 'geolog'].includes(String(item?.pendenciaResponsavel || '').toLowerCase())
+    ? String(item.pendenciaResponsavel).toLowerCase()
+    : 'geolog';
+
+const getUserPendenciaGroup = (role) => {
+  if (role === 'geomar') return 'geomar';
+  if (role === 'admin') return 'geolog';
+  return '';
+};
+
+const getNextResponsavel = (current) => current === 'geomar' ? 'geolog' : 'geomar';
+
+const PendingDocumentControl = ({ doc, city, disabled, disabledLabel, onUpload }) => {
   const inputId = useId();
 
   return (
@@ -179,6 +216,10 @@ const PendingDocumentControl = ({ doc, city, disabled, onUpload }) => {
           multiple
           className="hidden"
           onChange={(event) => {
+            if (disabled) {
+              event.target.value = '';
+              return;
+            }
             onUpload(event.target.files);
             event.target.value = '';
           }}
@@ -194,7 +235,7 @@ const PendingDocumentControl = ({ doc, city, disabled, onUpload }) => {
           )}
         >
           <FaUpload size={11} />
-          {disabled ? 'Anexando...' : 'Selecionar arquivos'}
+          {disabled && disabledLabel ? disabledLabel : disabled ? 'Anexando...' : 'Selecionar arquivos'}
         </label>
       </div>
     </div>
@@ -208,6 +249,8 @@ const ReturnPanel = ({
   draftValue,
   onChange,
   placeholder,
+  disabled = false,
+  helper,
 }) => (
   <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
     <div className="flex items-center gap-2 mb-3">
@@ -236,10 +279,21 @@ const ReturnPanel = ({
     <textarea
       value={draftValue ?? ''}
       onChange={onChange}
+      disabled={disabled}
       rows={5}
-      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-800 outline-none resize-y transition focus:border-amber-300 focus:bg-white focus:ring-4 focus:ring-amber-100"
+      className={cn(
+        'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-800 outline-none resize-y transition focus:bg-white focus:ring-4',
+        disabled
+          ? 'cursor-not-allowed text-slate-400'
+          : 'focus:border-amber-300 focus:ring-amber-100'
+      )}
       placeholder={placeholder}
     />
+    {helper && (
+      <p className="mt-2 text-xs font-semibold text-slate-500 leading-relaxed">
+        {helper}
+      </p>
+    )}
   </div>
 );
 
@@ -270,6 +324,8 @@ const DeliveryCardSkeleton = () => (
 const EntregasCanhotosPendentes = () => {
   const navigate = useNavigate();
   const { city } = useCity();
+  const { user } = useAuth();
+  const userPendenciaGroup = getUserPendenciaGroup(user?.role);
 
   const [items, setItems] = useState([]);
   const [drafts, setDrafts] = useState({});
@@ -334,8 +390,12 @@ const EntregasCanhotosPendentes = () => {
     sum + (Array.isArray(item.missingDocumentsAtSubmit) ? item.missingDocumentsAtSubmit.length : 0)
   ), 0);
 
-  const totalComRetorno = items.filter(
-    (item) => item.retornoGeoMar || item.retornoGeoLog
+  const totalComGeoMar = items.filter(
+    (item) => getPendenciaResponsavel(item) === 'geomar'
+  ).length;
+
+  const totalComGeoLog = items.filter(
+    (item) => getPendenciaResponsavel(item) === 'geolog'
   ).length;
 
   const updateDraft = (id, field, value) => {
@@ -352,14 +412,24 @@ const EntregasCanhotosPendentes = () => {
 
   const saveRetornos = async (item) => {
     const draft = drafts[item._id] || {};
+    const currentOwner = getPendenciaResponsavel(item);
+    const currentConfig = RESPONSAVEL_CONFIG[currentOwner];
+    const nextOwner = getNextResponsavel(currentOwner);
 
-    if (
-      !String(draft.retornoGeoMar || '').trim() &&
-      !String(draft.retornoGeoLog || '').trim()
-    ) {
+    if (currentOwner !== userPendenciaGroup) {
       setToast({
         type: 'warning',
-        message: 'Digite uma nova observação antes de salvar',
+        message: `Esta pendência está com ${currentConfig.label}. Aguarde o repasse para responder.`,
+      });
+      return;
+    }
+
+    const message = String(draft[currentConfig.field] || '').trim();
+
+    if (!message) {
+      setToast({
+        type: 'warning',
+        message: 'Digite uma nova observação antes de repassar',
       });
       return;
     }
@@ -368,8 +438,8 @@ const EntregasCanhotosPendentes = () => {
 
     try {
       const res = await adminService.updateCanhotoRetornos(item._id, {
-        retornoGeoMar: draft.retornoGeoMar || '',
-        retornoGeoLog: draft.retornoGeoLog || '',
+        [currentConfig.field]: message,
+        repassarPara: nextOwner,
       });
 
       const updated = res.data?.delivery || {};
@@ -381,6 +451,12 @@ const EntregasCanhotosPendentes = () => {
                 ...row,
                 retornoGeoMar: updated.retornoGeoMar ?? draft.retornoGeoMar ?? '',
                 retornoGeoLog: updated.retornoGeoLog ?? draft.retornoGeoLog ?? '',
+                pendenciaResponsavel:
+                  updated.pendenciaResponsavel || nextOwner,
+                pendenciaStatus:
+                  updated.pendenciaStatus || row.pendenciaStatus,
+                pendenciaHistorico:
+                  updated.pendenciaHistorico || row.pendenciaHistorico || [],
                 retornosPendenciaUpdatedAt:
                   updated.retornosPendenciaUpdatedAt || new Date().toISOString(),
                 retornosPendenciaUpdatedBy:
@@ -400,7 +476,7 @@ const EntregasCanhotosPendentes = () => {
 
       setToast({
         type: 'success',
-        message: 'Retornos salvos com sucesso',
+        message: `Pendência repassada para ${RESPONSAVEL_CONFIG[nextOwner].label}`,
       });
     } catch (err) {
       setToast({
@@ -412,9 +488,68 @@ const EntregasCanhotosPendentes = () => {
     }
   };
 
+  const concluirPendencia = async (item) => {
+    const currentOwner = getPendenciaResponsavel(item);
+    const draft = drafts[item._id] || {};
+    const message = String(draft.retornoGeoMar || '').trim();
+    const pendingDocs = Array.isArray(item.missingDocumentsAtSubmit)
+      ? item.missingDocumentsAtSubmit
+      : [];
+
+    if (currentOwner !== 'geomar' || userPendenciaGroup !== 'geomar') {
+      setToast({
+        type: 'warning',
+        message: 'A conclusão fica disponível apenas para GeoMar quando a pendência estiver com ela.',
+      });
+      return;
+    }
+
+    if (pendingDocs.length > 0) {
+      setToast({
+        type: 'warning',
+        message: 'Ainda existem documentos pendentes para anexar antes da conclusão.',
+      });
+      return;
+    }
+
+    setSavingId(item._id);
+
+    try {
+      await adminService.concluirCanhotoPendencia(item._id, { mensagem: message });
+      setItems((prev) => prev.filter((row) => row._id !== item._id));
+      setDrafts((prev) => ({
+        ...prev,
+        [item._id]: {
+          retornoGeoMar: '',
+          retornoGeoLog: '',
+        },
+      }));
+      setToast({
+        type: 'success',
+        message: 'Pendência concluída pela GeoMar',
+      });
+    } catch (err) {
+      setToast({
+        type: 'error',
+        message: err.response?.data?.message || 'Erro ao concluir pendência',
+      });
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   const uploadDocumento = async (item, doc, files) => {
     const selected = Array.from(files || []);
     if (!selected.length) return;
+    const currentOwner = getPendenciaResponsavel(item);
+
+    if (currentOwner !== userPendenciaGroup) {
+      setToast({
+        type: 'warning',
+        message: `Esta pendência está com ${RESPONSAVEL_CONFIG[currentOwner].label}. Aguarde o repasse para anexar.`,
+      });
+      return;
+    }
 
     const uploadKey = `${item._id}:${doc}`;
     setUploadingDoc(uploadKey);
@@ -424,12 +559,8 @@ const EntregasCanhotosPendentes = () => {
       const updated = res.data?.delivery || {};
       const remaining = updated.missingDocumentsAtSubmit || [];
 
-      setItems((prev) => {
-        if (remaining.length === 0) {
-          return prev.filter((row) => row._id !== item._id);
-        }
-
-        return prev.map((row) =>
+      setItems((prev) =>
+        prev.map((row) =>
           row._id === item._id
             ? {
                 ...row,
@@ -437,14 +568,14 @@ const EntregasCanhotosPendentes = () => {
                 missingDocumentsAtSubmit: remaining,
               }
             : row
-        );
-      });
+        )
+      );
 
       setToast({
         type: 'success',
         message:
           remaining.length === 0
-            ? 'Todos os documentos foram anexados. Entrega removida da pendência.'
+            ? 'Todos os documentos foram anexados. Repasse para a GeoMar conferir e concluir.'
             : `${getDocumentLabel(doc, city)} anexado com sucesso`,
       });
     } catch (err) {
@@ -532,15 +663,15 @@ const EntregasCanhotosPendentes = () => {
               tone="amber"
             />
             <StatCard
-              label="Com retorno"
-              value={totalComRetorno}
-              icon={FaCheckCircle}
+              label="Com GeoMar"
+              value={totalComGeoMar}
+              icon={FaUser}
               tone="emerald"
             />
             <StatCard
-              label="Cidade"
-              value={String(city || '-').toUpperCase()}
-              icon={FaBuilding}
+              label="Com GeoLog"
+              value={totalComGeoLog}
+              icon={FaTruck}
               tone="blue"
             />
           </div>
@@ -577,6 +708,16 @@ const EntregasCanhotosPendentes = () => {
               const pendingDocs = item.missingDocumentsAtSubmit || [];
               const isSaving = savingId === item._id;
               const scheduleInfo = getScheduleInfo(item, city);
+              const currentOwner = getPendenciaResponsavel(item);
+              const currentConfig = RESPONSAVEL_CONFIG[currentOwner];
+              const CurrentIcon = currentConfig.icon;
+              const nextOwner = getNextResponsavel(currentOwner);
+              const nextConfig = RESPONSAVEL_CONFIG[nextOwner];
+              const isMyTurn = currentOwner === userPendenciaGroup;
+              const canConclude = isMyTurn && currentOwner === 'geomar' && pendingDocs.length === 0;
+              const history = Array.isArray(item.pendenciaHistorico)
+                ? item.pendenciaHistorico
+                : [];
 
               return (
                 <div
@@ -613,10 +754,19 @@ const EntregasCanhotosPendentes = () => {
                             )}
                           </div>
 
-                          <span className="shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-xs font-black border border-amber-200">
-                            <FaExclamationTriangle size={11} />
-                            {pendingDocs.length} pend.
-                          </span>
+                          <div className="shrink-0 flex flex-col items-end gap-2">
+                            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-xs font-black border border-amber-200">
+                              <FaExclamationTriangle size={11} />
+                              {pendingDocs.length} pend.
+                            </span>
+                            <span className={cn(
+                              'inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-black border',
+                              currentConfig.badge
+                            )}>
+                              <CurrentIcon size={11} />
+                              Com {currentConfig.label}
+                            </span>
+                          </div>
                         </div>
 
                         <div className="mt-5">
@@ -697,7 +847,12 @@ const EntregasCanhotosPendentes = () => {
                                 key={doc}
                                 doc={doc}
                                 city={city}
-                                disabled={uploadingDoc === `${item._id}:${doc}`}
+                                disabled={uploadingDoc === `${item._id}:${doc}` || !isMyTurn}
+                                disabledLabel={
+                                  !isMyTurn
+                                    ? `Com ${currentConfig.label}`
+                                    : undefined
+                                }
                                 onUpload={(files) => uploadDocumento(item, doc, files)}
                               />
                             ))}
@@ -707,32 +862,103 @@ const EntregasCanhotosPendentes = () => {
                         <div>
                           <SectionTitle
                             icon={FaRegCommentDots}
-                            title="Retornos operacionais"
-                            subtitle="Registre observações internas da operação"
+                            title="Passe e repasse"
+                            subtitle={`A pendência está com ${currentConfig.label}`}
                           />
 
-                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-4">
                             <ReturnPanel
-                              title="Retorno GeoMar"
-                              icon={FaUser}
-                              value={item.retornoGeoMar}
-                              draftValue={draft.retornoGeoMar}
+                              title={`Responder como ${currentConfig.label}`}
+                              icon={currentConfig.icon}
+                              value={item[currentConfig.field]}
+                              draftValue={draft[currentConfig.field]}
                               onChange={(e) =>
-                                updateDraft(item._id, 'retornoGeoMar', e.target.value)
+                                updateDraft(item._id, currentConfig.field, e.target.value)
                               }
-                              placeholder="Adicionar nova observação da GeoMar..."
+                              placeholder={
+                                isMyTurn
+                                  ? `Descreva a tratativa e repasse para ${nextConfig.label}...`
+                                  : `Aguardando repasse para ${RESPONSAVEL_CONFIG[userPendenciaGroup]?.label || 'seu perfil'}...`
+                              }
+                              disabled={!isMyTurn || isSaving}
+                              helper={
+                                isMyTurn
+                                  ? canConclude
+                                    ? 'Revise os anexos e conclua a pendência para remover da tela.'
+                                    : `Ao salvar, esta pendência sai da sua fila e vai para ${nextConfig.label}.`
+                                  : `Você consegue responder apenas quando a pendência estiver com ${RESPONSAVEL_CONFIG[userPendenciaGroup]?.label || 'seu perfil'}.`
+                              }
                             />
 
-                            <ReturnPanel
-                              title="Retorno GeoLog"
-                              icon={FaTruck}
-                              value={item.retornoGeoLog}
-                              draftValue={draft.retornoGeoLog}
-                              onChange={(e) =>
-                                updateDraft(item._id, 'retornoGeoLog', e.target.value)
-                              }
-                              placeholder="Adicionar nova observação da GeoLog..."
-                            />
+                            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                              <div className="flex items-center gap-2 mb-3">
+                                <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
+                                  <FaHistory size={14} />
+                                </div>
+                                <div>
+                                  <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-black">
+                                    Histórico
+                                  </p>
+                                  <h4 className="text-sm font-black text-slate-900">
+                                    Últimos repasses
+                                  </h4>
+                                </div>
+                              </div>
+
+                              {(item.retornoGeoMar || item.retornoGeoLog) && (
+                                <div className="mb-3 grid grid-cols-1 gap-2">
+                                  {item.retornoGeoMar && (
+                                    <div className="rounded-xl border border-cyan-100 bg-cyan-50/70 px-3 py-2.5">
+                                      <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-700 font-black mb-1">
+                                        GeoMar
+                                      </p>
+                                      <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed max-h-24 overflow-y-auto">
+                                        {item.retornoGeoMar}
+                                      </p>
+                                    </div>
+                                  )}
+                                  {item.retornoGeoLog && (
+                                    <div className="rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-2.5">
+                                      <p className="text-[10px] uppercase tracking-[0.16em] text-blue-700 font-black mb-1">
+                                        GeoLog
+                                      </p>
+                                      <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed max-h-24 overflow-y-auto">
+                                        {item.retornoGeoLog}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {history.length === 0 ? (
+                                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">
+                                  Nenhum repasse registrado ainda.
+                                </div>
+                              ) : (
+                                <div className="max-h-56 overflow-y-auto space-y-3 pr-1">
+                                  {history.slice().reverse().slice(0, 5).map((entry, index) => {
+                                    const from = RESPONSAVEL_CONFIG[entry.from]?.label || '-';
+                                    const to = RESPONSAVEL_CONFIG[entry.to]?.label || '-';
+                                    return (
+                                      <div key={`${entry.createdAt || index}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                          <span>{entry.action === 'documento_anexado' ? 'Documento' : `${from} para ${to}`}</span>
+                                          {entry.createdAt && <span>{formatarData(entry.createdAt, city)}</span>}
+                                        </div>
+                                        <p className="mt-1 text-sm font-semibold text-slate-700 whitespace-pre-wrap leading-relaxed">
+                                          {entry.message || '-'}
+                                        </p>
+                                        {entry.by && (
+                                          <p className="mt-1 text-xs text-slate-400">
+                                            por {entry.by}
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
 
@@ -751,14 +977,38 @@ const EntregasCanhotosPendentes = () => {
                             )}
                           </div>
 
-                          <button
-                            onClick={() => saveRetornos(item)}
-                            disabled={isSaving}
-                            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black transition disabled:opacity-60 shadow-sm"
-                          >
-                            <FaSave size={12} />
-                            {isSaving ? 'Salvando...' : 'Salvar retornos'}
-                          </button>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            {canConclude && (
+                              <button
+                                onClick={() => saveRetornos(item)}
+                                disabled={isSaving}
+                                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-slate-700 hover:bg-slate-800 text-white text-sm font-black transition disabled:opacity-60 shadow-sm"
+                              >
+                                <FaExchangeAlt size={12} />
+                                Repassar para GeoLog
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => canConclude ? concluirPendencia(item) : saveRetornos(item)}
+                              disabled={isSaving || !isMyTurn}
+                              className={cn(
+                                'inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-white text-sm font-black transition disabled:opacity-60 shadow-sm',
+                                canConclude
+                                  ? 'bg-emerald-600 hover:bg-emerald-700'
+                                  : isMyTurn ? currentConfig.button : 'bg-slate-400 cursor-not-allowed'
+                              )}
+                            >
+                              {isMyTurn ? (canConclude ? <FaCheckCircle size={12} /> : <FaExchangeAlt size={12} />) : <FaLock size={12} />}
+                              {isSaving
+                                ? canConclude ? 'Concluindo...' : 'Repassando...'
+                                : canConclude
+                                  ? 'Concluir pendência'
+                                  : isMyTurn
+                                  ? `Repassar para ${nextConfig.label}`
+                                  : `Aguardando ${currentConfig.label}`}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>

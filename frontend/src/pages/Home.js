@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/authContext';
-import { deliveryService } from '../services/authService';
+import { adminService, deliveryService } from '../services/authService';
 import { formatarDataApenasLocal, formatarHoraLocal } from '../utils/date';
 import Footer from '../components/Footer';
 import {
@@ -446,7 +446,7 @@ const DriverCard = ({ onClick, accentColor, accentDark, icon, title, description
 /* ═══════════════════════════════════════════════════════════
    MONITOR CARD (large — admin panels)
 ═══════════════════════════════════════════════════════════ */
-const MonitorCard = ({ onClick, disabled, accentColor, accentDark, icon, titleIcon, title, description, viewOnly, delay = 0 }) => (
+const MonitorCard = ({ onClick, disabled, accentColor, accentDark, icon, titleIcon, title, description, viewOnly, delay = 0, notificationCount = 0, notificationLabel = 'novo' }) => (
   <button
     onClick={onClick}
     disabled={disabled}
@@ -469,6 +469,23 @@ const MonitorCard = ({ onClick, disabled, accentColor, accentDark, icon, titleIc
       e.currentTarget.style.borderColor = `${accentColor}18`;
     }}
   >
+    {notificationCount > 0 && (
+      <div
+        className="absolute right-4 top-4 z-20 flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-black shadow-lg"
+        style={{
+          background: `linear-gradient(135deg,${accentColor},${accentDark || accentColor})`,
+          color: '#fff',
+          boxShadow: `0 10px 24px ${accentColor}45`,
+        }}
+      >
+        <span
+          className="h-2 w-2 rounded-full bg-white"
+          style={{ animation: 'pulse-dot 1.6s infinite' }}
+        />
+        {notificationCount} {notificationLabel}
+      </div>
+    )}
+
     <div
       className="relative overflow-hidden"
       style={{
@@ -678,6 +695,7 @@ const Home = () => {
   const [statsGeneral, setStatsGeneral]   = useState({ total:0, completed:0, inProgress:0, onTimePercentage:100 });
   const [loading,  setLoading]  = useState(false);
   const [now,      setNow]      = useState(new Date());
+  const [canhotosNoticeCount, setCanhotosNoticeCount] = useState(0);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60_000);
@@ -687,11 +705,57 @@ const Home = () => {
   const hasAccess      = (roles) => !!user?.role && roles.includes(user.role);
   const isViewOnly     = () => false; // Libera acesso total para geomar
   const canAccessAdmin = () => hasAccess(['manager','admin','geomar','gestor_contratado']);
+  const pendingGroup = user?.role === 'geomar' ? 'geomar' : user?.role === 'admin' ? 'geolog' : '';
+  const canhotosSeenKey = `canhotosPendentesSeenAt:${user?._id || user?.id || user?.username || user?.email || 'user'}:${user?.role || 'role'}:${localStorage.getItem('city') || 'manaus'}`;
+
+  const getPendingUpdatedAt = (item) => {
+    const history = Array.isArray(item.pendenciaHistorico) ? item.pendenciaHistorico : [];
+    const historyTimes = history
+      .map((entry) => new Date(entry.createdAt || 0).getTime())
+      .filter((time) => Number.isFinite(time));
+    return Math.max(
+      new Date(item.retornosPendenciaUpdatedAt || 0).getTime() || 0,
+      new Date(item.updatedAt || 0).getTime() || 0,
+      ...historyTimes,
+      0
+    );
+  };
+
+  const loadCanhotosNotice = async () => {
+    if (!pendingGroup || !hasAccess(['admin', 'geomar'])) {
+      setCanhotosNoticeCount(0);
+      return;
+    }
+
+    try {
+      const seenAt = Number(localStorage.getItem(canhotosSeenKey) || 0);
+      const res = await adminService.getCanhotosPendentes();
+      const deliveries = res.data?.deliveries || [];
+      const count = deliveries.filter((item) => (
+        String(item.pendenciaResponsavel || 'geolog').toLowerCase() === pendingGroup &&
+        getPendingUpdatedAt(item) > seenAt
+      )).length;
+      setCanhotosNoticeCount(count);
+    } catch (_) {
+      setCanhotosNoticeCount(0);
+    }
+  };
+
+  const openCanhotosPendentes = () => {
+    localStorage.setItem(canhotosSeenKey, String(Date.now()));
+    setCanhotosNoticeCount(0);
+    navigate('/entregas-canhotos-pendentes');
+  };
 
   useEffect(() => {
     if (user?.role === 'driver') loadStats();
     // eslint-disable-next-line
   }, [user]);
+
+  useEffect(() => {
+    loadCanhotosNotice();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingGroup, canhotosSeenKey]);
 
   const loadStats = async () => {
     setLoading(true);
@@ -1006,7 +1070,7 @@ const Home = () => {
               />
               {hasAccess(['admin','geomar']) && (
                 <MonitorCard
-                  onClick={() => navigate('/entregas-canhotos-pendentes')}
+                  onClick={openCanhotosPendentes}
                   disabled={false}
                   accentColor="#D97706"
                   accentDark="#92400E"
@@ -1016,6 +1080,8 @@ const Home = () => {
                   description="Acompanhe entregas finalizadas com documentos faltantes e registre os retornos GeoMar e GeoLog."
                   viewOnly={false}
                   delay={180}
+                  notificationCount={canhotosNoticeCount}
+                  notificationLabel={canhotosNoticeCount === 1 ? 'repasse' : 'repasses'}
                 />
               )}
               {hasAccess(['geomar']) && (

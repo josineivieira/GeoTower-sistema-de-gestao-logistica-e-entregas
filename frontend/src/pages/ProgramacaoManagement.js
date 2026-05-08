@@ -40,8 +40,8 @@ const ProgramacaoManagement = () => {
   const [syncDates, setSyncDates] = useState({ startDate: '', endDate: '' });
 
   const [formData, setFormData] = useState({
-    processo: '', recebedor: '', remetente: '', destinatario: '', container: '', dataAgendamento: '',
-    contratado: 'GEO', motorista: '', status: 'AGENDADO', observacoes: ''
+    processo: '', processoLog: '', recebedor: '', remetente: '', destinatario: '', container: '', dataAgendamento: '',
+    contratado: 'GEO', motorista: '', status: 'AGENDADO', observacoes: '', sentido: ''
   });
   const [motoristasList, setMotoristasList] = useState([]);
 
@@ -192,7 +192,20 @@ const ProgramacaoManagement = () => {
   };
 
   const resetForm = () => {
-    setFormData({ processo: '', recebedor: '', remetente: '', destinatario: '', container: '', dataAgendamento: '', contratado: 'GEO', motorista: '', status: 'AGENDADO', observacoes: '' });
+    setFormData({
+      processo: '',
+      processoLog: '',
+      recebedor: '',
+      remetente: '',
+      destinatario: '',
+      container: '',
+      dataAgendamento: '',
+      contratado: 'GEO',
+      motorista: '',
+      status: 'AGENDADO',
+      observacoes: '',
+      sentido: ''
+    });
     setEditingId(null);
   };
 
@@ -206,11 +219,15 @@ const ProgramacaoManagement = () => {
         if (dataAgendamento.length > 16) dataAgendamento = dataAgendamento.slice(0, 16);
       }
       setFormData({
-        processo: programacao.processo, recebedor: programacao.recebedor,
+        processo: programacao.processo,
+        processoLog: programacao.processoLog || '',
+        recebedor: programacao.recebedor,
         remetente: programacao.remetente || '', destinatario: programacao.destinatario || '',
         container: programacao.container || '', dataAgendamento,
         contratado: programacao.contratado, motorista: programacao.motorista || '',
-        status: normalizeProgramacaoStatus(programacao.status), observacoes: programacao.observacoes || ''
+        status: normalizeProgramacaoStatus(programacao.status),
+        observacoes: programacao.observacoes || '',
+        sentido: programacao.sentido || ''
       });
     } else { resetForm(); }
     setShowModal(true);
@@ -218,7 +235,14 @@ const ProgramacaoManagement = () => {
 
   const handleSave = async () => {
     // Libera operação para geomar
-    if (!formData.processo || !formData.recebedor || !formData.dataAgendamento || !formData.contratado) {
+    const clienteOperacional = getClientePorSentido(
+      formData.sentido,
+      formData.remetente,
+      formData.destinatario,
+      formData.recebedor
+    );
+
+    if (!formData.processo || !clienteOperacional || !formData.dataAgendamento || !formData.contratado) {
       showToast('Preencha todos os campos obrigatórios', 'error'); return;
     }
     try {
@@ -227,6 +251,9 @@ const ProgramacaoManagement = () => {
 
       const payload = {
         ...formData,
+        recebedor: clienteOperacional,
+        processoLog: formData.processoLog || '',
+        sentido: String(formData.sentido || '').trim().toUpperCase(),
         origem: city === 'itajai' ? 'ITAJAI' : 'MANAUS',
         estab: city === 'itajai' ? 'LSC' : 'LAM',
         motorista: formData.motorista || ''
@@ -917,7 +944,7 @@ const ProgramacaoManagement = () => {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: '#fff', borderRadius: 16, width: '100%', maxWidth: 560,
+              background: '#fff', borderRadius: 16, width: '100%', maxWidth: 760,
               boxShadow: '0 24px 80px rgba(0,0,0,.22)',
               display: 'flex', flexDirection: 'column', maxHeight: '92vh', overflow: 'hidden'
             }}
@@ -955,12 +982,18 @@ const ProgramacaoManagement = () => {
             {/* Modal Body */}
             <div style={{ padding: '24px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
                 <div>
                   <label style={labelStyle}>Processo <span style={{ color: '#ef4444' }}>*</span></label>
                   <input type="text" disabled={false} value={formData.processo}
                     onChange={e => setFormData({...formData, processo: e.target.value})}
                     placeholder="CAB42196" style={inputStyle(isGeoMar())} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Processo Log</label>
+                  <input type="text" disabled={false} value={formData.processoLog}
+                    onChange={e => setFormData({...formData, processoLog: e.target.value})}
+                    placeholder="Nr. do processo" style={inputStyle(isGeoMar())} />
                 </div>
                 <div>
                   <label style={labelStyle}>Container</label>
@@ -970,14 +1003,23 @@ const ProgramacaoManagement = () => {
                 </div>
               </div>
 
-              <div>
-                <label style={labelStyle}>Cliente operacional <span style={{ color: '#ef4444' }}>*</span></label>
-                <input type="text" disabled={false} value={formData.recebedor}
-                  onChange={e => setFormData({...formData, recebedor: e.target.value})}
-                  placeholder={getRecebedorPlaceholder(city)} style={inputStyle(isGeoMar())} />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+                <div>
+                  <label style={labelStyle}>Sentido</label>
+                  <select disabled={false} value={formData.sentido}
+                    onChange={e => setFormData({...formData, sentido: e.target.value})}
+                    style={{ ...inputStyle(isGeoMar()), cursor: isGeoMar() ? 'not-allowed' : 'pointer' }}>
+                    <option value="">Não informado</option>
+                    <option value="ORIGEM">Origem</option>
+                    <option value="DESTINO">Destino</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Cliente operacional <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input type="text" disabled={false} value={formData.recebedor}
+                    onChange={e => setFormData({...formData, recebedor: e.target.value})}
+                    placeholder={getRecebedorPlaceholder(city)} style={inputStyle(isGeoMar())} />
+                </div>
                 <div>
                   <label style={labelStyle}>Remetente</label>
                   <input type="text" disabled={false} value={formData.remetente}
@@ -992,14 +1034,13 @@ const ProgramacaoManagement = () => {
                 </div>
               </div>
 
-              <div>
-                <label style={labelStyle}>Data de Agendamento <span style={{ color: '#ef4444' }}>*</span></label>
-                <input type="datetime-local" disabled={false} value={formData.dataAgendamento}
-                  onChange={e => setFormData({...formData, dataAgendamento: e.target.value})}
-                  style={inputStyle(isGeoMar())} />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+                <div>
+                  <label style={labelStyle}>Data de Agendamento <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input type="datetime-local" disabled={false} value={formData.dataAgendamento}
+                    onChange={e => setFormData({...formData, dataAgendamento: e.target.value})}
+                    style={inputStyle(isGeoMar())} />
+                </div>
                 <div>
                   <label style={labelStyle}>Contratado <span style={{ color: '#ef4444' }}>*</span></label>
                   <select disabled={false} value={formData.contratado}
@@ -1015,7 +1056,14 @@ const ProgramacaoManagement = () => {
                     style={{ ...inputStyle(isGeoMar()), cursor: isGeoMar() ? 'not-allowed' : 'pointer' }}>
                     <option value="AGENDADO">Agendado</option>
                     <option value="A_CAMINHO_DO_CLIENTE">A caminho do cliente</option>
+                    <option value="CONTAINER_MONTADO">Container montado</option>
+                    <option value="AGUARDANDO_DESOVA">Aguardando desova/ovação</option>
+                    <option value="EM_DESOVA">Em desova/ovação</option>
+                    <option value="AGUARDANDO_ANEXO">Aguardando anexo</option>
+                    <option value="ANEXANDO_DOCUMENTOS_FINAIS">Anexando documentos finais</option>
                     <option value="ENTREGUE">Entregue</option>
+                    <option value="FINALIZADO">Finalizado</option>
+                    <option value="ENTREGUE_COM_PENDENCIA_CANHOTO">Entregue com pendência</option>
                     <option value="CANCELADO">Cancelado</option>
                   </select>
                 </div>

@@ -59,6 +59,50 @@ function onlyCanhotosPendentes(req, res, next) {
   next();
 }
 
+const PENDENCIA_LABELS = {
+  geolog: 'GeoLog',
+  geomar: 'GeoMar'
+};
+
+const getPendenciaGroupFromRole = (role = '') => {
+  if (role === 'geomar') return 'geomar';
+  if (role === 'admin') return 'geolog';
+  return '';
+};
+
+const normalizePendenciaResponsavel = (value) =>
+  ['geolog', 'geomar'].includes(String(value || '').toLowerCase())
+    ? String(value || '').toLowerCase()
+    : 'geolog';
+
+const getPendenciaStatus = (responsavel) =>
+  normalizePendenciaResponsavel(responsavel) === 'geomar'
+    ? 'AGUARDANDO_GEOMAR'
+    : 'AGUARDANDO_GEOLOG';
+
+const getPendenciaActorName = (user = {}) =>
+  user.name || user.username || user.email || 'unknown';
+
+const ensurePendenciaTurn = (delivery, req, res) => {
+  const actorGroup = getPendenciaGroupFromRole(req.user?.role);
+  const current = normalizePendenciaResponsavel(delivery.pendenciaResponsavel);
+
+  if (!actorGroup) {
+    res.status(403).json({ message: 'Perfil sem permissao para responder pendencias' });
+    return null;
+  }
+
+  if (current !== actorGroup) {
+    res.status(409).json({
+      message: `Esta pendencia esta com ${PENDENCIA_LABELS[current]}. Aguarde o repasse para ${PENDENCIA_LABELS[actorGroup]}.`,
+      pendenciaResponsavel: current
+    });
+    return null;
+  }
+
+  return { actorGroup, current };
+};
+
 const cleanLookupKey = (value) => {
   if (value === null || value === undefined) return '';
   return value.toString().replace(/^#/, '').trim().toUpperCase();
@@ -142,11 +186,29 @@ router.get("/canhotos-pendentes", auth, onlyCanhotosPendentes, async (req, res) 
     const Delivery = require('../models/Delivery');
     const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
 
+    const openPendenciaFilter = {
+      $or: [
+        { missingDocumentsAtSubmit: { $exists: true, $ne: [] } },
+        { pendenciaStatus: { $in: ['AGUARDANDO_GEOLOG', 'AGUARDANDO_GEOMAR'] } }
+      ]
+    };
+
     const deliveries = await Delivery.find({
       cityCode: city,
       isCanceled: { $ne: true },
-      status: { $in: ['FINALIZADO', 'ENTREGUE', 'submitted', 'ENTREGUE_COM_PENDENCIA_CANHOTO'] },
-      missingDocumentsAtSubmit: { $exists: true, $ne: [] }
+      status: {
+        $in: [
+          'submitted',
+          'ANEXANDO_DOCUMENTOS_FINAIS',
+          'SAINDO_CLIENTE',
+          'RETORNANDO_PORTO',
+          'CHEGOU_PORTO',
+          'FINALIZADO',
+          'ENTREGUE',
+          'ENTREGUE_COM_PENDENCIA_CANHOTO'
+        ]
+      },
+      ...openPendenciaFilter
     }).sort({ updatedAt: -1, submittedAt: -1, createdAt: -1 }).lean();
 
     const normalizedDeliveries = deliveries.map((delivery) => normalizeDeliveryForResponse(delivery));
@@ -224,6 +286,9 @@ router.get("/canhotos-pendentes", auth, onlyCanhotosPendentes, async (req, res) 
         sentido: prog?.sentido || normalized.sentido || '',
         retornoGeoMar: normalized.retornoGeoMar || '',
         retornoGeoLog: normalized.retornoGeoLog || '',
+        pendenciaResponsavel: normalizePendenciaResponsavel(normalized.pendenciaResponsavel),
+        pendenciaStatus: normalized.pendenciaStatus || getPendenciaStatus(normalized.pendenciaResponsavel),
+        pendenciaHistorico: Array.isArray(normalized.pendenciaHistorico) ? normalized.pendenciaHistorico : [],
         retornosPendenciaUpdatedAt: normalized.retornosPendenciaUpdatedAt || null,
         retornosPendenciaUpdatedBy: normalized.retornosPendenciaUpdatedBy || ''
       };
@@ -251,6 +316,9 @@ router.post("/canhotos-pendentes/:id/documentos/:documentType", auth, onlyCanhot
     if (delivery.cityCode !== city) {
       return res.status(403).json({ message: 'Acesso negado - dados de outra cidade' });
     }
+    const turn = ensurePendenciaTurn(delivery, req, res);
+    if (!turn) return;
+
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: 'Nenhum arquivo enviado' });
     }
@@ -329,6 +397,25 @@ router.post("/canhotos-pendentes/:id/documentos/:documentType", auth, onlyCanhot
     if (Array.isArray(delivery.documentCorrectionLog)) {
       delivery.documentCorrectionLog = delivery.documentCorrectionLog.filter((log) => log.documentType !== documentType);
     }
+
+    const editor = getPendenciaActorName(req.user);
+    delivery.pendenciaResponsavel = normalizePendenciaResponsavel(delivery.pendenciaResponsavel);
+    delivery.pendenciaStatus = getPendenciaStatus(delivery.pendenciaResponsavel);
+    delivery.pendenciaHistorico = Array.isArray(delivery.pendenciaHistorico)
+      ? delivery.pendenciaHistorico
+      : [];
+    delivery.pendenciaHistorico.push({
+      from: turn.actorGroup,
+      to: turn.actorGroup,
+      by: editor,
+      role: req.user?.role || '',
+      message: `Anexou ${baseName}`,
+      action: 'documento_anexado',
+      createdAt: new Date()
+    });
+    delivery.retornosPendenciaUpdatedAt = new Date();
+    delivery.retornosPendenciaUpdatedBy = editor;
+
     await delivery.save();
 
     return res.json({ success: true, delivery: normalizeDeliveryForResponse(delivery.toObject()) });
@@ -345,17 +432,19 @@ router.put("/canhotos-pendentes/:id/retornos", auth, onlyCanhotosPendentes, asyn
   try {
     const city = req.city || 'manaus';
     const Delivery = require('../models/Delivery');
-    const { retornoGeoMar, retornoGeoLog } = req.body;
+    const { retornoGeoMar, retornoGeoLog, mensagem, repassarPara } = req.body;
 
     const delivery = await Delivery.findById(req.params.id);
     if (!delivery) return res.status(404).json({ message: 'Entrega nao encontrada' });
     if (delivery.cityCode !== city) {
       return res.status(403).json({ message: 'Acesso negado - dados de outra cidade' });
     }
+    const turn = ensurePendenciaTurn(delivery, req, res);
+    if (!turn) return;
 
-    const editor = req.user?.name || req.user?.username || req.user?.email || 'unknown';
+    const editor = getPendenciaActorName(req.user);
     const now = new Date();
-    const appendRetorno = (current, next, label) => {
+    const appendRetorno = (current, next) => {
       const text = String(next || '').trim();
       if (!text) return current || '';
       const stamp = now.toLocaleString('pt-BR');
@@ -363,12 +452,45 @@ router.put("/canhotos-pendentes/:id/retornos", auth, onlyCanhotosPendentes, asyn
       return [String(current || '').trim(), entry].filter(Boolean).join('\n\n');
     };
 
-    if (retornoGeoMar !== undefined) {
-      delivery.retornoGeoMar = appendRetorno(delivery.retornoGeoMar, retornoGeoMar, 'GeoMar');
+    const current = turn.actorGroup;
+    const nextOwner = normalizePendenciaResponsavel(
+      repassarPara || (current === 'geolog' ? 'geomar' : 'geolog')
+    );
+
+    if (nextOwner === current) {
+      return res.status(400).json({ message: 'Selecione o outro setor para repassar a pendencia' });
     }
-    if (retornoGeoLog !== undefined) {
-      delivery.retornoGeoLog = appendRetorno(delivery.retornoGeoLog, retornoGeoLog, 'GeoLog');
+
+    const text = String(
+      mensagem ||
+      (current === 'geomar' ? retornoGeoMar : retornoGeoLog) ||
+      ''
+    ).trim();
+
+    if (!text) {
+      return res.status(400).json({ message: 'Digite uma observacao antes de repassar' });
     }
+
+    if (current === 'geomar') {
+      delivery.retornoGeoMar = appendRetorno(delivery.retornoGeoMar, text);
+    } else {
+      delivery.retornoGeoLog = appendRetorno(delivery.retornoGeoLog, text);
+    }
+
+    delivery.pendenciaResponsavel = nextOwner;
+    delivery.pendenciaStatus = getPendenciaStatus(nextOwner);
+    delivery.pendenciaHistorico = Array.isArray(delivery.pendenciaHistorico)
+      ? delivery.pendenciaHistorico
+      : [];
+    delivery.pendenciaHistorico.push({
+      from: current,
+      to: nextOwner,
+      by: editor,
+      role: req.user?.role || '',
+      message: text,
+      action: 'repasse',
+      createdAt: now
+    });
     delivery.retornosPendenciaUpdatedAt = now;
     delivery.retornosPendenciaUpdatedBy = editor;
     await delivery.save();
@@ -377,6 +499,74 @@ router.put("/canhotos-pendentes/:id/retornos", auth, onlyCanhotosPendentes, asyn
   } catch (err) {
     console.error('[CANHOTOS_PENDENTES] Erro ao atualizar retornos:', err);
     return res.status(500).json({ message: 'Erro ao atualizar retornos' });
+  }
+});
+
+/**
+ * PUT /api/admin/canhotos-pendentes/:id/concluir
+ * GeoMar conclui a pendencia depois de conferir os documentos anexados.
+ */
+router.put("/canhotos-pendentes/:id/concluir", auth, onlyCanhotosPendentes, async (req, res) => {
+  try {
+    const city = req.city || 'manaus';
+    const Delivery = require('../models/Delivery');
+    const { mensagem } = req.body || {};
+
+    const delivery = await Delivery.findById(req.params.id);
+    if (!delivery) return res.status(404).json({ message: 'Entrega nao encontrada' });
+    if (delivery.cityCode !== city) {
+      return res.status(403).json({ message: 'Acesso negado - dados de outra cidade' });
+    }
+
+    const turn = ensurePendenciaTurn(delivery, req, res);
+    if (!turn) return;
+
+    if (turn.actorGroup !== 'geomar') {
+      return res.status(403).json({ message: 'Somente GeoMar pode concluir a pendencia documental' });
+    }
+
+    const missing = Array.isArray(delivery.missingDocumentsAtSubmit)
+      ? delivery.missingDocumentsAtSubmit
+      : [];
+    if (missing.length > 0) {
+      return res.status(400).json({ message: 'Ainda existem documentos pendentes para anexar' });
+    }
+
+    const editor = getPendenciaActorName(req.user);
+    const now = new Date();
+    const text = String(mensagem || '').trim();
+
+    if (text) {
+      const stamp = now.toLocaleString('pt-BR');
+      const entry = `[${stamp}] ${editor}: ${text}`;
+      delivery.retornoGeoMar = [String(delivery.retornoGeoMar || '').trim(), entry]
+        .filter(Boolean)
+        .join('\n\n');
+    }
+
+    delivery.pendenciaResponsavel = 'geomar';
+    delivery.pendenciaStatus = 'RESOLVIDA';
+    delivery.pendenciaHistorico = Array.isArray(delivery.pendenciaHistorico)
+      ? delivery.pendenciaHistorico
+      : [];
+    delivery.pendenciaHistorico.push({
+      from: 'geomar',
+      to: 'geomar',
+      by: editor,
+      role: req.user?.role || '',
+      message: text || 'Pendencia documental conferida e concluida',
+      action: 'conclusao',
+      createdAt: now
+    });
+    delivery.retornosPendenciaUpdatedAt = now;
+    delivery.retornosPendenciaUpdatedBy = editor;
+
+    await delivery.save();
+
+    return res.json({ success: true, delivery: normalizeDeliveryForResponse(delivery.toObject()) });
+  } catch (err) {
+    console.error('[CANHOTOS_PENDENTES] Erro ao concluir pendencia:', err);
+    return res.status(500).json({ message: 'Erro ao concluir pendencia' });
   }
 });
 /**

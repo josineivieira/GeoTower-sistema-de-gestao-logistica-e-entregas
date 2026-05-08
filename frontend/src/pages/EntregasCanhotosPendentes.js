@@ -58,7 +58,7 @@ const SectionTitle = ({ icon: Icon, title, subtitle }) => (
   </div>
 );
 
-const StatCard = ({ label, value, icon: Icon, tone = 'slate' }) => {
+const StatCard = ({ label, value, icon: Icon, tone = 'slate', active = false, onClick }) => {
   const styles = {
     slate: {
       wrap: 'border-slate-200 bg-white',
@@ -87,12 +87,19 @@ const StatCard = ({ label, value, icon: Icon, tone = 'slate' }) => {
   };
 
   const current = styles[tone] || styles.slate;
+  const Component = onClick ? 'button' : 'div';
 
   return (
-    <div className={cn(
-      'rounded-2xl border p-4 shadow-sm transition hover:shadow-md',
-      current.wrap
-    )}>
+    <Component
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      className={cn(
+        'w-full text-left rounded-2xl border p-4 shadow-sm transition hover:shadow-md',
+        onClick && 'cursor-pointer hover:-translate-y-0.5',
+        active && 'ring-4 ring-slate-300/50 shadow-md',
+        current.wrap
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className={cn(
@@ -112,7 +119,7 @@ const StatCard = ({ label, value, icon: Icon, tone = 'slate' }) => {
           <Icon size={16} />
         </div>
       </div>
-    </div>
+    </Component>
   );
 };
 
@@ -334,6 +341,7 @@ const EntregasCanhotosPendentes = () => {
   const [uploadingDoc, setUploadingDoc] = useState(null);
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState('');
+  const [ownerFilter, setOwnerFilter] = useState('all');
 
   const loadPendencias = async () => {
     setLoading(true);
@@ -369,10 +377,14 @@ const EntregasCanhotosPendentes = () => {
 
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return items;
+    return items.filter((item) => {
+      if (ownerFilter !== 'all' && getPendenciaResponsavel(item) !== ownerFilter) {
+        return false;
+      }
 
-    return items.filter((item) =>
-      [
+      if (!term) return true;
+
+      return [
         item.processoCAB,
         item.processoLog,
         item.deliveryNumber,
@@ -382,9 +394,13 @@ const EntregasCanhotosPendentes = () => {
         item.recebedor,
         item.retornoGeoMar,
         item.retornoGeoLog,
-      ].some((value) => String(value || '').toLowerCase().includes(term))
-    );
-  }, [items, search]);
+      ].some((value) => String(value || '').toLowerCase().includes(term));
+    });
+  }, [items, ownerFilter, search]);
+
+  const toggleOwnerFilter = (owner) => {
+    setOwnerFilter((current) => current === owner ? 'all' : owner);
+  };
 
   const totalDocs = items.reduce((sum, item) => (
     sum + (Array.isArray(item.missingDocumentsAtSubmit) ? item.missingDocumentsAtSubmit.length : 0)
@@ -655,6 +671,8 @@ const EntregasCanhotosPendentes = () => {
               value={items.length}
               icon={FaClipboardList}
               tone="slate"
+              active={ownerFilter === 'all'}
+              onClick={() => setOwnerFilter('all')}
             />
             <StatCard
               label="Documentos pendentes"
@@ -667,12 +685,16 @@ const EntregasCanhotosPendentes = () => {
               value={totalComGeoMar}
               icon={FaUser}
               tone="emerald"
+              active={ownerFilter === 'geomar'}
+              onClick={() => toggleOwnerFilter('geomar')}
             />
             <StatCard
               label="Com GeoLog"
               value={totalComGeoLog}
               icon={FaTruck}
               tone="blue"
+              active={ownerFilter === 'geolog'}
+              onClick={() => toggleOwnerFilter('geolog')}
             />
           </div>
         </div>
@@ -905,31 +927,6 @@ const EntregasCanhotosPendentes = () => {
                                 </div>
                               </div>
 
-                              {(item.retornoGeoMar || item.retornoGeoLog) && (
-                                <div className="mb-3 grid grid-cols-1 gap-2">
-                                  {item.retornoGeoMar && (
-                                    <div className="rounded-xl border border-cyan-100 bg-cyan-50/70 px-3 py-2.5">
-                                      <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-700 font-black mb-1">
-                                        GeoMar
-                                      </p>
-                                      <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed max-h-24 overflow-y-auto">
-                                        {item.retornoGeoMar}
-                                      </p>
-                                    </div>
-                                  )}
-                                  {item.retornoGeoLog && (
-                                    <div className="rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-2.5">
-                                      <p className="text-[10px] uppercase tracking-[0.16em] text-blue-700 font-black mb-1">
-                                        GeoLog
-                                      </p>
-                                      <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed max-h-24 overflow-y-auto">
-                                        {item.retornoGeoLog}
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
                               {history.length === 0 ? (
                                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">
                                   Nenhum repasse registrado ainda.
@@ -939,10 +936,18 @@ const EntregasCanhotosPendentes = () => {
                                   {history.slice().reverse().slice(0, 5).map((entry, index) => {
                                     const from = RESPONSAVEL_CONFIG[entry.from]?.label || '-';
                                     const to = RESPONSAVEL_CONFIG[entry.to]?.label || '-';
+                                    const titleColor = entry.from === 'geomar' || entry.to === 'geomar'
+                                      ? 'text-cyan-700'
+                                      : entry.from === 'geolog' || entry.to === 'geolog'
+                                        ? 'text-blue-700'
+                                        : 'text-slate-500';
+                                    const titleText = entry.action === 'documento_anexado'
+                                      ? 'Documento'
+                                      : `${from} para ${to}`;
                                     return (
                                       <div key={`${entry.createdAt || index}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                                          <span>{entry.action === 'documento_anexado' ? 'Documento' : `${from} para ${to}`}</span>
+                                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em]">
+                                          <span className={titleColor}>{titleText}</span>
                                           {entry.createdAt && <span>{formatarData(entry.createdAt, city)}</span>}
                                         </div>
                                         <p className="mt-1 text-sm font-semibold text-slate-700 whitespace-pre-wrap leading-relaxed">

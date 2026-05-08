@@ -164,7 +164,7 @@ function AppContent() {
       <Route
         path="/entregas-canhotos-pendentes"
         element={
-          <PrivateRoute allowedRoles={[ 'admin', 'geomar' ]}>
+          <PrivateRoute allowedRoles={[ 'admin', 'geomar', 'manager' ]}>
             <AppLayout>
               <EntregasCanhotosPendentes />
             </AppLayout>

@@ -1068,7 +1068,7 @@ const Home = () => {
                 viewOnly={false}
                 delay={120}
               />
-              {hasAccess(['admin','geomar']) && (
+              {hasAccess(['admin','geomar','manager']) && (
                 <MonitorCard
                   onClick={openCanhotosPendentes}
                   disabled={false}
@@ -1078,7 +1078,7 @@ const Home = () => {
                   titleIcon={<FaClipboardList />}
                   title="Canhotos Pendentes"
                   description="Acompanhe entregas finalizadas com documentos faltantes e registre os retornos GeoMar e GeoLog."
-                  viewOnly={false}
+                  viewOnly={hasAccess(['manager'])}
                   delay={180}
                   notificationCount={canhotosNoticeCount}
                   notificationLabel={canhotosNoticeCount === 1 ? 'repasse' : 'repasses'}

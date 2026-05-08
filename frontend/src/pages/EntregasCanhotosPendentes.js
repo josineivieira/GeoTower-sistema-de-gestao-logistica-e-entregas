@@ -333,6 +333,7 @@ const EntregasCanhotosPendentes = () => {
   const { city } = useCity();
   const { user } = useAuth();
   const userPendenciaGroup = getUserPendenciaGroup(user?.role);
+  const isManagerViewOnly = user?.role === 'manager';
 
   const [items, setItems] = useState([]);
   const [drafts, setDrafts] = useState({});
@@ -341,7 +342,7 @@ const EntregasCanhotosPendentes = () => {
   const [uploadingDoc, setUploadingDoc] = useState(null);
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState('');
-  const [ownerFilter, setOwnerFilter] = useState(userPendenciaGroup || 'geolog');
+  const [ownerFilter, setOwnerFilter] = useState(userPendenciaGroup || 'geomar');
 
   const loadPendencias = async () => {
     setLoading(true);
@@ -399,7 +400,7 @@ const EntregasCanhotosPendentes = () => {
   }, [items, ownerFilter, search]);
 
   useEffect(() => {
-    setOwnerFilter(userPendenciaGroup || 'geolog');
+    setOwnerFilter(userPendenciaGroup || 'geomar');
   }, [userPendenciaGroup]);
 
   const totalComGeoMar = items.filter(
@@ -717,7 +718,7 @@ const EntregasCanhotosPendentes = () => {
               const CurrentIcon = currentConfig.icon;
               const nextOwner = getNextResponsavel(currentOwner);
               const nextConfig = RESPONSAVEL_CONFIG[nextOwner];
-              const isMyTurn = currentOwner === userPendenciaGroup;
+              const isMyTurn = !isManagerViewOnly && currentOwner === userPendenciaGroup;
               const canConclude = isMyTurn && currentOwner === 'geomar' && pendingDocs.length === 0;
               const history = Array.isArray(item.pendenciaHistorico)
                 ? item.pendenciaHistorico
@@ -882,7 +883,9 @@ const EntregasCanhotosPendentes = () => {
                               placeholder={
                                 isMyTurn
                                   ? `Descreva a tratativa e repasse para ${nextConfig.label}...`
-                                  : `Aguardando repasse para ${RESPONSAVEL_CONFIG[userPendenciaGroup]?.label || 'seu perfil'}...`
+                                  : isManagerViewOnly
+                                    ? 'Modo visualização para gerente.'
+                                    : `Aguardando repasse para ${RESPONSAVEL_CONFIG[userPendenciaGroup]?.label || 'seu perfil'}...`
                               }
                               disabled={!isMyTurn || isSaving}
                               helper={
@@ -890,7 +893,9 @@ const EntregasCanhotosPendentes = () => {
                                   ? canConclude
                                     ? 'Revise os anexos e conclua a pendência para remover da tela.'
                                     : `Ao salvar, esta pendência sai da sua fila e vai para ${nextConfig.label}.`
-                                  : `Você consegue responder apenas quando a pendência estiver com ${RESPONSAVEL_CONFIG[userPendenciaGroup]?.label || 'seu perfil'}.`
+                                  : isManagerViewOnly
+                                    ? 'Perfil gerente acompanha a pendência sem alterar o fluxo.'
+                                    : `Você consegue responder apenas quando a pendência estiver com ${RESPONSAVEL_CONFIG[userPendenciaGroup]?.label || 'seu perfil'}.`
                               }
                             />
 

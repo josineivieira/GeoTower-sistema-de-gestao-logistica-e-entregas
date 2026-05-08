@@ -53,7 +53,7 @@ function onlyAdmin(req, res, next) {
 
 function onlyCanhotosPendentes(req, res, next) {
   const role = req.user?.role || "operacao";
-  if (role !== "admin" && role !== "geomar") {
+  if (role !== "admin" && role !== "geomar" && role !== "manager") {
     return res.status(403).json({ message: "Sem permissao" });
   }
   next();

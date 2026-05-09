@@ -4,7 +4,7 @@ import { useCity } from '../contexts/CityContext';
 import { formatarAgendamento } from '../utils/date';
 import {
   FaArrowLeft, FaDownload, FaFilter, FaSync, FaChartBar,
-  FaTruck, FaBoxes, FaCalendarAlt, FaLayerGroup
+  FaTruck, FaBoxes, FaCalendarAlt
 } from 'react-icons/fa';
 import Toast from '../components/Toast';
 import api from '../services/api';
@@ -23,9 +23,7 @@ const RelatorioContratado = () => {
   const [dados, setDados] = useState([]);
   const [resumo, setResumo] = useState({
     totalEntregas: 0,
-    totalContratados: 0,
-    registrosOriginais: 0,
-    duplicadosAgrupados: 0
+    totalContratados: 0
   });
 
   const getAgendaDate = (d) => {
@@ -37,6 +35,13 @@ const RelatorioContratado = () => {
 
   const getAgendaLabel = () => (city === 'itajai' ? 'Dt Coleta' : 'Data Agendamento');
   const [resumoPorContratado, setResumoPorContratado] = useState({});
+
+  const parseDateInput = (value, endOfDay = false) => {
+    if (!value) return null;
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) return null;
+    return new Date(year, month - 1, day, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+  };
 
   const getNumeroProcesso = (d) => {
     return String(
@@ -133,8 +138,7 @@ const RelatorioContratado = () => {
 
     // Filtro por data início
     if (filtros.dataInicio) {
-      const dataInicio = new Date(filtros.dataInicio);
-      dataInicio.setHours(0, 0, 0, 0);
+      const dataInicio = parseDateInput(filtros.dataInicio);
       dadosFiltrados = dadosFiltrados.filter(d => {
         const dataEntrega = new Date(getAgendaDate(d));
         return dataEntrega >= dataInicio;
@@ -143,8 +147,7 @@ const RelatorioContratado = () => {
 
     // Filtro por data fim
     if (filtros.dataFim) {
-      const dataFim = new Date(filtros.dataFim);
-      dataFim.setHours(23, 59, 59, 999);
+      const dataFim = parseDateInput(filtros.dataFim, true);
       dadosFiltrados = dadosFiltrados.filter(d => {
         const dataEntrega = new Date(getAgendaDate(d));
         return dataEntrega <= dataFim;
@@ -170,8 +173,6 @@ const RelatorioContratado = () => {
         // Calcula resumo com dados filtrados
         const totalEntregas = dadosFiltrados.length;
         const totalContratados = new Set(dadosFiltrados.map(d => d.contratado || 'SEM CONTRATADO')).size;
-        const registrosOriginais = dadosBase.length;
-        const duplicadosAgrupados = Math.max(registrosOriginais - totalEntregas, 0);
 
         const resumoPorContratado = {};
         dadosFiltrados.forEach(d => {
@@ -185,9 +186,7 @@ const RelatorioContratado = () => {
         setDados(dadosFiltrados);
         setResumo({
           totalEntregas,
-          totalContratados,
-          registrosOriginais,
-          duplicadosAgrupados
+          totalContratados
         });
         setResumoPorContratado(resumoPorContratado);
         
@@ -212,7 +211,7 @@ const RelatorioContratado = () => {
       dataFim: ''
     });
     setDados([]);
-    setResumo({ totalEntregas: 0, totalContratados: 0, registrosOriginais: 0, duplicadosAgrupados: 0 });
+    setResumo({ totalEntregas: 0, totalContratados: 0 });
     setResumoPorContratado({});
   };
 
@@ -230,7 +229,6 @@ const RelatorioContratado = () => {
       'Container': d.containerNumero || '—',
       [labelAgenda]: getAgendaDate(d) ? formatarAgendamento(getAgendaDate(d)) : '—',
       'Motorista': d.motorista,
-      'Registros Agrupados': d.linhasAgrupadas || 1,
     }));
 
     exportToExcel(exportDados, 'Relatorio_Contratado');
@@ -279,8 +277,6 @@ const RelatorioContratado = () => {
       body: [
         ['Processos únicos', resumo.totalEntregas.toString()],
         ['Contratados', resumo.totalContratados.toString()],
-        ['Registros originais', resumo.registrosOriginais.toString()],
-        ['Repetidos agrupados', resumo.duplicadosAgrupados.toString()],
       ],
       margin: margin,
       didDrawPage: () => {},
@@ -301,13 +297,12 @@ const RelatorioContratado = () => {
       d.containerNumero || '—',
       getAgendaDate(d) ? formatarAgendamento(getAgendaDate(d)) : '—',
       d.motorista || '—',
-      String(d.linhasAgrupadas || 1),
     ]);
 
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Nr. do Processo', 'Contratado', 'Destinatário', 'Container', labelAgendaPDF, 'Motorista', 'Agrupados']],
+      head: [['Nr. do Processo', 'Contratado', 'Destinatário', 'Container', labelAgendaPDF, 'Motorista']],
       body: tableData,
       margin: margin,
       styles: { fontSize: 8 },
@@ -429,7 +424,7 @@ const RelatorioContratado = () => {
       {/* Resumo */}
       {dados.length > 0 && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {/* Card Total Entregas */}
             <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl p-5 border border-blue-200/50 shadow-sm">
               <div className="flex items-center gap-3 mb-2">
@@ -452,27 +447,6 @@ const RelatorioContratado = () => {
               <p className="text-3xl font-bold text-green-700">{resumo.totalContratados}</p>
             </div>
 
-            {/* Card Registros Originais */}
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-2xl p-5 border border-purple-200/50 shadow-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-lg bg-purple-500/15 flex items-center justify-center">
-                  <FaLayerGroup className="text-purple-600" size={18} />
-                </div>
-                <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide">Registros Originais</p>
-              </div>
-              <p className="text-3xl font-bold text-purple-700">{resumo.registrosOriginais}</p>
-            </div>
-
-            {/* Card Repetidos */}
-            <div className="bg-gradient-to-br from-red-50 to-red-100/50 rounded-2xl p-5 border border-red-200/50 shadow-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-lg bg-red-500/15 flex items-center justify-center">
-                  <FaLayerGroup className="text-red-600" size={18} />
-                </div>
-                <p className="text-xs font-semibold text-red-600 uppercase tracking-wide">Repetidos Agrupados</p>
-              </div>
-              <p className="text-3xl font-bold text-red-700">{resumo.duplicadosAgrupados}</p>
-            </div>
           </div>
 
           {/* Resumo por Contratado */}
@@ -530,7 +504,6 @@ const RelatorioContratado = () => {
                     <th className="px-4 py-3 text-left font-semibold text-slate-600">Container</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-600">{getAgendaLabel()}</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-600">Motorista</th>
-                    <th className="px-4 py-3 text-right font-semibold text-slate-600">Agrupados</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -542,7 +515,6 @@ const RelatorioContratado = () => {
                       <td className="px-4 py-3 text-slate-700">{d.containerNumero || '—'}</td>
                       <td className="px-4 py-3 text-slate-700">{formatDate(getAgendaDate(d))}</td>
                       <td className="px-4 py-3 text-slate-700">{d.motorista || '—'}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-700">{d.linhasAgrupadas || 1}</td>
                     </tr>
                   ))}
                 </tbody>

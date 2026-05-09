@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCity } from '../contexts/CityContext';
-import { formatarDataApenas, formatarAgendamento } from '../utils/date';
+import { formatarAgendamento } from '../utils/date';
 import {
   FaArrowLeft, FaDownload, FaFilter, FaSync, FaChartBar,
-  FaTruck, FaDollarSign, FaBoxes, FaCalendarAlt
+  FaTruck, FaBoxes, FaCalendarAlt, FaLayerGroup
 } from 'react-icons/fa';
 import Toast from '../components/Toast';
 import api from '../services/api';
@@ -23,8 +23,9 @@ const RelatorioContratado = () => {
   const [dados, setDados] = useState([]);
   const [resumo, setResumo] = useState({
     totalEntregas: 0,
-    totalFrete: 0,
-    mediaFrete: 0
+    totalContratados: 0,
+    registrosOriginais: 0,
+    duplicadosAgrupados: 0
   });
 
   const getAgendaDate = (d) => {
@@ -37,13 +38,60 @@ const RelatorioContratado = () => {
   const getAgendaLabel = () => (city === 'itajai' ? 'Dt Coleta' : 'Data Agendamento');
   const [resumoPorContratado, setResumoPorContratado] = useState({});
 
+  const getNumeroProcesso = (d) => {
+    return String(
+      d.nrProcesso ||
+      d['Nr. do processo'] ||
+      d['Nr do processo'] ||
+      d['Nro. do processo'] ||
+      d['Numero do processo'] ||
+      d.processo ||
+      d.geomaritima ||
+      d.codigo ||
+      ''
+    ).trim();
+  };
+
+  const getProcessoKey = (d) => {
+    const numeroProcesso = getNumeroProcesso(d).toUpperCase();
+    return numeroProcesso || `SEM_PROCESSO_${d._id || d.codigo || Math.random()}`;
+  };
+
+  const agruparPorProcesso = (lista) => {
+    const grupos = new Map();
+
+    lista.forEach((item) => {
+      const key = getProcessoKey(item);
+      const existente = grupos.get(key);
+
+      if (!existente) {
+        grupos.set(key, {
+          ...item,
+          numeroProcessoRelatorio: getNumeroProcesso(item),
+          linhasAgrupadas: 1
+        });
+        return;
+      }
+
+      const atualDate = getAgendaDate(item) ? new Date(getAgendaDate(item)).getTime() : 0;
+      const existenteDate = getAgendaDate(existente) ? new Date(getAgendaDate(existente)).getTime() : 0;
+      const base = atualDate > existenteDate ? item : existente;
+
+      grupos.set(key, {
+        ...base,
+        numeroProcessoRelatorio: getNumeroProcesso(base) || existente.numeroProcessoRelatorio,
+        linhasAgrupadas: (existente.linhasAgrupadas || 1) + 1
+      });
+    });
+
+    return Array.from(grupos.values());
+  };
+
   // Filtros
   const [filtros, setFiltros] = useState({
     contratado: '',
     dataInicio: '',
-    dataFim: '',
-    vlFreteMIN: '',
-    vlFreteMAX: ''
+    dataFim: ''
   });
 
   // Carrega a lista de contratados ao montar
@@ -103,18 +151,6 @@ const RelatorioContratado = () => {
       });
     }
 
-    // Filtro por valor mínimo
-    if (filtros.vlFreteMIN && filtros.vlFreteMIN !== '') {
-      const vlMin = parseFloat(filtros.vlFreteMIN);
-      dadosFiltrados = dadosFiltrados.filter(d => (d.vlFreteProcesso || 0) >= vlMin);
-    }
-
-    // Filtro por valor máximo
-    if (filtros.vlFreteMAX && filtros.vlFreteMAX !== '') {
-      const vlMax = parseFloat(filtros.vlFreteMAX);
-      dadosFiltrados = dadosFiltrados.filter(d => (d.vlFreteProcesso || 0) <= vlMax);
-    }
-
     return dadosFiltrados;
   };
 
@@ -127,29 +163,31 @@ const RelatorioContratado = () => {
 
       if (response.data.ok) {
         const todosOsDados = response.data.dados || [];
-        // Aplica filtros no frontend
-        const dadosFiltrados = aplicarFiltros(todosOsDados);
+        // Aplica filtros no frontend e conta cada Nr. do Processo uma unica vez
+        const dadosBase = aplicarFiltros(todosOsDados);
+        const dadosFiltrados = agruparPorProcesso(dadosBase);
 
         // Calcula resumo com dados filtrados
         const totalEntregas = dadosFiltrados.length;
-        const totalFrete = dadosFiltrados.reduce((sum, d) => sum + (d.vlFreteProcesso || 0), 0);
-        const mediaFrete = totalEntregas > 0 ? totalFrete / totalEntregas : 0;
+        const totalContratados = new Set(dadosFiltrados.map(d => d.contratado || 'SEM CONTRATADO')).size;
+        const registrosOriginais = dadosBase.length;
+        const duplicadosAgrupados = Math.max(registrosOriginais - totalEntregas, 0);
 
         const resumoPorContratado = {};
         dadosFiltrados.forEach(d => {
           const c = d.contratado || 'SEM CONTRATADO';
           if (!resumoPorContratado[c]) {
-            resumoPorContratado[c] = { quantidade: 0, totalFrete: 0 };
+            resumoPorContratado[c] = { quantidade: 0 };
           }
           resumoPorContratado[c].quantidade += 1;
-          resumoPorContratado[c].totalFrete += d.vlFreteProcesso || 0;
         });
 
         setDados(dadosFiltrados);
         setResumo({
           totalEntregas,
-          totalFrete,
-          mediaFrete: parseFloat(mediaFrete.toFixed(2))
+          totalContratados,
+          registrosOriginais,
+          duplicadosAgrupados
         });
         setResumoPorContratado(resumoPorContratado);
         
@@ -171,12 +209,10 @@ const RelatorioContratado = () => {
     setFiltros({
       contratado: '',
       dataInicio: '',
-      dataFim: '',
-      vlFreteMIN: '',
-      vlFreteMAX: ''
+      dataFim: ''
     });
     setDados([]);
-    setResumo({ totalEntregas: 0, totalFrete: 0, mediaFrete: 0 });
+    setResumo({ totalEntregas: 0, totalContratados: 0, registrosOriginais: 0, duplicadosAgrupados: 0 });
     setResumoPorContratado({});
   };
 
@@ -188,14 +224,13 @@ const RelatorioContratado = () => {
 
     const labelAgenda = getAgendaLabel();
     const exportDados = dados.map(d => ({
-      'Código': d.codigo,
+      'Nr. do Processo': d.numeroProcessoRelatorio || getNumeroProcesso(d),
       'Contratado': d.contratado,
       'Destinatário': d.destinatario,
       'Container': d.containerNumero || '—',
       [labelAgenda]: getAgendaDate(d) ? formatarAgendamento(getAgendaDate(d)) : '—',
       'Motorista': d.motorista,
-      'Vl. Frete Processo': d.vlFreteProcesso ? `R$ ${d.vlFreteProcesso.toFixed(2).replace('.', ',')}` : 'R$ 0,00',
-      'Vl. Pedágio': d.vlPedagio ? `R$ ${d.vlPedagio.toFixed(2).replace('.', ',')}` : 'R$ 0,00',
+      'Registros Agrupados': d.linhasAgrupadas || 1,
     }));
 
     exportToExcel(exportDados, 'Relatorio_Contratado');
@@ -209,7 +244,6 @@ const RelatorioContratado = () => {
     }
 
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 10;
 
     // Título
@@ -243,10 +277,10 @@ const RelatorioContratado = () => {
       startY: yPos,
       head: [['Métrica', 'Valor']],
       body: [
-        ['Total de Entregas', resumo.totalEntregas.toString()],
-        ['Total de Frete', `R$ ${parseFloat(resumo.totalFrete).toFixed(2)}`],
-        ['Média de Frete', `R$ ${parseFloat(resumo.mediaFrete).toFixed(2)}`],
-        ['Total de Contratados', Object.keys(resumoPorContratado).length.toString()],
+        ['Processos únicos', resumo.totalEntregas.toString()],
+        ['Contratados', resumo.totalContratados.toString()],
+        ['Registros originais', resumo.registrosOriginais.toString()],
+        ['Repetidos agrupados', resumo.duplicadosAgrupados.toString()],
       ],
       margin: margin,
       didDrawPage: () => {},
@@ -261,19 +295,19 @@ const RelatorioContratado = () => {
 
     const labelAgendaPDF = getAgendaLabel();
     const tableData = dados.map(d => [
-      d.codigo,
+      d.numeroProcessoRelatorio || getNumeroProcesso(d),
       d.contratado || '—',
       d.destinatario || '—',
       d.containerNumero || '—',
       getAgendaDate(d) ? formatarAgendamento(getAgendaDate(d)) : '—',
       d.motorista || '—',
-      `R$ ${(d.vlFreteProcesso || 0).toFixed(2)}`,
+      String(d.linhasAgrupadas || 1),
     ]);
 
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Código', 'Contratado', 'Destinatário', 'Container', getAgendaLabel(), 'Motorista', 'Vl. Frete']],
+      head: [['Nr. do Processo', 'Contratado', 'Destinatário', 'Container', labelAgendaPDF, 'Motorista', 'Agrupados']],
       body: tableData,
       margin: margin,
       styles: { fontSize: 8 },
@@ -282,11 +316,6 @@ const RelatorioContratado = () => {
 
     doc.save(`Relatorio_Contratado_${new Date().toISOString().split('T')[0]}.pdf`);
     showToast('Relatório exportado em PDF');
-  };
-
-  const formatCurrency = (value) => {
-    if (!value && value !== 0) return 'R$ 0,00';
-    return parseFloat(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
   const formatDate = (date) => {
@@ -329,7 +358,7 @@ const RelatorioContratado = () => {
           Filtros
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           {/* Contratado */}
           <div>
             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
@@ -376,37 +405,6 @@ const RelatorioContratado = () => {
             />
           </div>
 
-          {/* Valor Mínimo */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
-              <FaDollarSign size={12} className="inline mr-1" />
-              Vl. Mínimo
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={filtros.vlFreteMIN}
-              onChange={e => handleFiltroChange('vlFreteMIN', e.target.value)}
-              placeholder="0.00"
-              className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 transition"
-            />
-          </div>
-
-          {/* Valor Máximo */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
-              <FaDollarSign size={12} className="inline mr-1" />
-              Vl. Máximo
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={filtros.vlFreteMAX}
-              onChange={e => handleFiltroChange('vlFreteMAX', e.target.value)}
-              placeholder="0.00"
-              className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 transition"
-            />
-          </div>
         </div>
 
         {/* Botões */}
@@ -438,42 +436,42 @@ const RelatorioContratado = () => {
                 <div className="w-10 h-10 rounded-lg bg-blue-500/15 flex items-center justify-center">
                   <FaBoxes className="text-blue-600" size={18} />
                 </div>
-                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Total de Entregas</p>
+                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Processos Únicos</p>
               </div>
               <p className="text-3xl font-bold text-blue-700">{resumo.totalEntregas}</p>
             </div>
 
-            {/* Card Total Frete */}
+            {/* Card Contratados */}
             <div className="bg-gradient-to-br from-green-50 to-green-100/50 rounded-2xl p-5 border border-green-200/50 shadow-sm">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-lg bg-green-500/15 flex items-center justify-center">
-                  <FaDollarSign className="text-green-600" size={18} />
+                  <FaTruck className="text-green-600" size={18} />
                 </div>
-                <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Total Frete</p>
+                <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Contratados</p>
               </div>
-              <p className="text-3xl font-bold text-green-700">{formatCurrency(resumo.totalFrete)}</p>
+              <p className="text-3xl font-bold text-green-700">{resumo.totalContratados}</p>
             </div>
 
-            {/* Card Média Frete */}
+            {/* Card Registros Originais */}
             <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-2xl p-5 border border-purple-200/50 shadow-sm">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-lg bg-purple-500/15 flex items-center justify-center">
-                  <FaDollarSign className="text-purple-600" size={18} />
+                  <FaLayerGroup className="text-purple-600" size={18} />
                 </div>
-                <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide">Média Frete</p>
+                <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide">Registros Originais</p>
               </div>
-              <p className="text-3xl font-bold text-purple-700">{formatCurrency(resumo.mediaFrete)}</p>
+              <p className="text-3xl font-bold text-purple-700">{resumo.registrosOriginais}</p>
             </div>
 
-            {/* Card Contratados */}
+            {/* Card Repetidos */}
             <div className="bg-gradient-to-br from-red-50 to-red-100/50 rounded-2xl p-5 border border-red-200/50 shadow-sm">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-lg bg-red-500/15 flex items-center justify-center">
-                  <FaTruck className="text-red-600" size={18} />
+                  <FaLayerGroup className="text-red-600" size={18} />
                 </div>
-                <p className="text-xs font-semibold text-red-600 uppercase tracking-wide">Contratados</p>
+                <p className="text-xs font-semibold text-red-600 uppercase tracking-wide">Repetidos Agrupados</p>
               </div>
-              <p className="text-3xl font-bold text-red-700">{Object.keys(resumoPorContratado).length}</p>
+              <p className="text-3xl font-bold text-red-700">{resumo.duplicadosAgrupados}</p>
             </div>
           </div>
 
@@ -485,9 +483,7 @@ const RelatorioContratado = () => {
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/50">
                     <th className="px-4 py-3 text-left font-semibold text-slate-600">Contratado</th>
-                    <th className="px-4 py-3 text-right font-semibold text-slate-600">Quantidade</th>
-                    <th className="px-4 py-3 text-right font-semibold text-slate-600">Total Frete</th>
-                    <th className="px-4 py-3 text-right font-semibold text-slate-600">Média</th>
+                    <th className="px-4 py-3 text-right font-semibold text-slate-600">Processos Únicos</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -495,10 +491,6 @@ const RelatorioContratado = () => {
                     <tr key={contratado} className="border-b border-slate-100/50 hover:bg-blue-50/30 transition">
                       <td className="px-4 py-3 font-medium text-slate-900">{contratado}</td>
                       <td className="px-4 py-3 text-right text-slate-600 font-semibold">{resumo.quantidade}</td>
-                      <td className="px-4 py-3 text-right text-green-600 font-semibold">{formatCurrency(resumo.totalFrete)}</td>
-                      <td className="px-4 py-3 text-right text-purple-600 font-semibold">
-                        {formatCurrency(resumo.totalFrete / resumo.quantidade)}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -532,25 +524,25 @@ const RelatorioContratado = () => {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/50">
-                    <th className="px-4 py-3 text-left font-semibold text-slate-600">Código</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-600">Nr. do Processo</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-600">Contratado</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-600">Destinatário</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-600">Container</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-600">{getAgendaLabel()}</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-600">Motorista</th>
-                    <th className="px-4 py-3 text-right font-semibold text-slate-600">Vl. Frete</th>
+                    <th className="px-4 py-3 text-right font-semibold text-slate-600">Agrupados</th>
                   </tr>
                 </thead>
                 <tbody>
                   {dados.map((d, idx) => (
                     <tr key={idx} className="border-b border-slate-100/50 hover:bg-blue-50/30 transition">
-                      <td className="px-4 py-3 font-medium text-slate-900">{d.codigo}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">{d.numeroProcessoRelatorio || getNumeroProcesso(d) || '—'}</td>
                       <td className="px-4 py-3 text-slate-700">{d.contratado || '—'}</td>
                       <td className="px-4 py-3 text-slate-700">{d.destinatario || '—'}</td>
                       <td className="px-4 py-3 text-slate-700">{d.containerNumero || '—'}</td>
                       <td className="px-4 py-3 text-slate-700">{formatDate(getAgendaDate(d))}</td>
                       <td className="px-4 py-3 text-slate-700">{d.motorista || '—'}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-green-600">{formatCurrency(d.vlFreteProcesso)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-slate-700">{d.linhasAgrupadas || 1}</td>
                     </tr>
                   ))}
                 </tbody>

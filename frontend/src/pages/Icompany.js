@@ -38,6 +38,7 @@ const NEW_BASE_COLUMNS = [
   { label: 'Tipo frota', field: 'tipo' },
   { label: 'Cód. processo integração', field: 'codProcessoIntegracao' },
   { label: 'Nº Container', field: 'containerNumero' },
+  { label: 'Armador', field: 'armador' },
   { label: 'Placa tracao', field: 'tracao' },
   { label: 'RIC DE ABASTECIMENTO', field: 'ricAbastecimento', type: 'number' },
   { label: 'RIC PORTO DESTINO', field: 'ricPortoDestino', type: 'number' },

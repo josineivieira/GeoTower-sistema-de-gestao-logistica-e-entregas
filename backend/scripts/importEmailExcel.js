@@ -35,6 +35,17 @@ function normalizeText(value) {
   return text === "" ? null : text;
 }
 
+function firstWord(value) {
+  const text = normalizeText(value);
+  if (!text) return null;
+  return text.split(/\s+/)[0] || null;
+}
+
+function joinFirstWords(...values) {
+  const words = values.map(firstWord).filter(Boolean);
+  return words.length ? words.join(" ") : null;
+}
+
 function formatDateLocal(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -168,6 +179,17 @@ function mapToIcompany(row, index = 0) {
   const nrProcesso = normalizeText(firstValue(row, ["Nr. do processo"]));
   const container = normalizeText(firstValue(row, ["Nº Container", "Numero", "Número", "Container"]));
   const estab = normalizeText(firstValue(row, ["Estab."]));
+  const armadorResumo = joinFirstWords(
+    firstValue(row, ["Armador"]),
+    firstValue(row, [
+      "DescriÃ§Ã£o container",
+      "Descricao container",
+      "Descrição container",
+      "DescriÃ§Ã£o Container",
+      "Descricao Container",
+      "Descrição Container",
+    ])
+  );
   const cityInfo = getCityFromEstab(estab);
   if (!codigo) {
     const fallback = processo || nrProcesso || container || "SEM-IDENTIFICADOR";
@@ -233,6 +255,7 @@ function mapToIcompany(row, index = 0) {
     numero: container,
     observacao: normalizeText(firstValue(row, ["Observação", "Observacao"])),
     codProcessoIntegracao: normalizeText(firstValue(row, ["Cód. processo integração", "Cod. processo integracao"])),
+    armador: armadorResumo,
     ricAbastecimento: toNumber(firstValue(row, ["RIC DE ABASTECIMENTO"])),
     ricPortoDestino: toNumber(firstValue(row, ["RIC PORTO DESTINO"])),
     comprovanteDesova: toNumber(firstValue(row, ["COMPROVANTE DE DESOVA"])),

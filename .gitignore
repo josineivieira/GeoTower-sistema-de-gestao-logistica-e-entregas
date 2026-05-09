@@ -5,6 +5,7 @@ google-token.json
 node_modules
 # Generated artifacts and temporary files
 *.zip
+*.rar
 *.xls
 *.xlsx
 *.csv
@@ -29,11 +30,36 @@ frontend/.env.production
 
 # Build artifacts
 frontend/build/
+frontend/build.log
+frontend/build-log.txt
+frontend/src.rar
+frontend/src/tmp/
+output/
 
 # Backend data & uploads (don't commit large binaries)
 backend/uploads/
 backend/data/
 backend/src/uploads/
+backend/scripts/reports/
+persistent_uploads/
+
+# Local backups and generated responses
+*.bak
+*.bak_old
+*.bak.*
+deploy_response.json
+disk.json
+services.json
+ACESSO.html
+*_PATH*.bat
+*_PATH*.ps1
+CLOUDFLARE_*.bat
+DISABLE_MONGODB_RENDER.sh
+verify-*.js
+verify-*.sh
+debug-*.js
+debug_*.js
+test-*.js
 
 # Logs
 server.log

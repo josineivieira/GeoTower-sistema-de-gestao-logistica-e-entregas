@@ -235,7 +235,7 @@ exports.getDeliveryWithProgramacao = async (deliveryId) => {
       .populate({
         path: 'linkedProgramacaoId',
         model: 'ProgramacaoEntrega',
-        select: 'processo container dataAgendamento status dtColeta',
+        select: 'processo container armador dataAgendamento status dtColeta',
         options: { lean: true }
       })
       .lean();
@@ -287,7 +287,7 @@ exports.listProgramacoesWithDeliveries = async (options = {}) => {
     // Listar com paginação e population
     const programacoes = await ProgramacaoEntrega
       .find(query)
-      .select('_id processo container dataAgendamento status motorista contratado linkedDeliveryId')
+      .select('_id processo container armador dataAgendamento status motorista contratado linkedDeliveryId')
       .sort({ dataAgendamento: -1 })
       .skip(skip)
       .limit(limit)

@@ -253,6 +253,7 @@ const DeliveryModal = ({
   const containerNumber = Array.isArray(selectedDelivery.containerNumero)
     ? selectedDelivery.containerNumero.filter(Boolean).join(', ')
     : selectedDelivery.containerNumero || selectedDelivery.container || selectedDelivery.cntr || selectedDelivery.numeroContainer || '';
+  const armador = selectedDelivery.armador || selectedDelivery.linkedProgramacaoId?.armador || '';
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
@@ -266,6 +267,12 @@ const DeliveryModal = ({
                 <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-extrabold uppercase tracking-wide text-purple-50 shadow-sm">
                   <span className="text-purple-200">Container</span>
                   <span className="truncate">{containerNumber}</span>
+                </span>
+              )}
+              {armador && (
+                <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-amber-300/25 bg-amber-300/15 px-2.5 py-1 text-xs font-extrabold uppercase tracking-wide text-amber-50 shadow-sm">
+                  <span className="text-amber-200">Armador</span>
+                  <span className="truncate">{armador}</span>
                 </span>
               )}
             </h2>

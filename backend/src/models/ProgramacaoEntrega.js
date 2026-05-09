@@ -33,6 +33,11 @@ const programacaoEntregaSchema = new mongoose.Schema({
     trim: true,
     default: '-'
   },
+  armador: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   dataAgendamento: {
     type: String,
     required: [true, 'Data de agendamento é obrigatória'],
@@ -159,7 +164,7 @@ programacaoEntregaSchema.index({ ativo: 1, status: 1 });
 programacaoEntregaSchema.index({ dataAgendamento: 1, status: 1 });
 
 // Índices de text search
-programacaoEntregaSchema.index({ processo: 'text', container: 'text', recebedor: 'text', remetente: 'text', destinatario: 'text' });
+programacaoEntregaSchema.index({ processo: 'text', container: 'text', armador: 'text', recebedor: 'text', remetente: 'text', destinatario: 'text' });
 
 const ProgramacaoEntrega = mongoose.model('ProgramacaoEntrega', programacaoEntregaSchema);
 

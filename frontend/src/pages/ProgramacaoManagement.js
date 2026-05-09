@@ -41,7 +41,7 @@ const ProgramacaoManagement = () => {
 
   const [formData, setFormData] = useState({
     processo: '', processoLog: '', recebedor: '', remetente: '', destinatario: '', container: '', dataAgendamento: '',
-    contratado: 'GEO', motorista: '', status: 'AGENDADO', observacoes: '', sentido: ''
+    contratado: 'GEO', motorista: '', status: 'AGENDADO', observacoes: '', sentido: '', armador: ''
   });
   const [motoristasList, setMotoristasList] = useState([]);
 
@@ -146,6 +146,7 @@ const ProgramacaoManagement = () => {
         (p.remetente || '').toLowerCase().includes(term) ||
         (p.destinatario || '').toLowerCase().includes(term) ||
         (p.container || '').toLowerCase().includes(term) ||
+        (p.armador || '').toLowerCase().includes(term) ||
         (p.motorista || '').toLowerCase().includes(term)
       );
     }
@@ -199,6 +200,7 @@ const ProgramacaoManagement = () => {
       remetente: '',
       destinatario: '',
       container: '',
+      armador: '',
       dataAgendamento: '',
       contratado: 'GEO',
       motorista: '',
@@ -223,7 +225,7 @@ const ProgramacaoManagement = () => {
         processoLog: programacao.processoLog || '',
         recebedor: programacao.recebedor,
         remetente: programacao.remetente || '', destinatario: programacao.destinatario || '',
-        container: programacao.container || '', dataAgendamento,
+        container: programacao.container || '', armador: programacao.armador || '', dataAgendamento,
         contratado: programacao.contratado, motorista: programacao.motorista || '',
         status: normalizeProgramacaoStatus(programacao.status),
         observacoes: programacao.observacoes || '',
@@ -787,6 +789,7 @@ const ProgramacaoManagement = () => {
                       { key: 'remetente', label: 'Remetente' },
                       { key: 'destinatario', label: 'Recebedor' },
                       { key: 'container', label: 'Container' },
+                      { key: 'armador', label: 'Armador' },
                       { key: 'dataAgendamento', label: 'Data / Hora' },
                       { key: 'contratado', label: 'Contratado' },
                       { key: 'motorista', label: 'Motorista' },
@@ -847,6 +850,9 @@ const ProgramacaoManagement = () => {
                         </td>
                         <td style={{ padding: '14px 16px', fontSize: 13, color: '#374151', fontFamily: 'monospace' }}>
                           {prog.container}
+                        </td>
+                        <td style={{ padding: '14px 16px', fontSize: 13, color: '#374151', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          {prog.armador || <span style={{ color: '#d1d5db' }}>-</span>}
                         </td>
                         <td style={{ padding: '14px 16px', fontSize: 13, color: '#374151', whiteSpace: 'nowrap' }}>
                           {(() => {
@@ -1000,6 +1006,12 @@ const ProgramacaoManagement = () => {
                   <input type="text" disabled={false} value={formData.container}
                     onChange={e => setFormData({...formData, container: e.target.value})}
                     placeholder="UETU6510024" style={inputStyle(isGeoMar())} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Armador</label>
+                  <input type="text" disabled={false} value={formData.armador}
+                    onChange={e => setFormData({...formData, armador: e.target.value})}
+                    placeholder="MAERSK 40HC" style={inputStyle(isGeoMar())} />
                 </div>
               </div>
 

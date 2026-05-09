@@ -244,7 +244,7 @@ router.get("/canhotos-pendentes", auth, onlyCanhotosPendentes, async (req, res) 
 
     if (programacaoQuery.length > 0) {
       const programacoes = await ProgramacaoEntrega.find({ $or: programacaoQuery })
-        .select('processo processoLog container recebedor remetente destinatario contratado motorista dataAgendamento dtColeta sentido origem estab')
+        .select('processo processoLog container armador recebedor remetente destinatario contratado motorista dataAgendamento dtColeta sentido origem estab')
         .lean();
       programacoes.forEach((p) => {
         programacoesById.set(String(p._id), p);
@@ -276,6 +276,7 @@ router.get("/canhotos-pendentes", auth, onlyCanhotosPendentes, async (req, res) 
         processoCAB: prog?.processo || normalized.processoCAB || normalized.deliveryNumber,
         processoLog: prog?.processoLog || normalized.processoLog || '',
         container: prog?.container || normalized.container || normalized.deliveryNumber,
+        armador: prog?.armador || normalized.armador || '',
         recebedor: cliente || prog?.recebedor || normalized.recebedor || '',
         remetente: prog?.remetente || normalized.remetente || '',
         destinatario: prog?.destinatario || normalized.destinatario || '',
@@ -635,7 +636,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     applyProgramacaoCityFilter(progFilter, city);
     if (sentido && sentido !== 'all') progFilter.sentido = String(sentido || '').trim().toUpperCase();
     const programacoes = await ProgramacaoEntrega.find(progFilter)
-      .select('processo processoLog recebedor remetente destinatario container dataAgendamento dtColeta contratado motorista status createdAt observacoes origem estab sentido')
+      .select('processo processoLog recebedor remetente destinatario container armador dataAgendamento dtColeta contratado motorista status createdAt observacoes origem estab sentido')
       .lean();
     console.log('  ℹ️  Total de programações (' + city + '):', programacoes ? programacoes.length : 0);
 
@@ -664,7 +665,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     // antes de cruzar, carregar dados do Icompany para termos placas (tracao)
     const Icompany = require('../models/Icompany');
     const icompanyRecords = await getCached(`admin:icompany:${city}`, () => Icompany.find({})
-      .select('geomaritima processo codigo numero NUMERO NÚMERO container containerNumero tracao contratado entradaDistrito dtColeta remetente dtChegadaPlanta dtDevolucaoCNTR dtAgendamentoDescarga destinatario dtRetiraPD dtInicioDescarga dtFimDescarga sentido SENTIDO')
+      .select('geomaritima processo codigo numero NUMERO NÚMERO container containerNumero armador tracao contratado entradaDistrito dtColeta remetente dtChegadaPlanta dtDevolucaoCNTR dtAgendamentoDescarga destinatario dtRetiraPD dtInicioDescarga dtFimDescarga sentido SENTIDO')
       .lean());
     const ycByProcess = new Map();  // processo -> [array de registros yc]
     const ycByContainer = new Map(); // container -> [array de registros yc]
@@ -747,6 +748,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
         processoCAB: prog ? prog.processo || '' : delivery.processoCAB || '',
         processoLog: prog ? prog.processoLog || '' : delivery.processoLog || '',
         sentido: prog ? prog.sentido || '' : delivery.sentido || '',
+        armador: prog ? prog.armador || delivery.armador || '' : delivery.armador || yrec?.armador || '',
         placaIcompany: placaY,
         container: prog ? prog.container || delivery.container || '' : delivery.container || '',
         containerNumero: containerNumeros.length > 0 ? containerNumeros : (prog?.container ? [prog.container] : undefined),  // Array de containers
@@ -788,6 +790,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
           processoCAB: prog.processo || '',
           processoLog: prog.processoLog || '',
           sentido: prog.sentido || '',
+          armador: prog.armador || yrec2?.armador || '',
           placaIcompany: placaY2,
           container: prog.container || '',
           containerNumero: containerNumeros2.length > 0 ? containerNumeros2 : (prog.container ? [prog.container] : undefined),  // Array de containers
@@ -2645,7 +2648,7 @@ router.get("/programacoes", auth, async (req, res) => {
     const pageNum = Math.max(parseInt(page, 10) || 1, 1);
 
     const programacoes = await ProgramacaoEntrega.find(dbFilter)
-      .select('processo processoLog recebedor remetente destinatario container dataAgendamento dtColeta contratado motorista linkedDeliveryId status containerReturned observacoes origem estab sentido ativo createdAt updatedAt')
+      .select('processo processoLog recebedor remetente destinatario container armador dataAgendamento dtColeta contratado motorista linkedDeliveryId status containerReturned observacoes origem estab sentido ativo createdAt updatedAt')
       .sort({ dataAgendamento: -1 })
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum)
@@ -2781,7 +2784,7 @@ router.post("/programacoes", auth, managerOnly, async (req, res) => {
   try {
     const city = req.city || 'manaus';
     const cfg = cityConfigFromRequest(city);
-    const { processo, processoLog, recebedor, remetente, destinatario, container, dataAgendamento, dtColeta, contratado, motorista, status, observacoes, origem, estab, sentido } = req.body;
+    const { processo, processoLog, recebedor, remetente, destinatario, container, armador, dataAgendamento, dtColeta, contratado, motorista, status, observacoes, origem, estab, sentido } = req.body;
 
     console.log('[PROGRAMACAO] Criando:', { processo, recebedor, contratado, cidade: city, dtColeta });
 
@@ -2794,6 +2797,7 @@ router.post("/programacoes", auth, managerOnly, async (req, res) => {
       remetente: remetente || '',
       destinatario: destinatario || '',
       container,
+      armador: armador || '',
       dataAgendamento,
       dtColeta: dtColeta || (city === 'itajai' ? dataAgendamento : ''),
       contratado,
@@ -2832,7 +2836,7 @@ router.put("/programacoes/:id", auth, managerOnly, async (req, res) => {
   try {
     const city = req.city || 'manaus';
     const { id } = req.params;
-    const { processo, processoLog, recebedor, remetente, destinatario, container, dataAgendamento, dtColeta, contratado, motorista, status, observacoes, containerReturned, origem, estab, sentido } = req.body;
+    const { processo, processoLog, recebedor, remetente, destinatario, container, armador, dataAgendamento, dtColeta, contratado, motorista, status, observacoes, containerReturned, origem, estab, sentido } = req.body;
     // Get editor name from logged-in user
     const editorName = req.user?.name || req.user?.username || req.user?._id || 'Desconhecido';
 
@@ -2856,6 +2860,7 @@ router.put("/programacoes/:id", auth, managerOnly, async (req, res) => {
     if (remetente !== undefined) programacao.remetente = remetente;
     if (destinatario !== undefined) programacao.destinatario = destinatario;
     if (container !== undefined) programacao.container = container;
+    if (armador !== undefined) programacao.armador = armador;
     if (dataAgendamento !== undefined) programacao.dataAgendamento = dataAgendamento;
     if (dtColeta !== undefined) programacao.dtColeta = dtColeta;
     if (contratado !== undefined) programacao.contratado = contratado;
@@ -2969,7 +2974,7 @@ router.post("/programacoes/import", auth, managerOnly, async (req, res) => {
 
     for (const prog of programacoes) {
       try {
-        const { processo, processoLog, container, dataAgendamento, contratado, motorista, status, observacoes, origem, estab, sentido, remetente, destinatario } = prog;
+        const { processo, processoLog, container, armador, dataAgendamento, contratado, motorista, status, observacoes, origem, estab, sentido, remetente, destinatario } = prog;
         // Case-insensitive recebedor field
         const recebedorField = prog.recebedor || prog.Recebedor || prog.RECEBEDOR || '';
 
@@ -2992,6 +2997,7 @@ router.post("/programacoes/import", auth, managerOnly, async (req, res) => {
           remetente: remetente || '',
           destinatario: destinatario || '',
           container: container || '',
+          armador: armador || '',
           dataAgendamento,
           contratado,
           motorista: motorista || '',
@@ -3160,6 +3166,7 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
         remetente: remetenteValue,
         destinatario: destinatarioValue,
         container: String(y.containerNumero || '').trim() || '',
+        armador: String(y.armador || '').trim(),
         dataAgendamento,
         dtColeta,
         contratado: String(y.contratado || '').trim() || 'OUTRO',

@@ -423,6 +423,7 @@ router.post("/", auth, async (req, res) => {
       observations: mergeDeliveryObservations(linkedProgramacao, observations),
       driverName: driverName || "",
       recebedor: partyName,
+      armador: String(linkedProgramacao?.armador || req.body?.armador || '').trim(),
       containerMontadoAt: containerMontadoAt ? new Date(containerMontadoAt) : null,
       userId: req.user.id,
       userName: driver?.fullName || driver?.name || driver?.username || "Unknown",
@@ -476,6 +477,7 @@ router.post("/", auth, async (req, res) => {
               updatedAt: new Date(),
               linkedProgramacaoId: existing.linkedProgramacaoId || programacaoKey,
               programacaoId: existing.programacaoId || programacaoKey,
+              armador: existing.armador || String(linkedProgramacao?.armador || req.body?.armador || '').trim(),
               ...(partyName ? { recebedor: partyName } : {})
             }
           },
@@ -856,7 +858,7 @@ router.get('/programacoes/mine', auth, async (req, res) => {
       status: { $ne: 'CANCELADO' },
       containerReturned: { $ne: true }
     })
-      .select('processo processoLog recebedor remetente destinatario container dataAgendamento dtColeta contratado motorista linkedDeliveryId status containerReturned observacoes origem estab sentido createdAt updatedAt')
+      .select('processo processoLog recebedor remetente destinatario container armador dataAgendamento dtColeta contratado motorista linkedDeliveryId status containerReturned observacoes origem estab sentido createdAt updatedAt')
       .sort({ dataAgendamento: -1 })
       .lean();  // .lean() = 60% mais rÃ¡pido
     

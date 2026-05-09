@@ -36,6 +36,7 @@ const DeliverySchema = new mongoose.Schema(
 
     // Dados do recebedor
     recebedor: { type: String, default: "" },
+    armador: { type: String, default: "" },
 
     // Observação e metadata ao submeter com documentos faltando
     submissionObservation: { type: String, default: "" },

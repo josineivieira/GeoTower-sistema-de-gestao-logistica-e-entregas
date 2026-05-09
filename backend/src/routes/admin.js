@@ -16,6 +16,12 @@ const shortCache = new Map();
 const SHORT_CACHE_MS = 30000;
 const ENABLE_CONTROLE_PROTOCOLOS_COMPARISON = false;
 
+const clearShortCacheByPrefix = (prefix) => {
+  for (const key of shortCache.keys()) {
+    if (String(key).startsWith(prefix)) shortCache.delete(key);
+  }
+};
+
 const getCached = async (key, loader, ttl = SHORT_CACHE_MS) => {
   const cached = shortCache.get(key);
   if (cached && Date.now() - cached.createdAt < ttl) return cached.value;
@@ -2575,7 +2581,7 @@ router.delete("/motoristas/:id", auth, managerOnly, async (req, res) => {
  */
 router.get("/programacoes", auth, async (req, res) => {
   try {
-    const { period, periodDate, startDate, endDate, page = 1, limit = 500 } = req.query;
+    const { period, periodDate, startDate, endDate, page = 1, limit = 500, _refresh } = req.query;
     console.log('[PROGRAMACAO] Listando programações de entrega, filtros:', { period, periodDate, startDate, endDate, page, limit });
 
     const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
@@ -2584,7 +2590,7 @@ router.get("/programacoes", auth, async (req, res) => {
     const city = req.city || 'manaus';
     const responseCacheKey = `admin:programacoes:${city}:${req.user?.id || ''}:${req.user?.role || ''}:${JSON.stringify(req.query || {})}`;
     const cachedResponse = shortCache.get(responseCacheKey);
-    if (cachedResponse && Date.now() - cachedResponse.createdAt < SHORT_CACHE_MS) {
+    if (!_refresh && cachedResponse && Date.now() - cachedResponse.createdAt < SHORT_CACHE_MS) {
       res.set('Cache-Control', 'private, max-age=20');
       return res.json(cachedResponse.value);
     }
@@ -2810,6 +2816,7 @@ router.post("/programacoes", auth, managerOnly, async (req, res) => {
     });
 
     await novaProgramacao.save();
+    clearShortCacheByPrefix('admin:programacoes:');
     console.log('[PROGRAMACAO] ✅ Criada:', { _id: novaProgramacao._id, processo, origem: novaProgramacao.origem });
 
     return res.status(201).json({
@@ -2877,6 +2884,7 @@ router.put("/programacoes/:id", auth, managerOnly, async (req, res) => {
 
     try {
       await programacao.save();
+      clearShortCacheByPrefix('admin:programacoes:');
       console.log('[PROGRAMACAO] ✅ Atualizada:', { _id: id, processo: programacao.processo, origem: programacao.origem });
       return res.json({
         success: true,
@@ -2934,6 +2942,7 @@ router.delete("/programacoes/:id", auth, managerOnly, async (req, res) => {
     }
 
     await ProgramacaoEntrega.findByIdAndDelete(id);
+    clearShortCacheByPrefix('admin:programacoes:');
     console.log('[PROGRAMACAO] 🗑️ Programação deletada:', { _id: id, processo: programacao.processo });
 
     return res.json({
@@ -3026,6 +3035,7 @@ router.post("/programacoes/import", auth, managerOnly, async (req, res) => {
     }
 
     console.log('[PROGRAMACAO] ✅ Import concluído:', { importados, erros, total: programacoes.length });
+    if (importados > 0) clearShortCacheByPrefix('admin:programacoes:');
 
     return res.json({
       success: true,
@@ -3195,6 +3205,7 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
     console.log(`[SYNC ICOMPANY] ${novosRegistros.length} novos registros para importar (sem duplicação)`);
 
     if (novosRegistros.length === 0) {
+      if (updatedCount > 0) clearShortCacheByPrefix('admin:programacoes:');
       return res.json({
         success: true,
         message: `${updatedCount} registro(s) atualizado(s) do Icompany`,
@@ -3208,6 +3219,7 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
     // Inserir novos registros
     const inserted = await ProgramacaoEntrega.insertMany(novosRegistros, { ordered: false });
     insertedCount = inserted.length;
+    if (updatedCount > 0 || insertedCount > 0) clearShortCacheByPrefix('admin:programacoes:');
     console.log(`[SYNC ICOMPANY] ✅ ${insertedCount} registros inseridos com sucesso`);
 
     const totalSynced = updatedCount + insertedCount;

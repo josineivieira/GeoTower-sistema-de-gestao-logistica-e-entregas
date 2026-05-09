@@ -79,10 +79,12 @@ const ProgramacaoManagement = () => {
     } catch (err) { console.error('Erro ao carregar motoristas', err); }
   };
 
-  const loadProgramacoes = async () => {
+  const loadProgramacoes = async (options = {}) => {
     try {
       setLoading(true);
-      const response = await adminService.getProgramacoes();
+      const response = await adminService.getProgramacoes(
+        options.forceRefresh ? { _refresh: Date.now() } : {}
+      );
       setProgramacoes(response.data.programacoes || []);
     } catch (err) {
       showToast('Erro ao carregar programações', 'error');
@@ -100,7 +102,7 @@ const ProgramacaoManagement = () => {
       if (response.data.success) {
         showToast(`OK ${response.data.sincronizados} registro(s) sincronizado(s) do Icompany` + 
                   (response.data.duplicados > 0 ? ` (${response.data.duplicados} duplicados ignorados)` : ''));
-        loadProgramacoes();
+        await loadProgramacoes({ forceRefresh: true });
       }
     } catch (err) {
       const message = err.response?.data?.message || err.message || 'Erro ao sincronizar';

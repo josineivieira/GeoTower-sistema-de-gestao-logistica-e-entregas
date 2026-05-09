@@ -78,6 +78,7 @@ export const adminService = {
     if (filters.periodDate) params.append('periodDate', filters.periodDate);
     if (filters.startDate) params.append('startDate', filters.startDate);
     if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters._refresh) params.append('_refresh', filters._refresh);
     return api.get('/admin/programacoes' + (params.toString() ? '?' + params.toString() : ''), { timeout: 30000 });
   },
   updateProgramacao: (id, data) => api.put(`/admin/programacoes/${id}`, data),

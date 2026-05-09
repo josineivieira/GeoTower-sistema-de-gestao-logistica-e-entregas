@@ -339,7 +339,7 @@ const Header = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 text-white bg-gradient-to-r from-rose-700 via-orange-500 to-purple-700 shadow-[0_4px_24px_rgba(109,40,217,0.35)]">
+      <header className="sticky top-0 z-50 text-white bg-gradient-to-r from-purple-800 via-violet-700 to-emerald-700 shadow-[0_4px_24px_rgba(109,40,217,0.35)]">
 
         {/* linha decorativa superior */}
         <div className="h-[2px] w-full

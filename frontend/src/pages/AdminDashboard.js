@@ -265,14 +265,22 @@ const AdminDashboard = () => {
 
   const getIcompanyProcessNumber = (record) =>
     normalizeProcessKey(
+      record?.processoLog ||
+      record?.processolog ||
+      record?.processo_log ||
+      record?.ProcessoLog ||
+      record?.PROCESSOLOG ||
+      record?.['Processo Log'] ||
+      record?.['Processo log'] ||
+      record?.['PROCESSO LOG'] ||
+      record?.['processo log'] ||
+      record?.deliveryNumber ||
       record?.nrProcesso ||
       record?.nr_processo ||
       record?.nrDoProcesso ||
       record?.numeroDoProcesso ||
       record?.numeroProcesso ||
       record?.processoIcompany ||
-      record?.processoLog ||
-      record?.deliveryNumber ||
       record?.['Nr. do processo'] ||
       record?.['Nr do processo'] ||
       record?.['Nr. Do Processo'] ||
@@ -314,8 +322,8 @@ const AdminDashboard = () => {
       if (!grouped.has(key)) {
         grouped.set(key, {
           ...item,
-          nrProcesso: item.nrProcesso || key,
-          processoLog: item.processoLog || key,
+          nrProcesso: item.nrProcesso || item.nr_processo || key,
+          processoLog: item.processoLog || item.processolog || item.processo_log || key,
           deliveryNumber: item.deliveryNumber || key
         });
         return;
@@ -347,15 +355,15 @@ const AdminDashboard = () => {
       
       // Mapear dados do Icompany para formato esperado pelo dashboard
       const mappedDeliveries = icompanyData.map(record => {
-        const nrProcesso = getIcompanyProcessNumber(record);
+        const processKey = getIcompanyProcessNumber(record);
         return {
         ...record,
         _id: record._id,
-        deliveryNumber: nrProcesso || record.nrProcesso || record.processo || record.codigo || record.geomaritima || record.numero,
-        nrProcesso,
-        processoLog: nrProcesso,
+        deliveryNumber: processKey || record.nrProcesso || record.processo || record.codigo || record.geomaritima || record.numero,
+        nrProcesso: record.nrProcesso || processKey,
+        processoLog: processKey,
         processo: record.processo,
-        numero: nrProcesso || record.nrProcesso || record.numero || record.processo || record.codigo || record.geomaritima,
+        numero: processKey || record.nrProcesso || record.numero || record.processo || record.codigo || record.geomaritima,
         driverName: record.motorista || 'Sem motorista',
         userName: record.contratado,
         status: 'FINALIZADO',

@@ -216,13 +216,10 @@ const AdminDashboard = () => {
   };
 
   const getDashboardDateValue = useCallback((delivery) => (
-    getProgramacaoDate(delivery, city) ||
     delivery?.agendamentoDescarga ||
     delivery?.dataAgendamento ||
-    delivery?.dtAgendamentoDescarga ||
-    delivery?.dtColeta ||
-    delivery?.createdAt
-  ), [city]);
+    delivery?.dtAgendamentoDescarga
+  ), []);
 
   // Função para filtrar entregas por data de referência do dashboard
   const filterDeliveriesByDate = useCallback((items = []) => {
@@ -390,7 +387,7 @@ const AdminDashboard = () => {
         horarioFimDesova: city === 'itajai' ? (record.dtFimDescarga || record.dtSaidaPlanta) : record.dtFimDescarga,
         horarioDevolucaoVazio: record.dtDevolucaoCNTR || record.entradaDistrito,
         agendamentoDescarga: record.dtAgendamentoDescarga,
-        dataAgendamento: record.dtColeta || record.dtAgendamentoDescarga,
+        dataAgendamento: record.dtAgendamentoDescarga || record.dtColeta,
         remetente: record.remetente,
         destinatario: record.destinatario,
         recebedor: getClienteBySentido(record),
@@ -544,7 +541,7 @@ const AdminDashboard = () => {
     }
 
     const counts = {};
-    const source = programacoes.length ? groupByNrProcesso(filterDeliveriesByDate(programacoes)) : dashboardDeliveries;
+    const source = dashboardDeliveries;
 
     source.forEach(item => {
       let key = null;

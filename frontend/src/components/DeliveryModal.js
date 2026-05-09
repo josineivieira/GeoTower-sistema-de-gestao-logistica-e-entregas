@@ -258,33 +258,62 @@ const DeliveryModal = ({
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
       <div className="bg-[#1a1a2e] rounded-3xl w-full max-w-2xl max-h-[92vh] overflow-hidden shadow-2xl border border-white/10 flex flex-col">
-        <div className="flex items-center justify-between px-5 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-purple-700/60 to-indigo-700/60 border-b border-white/10 flex-shrink-0">
-          <div className="min-w-0 [&>p:not(:first-child)]:sr-only">
-            <p className="text-xs text-purple-300 uppercase tracking-widest font-semibold mb-0.5">Entrega</p>
-            <h2 className="flex flex-wrap items-center gap-2 text-white">
-              <span className="text-2xl font-black leading-none tracking-wide">#{selectedDelivery.deliveryNumber}</span>
-              {containerNumber && (
-                <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-extrabold uppercase tracking-wide text-purple-50 shadow-sm">
-                  <span className="text-purple-200">Container</span>
-                  <span className="truncate">{containerNumber}</span>
-                </span>
-              )}
-              {armador && (
-                <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-amber-300/25 bg-amber-300/15 px-2.5 py-1 text-xs font-extrabold uppercase tracking-wide text-amber-50 shadow-sm">
-                  <span className="text-amber-200">Armador</span>
-                  <span className="truncate">{armador}</span>
-                </span>
-              )}
-            </h2>
-            <p className="text-xs text-gray-300 mt-1">CAB: {selectedDelivery.processoCAB || selectedDelivery.processo || selectedDelivery.processNumber || selectedDelivery.codigo || '—'}</p>
-            <p className="text-xs text-gray-300 mt-1">Código: {(linkedIcompanyRecord?.codigo || '—')}</p>
-          </div>
+        <div className="relative overflow-hidden px-5 sm:px-6 py-4 sm:py-5 bg-[radial-gradient(circle_at_top_left,rgba(168,85,247,0.36),transparent_34%),linear-gradient(135deg,rgba(88,28,135,0.95),rgba(49,46,129,0.92))] border-b border-white/10 flex-shrink-0">
+          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="min-w-0">
+                  <p className="text-[11px] text-purple-200/80 uppercase tracking-[0.22em] font-bold mb-1">Entrega</p>
+                  <h2 className="text-3xl sm:text-4xl font-black leading-none tracking-wide text-white">
+                    #{selectedDelivery.deliveryNumber}
+                  </h2>
+                </div>
+                <Badge
+                  status={(selectedDelivery.status === 'FINALIZADO' && allModalDocsComplete(selectedDelivery)) ? 'DOCUMENTOS ENTREGUES' : selectedDelivery.status}
+                  city={city}
+                />
+              </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Badge status={(selectedDelivery.status === 'FINALIZADO' && allModalDocsComplete(selectedDelivery)) ? 'DOCUMENTOS ENTREGUES' : selectedDelivery.status} />
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {containerNumber && (
+                  <div className="min-w-0 rounded-xl border border-white/12 bg-white/[0.08] px-3 py-2.5 shadow-inner shadow-white/5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-8 h-8 rounded-lg bg-cyan-300/15 text-cyan-100 flex items-center justify-center border border-cyan-200/20 flex-shrink-0">
+                        <FaBoxOpen className="text-sm" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-cyan-100/70">Container</p>
+                        <p className="text-sm sm:text-base font-black text-white truncate">{containerNumber}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {armador && (
+                  <div className="min-w-0 rounded-xl border border-white/12 bg-white/[0.08] px-3 py-2.5 shadow-inner shadow-white/5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-8 h-8 rounded-lg bg-amber-300/15 text-amber-100 flex items-center justify-center border border-amber-200/20 flex-shrink-0">
+                        <FaBuilding className="text-sm" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-amber-100/70">Armador</p>
+                        <p className="text-sm sm:text-base font-black text-white truncate">{armador}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="sr-only">
+                <p>CAB: {selectedDelivery.processoCAB || selectedDelivery.processo || selectedDelivery.processNumber || selectedDelivery.codigo || '-'}</p>
+                <p>Codigo: {(linkedIcompanyRecord?.codigo || '-')}</p>
+              </div>
+            </div>
+
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
+              aria-label="Fechar modal"
+              className="w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition border border-white/10 flex-shrink-0"
             >
               <FaTimes />
             </button>

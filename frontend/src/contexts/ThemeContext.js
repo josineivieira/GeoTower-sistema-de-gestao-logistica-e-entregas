@@ -1,28 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export const THEMES = {
-  dark: {
-    name: 'Noite',
-    bg: '#0f172a',
-    bgSecondary: '#111827',
-    surface: '#1e293b',
-    surfaceAlt: '#273449',
-    text: '#ffffff',
-    textSecondary: '#cbd5e1',
-    muted: '#94a3b8',
-    accent: '#8b5cf6',
-    accentSoft: 'rgba(139, 92, 246, 0.16)',
-    headerGradient: 'linear-gradient(135deg, #0f172a 0%, #312e81 52%, #0f766e 100%)',
-    preview: 'linear-gradient(135deg, #0f172a 0%, #312e81 52%, #0f766e 100%)',
-    border: 'border-white/10',
-    borderColor: 'rgba(255,255,255,0.12)',
-    header: 'bg-[#0b1020]/90',
-    card: 'bg-white/5',
-    cardHover: 'hover:bg-white/10',
-    tableRow: 'bg-transparent',
-    tableRowAlt: 'bg-white/[0.015]',
-    tableRowHover: 'hover:bg-white/[0.04]',
-  },
   black: {
     name: 'Preto Puro',
     bg: '#000000',
@@ -162,16 +140,16 @@ const ThemeContext = createContext();
 const getInitialTheme = () => {
   const stored = localStorage.getItem('appTheme');
   const legacy = localStorage.getItem('torreControleTema');
-  return THEMES[stored] ? stored : THEMES[legacy] ? legacy : 'dark';
+  return THEMES[stored] ? stored : THEMES[legacy] ? legacy : 'black';
 };
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setThemeState] = useState(getInitialTheme);
-  const safeTheme = THEMES[theme] ? theme : 'dark';
+  const safeTheme = THEMES[theme] ? theme : 'black';
   const themeConfig = THEMES[safeTheme];
 
   const setTheme = (nextTheme) => {
-    setThemeState(THEMES[nextTheme] ? nextTheme : 'dark');
+    setThemeState(THEMES[nextTheme] ? nextTheme : 'black');
   };
 
   useEffect(() => {

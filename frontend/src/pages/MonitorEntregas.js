@@ -911,7 +911,7 @@ const MonitorEntregas = () => {
   const RISE_WINDOW = 8000;
 
   const { theme, setTheme } = useTheme();
-  const themeConfig = THEMES[theme] || THEMES.dark;
+  const themeConfig = THEMES[theme] || THEMES.black;
   const userName = user?.name || 'Usuário Desconhecido';
 
   const statusMapToBackend = {

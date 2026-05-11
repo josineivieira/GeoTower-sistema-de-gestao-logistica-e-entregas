@@ -222,6 +222,41 @@ textarea:focus {
   border-color: var(--app-border) !important;
 }
 
+.theme-black input,
+.theme-black select,
+.theme-black textarea {
+  background-color: var(--app-surface-alt) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+  caret-color: var(--app-text);
+}
+
+.theme-black input::placeholder,
+.theme-black textarea::placeholder {
+  color: var(--app-muted) !important;
+}
+
+.theme-black input:focus,
+.theme-black select:focus,
+.theme-black textarea:focus {
+  background-color: var(--app-surface) !important;
+  border-color: var(--app-accent) !important;
+}
+
+.theme-black input:disabled,
+.theme-black select:disabled,
+.theme-black textarea:disabled {
+  background-color: #111111 !important;
+  color: rgba(255, 255, 255, 0.72) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.72);
+  opacity: 1;
+}
+
+.theme-black select option {
+  background-color: var(--app-surface);
+  color: var(--app-text);
+}
+
 /* ===== iOS: remove bounce do body em todas as telas ===== */
 html,
 body {

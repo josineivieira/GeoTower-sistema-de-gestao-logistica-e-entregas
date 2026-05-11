@@ -222,39 +222,65 @@ textarea:focus {
   border-color: var(--app-border) !important;
 }
 
-.theme-black input,
-.theme-black select,
-.theme-black textarea {
-  background-color: var(--app-surface-alt) !important;
-  color: var(--app-text) !important;
-  border-color: var(--app-border) !important;
-  caret-color: var(--app-text);
+.theme-black .input-base,
+.theme-black input.bg-gray-50,
+.theme-black select.bg-gray-50,
+.theme-black textarea.bg-gray-50,
+.theme-black input.bg-white,
+.theme-black select.bg-white,
+.theme-black textarea.bg-white,
+.theme-black input.bg-slate-50,
+.theme-black select.bg-slate-50,
+.theme-black textarea.bg-slate-50 {
+  background-color: #f9fafb !important;
+  color: #111827 !important;
+  border-color: #e5e7eb !important;
+  caret-color: #111827;
 }
 
-.theme-black input::placeholder,
-.theme-black textarea::placeholder {
-  color: var(--app-muted) !important;
+.theme-black .input-base::placeholder,
+.theme-black input.bg-gray-50::placeholder,
+.theme-black textarea.bg-gray-50::placeholder,
+.theme-black input.bg-white::placeholder,
+.theme-black textarea.bg-white::placeholder,
+.theme-black input.bg-slate-50::placeholder,
+.theme-black textarea.bg-slate-50::placeholder {
+  color: #9ca3af !important;
 }
 
-.theme-black input:focus,
-.theme-black select:focus,
-.theme-black textarea:focus {
-  background-color: var(--app-surface) !important;
+.theme-black .input-base:focus,
+.theme-black input.bg-gray-50:focus,
+.theme-black select.bg-gray-50:focus,
+.theme-black textarea.bg-gray-50:focus,
+.theme-black input.bg-white:focus,
+.theme-black select.bg-white:focus,
+.theme-black textarea.bg-white:focus,
+.theme-black input.bg-slate-50:focus,
+.theme-black select.bg-slate-50:focus,
+.theme-black textarea.bg-slate-50:focus {
+  background-color: #ffffff !important;
   border-color: var(--app-accent) !important;
 }
 
-.theme-black input:disabled,
-.theme-black select:disabled,
-.theme-black textarea:disabled {
-  background-color: #111111 !important;
-  color: rgba(255, 255, 255, 0.72) !important;
-  -webkit-text-fill-color: rgba(255, 255, 255, 0.72);
+.theme-black .input-base:disabled,
+.theme-black input.bg-gray-50:disabled,
+.theme-black select.bg-gray-50:disabled,
+.theme-black textarea.bg-gray-50:disabled,
+.theme-black input.bg-white:disabled,
+.theme-black select.bg-white:disabled,
+.theme-black textarea.bg-white:disabled,
+.theme-black input.bg-slate-50:disabled,
+.theme-black select.bg-slate-50:disabled,
+.theme-black textarea.bg-slate-50:disabled {
+  background-color: #f9fafb !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827;
   opacity: 1;
 }
 
 .theme-black select option {
-  background-color: var(--app-surface);
-  color: var(--app-text);
+  background-color: #ffffff;
+  color: #111827;
 }
 
 /* ===== iOS: remove bounce do body em todas as telas ===== */

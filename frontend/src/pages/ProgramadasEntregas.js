@@ -185,8 +185,8 @@ const getStepFromDeliveryStatus = (delivery) => {
     case 'EM_DESOVA': restoredStep = 'desovaProgress'; break;
     case 'AGUARDANDO_ANEXO': case 'ANEXANDO_DOCUMENTOS_FINAIS': restoredStep = 'finalDocs'; break;
     case 'DESOVA_FINALIZADA': case 'AGUARDANDO_AGENDAMENTO_DEVOLUCAO': restoredStep = 'finalDocs'; break;
-    case 'SAINDO_CLIENTE': restoredStep = delivery?.currentStep || 'leavingClient'; break;
-    case 'RETORNANDO_PORTO': restoredStep = delivery?.currentStep === 'portReturn' ? 'portReturn' : 'arrivingPort'; break;
+    case 'SAINDO_CLIENTE': restoredStep = ['leavingClient', 'leavingClientPhoto'].includes(delivery?.currentStep) ? delivery.currentStep : 'leavingClient'; break;
+    case 'RETORNANDO_PORTO': restoredStep = ['arrivingPort', 'arrivingPortPhoto', 'portReturn'].includes(delivery?.currentStep) ? delivery.currentStep : 'arrivingPort'; break;
     case 'CHEGOU_PORTO': restoredStep = 'portReturn'; break;
     case 'ENTREGUE': case 'DEVOLVENDO_CONTAINER': case 'FINALIZADO': restoredStep = 'welcome'; break;
     default: restoredStep = 'welcome';
@@ -275,6 +275,8 @@ const FLOW_STEPS_BASE = [
   { key: 'portReturn',      labelKey: 'Devolucao' },
 ];
 const STEP_INDEX = Object.fromEntries(FLOW_STEPS_BASE.map((s, i) => [s.key, i]));
+STEP_INDEX.leavingClientPhoto = STEP_INDEX.leavingClient;
+STEP_INDEX.arrivingPortPhoto = STEP_INDEX.arrivingPort;
 
 const FlowStepBar = ({ currentStep, city = 'manaus' }) => {
   const idx = STEP_INDEX[currentStep] ?? 0;
@@ -1229,7 +1231,9 @@ const ProgramadasEntregas = () => {
       desovaFinal: 'desovaProgress',
       finalDocs: 'desovaProgress',
       leavingClient: 'finalDocs',
+      leavingClientPhoto: 'leavingClient',
       arrivingPort: 'leavingClient',
+      arrivingPortPhoto: 'arrivingPort',
       portReturn: 'arrivingPort'
     };
 
@@ -1442,6 +1446,74 @@ const ProgramadasEntregas = () => {
   );
 
   // ─────────────────────────────────────────────
+  const FlowCallToActionStep = ({
+    icon: Icon,
+    title,
+    subtitle,
+    timerLabel,
+    timerStart,
+    primaryLabel,
+    onPrimary,
+    onBack,
+    tone = 'cyan'
+  }) => {
+    const toneClasses = {
+      cyan: {
+        iconBg: 'bg-cyan-100',
+        iconText: 'text-cyan-600',
+        card: 'bg-cyan-50 border-cyan-200',
+        title: 'text-cyan-800',
+        button: 'from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700'
+      },
+      blue: {
+        iconBg: 'bg-blue-100',
+        iconText: 'text-blue-600',
+        card: 'bg-blue-50 border-blue-200',
+        title: 'text-blue-800',
+        button: 'from-blue-500 to-indigo-700 hover:from-blue-600 hover:to-indigo-800'
+      }
+    }[tone];
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3 mb-2">
+          <div className={`w-8 h-8 rounded-xl ${toneClasses.iconBg} flex items-center justify-center`}>
+            <Icon className={toneClasses.iconText} size={14} />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+        </div>
+
+        <StepTimer start={timerStart} label={timerLabel} />
+
+        <div className={`${toneClasses.card} border rounded-2xl p-4 space-y-3`}>
+          <div>
+            <p className={`text-sm font-semibold ${toneClasses.title}`}>Pronto para a proxima etapa?</p>
+            <p className="text-gray-600 text-sm mt-1">{subtitle}</p>
+          </div>
+          <div className="flex items-start gap-2 text-sm text-gray-600">
+            <FaCamera className={`${toneClasses.iconText} mt-0.5 flex-shrink-0`} size={14} />
+            <span>Ao confirmar, a tela de fotos sera aberta para registrar esta etapa.</span>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onPrimary}
+            className={`flex-1 py-4 bg-gradient-to-r ${toneClasses.button} text-white rounded-2xl font-bold text-base shadow-md active:scale-95 transition flex items-center justify-center gap-2`}
+          >
+            <Icon size={16} /> {primaryLabel}
+          </button>
+          <button
+            onClick={onBack}
+            className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl font-bold text-base active:scale-95 transition"
+          >
+            Voltar
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   //  RENDER
   // ─────────────────────────────────────────────
   return (
@@ -2386,6 +2458,21 @@ const ProgramadasEntregas = () => {
 
               {/* STEP: leavingClient */}
               {currentStep === 'leavingClient' && (
+                <FlowCallToActionStep
+                  icon={FaRoute}
+                  title="Saindo do Cliente"
+                  subtitle="Documentos enviados. Agora registre a saida para iniciar o retorno e manter o horario do fluxo atualizado."
+                  timerStart={currentDelivery?.arrivedAt || currentDelivery?.createdAt}
+                  timerLabel="Tempo no cliente"
+                  primaryLabel="Saindo do Cliente"
+                  onPrimary={() => goToStep('leavingClientPhoto')}
+                  onBack={() => goToStep('finalDocs')}
+                  tone="cyan"
+                />
+              )}
+
+              {/* STEP: leavingClientPhoto */}
+              {currentStep === 'leavingClientPhoto' && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-8 h-8 rounded-xl bg-cyan-100 flex items-center justify-center">
@@ -2397,7 +2484,7 @@ const ProgramadasEntregas = () => {
                   <p className="text-gray-500 text-sm">Registre com foto a saida do cliente.</p>
                   <PhotoSection
                     onConfirm={() => compressAndUpload('saidaCliente', 'RETORNANDO_PORTO', 'arrivingPort', { saidaClienteAt: new Date().toISOString() })}
-                    onBack={() => goToStep('finalDocs')}
+                    onBack={() => goToStep('leavingClient')}
                     buttonLabel="Confirmar saida do cliente"
                     buttonColor="bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700"
                   />
@@ -2406,6 +2493,21 @@ const ProgramadasEntregas = () => {
 
               {/* STEP: arrivingPort */}
               {currentStep === 'arrivingPort' && (
+                <FlowCallToActionStep
+                  icon={FaMapMarkerAlt}
+                  title="Cheguei no Porto"
+                  subtitle="Saida do cliente confirmada. Quando chegar ao porto, avance para registrar a chegada com foto."
+                  timerStart={currentDelivery?.saidaClienteAt || currentDelivery?.arrivedAt || currentDelivery?.createdAt}
+                  timerLabel="Tempo ate o porto"
+                  primaryLabel="Cheguei no Porto"
+                  onPrimary={() => goToStep('arrivingPortPhoto')}
+                  onBack={() => goToStep('leavingClient')}
+                  tone="blue"
+                />
+              )}
+
+              {/* STEP: arrivingPortPhoto */}
+              {currentStep === 'arrivingPortPhoto' && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
@@ -2417,7 +2519,7 @@ const ProgramadasEntregas = () => {
                   <p className="text-gray-500 text-sm">Registre com foto a chegada no porto.</p>
                   <PhotoSection
                     onConfirm={() => compressAndUpload('chegadaPorto', 'CHEGOU_PORTO', 'portReturn', { chegadaPortoAt: new Date().toISOString() })}
-                    onBack={() => goToStep('leavingClient')}
+                    onBack={() => goToStep('arrivingPort')}
                     buttonLabel="Confirmar chegada no porto"
                     buttonColor="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
                   />

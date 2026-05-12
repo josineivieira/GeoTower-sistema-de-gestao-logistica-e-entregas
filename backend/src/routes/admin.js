@@ -645,7 +645,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     }
     if (sentido && sentido !== 'all') progFilter.sentido = String(sentido || '').trim().toUpperCase();
     const programacoes = await ProgramacaoEntrega.find(progFilter)
-      .select('processo processoLog recebedor remetente destinatario container armador dataAgendamento dtColeta contratado motorista status createdAt observacoes origem estab sentido')
+      .select('processo processoLog recebedor remetente destinatario container armador dataAgendamento dtColeta contratado motorista linkedDeliveryId chegadaMontagemAt status createdAt observacoes origem estab sentido')
       .lean();
     console.log('  ℹ️  Total de programações (' + city + '):', programacoes ? programacoes.length : 0);
 
@@ -766,7 +766,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
         destinatario: prog ? prog.destinatario || '' : delivery.destinatario || '',
         dataAgendamento: prog ? prog.dataAgendamento : delivery.dataAgendamento || '',
         dtColeta: prog ? prog.dtColeta : delivery.dtColeta || '',  // Itajaí: data de coleta
-        chegadaMontagemAt: delivery.chegadaMontagemAt || '',
+        chegadaMontagemAt: delivery.chegadaMontagemAt || prog?.chegadaMontagemAt || '',
         horarioChegada: delivery.arrivedAt || '',
         horarioSaidaCliente: delivery.saidaClienteAt || '',
         horarioChegadaPorto: delivery.chegadaPortoAt || '',
@@ -811,6 +811,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
           destinatario: prog.destinatario || '',
           dataAgendamento: prog.dataAgendamento || '',
           dtColeta: prog.dtColeta || '',  // Itajaí: data de coleta
+          chegadaMontagemAt: prog.chegadaMontagemAt || '',
           status: prog.status || 'AGENDADO',
           documents: {},
           uploadedFiles: [],

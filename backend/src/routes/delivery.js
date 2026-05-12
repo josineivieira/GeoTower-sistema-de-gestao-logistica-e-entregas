@@ -528,6 +528,9 @@ router.post("/", auth, async (req, res) => {
       if (prog) {
         if (status === 'NO_PORTO_AGUARDANDO_MONTAGEM' || status === 'CONTAINER_MONTADO') {
           prog.status = status;
+          if (status === 'NO_PORTO_AGUARDANDO_MONTAGEM' && chegadaMontagemAt) {
+            prog.chegadaMontagemAt = new Date(chegadaMontagemAt);
+          }
         }
         // gravar referÃªncia para futuras consultas
         prog.linkedDeliveryId = delivery._id;
@@ -744,6 +747,22 @@ router.put("/:id", auth, async (req, res) => {
       const shouldMarkReturned = updated.horarioDevolucaoVazio;
       const programacaoToUpdate = programacaoIdFromBody || updated.programacaoId || updated.linkedProgramacaoId;
 
+      if (programacaoToUpdate && ['NO_PORTO_AGUARDANDO_MONTAGEM', 'CONTAINER_MONTADO'].includes(req.body.status)) {
+        try {
+          const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
+          const programacaoUpdates = {
+            status: req.body.status,
+            linkedDeliveryId: updated._id
+          };
+          if (req.body.status === 'NO_PORTO_AGUARDANDO_MONTAGEM') {
+            programacaoUpdates.chegadaMontagemAt = updated.chegadaMontagemAt || req.body.chegadaMontagemAt || new Date();
+          }
+          await ProgramacaoEntrega.findByIdAndUpdate(programacaoToUpdate, programacaoUpdates);
+        } catch (e) {
+          console.error('[PROGRAMACAO] Erro ao sincronizar status de montagem:', e.message);
+        }
+      }
+
       if (shouldMarkReturned && programacaoToUpdate) {
         try {
           const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
@@ -846,8 +865,9 @@ router.get('/programacoes/mine', auth, async (req, res) => {
     }
 
     const city = req.city || 'manaus';
+    const includeFinished = req.query.includeFinished === 'true' || req.query.includeFinished === true;
     const regex = new RegExp(`^${contratado}$`, 'i');
-    const cacheKey = `${req.user.id}:${city}:${contratado.toUpperCase()}`;
+    const cacheKey = `${req.user.id}:${city}:${contratado.toUpperCase()}:finished=${includeFinished ? '1' : '0'}`;
     const cached = programacoesMineCache.get(cacheKey);
     if (cached && Date.now() - cached.createdAt < PROGRAMACOES_MINE_CACHE_MS) {
       res.set('Cache-Control', 'private, max-age=10');
@@ -863,9 +883,9 @@ router.get('/programacoes/mine', auth, async (req, res) => {
       contratado: regex,
       ativo: { $ne: false },
       status: { $ne: 'CANCELADO' },
-      containerReturned: { $ne: true }
+      ...(includeFinished ? {} : { containerReturned: { $ne: true } })
     })
-      .select('processo processoLog recebedor remetente destinatario container armador dataAgendamento dtColeta contratado motorista linkedDeliveryId status containerReturned observacoes origem estab sentido createdAt updatedAt')
+      .select('processo processoLog recebedor remetente destinatario container armador dataAgendamento dtColeta contratado motorista linkedDeliveryId chegadaMontagemAt status containerReturned observacoes origem estab sentido createdAt updatedAt')
       .sort({ dataAgendamento: -1 })
       .lean();  // .lean() = 60% mais rÃ¡pido
     
@@ -965,6 +985,7 @@ router.get('/programacoes/mine', auth, async (req, res) => {
         obj.linkedDeliveryId = matchedDelivery._id;
         obj.missingDocumentsAtSubmit = matchedDelivery.missingDocumentsAtSubmit || [];
         obj.status = matchedDelivery.status || obj.status;
+        obj.chegadaMontagemAt = matchedDelivery.chegadaMontagemAt || obj.chegadaMontagemAt;
         if (isReturnedDelivery(matchedDelivery)) {
           obj.horarioDevolucaoVazio = matchedDelivery.horarioDevolucaoVazio;
           obj.containerReturned = true;
@@ -974,6 +995,7 @@ router.get('/programacoes/mine', auth, async (req, res) => {
       
       return obj;
     }).filter(p => {
+      if (includeFinished) return String(p.status || '').toUpperCase() !== 'CANCELADO';
       const hasPendingDocuments = Array.isArray(p.missingDocumentsAtSubmit) && p.missingDocumentsAtSubmit.length > 0;
       return hasPendingDocuments || (p.containerReturned !== true && !p.horarioDevolucaoVazio);
     });

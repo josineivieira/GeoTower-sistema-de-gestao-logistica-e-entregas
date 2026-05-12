@@ -51,6 +51,10 @@ const dotClass = {
   orange:  'bg-orange-400',
 };
 
+const FINISHED_STATUSES = ['ENTREGUE', 'FINALIZADO', 'ENTREGUE_COM_PENDENCIA_CANHOTO', 'SUBMITTED'];
+const isFinishedDelivery = (status) => FINISHED_STATUSES.includes(String(status || '').toUpperCase());
+const isCanceledDelivery = (status) => String(status || '').toUpperCase() === 'CANCELADO';
+
 const fmtDate = (d) => new Date(d).toLocaleString('pt-BR');
 const fmtMonth = (d) => formatarDataApenasLocal(d, { month: 'short', year: '2-digit' });
 
@@ -75,8 +79,8 @@ function buildChartData(list) {
     if (!monthMap[key]) monthMap[key] = { month: key, total: 0, entregues: 0, pendentes: 0, cancelados: 0 };
     monthMap[key].total++;
     const s = String(p.status || '').toUpperCase();
-    if (['ENTREGUE', 'FINALIZADO'].includes(s)) monthMap[key].entregues++;
-    else if (s === 'CANCELADO')                  monthMap[key].cancelados++;
+    if (isFinishedDelivery(s)) monthMap[key].entregues++;
+    else if (isCanceledDelivery(s))              monthMap[key].cancelados++;
     else                                          monthMap[key].pendentes++;
   });
   const barData = Object.values(monthMap).slice(-6); // last 6 months
@@ -194,15 +198,15 @@ const DashboardView = ({ data }) => {
   const { pieData, barData, lineData } = buildChartData(data);
 
   const total     = data.length;
-  const entregues = data.filter(p => ['ENTREGUE','FINALIZADO'].includes(String(p.status||'').toUpperCase())).length;
-  const pendentes = data.filter(p => !['ENTREGUE','FINALIZADO','CANCELADO'].includes(String(p.status||'').toUpperCase())).length;
-  const cancelados= data.filter(p => String(p.status||'').toUpperCase() === 'CANCELADO').length;
+  const entregues = data.filter(p => isFinishedDelivery(p.status)).length;
+  const pendentes = data.filter(p => !isFinishedDelivery(p.status) && !isCanceledDelivery(p.status)).length;
+  const cancelados= data.filter(p => isCanceledDelivery(p.status)).length;
   const taxa      = total ? Math.round((entregues / total) * 100) : 0;
 
   /* próxima entrega */
   const now = Date.now();
   const proxima = data
-    .filter(p => !['ENTREGUE','FINALIZADO','CANCELADO'].includes(String(p.status||'').toUpperCase()))
+    .filter(p => !isFinishedDelivery(p.status) && !isCanceledDelivery(p.status))
     .filter(p => new Date(p.dataAgendamento).getTime() >= now)
     .sort((a,b) => new Date(a.dataAgendamento) - new Date(b.dataAgendamento))[0];
 
@@ -529,9 +533,9 @@ const MinhasEntregas = () => {
     );
 
     if (filter === 'pendentes') {
-      filtered = filtered.filter(p => !['ENTREGUE','FINALIZADO','CANCELADO'].includes(String(p.status||'').toUpperCase()));
+      filtered = filtered.filter(p => !isFinishedDelivery(p.status) && !isCanceledDelivery(p.status));
     } else if (filter === 'enviadas') {
-      filtered = filtered.filter(p => ['ENTREGUE','FINALIZADO','CANCELADO'].includes(String(p.status||'').toUpperCase()));
+      filtered = filtered.filter(p => isFinishedDelivery(p.status));
     }
 
     if (debouncedSearch.trim()) {
@@ -550,7 +554,7 @@ const MinhasEntregas = () => {
   const loadProgramacoes = async () => {
     setLoading(true);
     try {
-      const res = await deliveryService.getProgramacoesAssigned();
+      const res = await deliveryService.getProgramacoesAssigned({ includeFinished: true });
       setAllProgramacoes(res.data.programacoes || []);
       setToast(null);
     } catch {
@@ -564,11 +568,12 @@ const MinhasEntregas = () => {
 
   const FILTERS = useMemo(() => {
     const tot = allProgramacoes.length;
-    const pen = allProgramacoes.filter(p => !['ENTREGUE','FINALIZADO','CANCELADO'].includes(String(p.status||'').toUpperCase())).length;
+    const pen = allProgramacoes.filter(p => !isFinishedDelivery(p.status) && !isCanceledDelivery(p.status)).length;
+    const env = allProgramacoes.filter(p => isFinishedDelivery(p.status)).length;
     return [
       { label: 'Todas',     value: 'all',      count: tot },
       { label: 'Pendentes', value: 'pendentes', count: pen },
-      { label: 'Enviadas',  value: 'enviadas',  count: tot - pen },
+      { label: 'Enviadas',  value: 'enviadas',  count: env },
     ];
   }, [allProgramacoes]);
 

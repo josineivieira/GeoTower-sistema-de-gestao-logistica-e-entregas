@@ -1926,7 +1926,7 @@ const ProgramadasEntregas = () => {
                   <div>
                     <p className="font-bold text-blue-900 text-sm">No porto aguardando montagem</p>
                     <p className="text-blue-700/80 text-xs mt-1">
-                      Registre a chegada do container no porto. Depois disso o botao de montagem sera liberado.
+                      Registre sua chegada no porto. Depois disso o botao de montagem sera liberado.
                     </p>
                   </div>
                 </div>
@@ -2079,7 +2079,7 @@ const ProgramadasEntregas = () => {
                 <input ref={montagemComprovanteRef} type="file" accept="image/*" capture="environment" multiple onChange={e => { 
                   const files = Array.from(e.target.files || []); 
                   if (files.length > 0) {
-                    const maxPhotos = 2;
+                    const maxPhotos = 3;
                     const currentCount = montagemComprovas.length;
                     if (currentCount >= maxPhotos) {
                       setToast({ message: `Máximo de ${maxPhotos} fotos permitidas. Remova uma para adicionar outra.`, type: 'warning' });

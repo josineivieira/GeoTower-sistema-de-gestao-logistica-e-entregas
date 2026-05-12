@@ -134,7 +134,7 @@ export const deliveryService = {
   },
   // Programações atribuídas ao contratado do usuário
   // Note: rota implementada dentro do router de `deliveries`, portanto URL completa será /api/deliveries/programacoes/mine
-  getProgramacoesAssigned: () => api.get('/deliveries/programacoes/mine'),
+  getProgramacoesAssigned: (params) => api.get('/deliveries/programacoes/mine', { params }),
   getDelivery: (id) => api.get(`/deliveries/${id}`),
   uploadDocument: (deliveryId, documentType, files) => {
     const formData = new FormData();

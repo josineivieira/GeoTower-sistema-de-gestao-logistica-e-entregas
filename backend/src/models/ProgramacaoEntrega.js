@@ -63,6 +63,10 @@ const programacaoEntregaSchema = new mongoose.Schema({
     ref: 'Delivery',
     default: null
   },
+  chegadaMontagemAt: {
+    type: Date,
+    default: null
+  },
   status: {
     type: String,
     enum: {

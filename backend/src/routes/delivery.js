@@ -155,6 +155,7 @@ function getDocumentFileBaseName(documentType, city = 'manaus') {
       canhotCTE: "CANHOTO_CTE",
       diarioBordo: "DIARIO_DE_BORDO",
       devolucaoVazio: "ENTREGA_CNTR_PORTO",
+      chegadaMontagem: "CHEGADA_PORTO_MONTAGEM",
       retiradaCheio: "RETIRADA_CHEIO",
       chegadaCliente: "CHEGADA_NO_CLIENTE",
       inicioDesova: "INICIO_DA_DESOVA",
@@ -167,6 +168,7 @@ function getDocumentFileBaseName(documentType, city = 'manaus') {
       canhotCTE: "CONTRATO",
       diarioBordo: "DIARIO_DE_BORDO",
       devolucaoVazio: "BAIXA_NO_PORTO",
+      chegadaMontagem: "CHEGADA_PORTO_MONTAGEM",
       retiradaCheio: "RETIRADA_PORTO",
       chegadaCliente: "CHEGADA_NO_CLIENTE",
       inicioDesova: "INICIO_DA_OVACAO",
@@ -394,7 +396,7 @@ router.post("/", auth, async (req, res) => {
   try {
     const db = await getDb(req);
     const city = req.city || 'manaus';
-    const { deliveryNumber, vehiclePlate, observations, driverName, containerMontadoAt, status, programacaoId, linkedProgramacaoId, recebedor } = req.body;
+    const { deliveryNumber, vehiclePlate, observations, driverName, chegadaMontagemAt, containerMontadoAt, status, programacaoId, linkedProgramacaoId, recebedor } = req.body;
 
     console.log('ðŸ“¦ Recebido no backend:', { deliveryNumber, vehiclePlate, observations, driverName, containerMontadoAt, status, programacaoId, linkedProgramacaoId, city });
 
@@ -424,6 +426,7 @@ router.post("/", auth, async (req, res) => {
       driverName: driverName || "",
       recebedor: partyName,
       armador: String(linkedProgramacao?.armador || req.body?.armador || '').trim(),
+      chegadaMontagemAt: chegadaMontagemAt ? new Date(chegadaMontagemAt) : null,
       containerMontadoAt: containerMontadoAt ? new Date(containerMontadoAt) : null,
       userId: req.user.id,
       userName: driver?.fullName || driver?.name || driver?.username || "Unknown",
@@ -523,8 +526,9 @@ router.post("/", auth, async (req, res) => {
         buildProgramacaoLookupFilter(deliveryNumber, city, programacaoId || linkedProgramacaoId)
       );
       if (prog) {
-        // Se status foi definido (ex: CONTAINER_MONTADO), usa esse, senÃ£o usa EM_ROTA
-        prog.status = status === 'CONTAINER_MONTADO' ? 'CONTAINER_MONTADO' : 'EM_ROTA';
+        if (status === 'NO_PORTO_AGUARDANDO_MONTAGEM' || status === 'CONTAINER_MONTADO') {
+          prog.status = status;
+        }
         // gravar referÃªncia para futuras consultas
         prog.linkedDeliveryId = delivery._id;
         await prog.save();
@@ -718,6 +722,7 @@ router.put("/:id", auth, async (req, res) => {
       // Usar updateDeliveryStatus para mudanÃ§a de status (com validaÃ§Ã£o de ordem)
       const statusUpdates = {};
       if (req.body.arrivedAt !== undefined) statusUpdates.arrivedAt = req.body.arrivedAt;
+      if (req.body.chegadaMontagemAt !== undefined) statusUpdates.chegadaMontagemAt = req.body.chegadaMontagemAt ? new Date(req.body.chegadaMontagemAt) : null;
       if (req.body.containerMontadoAt !== undefined) statusUpdates.containerMontadoAt = req.body.containerMontadoAt ? new Date(req.body.containerMontadoAt) : null;
       if (req.body.currentStep !== undefined) statusUpdates.currentStep = req.body.currentStep;
       if (req.body.observations !== undefined) {
@@ -753,11 +758,13 @@ router.put("/:id", auth, async (req, res) => {
         }
       }
 
+      clearProgramacoesMineCache(city);
       return res.json({ delivery: normalizeDeliveryForResponse(updated) });
     }
 
     // Para updates sem mudanÃ§a de status, usar updateDeliveryAtomic
     if (req.body.arrivedAt !== undefined) updates.arrivedAt = req.body.arrivedAt;
+    if (req.body.chegadaMontagemAt !== undefined) updates.chegadaMontagemAt = req.body.chegadaMontagemAt ? new Date(req.body.chegadaMontagemAt) : null;
     if (req.body.containerMontadoAt !== undefined) updates.containerMontadoAt = req.body.containerMontadoAt ? new Date(req.body.containerMontadoAt) : null;
     if (req.body.currentStep !== undefined) updates.currentStep = req.body.currentStep;
     if (req.body.observations !== undefined) {
@@ -876,7 +883,7 @@ router.get('/programacoes/mine', auth, async (req, res) => {
     
     const deliveriesByLinkedId = new Map();
     const deliveriesByProgramacaoId = new Map();
-    const deliverySelect = 'deliveryNumber status programacaoId linkedProgramacaoId linkedDeliveryId missingDocumentsAtSubmit horarioDevolucaoVazio containerReturned updatedAt createdAt recebedor userName driverName cityCode';
+    const deliverySelect = 'deliveryNumber status programacaoId linkedProgramacaoId linkedDeliveryId missingDocumentsAtSubmit chegadaMontagemAt horarioDevolucaoVazio containerReturned updatedAt createdAt recebedor userName driverName cityCode';
     if (linkedIds.length > 0) {
       const linkedDeliveries = await Delivery.find({ _id: { $in: linkedIds } }).select(deliverySelect).lean();
       linkedDeliveries.forEach(d => {

@@ -222,6 +222,7 @@ const STATUS_CONFIG = {
   PENDING: { label: 'AGENDADO', color: 'bg-sky-100 text-sky-700 border-sky-300', dot: 'bg-sky-500', icon: FaCalendarAlt },
   pending: { label: 'AGENDADO', color: 'bg-sky-100 text-sky-700 border-sky-300', dot: 'bg-sky-500', icon: FaCalendarAlt },
   AGENDADO: { label: 'AGENDADO', color: 'bg-sky-100 text-sky-700 border-sky-300', dot: 'bg-sky-500', icon: FaCalendarAlt },
+  NO_PORTO_AGUARDANDO_MONTAGEM: { label: 'NO PORTO P/ MONTAR', color: 'bg-blue-100 text-blue-700 border-blue-300', dot: 'bg-blue-500', icon: FaMapMarkerAlt },
   CONTAINER_MONTADO: { label: 'CONTAINER MONTADO', color: 'bg-indigo-100 text-indigo-700 border-indigo-300', dot: 'bg-indigo-500', icon: FaBox },
   A_CAMINHO_DO_CLIENTE: { label: 'A CAMINHO', color: 'bg-purple-100 text-purple-700 border-purple-300', dot: 'bg-purple-500', icon: FaTruck },
   AGUARDANDO_DESOVA: { label: 'AGUARD. DESOVA', color: 'bg-amber-100 text-amber-700 border-amber-300', dot: 'bg-amber-500', icon: FaWarehouse },
@@ -416,6 +417,11 @@ const ProgramadasEntregas = () => {
   const [montagemSubmitting, setMontagemSubmitting] = useState(false);
   const [montagemComprovas, setMontagemComprovas] = useState([]);
   const montagemComprovanteRef = useRef(null);
+  const [showChegadaMontagemModal, setShowChegadaMontagemModal] = useState(false);
+  const [chegadaMontagemProgramacao, setChegadaMontagemProgramacao] = useState(null);
+  const [chegadaMontagemSubmitting, setChegadaMontagemSubmitting] = useState(false);
+  const [chegadaMontagemProof, setChegadaMontagemProof] = useState(null);
+  const chegadaMontagemProofRef = useRef(null);
 
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [returnProof, setReturnProof] = useState(null);
@@ -693,7 +699,84 @@ const ProgramadasEntregas = () => {
     // Não recarrega lista - polling automático já sincroniza a cada 30s
   };
 
+  const handleStartChegadaMontagem = (p) => {
+    setChegadaMontagemProgramacao(p);
+    setChegadaMontagemProof(null);
+    setShowChegadaMontagemModal(true);
+  };
+
+  const closeChegadaMontagemModal = () => {
+    setShowChegadaMontagemModal(false);
+    setChegadaMontagemProgramacao(null);
+    setChegadaMontagemProof(null);
+  };
+
   const handleStartMontagem = async (p) => { setMontagemProgramacao(p); setShowMontagemModal(true); };
+
+  const handleChegadaMontagemConfirm = async () => {
+    if (!chegadaMontagemProgramacao) return;
+    if (!chegadaMontagemProof) {
+      setToast({ message: 'Anexe a foto da chegada no porto para montar', type: 'error' });
+      return;
+    }
+
+    setChegadaMontagemSubmitting(true);
+    try {
+      const programacao = chegadaMontagemProgramacao;
+      const deliveryNumber = getProgramacaoDeliveryNumber(programacao);
+      if (!deliveryNumber) {
+        setToast({ message: 'Sem numero de container/processo', type: 'error' });
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const payload = {
+        deliveryNumber: deliveryNumber.toUpperCase(),
+        observations: buildInitialDeliveryObservation(
+          programacao,
+          `Chegada no porto para montagem registrada em ${formatarData(new Date(), city)}`
+        ),
+        driverName: programacao.motorista || user?.fullName || user?.name || '',
+        status: 'NO_PORTO_AGUARDANDO_MONTAGEM',
+        currentStep: 'chegadaMontagem',
+        chegadaMontagemAt: now,
+        programacaoId: programacao._id,
+        recebedor: programacao.recebedor || ''
+      };
+
+      const searchNumbers = [deliveryNumber, ...getProgramacaoLegacyDeliveryNumbers(programacao)];
+      const results = await Promise.all(searchNumbers.map(number =>
+        deliveryService.getMyDeliveries({ q: number.toUpperCase(), includeCanceled: true }).catch(() => ({ data: { deliveries: [] } }))
+      ));
+      const list = results.flatMap(result => result.data.deliveries || []);
+      const validNumbers = searchNumbers.map(normalizeGroupValue);
+      const exactMatches = list.filter(d => validNumbers.includes(normalizeGroupValue(d.deliveryNumber)));
+      const existing = exactMatches.length > 0 ? selectDeliveryForProgramacao(exactMatches, programacao._id, programacao) : null;
+
+      let delivery = null;
+      if (existing) {
+        await deliveryService.updateDelivery(existing._id, payload);
+        const refreshed = await deliveryService.getDelivery(existing._id);
+        delivery = refreshed.data.delivery;
+      } else {
+        const res = await deliveryService.createDelivery(payload);
+        delivery = res.data.delivery;
+      }
+
+      const proofFile = await compressUploadFile(chegadaMontagemProof);
+      await deliveryService.uploadDocument(delivery._id, 'chegadaMontagem', proofFile);
+      updateProgramacaoGroupInList(programacao, { status: 'NO_PORTO_AGUARDANDO_MONTAGEM', linkedDeliveryId: delivery._id });
+      setToast({ message: 'Chegada no porto registrada. Agora pode iniciar a montagem.', type: 'success' });
+      closeChegadaMontagemModal();
+      setMontagemProgramacao({ ...programacao, status: 'NO_PORTO_AGUARDANDO_MONTAGEM', linkedDeliveryId: delivery._id });
+      setShowMontagemModal(true);
+      await loadProgramacoes({ silent: true });
+    } catch (err) {
+      setToast({ message: err?.response?.data?.message || 'Erro ao registrar chegada no porto', type: 'error' });
+    } finally {
+      setChegadaMontagemSubmitting(false);
+    }
+  };
 
   const openReturnModal = (p) => { setCurrentProgramacao(p); setReturnProof(null); setShowReturnModal(true); };
   const closeReturnModal = () => { setShowReturnModal(false); setReturnProof(null); setCurrentProgramacao(null); };
@@ -1240,16 +1323,20 @@ const ProgramadasEntregas = () => {
     };
 
     const handleAppBack = (event) => {
-      const hasOpenModal = showModal || showMontagemModal || showReturnModal || showContainerReturnModal;
+      const hasOpenModal = showModal || showChegadaMontagemModal || showMontagemModal || showReturnModal || showContainerReturnModal;
       if (!hasOpenModal) return;
 
       event.preventDefault();
 
-      if (submitting || montagemSubmitting || returnSubmitting || containerVazioSubmitting) {
+      if (submitting || chegadaMontagemSubmitting || montagemSubmitting || returnSubmitting || containerVazioSubmitting) {
         setToast({ message: 'Aguarde a operacao terminar', type: 'info' });
         return;
       }
 
+      if (showChegadaMontagemModal) {
+        closeChegadaMontagemModal();
+        return;
+      }
       if (showMontagemModal) {
         closeMontagemModal();
         return;
@@ -1275,11 +1362,13 @@ const ProgramadasEntregas = () => {
     return () => window.removeEventListener('appBackButton', handleAppBack);
   }, [
     showModal,
+    showChegadaMontagemModal,
     showMontagemModal,
     showReturnModal,
     showContainerReturnModal,
     currentStep,
     submitting,
+    chegadaMontagemSubmitting,
     montagemSubmitting,
     returnSubmitting,
     containerVazioSubmitting
@@ -1331,6 +1420,7 @@ const ProgramadasEntregas = () => {
       'AGUARDANDO_DESOVA',
       'A_CAMINHO_DO_CLIENTE',
       'CONTAINER_MONTADO',
+      'NO_PORTO_AGUARDANDO_MONTAGEM',
       'AGENDADO',
       'PENDING',
       'pending'
@@ -1355,8 +1445,17 @@ const ProgramadasEntregas = () => {
     const s = (p.status || 'pending').toUpperCase();
     if (!p.status || s === 'PENDING' || s === 'AGENDADO') {
       return (
-        <button onClick={() => handleStartMontagem(p)}
+        <button onClick={() => handleStartChegadaMontagem(p)}
           className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl shadow-md hover:shadow-lg active:scale-95 transition font-bold text-sm"
+        >
+          <FaMapMarkerAlt size={14} /> Chegada no Porto para Montar
+        </button>
+      );
+    }
+    if (s === 'NO_PORTO_AGUARDANDO_MONTAGEM') {
+      return (
+        <button onClick={() => handleStartMontagem(p)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl shadow-md hover:shadow-lg active:scale-95 transition font-bold text-sm"
         >
           <FaWarehouse size={14} /> Iniciar Montagem
         </button>
@@ -1380,7 +1479,7 @@ const ProgramadasEntregas = () => {
         </button>
       );
     }
-    if (p.status && !['AGENDADO', 'CONTAINER_MONTADO', 'ENTREGUE', 'DEVOLVENDO_CONTAINER', 'CANCELADO', 'FINALIZADO', 'pending'].includes(s)) {
+    if (p.status && !['AGENDADO', 'NO_PORTO_AGUARDANDO_MONTAGEM', 'CONTAINER_MONTADO', 'ENTREGUE', 'DEVOLVENDO_CONTAINER', 'CANCELADO', 'FINALIZADO', 'pending'].includes(s)) {
       return (
         <button onClick={() => handleStartDelivery(p)}
           className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl shadow-md hover:shadow-lg active:scale-95 transition font-bold text-sm"
@@ -1585,6 +1684,7 @@ const ProgramadasEntregas = () => {
             >
               <option value="all" className="bg-gray-900">Todos os status</option>
               <option value="pending" className="bg-gray-900">Agendado</option>
+              <option value="NO_PORTO_AGUARDANDO_MONTAGEM" className="bg-gray-900">No porto aguardando montagem</option>
               <option value="CONTAINER_MONTADO" className="bg-gray-900">Container Montado</option>
               <option value="A_CAMINHO_DO_CLIENTE" className="bg-gray-900">A Caminho</option>
               <option value="ENTREGUE" className="bg-gray-900">Entregue</option>
@@ -1636,6 +1736,7 @@ const ProgramadasEntregas = () => {
                 {/* Card top color bar */}
                 <div className={`h-1.5 w-full ${
                   (!p.status || p.status === 'pending' || p.status === 'PENDING') ? 'bg-gradient-to-r from-sky-400 to-blue-500' :
+                  p.status === 'NO_PORTO_AGUARDANDO_MONTAGEM' ? 'bg-gradient-to-r from-blue-400 to-indigo-500' :
                   p.status === 'CONTAINER_MONTADO' ? 'bg-gradient-to-r from-indigo-400 to-purple-500' :
                   p.status === 'A_CAMINHO_DO_CLIENTE' ? 'bg-gradient-to-r from-purple-400 to-pink-500' :
                   p.status === 'AGUARDANDO_DESOVA' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
@@ -1796,6 +1897,119 @@ const ProgramadasEntregas = () => {
       {/* ════════════════════════════════════════════
            MODAL: MONTAGEM DE CONTAINER
           ════════════════════════════════════════════ */}
+      {showChegadaMontagemModal && chegadaMontagemProgramacao && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="mobile-modal-panel bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <FaMapMarkerAlt className="text-white" size={18} />
+                  </div>
+                  <div>
+                    <h2 className="text-white text-xl font-extrabold">Chegada no Porto</h2>
+                    <p className="text-white/70 text-sm">{chegadaMontagemProgramacao.processo}</p>
+                  </div>
+                </div>
+                <button onClick={closeChegadaMontagemModal} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition">
+                  <FaTimes size={14} />
+                </button>
+              </div>
+            </div>
+
+            <div className="mobile-modal-scroll overflow-y-auto flex-1 p-5 space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <FaWarehouse className="text-blue-600" size={15} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-blue-900 text-sm">No porto aguardando montagem</p>
+                    <p className="text-blue-700/80 text-xs mt-1">
+                      Registre a chegada do container no porto. Depois disso o botao de montagem sera liberado.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: 'Container', value: chegadaMontagemProgramacao.container || '-', icon: FaBox, color: 'text-blue-500' },
+                  { label: city === 'itajai' ? 'Remetente' : 'Recebedor', value: chegadaMontagemProgramacao.recebedor || '-', icon: FaUser, color: 'text-purple-500' },
+                  { label: 'Motorista', value: chegadaMontagemProgramacao.motorista || '-', icon: FaTruck, color: 'text-emerald-500' },
+                ].map(item => (
+                  <div key={item.label} className="bg-gray-50 rounded-xl p-3 text-center">
+                    <item.icon className={`mx-auto mb-1 ${item.color}`} size={14} />
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase mb-0.5">{item.label}</p>
+                    <p className="text-xs font-bold text-gray-800 leading-tight truncate">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className={`rounded-2xl border-2 p-4 transition-all ${chegadaMontagemProof ? 'border-blue-400 bg-blue-50' : 'border-dashed border-gray-300 bg-gray-50'}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <FaImage className="text-blue-500" size={18} />
+                  <p className="font-bold text-gray-800 text-sm">Foto da chegada no porto</p>
+                </div>
+                {chegadaMontagemProof ? (
+                  <div className="flex items-center justify-between bg-blue-100 rounded-xl px-3 py-2 mb-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FaCheckCircle className="text-blue-500 shrink-0" size={14} />
+                      <span className="text-xs font-bold text-blue-700 truncate">{chegadaMontagemProof.name}</span>
+                    </div>
+                    <button onClick={() => setChegadaMontagemProof(null)} className="text-red-500 hover:text-red-700 shrink-0">
+                      <FaTimes size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 italic mb-3 text-center">Nenhuma foto selecionada</p>
+                )}
+                <button
+                  onClick={() => chegadaMontagemProofRef.current?.click()}
+                  className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm flex items-center justify-center gap-2 transition"
+                >
+                  <FaCamera size={14} /> {chegadaMontagemProof ? 'Trocar Foto' : 'Tirar Foto'}
+                </button>
+                <input
+                  ref={chegadaMontagemProofRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) setChegadaMontagemProof(f);
+                  }}
+                  className="hidden"
+                />
+              </div>
+
+              {chegadaMontagemSubmitting && (
+                <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-300 rounded-xl">
+                  <svg className="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  <span className="text-blue-700 font-semibold text-sm">Registrando chegada...</span>
+                </div>
+              )}
+
+              <div className="mobile-action-bar flex gap-3">
+                <button
+                  onClick={handleChegadaMontagemConfirm}
+                  disabled={chegadaMontagemSubmitting || !chegadaMontagemProof}
+                  className="action-btn flex-1 px-3 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-base shadow-lg active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Confirmar Chegada
+                </button>
+                <button onClick={closeChegadaMontagemModal} className="action-btn flex-1 px-3 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-base active:scale-95 transition">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showMontagemModal && montagemProgramacao && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="mobile-modal-panel bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl shadow-2xl overflow-hidden flex flex-col">

@@ -10,7 +10,7 @@ const DeliverySchema = new mongoose.Schema(
     status: { 
       type: String, 
       enum: [
-        'pending', 'submitted', 'AGENDADO', 'CONTAINER_MONTADO', 'AGUARDANDO_DESOVA',
+        'pending', 'submitted', 'AGENDADO', 'NO_PORTO_AGUARDANDO_MONTAGEM', 'CONTAINER_MONTADO', 'AGUARDANDO_DESOVA',
         'EM_DESOVA', 'DESOVA_FINALIZADA', 'AGUARDANDO_ANEXO', 'ANEXANDO_DOCUMENTOS_FINAIS',
         'SAINDO_CLIENTE', 'RETORNANDO_PORTO', 'CHEGOU_PORTO',
         'ENTREGUE', 'CANCELADO', 'A_CAMINHO_DO_CLIENTE', 'ENTREGUE_COM_PENDENCIA_CANHOTO',
@@ -23,6 +23,7 @@ const DeliverySchema = new mongoose.Schema(
     arrivedAt: { type: Date },
 
     // registrar quando o container foi montado
+    chegadaMontagemAt: { type: Date },
     containerMontadoAt: { type: Date },
 
     // registrar quando o motorista iniciou e finalizou a desova
@@ -109,6 +110,7 @@ const DeliverySchema = new mongoose.Schema(
       canhotCTE: { type: String, default: null },
       diarioBordo: { type: String, default: null },
       devolucaoVazio: { type: String, default: null },
+      chegadaMontagem: { type: String, default: null },
       retiradaCheio: { type: String, default: null },
       chegadaCliente: { type: String, default: null }, // Fotos da chegada no cliente
       inicioDesova: { type: String, default: null },   // Fotos do início da desova

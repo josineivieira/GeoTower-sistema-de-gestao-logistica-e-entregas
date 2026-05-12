@@ -33,7 +33,7 @@ export const getStatusColumns = (city = 'manaus') => [
     border: 'border-violet-200',
     text: 'text-violet-700',
     badge: 'bg-violet-100 text-violet-700',
-    filter: (p) => normalizeKey(p.status) === 'AGENDADO' && p.driverName && p.driverName !== '-',
+    filter: (p) => ['AGENDADO', 'NO PORTO AGUARDANDO MONTAGEM'].includes(normalizeKey(p.status)) && p.driverName && p.driverName !== '-',
   },
   {
     key: 'CNTR_COLETADO',

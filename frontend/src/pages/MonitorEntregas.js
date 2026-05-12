@@ -55,6 +55,14 @@ const getStatusConfig = (city = 'manaus') => {
       icon: <FaCalendarAlt />, gradient: 'from-indigo-500 to-indigo-700',
       ring: 'ring-indigo-400/30', dot: 'bg-indigo-500', hex: '#6366f1'
     },
+    'NO PORTO AGUARDANDO MONTAGEM': {
+      label: 'No porto aguardando montagem',
+      bg: 'bg-blue-600', light: 'bg-blue-50', text: 'text-blue-700',
+      border: 'border-blue-300',
+      badge: 'bg-blue-100 text-blue-800 border border-blue-300',
+      icon: <FaMapMarkerAlt />, gradient: 'from-blue-500 to-indigo-700',
+      ring: 'ring-blue-400/30', dot: 'bg-blue-500', hex: '#3b82f6'
+    },
     'CONTAINER MONTADO': {
       label: 'Container Montado',
       bg: 'bg-sky-600', light: 'bg-sky-50', text: 'text-sky-700',
@@ -433,7 +441,7 @@ const DeliveryKanbanColumn = ({ column, deliveries, onOpen, currentTime, city = 
    PROGRESS
 ───────────────────────────────────────────────────────────── */
 const progressStatuses = [
-  'AGENDADO', 'CONTAINER MONTADO', 'A CAMINHO DO CLIENTE',
+  'AGENDADO', 'NO PORTO AGUARDANDO MONTAGEM', 'CONTAINER MONTADO', 'A CAMINHO DO CLIENTE',
   'AGUARDANDO DESOVA', 'EM DESOVA', 'ANEXANDO DOCUMENTOS FINAIS', 'ENTREGUE'
 ];
 
@@ -476,6 +484,7 @@ const SettingsPanel = ({
     { value: "FINALIZADO", label: "Finalizado (sem docs)" },
     { value: "A CAMINHO DO CLIENTE", label: "A Caminho do Cliente" },
     { value: "AGENDADO", label: "Agendado" },
+    { value: "NO_PORTO_AGUARDANDO_MONTAGEM", label: "No porto aguardando montagem" },
     { value: "AGUARDANDO_DESOVA", label: "Aguardando Desova/Ovação" },
     { value: "EM_DESOVA", label: "Em Desova/Ovação" },
     { value: "DESOVA_FINALIZADA", label: "Desova/Ovação Finalizada" },
@@ -791,6 +800,7 @@ const getStatusEntryTime = (delivery, city) => {
     const progDate = getProgramacaoDate(delivery, city);
     return progDate || delivery.scheduledAt || delivery.dataAgendamento || delivery.createdAt;
   }
+  if (status === 'NO PORTO AGUARDANDO MONTAGEM') return delivery.chegadaMontagemAt || delivery.createdAt;
   if (status === 'CONTAINER MONTADO') return delivery.containerMontadoAt;
   if (status === 'A CAMINHO DO CLIENTE' || status === 'PENDING') return delivery.tripStartedAt || delivery.createdAt; // fallback para createdAt se tripStartedAt não existir
   if (status === 'AGUARDANDO DESOVA') return delivery.arrivedAt || delivery.horarioChegada;
@@ -820,6 +830,7 @@ const MonitorEntregas = () => {
     { value: "FINALIZADO", label: "Finalizado (sem docs)" },
     { value: "A CAMINHO DO CLIENTE", label: "A Caminho do Cliente" },
     { value: "AGENDADO", label: "Agendado" },
+    { value: "NO_PORTO_AGUARDANDO_MONTAGEM", label: "No porto aguardando montagem" },
     { value: "AGUARDANDO_DESOVA", label: `Aguardando ${getDesovaStepLabel(currentCity)}` },
     { value: "EM_DESOVA", label: `Em ${getDesovaStepLabel(currentCity)}` },
     { value: "DESOVA_FINALIZADA", label: getDesovaStatusLabel('DESOVA_FINALIZADA', currentCity) },
@@ -832,6 +843,7 @@ const MonitorEntregas = () => {
   const getEditStatusOptions = () => [
     { value: "", label: "Selecione…" },
     { value: "ENTREGUE", label: "Operação Finalizada" },
+    { value: "NO_PORTO_AGUARDANDO_MONTAGEM", label: "No porto aguardando montagem" },
     { value: "pending", label: "A Caminho do Cliente" },
     { value: "AGUARDANDO_DESOVA", label: `Aguardando ${getDesovaStepLabel(currentCity)}` },
     { value: "EM_DESOVA", label: `Em ${getDesovaStepLabel(currentCity)}` },
@@ -927,6 +939,7 @@ const MonitorEntregas = () => {
     RETORNANDO_PORTO: ['RETORNANDO_PORTO'],
     CHEGOU_PORTO: ['CHEGOU_PORTO'],
     AGENDADO: ['AGENDADO'],
+    NO_PORTO_AGUARDANDO_MONTAGEM: ['NO_PORTO_AGUARDANDO_MONTAGEM'],
     CANCELADO: ['CANCELADO']
   };
 
@@ -1135,6 +1148,7 @@ const MonitorEntregas = () => {
 
   const getFlowHistory = (d) => {
     const ev = [];
+    if (d.chegadaMontagemAt) ev.push({ label: 'Chegada no porto para montagem', date: d.chegadaMontagemAt });
     if (d.containerMontadoAt) ev.push({ label: 'Montagem do container', date: d.containerMontadoAt });
     if (d.horarioChegada) ev.push({ label: 'Chegada', date: d.horarioChegada });
     if (d.horarioInicioDesova) ev.push({ label: city === 'itajai' ? 'Inicio da ovação' : 'Início da desova', date: d.horarioInicioDesova });
@@ -1387,6 +1401,7 @@ const MonitorEntregas = () => {
       [getPartyLabelBySentido(filters.sentido), safe(getPartyBySentido(delivery, filters.sentido))],
       ['Status', safe(formatStatus(delivery.status, delivery))],
       ['Agendamento', formatDT(getProgramacaoDate(delivery, city))],
+      ['Chegada Porto Montagem', formatDT(delivery.chegadaMontagemAt)],
       ['Montagem Container', formatDT(delivery.containerMontadoAt)],
       ['Chegada', formatDT(delivery.horarioChegada)],
       [`Início ${getDesovaStepLabel(city)}`, formatDT(delivery.horarioInicioDesova)],
@@ -1420,8 +1435,9 @@ const MonitorEntregas = () => {
 
     // Documents
     const labels = getLabelsForDelivery(delivery);
-    const docKeys = Object.keys(delivery.documents || {}).filter(k => !['chegadaCliente', 'inicioDesova', 'fimDesova', 'saidaCliente', 'chegadaPorto'].includes(k));
+    const docKeys = Object.keys(delivery.documents || {}).filter(k => !['chegadaMontagem', 'chegadaCliente', 'inicioDesova', 'fimDesova', 'saidaCliente', 'chegadaPorto'].includes(k));
     const fotoFields = [
+      { key: 'chegadaMontagem', label: 'Chegada no Porto para Montagem' },
       { key: 'chegadaCliente', label: 'Chegada no Cliente' },
       { key: 'inicioDesova', label: `Início da ${getDesovaStepLabel(city)}` },
       { key: 'fimDesova', label: `Finalização da ${getDesovaStepLabel(city)}` },
@@ -2950,6 +2966,7 @@ const MonitorEntregas = () => {
                 >
                   <option value="" className="bg-gray-900">Selecione…</option>
                   <option value="ENTREGUE" className="bg-gray-900">Operação Finalizada</option>
+                  <option value="NO_PORTO_AGUARDANDO_MONTAGEM" className="bg-gray-900">No porto aguardando montagem</option>
                   <option value="pending" className="bg-gray-900">A Caminho do Cliente</option>
                   <option value="AGUARDANDO_DESOVA" className="bg-gray-900">Aguardando Desova/Ovação</option>
                   <option value="EM_DESOVA" className="bg-gray-900">Em Desova/Ovação</option>

@@ -334,6 +334,8 @@ const ProgramacaoManagement = () => {
 
   const statusConfig = {
     AGENDADO:           { color: '#3b82f6', bg: '#eff6ff', label: 'Agendado' },
+    NO_PORTO_AGUARDANDO_MONTAGEM: { color: '#2563eb', bg: '#eff6ff', label: 'No porto aguardando montagem' },
+    CONTAINER_MONTADO:  { color: '#4f46e5', bg: '#eef2ff', label: 'Container montado' },
     A_CAMINHO_DO_CLIENTE: { color: '#f59e0b', bg: '#fffbeb', label: 'A caminho do cliente' },
     ENTREGUE:           { color: '#10b981', bg: '#f0fdf4', label: 'Entregue' },
     CANCELADO:          { color: '#ef4444', bg: '#fef2f2', label: 'Cancelado' },
@@ -661,6 +663,7 @@ const ProgramacaoManagement = () => {
               >
                 <option value="all">Todos os status</option>
                 <option value="AGENDADO">Agendado</option>
+                <option value="NO_PORTO_AGUARDANDO_MONTAGEM">No porto aguardando montagem</option>
                 <option value="A_CAMINHO_DO_CLIENTE">A caminho do cliente</option>
                 <option value="ENTREGUE">Entregue</option>
                 <option value="CANCELADO">Cancelado</option>
@@ -1069,6 +1072,7 @@ const ProgramacaoManagement = () => {
                     onChange={e => setFormData({...formData, status: e.target.value})}
                     style={{ ...inputStyle(isGeoMar()), cursor: isGeoMar() ? 'not-allowed' : 'pointer' }}>
                     <option value="AGENDADO">Agendado</option>
+                    <option value="NO_PORTO_AGUARDANDO_MONTAGEM">No porto aguardando montagem</option>
                     <option value="A_CAMINHO_DO_CLIENTE">A caminho do cliente</option>
                     <option value="CONTAINER_MONTADO">Container montado</option>
                     <option value="AGUARDANDO_DESOVA">Aguardando desova/ovação</option>

@@ -18,6 +18,14 @@ const getStatusConfig = (city = 'manaus') => {
       icon: '📅', gradient: 'from-indigo-500 to-indigo-700',
       ring: 'ring-indigo-400/30', dot: 'bg-indigo-500', hex: '#6366f1'
     },
+    'NO PORTO AGUARDANDO MONTAGEM': {
+      label: 'No porto aguardando montagem',
+      bg: 'bg-blue-600', light: 'bg-blue-50', text: 'text-blue-700',
+      border: 'border-blue-300',
+      badge: 'bg-blue-100 text-blue-800 border border-blue-300',
+      icon: 'PORTO', gradient: 'from-blue-500 to-indigo-700',
+      ring: 'ring-blue-400/30', dot: 'bg-blue-500', hex: '#3b82f6'
+    },
     'CONTAINER MONTADO': {
       label: 'Container Montado',
       bg: 'bg-sky-600', light: 'bg-sky-50', text: 'text-sky-700',
@@ -105,7 +113,7 @@ MemoizedBadge.displayName = 'MemoizedBadge';
 
 // Memoized Progress Dots
 const progressStatuses = [
-  'AGENDADO', 'CONTAINER MONTADO', 'A CAMINHO DO CLIENTE',
+  'AGENDADO', 'NO PORTO AGUARDANDO MONTAGEM', 'CONTAINER MONTADO', 'A CAMINHO DO CLIENTE',
   'AGUARDANDO DESOVA', 'EM DESOVA', 'ANEXANDO DOCUMENTOS FINAIS', 'ENTREGUE'
 ];
 

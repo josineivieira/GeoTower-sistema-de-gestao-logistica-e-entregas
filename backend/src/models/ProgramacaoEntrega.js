@@ -68,6 +68,7 @@ const programacaoEntregaSchema = new mongoose.Schema({
     enum: {
       values: [
         'AGENDADO',
+        'NO_PORTO_AGUARDANDO_MONTAGEM',
         'CONTAINER_MONTADO',
         'A_CAMINHO_DO_CLIENTE',
         'AGUARDANDO_DESOVA',

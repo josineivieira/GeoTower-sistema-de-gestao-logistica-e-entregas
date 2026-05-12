@@ -7,20 +7,21 @@ const mongoose = require('mongoose');
 const STATUS_ORDER = {
   'pending': 0,
   'AGENDADO': 1,
-  'CONTAINER_MONTADO': 2,
-  'A_CAMINHO_DO_CLIENTE': 3,
-  'AGUARDANDO_DESOVA': 4,
-  'EM_DESOVA': 5,
-  'DESOVA_FINALIZADA': 6,
-  'AGUARDANDO_ANEXO': 7,
-  'ANEXANDO_DOCUMENTOS_FINAIS': 8,
-  'SAINDO_CLIENTE': 9,
-  'RETORNANDO_PORTO': 10,
-  'CHEGOU_PORTO': 11,
-  'ENTREGUE': 12,
-  'ENTREGUE_COM_PENDENCIA_CANHOTO': 12, // Mesmo nivel que ENTREGUE
-  'FINALIZADO': 13,
-  'CANCELADO': 14 // Cancelado pode ser aplicado a qualquer status
+  'NO_PORTO_AGUARDANDO_MONTAGEM': 2,
+  'CONTAINER_MONTADO': 3,
+  'A_CAMINHO_DO_CLIENTE': 4,
+  'AGUARDANDO_DESOVA': 5,
+  'EM_DESOVA': 6,
+  'DESOVA_FINALIZADA': 7,
+  'AGUARDANDO_ANEXO': 8,
+  'ANEXANDO_DOCUMENTOS_FINAIS': 9,
+  'SAINDO_CLIENTE': 10,
+  'RETORNANDO_PORTO': 11,
+  'CHEGOU_PORTO': 12,
+  'ENTREGUE': 13,
+  'ENTREGUE_COM_PENDENCIA_CANHOTO': 13, // Mesmo nivel que ENTREGUE
+  'FINALIZADO': 14,
+  'CANCELADO': 15 // Cancelado pode ser aplicado a qualquer status
 };
 
 /**
@@ -29,6 +30,7 @@ const STATUS_ORDER = {
  */
 const FIELDS_TO_CLEAR_ON_REGRESSION = {
   'AGENDADO': [],
+  'NO_PORTO_AGUARDANDO_MONTAGEM': ['chegadaMontagemAt'],
   'CONTAINER_MONTADO': ['containerMontadoAt'],
   'A_CAMINHO_DO_CLIENTE': ['containerMontadoAt'],
   'AGUARDANDO_DESOVA': ['arrivedAt', 'horarioChegada'],
@@ -50,6 +52,7 @@ const FIELDS_TO_CLEAR_ON_REGRESSION = {
  */
 const DOCUMENTS_TO_CLEAR_ON_REGRESSION = {
   'AGENDADO': [],
+  'NO_PORTO_AGUARDANDO_MONTAGEM': ['chegadaMontagem'],
   'CONTAINER_MONTADO': [],
   'A_CAMINHO_DO_CLIENTE': [],
   'AGUARDANDO_DESOVA': ['chegadaCliente'],

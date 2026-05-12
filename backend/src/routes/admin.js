@@ -766,6 +766,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
         destinatario: prog ? prog.destinatario || '' : delivery.destinatario || '',
         dataAgendamento: prog ? prog.dataAgendamento : delivery.dataAgendamento || '',
         dtColeta: prog ? prog.dtColeta : delivery.dtColeta || '',  // Itajaí: data de coleta
+        chegadaMontagemAt: delivery.chegadaMontagemAt || '',
         horarioChegada: delivery.arrivedAt || '',
         horarioSaidaCliente: delivery.saidaClienteAt || '',
         horarioChegadaPorto: delivery.chegadaPortoAt || '',
@@ -875,6 +876,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       if (statusKey === 'AGENDADO') {
         return getProgramacaoDateString(delivery, cityCode) || delivery.scheduledAt || delivery.createdAt;
       }
+      if (statusKey === 'NO PORTO AGUARDANDO MONTAGEM') return delivery.chegadaMontagemAt || delivery.createdAt;
       if (statusKey === 'CONTAINER MONTADO') return delivery.containerMontadoAt || delivery.createdAt;
       if (statusKey === 'A CAMINHO DO CLIENTE' || statusKey === 'PENDING') return delivery.tripStartedAt || delivery.createdAt;
       if (statusKey === 'AGUARDANDO DESOVA') return delivery.arrivedAt || delivery.horarioChegada || delivery.createdAt;

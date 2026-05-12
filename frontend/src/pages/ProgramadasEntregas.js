@@ -285,83 +285,27 @@ const FlowStepBar = ({ currentStep, city = 'manaus' }) => {
     return step.labelKey;
   };
   return (
-    <div className="flex items-center justify-between px-1">
+    <div className="flex items-center justify-between mb-6 px-1">
       {FLOW_STEPS_BASE.map((s, i) => (
         <React.Fragment key={s.key}>
           <div className="flex flex-col items-center gap-1 flex-shrink-0">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-              i < idx ? 'bg-white text-purple-700 shadow-md' :
-              i === idx ? 'bg-white border-2 border-white text-purple-700 shadow-lg scale-110' :
-              'bg-white/15 text-white/60'
+              i < idx ? 'bg-emerald-500 text-white shadow-md' :
+              i === idx ? 'bg-white border-2 border-emerald-500 text-emerald-600 shadow-lg scale-110' :
+              'bg-gray-100 text-gray-400'
             }`}>
               {i < idx ? '✓' : i + 1}
             </div>
-            <span className={`text-[9px] font-semibold ${i === idx ? 'text-white' : 'text-white/55'}`}>
+            <span className={`text-[9px] font-semibold ${i === idx ? 'text-emerald-600' : 'text-gray-400'}`}>
               {getStepLabel(s)}
             </span>
           </div>
           {i < FLOW_STEPS_BASE.length - 1 && (
-            <div className={`flex-1 h-0.5 mx-1 rounded transition-all ${i < idx ? 'bg-white' : 'bg-white/20'}`} />
+            <div className={`flex-1 h-0.5 mx-1 rounded transition-all ${i < idx ? 'bg-emerald-400' : 'bg-gray-200'}`} />
           )}
         </React.Fragment>
       ))}
     </div>
-  );
-};
-
-const FLOW_PRIMARY = 'bg-gradient-to-r from-purple-700 to-violet-800 hover:from-purple-800 hover:to-violet-900';
-
-const FlowInfoCard = ({ title, children, icon: Icon = MdAssignment, tone = 'purple' }) => {
-  const tones = {
-    purple: 'bg-purple-50 border-purple-100 text-purple-700',
-    amber: 'bg-amber-50 border-amber-100 text-amber-700',
-    blue: 'bg-blue-50 border-blue-100 text-blue-700',
-    emerald: 'bg-emerald-50 border-emerald-100 text-emerald-700',
-    red: 'bg-red-50 border-red-100 text-red-700',
-    slate: 'bg-slate-50 border-slate-100 text-slate-700',
-  };
-
-  return (
-    <div className={`rounded-2xl border p-4 shadow-sm ${tones[tone] || tones.purple}`}>
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm flex-shrink-0">
-          <Icon size={18} />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[11px] font-black uppercase tracking-wide opacity-70">{title}</p>
-          <div className="mt-1 text-sm text-slate-700">{children}</div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const FlowDetailRow = ({ label, value }) => (
-  <div>
-    <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">{label}</p>
-    <p className="mt-0.5 text-sm font-extrabold text-slate-900 leading-snug break-words">{value || '-'}</p>
-  </div>
-);
-
-const FlowActionButton = ({ children, onClick, disabled, variant = 'primary', className = '' }) => {
-  const styles = {
-    primary: `${FLOW_PRIMARY} text-white shadow-lg shadow-purple-900/20`,
-    neutral: 'bg-slate-100 hover:bg-slate-200 text-slate-700',
-    danger: 'bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-lg shadow-red-900/10',
-    amber: 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-900/10',
-    blue: 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-900/10',
-    emerald: 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-lg shadow-emerald-900/10',
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`action-btn rounded-xl px-4 py-3.5 font-extrabold text-sm active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed ${styles[variant] || styles.primary} ${className}`}
-    >
-      {children}
-    </button>
   );
 };
 
@@ -1271,24 +1215,24 @@ const ProgramadasEntregas = () => {
     setContainerVazioProof(null);
   };
 
-  const flowBackSteps = {
-    obs: 'welcome',
-    arrival: 'welcome',
-    confirmDesova: 'welcome',
-    desovaJustify: 'confirmDesova',
-    desovaStart: 'confirmDesova',
-    desovaProgress: 'confirmDesova',
-    desovaNotYet: 'desovaProgress',
-    desovaNotYetObs: 'desovaProgress',
-    desovaNotYetMsg: 'desovaProgress',
-    desovaFinal: 'desovaProgress',
-    finalDocs: 'desovaProgress',
-    leavingClient: 'finalDocs',
-    arrivingPort: 'leavingClient',
-    portReturn: 'arrivingPort'
-  };
-
   useEffect(() => {
+    const flowBackSteps = {
+      obs: 'welcome',
+      arrival: 'welcome',
+      confirmDesova: 'welcome',
+      desovaJustify: 'confirmDesova',
+      desovaStart: 'confirmDesova',
+      desovaProgress: 'confirmDesova',
+      desovaNotYet: 'desovaProgress',
+      desovaNotYetObs: 'desovaProgress',
+      desovaNotYetMsg: 'desovaProgress',
+      desovaFinal: 'desovaProgress',
+      finalDocs: 'desovaProgress',
+      leavingClient: 'finalDocs',
+      arrivingPort: 'leavingClient',
+      portReturn: 'arrivingPort'
+    };
+
     const handleAppBack = (event) => {
       const hasOpenModal = showModal || showMontagemModal || showReturnModal || showContainerReturnModal;
       if (!hasOpenModal) return;
@@ -1445,31 +1389,7 @@ const ProgramadasEntregas = () => {
   // ─────────────────────────────────────────────
   //  CAMERA/PHOTO SECTION REUSABLE
   // ─────────────────────────────────────────────
-  const getPhotoChecklist = () => {
-    const desovaLabel = city === 'itajai' ? 'Ovacao' : 'Desova';
-    const itemsByStep = {
-      arrival: ['Caminhao no cliente', 'Container na doca', 'Situacao da chegada', 'Condicoes operacionais'],
-      desovaStart: [`Inicio da ${desovaLabel.toLowerCase()}`, 'Lacre/container identificado', 'Area operacional visivel'],
-      desovaFinal: [`Fim da ${desovaLabel.toLowerCase()}`, 'Container/carga liberada', 'Local em condicoes finais'],
-      leavingClient: ['Caminhao saindo do cliente', 'Container/equipamento em seguranca', 'Situacao da saida'],
-      arrivingPort: ['Caminhao no porto', 'Entrada/area do terminal', 'Situacao da chegada no porto'],
-      portReturn: ['Comprovante da devolucao', 'Container identificado', 'Registro operacional do porto'],
-    };
-    return itemsByStep[currentStep] || ['Foto clara', 'Placa/container visivel', 'Situacao operacional'];
-  };
-
-  const PhotoSection = ({
-    onConfirm,
-    onBack,
-    buttonLabel = 'Enviar registro',
-    buttonColor = FLOW_PRIMARY,
-    confirmDisabled = false,
-    helperText = 'A foto e obrigatoria para continuar a operacao.',
-    checklist,
-  }) => {
-    const firstPhoto = photos[0];
-    const checklistItems = checklist || getPhotoChecklist();
-    return (
+  const PhotoSection = ({ onConfirm, onBack, buttonLabel = 'Enviar registro', buttonColor = 'bg-emerald-600 hover:bg-emerald-700', confirmDisabled = false }) => (
     <div className="space-y-4">
       {uploadProgress > 0 && (
         <div className="space-y-1">
@@ -1479,43 +1399,7 @@ const ProgramadasEntregas = () => {
           <ProgressBar progress={uploadProgress} />
         </div>
       )}
-      <div className="text-center">
-        <p className="text-sm font-extrabold text-slate-900">Registre com foto</p>
-        <p className="mt-1 text-xs font-medium text-slate-500">{helperText}</p>
-      </div>
-
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm aspect-[4/3]">
-        {firstPhoto ? (
-          <img src={firstPhoto.preview || firstPhoto.data} alt="Foto principal" className="h-full w-full object-cover" />
-        ) : (
-          <div className="h-full w-full flex flex-col items-center justify-center text-slate-400">
-            <FaCamera size={36} />
-            <span className="mt-2 text-xs font-bold uppercase tracking-wide">Nenhuma foto registrada</span>
-          </div>
-        )}
-        <button
-          onClick={openCamera}
-          disabled={processingPhoto || submitting}
-          className="absolute left-1/2 bottom-3 -translate-x-1/2 w-16 h-16 rounded-full bg-purple-700 text-white flex items-center justify-center border-4 border-white shadow-xl active:scale-95 transition disabled:opacity-50"
-          aria-label="Tirar foto"
-        >
-          <FaCamera size={25} />
-        </button>
-      </div>
-
-      {photos.length > 1 && <PhotoGrid photos={photos.slice(1)} onRemove={removePhoto} />}
-
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-        <p className="text-[11px] font-black uppercase tracking-wide text-emerald-700 mb-3">A foto deve registrar:</p>
-        <div className="space-y-2.5">
-          {checklistItems.map((item) => (
-            <div key={item} className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <FaCheckCircle className="text-emerald-600 flex-shrink-0" size={14} />
-              <span>{item}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <PhotoGrid photos={photos} onRemove={removePhoto} />
       {processingPhoto && (
         <div className="flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-sm font-semibold">
           <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1526,21 +1410,19 @@ const ProgramadasEntregas = () => {
         </div>
       )}
       <input key={`${currentStep}-${cameraInputKey}`} ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleCameraCapture} className="hidden" />
-      {photos.length > 0 && (
-        <FlowActionButton
-          onClick={openCamera}
-          disabled={processingPhoto || submitting}
-          variant="neutral"
-          className="w-full flex items-center justify-center gap-2"
-        >
-          <FaCamera size={16} /> Tirar mais fotos
-        </FlowActionButton>
-      )}
-      <div className="grid grid-cols-[1fr_auto] gap-3">
+      <button
+        onClick={openCamera}
+        disabled={processingPhoto || submitting}
+        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-base shadow-lg hover:shadow-xl active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <FaCamera size={18} />
+        {photos.length === 0 ? 'Tirar Foto' : 'Tirar Mais Fotos'}
+      </button>
+      <div className="flex gap-3">
         <button
           onClick={onConfirm}
           disabled={submitting || processingPhoto || photos.length === 0 || confirmDisabled}
-          className={`action-btn px-3 py-3.5 rounded-xl text-white font-extrabold text-sm shadow-md active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed ${buttonColor}`}
+          className={`action-btn flex-1 px-3 py-3.5 text-white font-bold text-base shadow-md active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed ${buttonColor}`}
         >
           {submitting ? (
             <span className="flex items-center justify-center gap-2">
@@ -1552,13 +1434,12 @@ const ProgramadasEntregas = () => {
             </span>
           ) : buttonLabel}
         </button>
-        <button onClick={onBack} className="action-btn w-14 px-3 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-base active:scale-95 transition" aria-label="Voltar">
-          <FaArrowLeft className="mx-auto" size={16} />
+        <button onClick={onBack} className="action-btn flex-1 px-3 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-base active:scale-95 transition">
+          Voltar
         </button>
       </div>
     </div>
   );
-  };
 
   // ─────────────────────────────────────────────
   //  RENDER
@@ -2026,27 +1907,22 @@ const ProgramadasEntregas = () => {
            MODAL: FLUXO DE ENTREGA
           ════════════════════════════════════════════ */}
       {showModal && currentDelivery && currentProgramacao && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm">
-          <div className="mobile-modal-panel bg-white w-full h-full sm:max-w-md sm:rounded-2xl sm:h-[92vh] rounded-none shadow-2xl overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="mobile-modal-panel bg-white w-full h-full sm:max-w-xl sm:rounded-3xl sm:h-auto rounded-none shadow-2xl overflow-hidden flex flex-col">
 
             {/* Modal header */}
-            <div className="bg-gradient-to-r from-purple-800 to-violet-800 px-4 py-3 flex-shrink-0">
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 p-5 flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <button onClick={currentStep === 'welcome' ? closeModal : () => goToStep(flowBackSteps[currentStep] || 'welcome')} className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition" aria-label="Voltar">
-                    <FaArrowLeft size={15} />
-                  </button>
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <MdLocalShipping className="text-white" size={20} />
+                  </div>
                   <div>
-                    <h2 className="text-white text-sm font-extrabold leading-tight">
-                      {currentStep === 'welcome' ? 'Iniciar Entrega' :
-                       currentStep === 'arrival' ? 'Chegada no Cliente' :
-                       currentStep === 'finalDocs' ? 'Documentos Finais' :
-                       'Fluxo de Entrega'}
-                    </h2>
+                    <h2 className="text-white text-lg font-extrabold leading-tight">Fluxo de Entrega</h2>
                     <p className="text-white/70 text-xs">{currentProgramacao.processo} · {currentProgramacao.recebedor}</p>
                   </div>
                 </div>
-                <button onClick={closeModal} className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition" aria-label="Fechar">
+                <button onClick={closeModal} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition">
                   <FaTimes size={14} />
                 </button>
               </div>
@@ -2054,29 +1930,40 @@ const ProgramadasEntregas = () => {
             </div>
 
             {/* Modal body */}
-            <div className="mobile-modal-scroll overflow-y-auto flex-1 p-4 bg-slate-50">
+            <div className="mobile-modal-scroll overflow-y-auto flex-1 p-5">
 
               {/* ── STEP: welcome ── */}
               {currentStep === 'welcome' && (
                 <div className="space-y-4">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Operacao</p>
-                        <h3 className="mt-1 text-lg font-black text-slate-950 leading-tight">{currentProgramacao?.processoLog || currentProgramacao?.processo || currentProgramacao?.container || '-'}</h3>
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <FaUser className="text-blue-600" size={16} />
                       </div>
-                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700 border border-emerald-100">
-                        Montagem concluida
-                      </span>
+                      <div>
+                        <p className="text-sm text-gray-500">Motorista</p>
+                        <p className="font-bold text-gray-900">{currentProgramacao?.motorista || currentDelivery?.driverName || user?.fullName || 'Motorista'}</p>
+                      </div>
                     </div>
-
-                    <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-3">
-                      <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Dados da carga</p>
-                      <FlowDetailRow label="Container" value={currentProgramacao?.container || currentDelivery?.deliveryNumber} />
-                      <FlowDetailRow label="Cliente" value={currentProgramacao?.recebedor || currentProgramacao?.destinatario} />
-                      <FlowDetailRow label="Motorista" value={currentProgramacao?.motorista || currentDelivery?.driverName || user?.fullName || user?.name || 'Motorista'} />
-                      <FlowDetailRow label="Endereco" value={currentProgramacao?.endereco || currentProgramacao?.destino || currentProgramacao?.localEntrega} />
-                      <FlowDetailRow label="Agendamento" value={formatarAgendamento(getProgramacaoDate(currentProgramacao, city))} />
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                        <FaMapMarkerAlt className="text-purple-600" size={16} />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Destino</p>
+                        <p className="font-bold text-gray-900">{currentProgramacao?.recebedor || '-'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <FaCalendarAlt className="text-emerald-600" size={16} />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Data agendada</p>
+                        <p className="font-bold text-blue-700 text-base">
+                          {formatarAgendamento(getProgramacaoDate(currentProgramacao, city))}
+                        </p>
+                      </div>
                     </div>
                     {(() => {
                       const statusKey = normalizeStatus(currentDelivery?.status);
@@ -2095,17 +1982,17 @@ const ProgramadasEntregas = () => {
                     )}
                     <StepTimer start={currentDelivery?.createdAt || getProgramacaoDate(currentProgramacao, city)} label="Tempo total" />
                   </div>
-                  <FlowInfoCard title="Iniciar entrega" icon={FaTruck}>
-                    Ao iniciar, o sistema registra o inicio do transporte ate o cliente.
-                  </FlowInfoCard>
-
-                  <div className="grid grid-cols-[1fr_auto] gap-3">
-                    <FlowActionButton onClick={() => goToStep('arrival')} className="flex items-center justify-center gap-2">
-                      <FaMapMarkerAlt size={16} /> Iniciar Entrega
-                    </FlowActionButton>
-                    <FlowActionButton onClick={() => goToStep('obs')} variant="neutral" className="w-14 flex items-center justify-center">
+                  <div className="flex gap-3">
+                    <button onClick={() => goToStep('arrival')}
+                      className="flex-1 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl font-bold text-base shadow-lg active:scale-95 transition flex items-center justify-center gap-2"
+                    >
+                      <FaMapMarkerAlt size={16} /> Cheguei no cliente
+                    </button>
+                    <button onClick={() => goToStep('obs')}
+                      className="px-4 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl font-bold text-sm active:scale-95 transition flex items-center justify-center gap-2"
+                    >
                       <FaClipboardList size={16} />
-                    </FlowActionButton>
+                    </button>
                   </div>
                 </div>
               )}
@@ -2180,7 +2067,7 @@ const ProgramadasEntregas = () => {
                     onConfirm={handleArrivalConfirm}
                     onBack={() => goToStep('welcome')}
                     buttonLabel="✓ Confirmar chegada"
-                    buttonColor={FLOW_PRIMARY}
+                    buttonColor="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
                     confirmDisabled={currentProgramacao && getProgramacaoDate(currentProgramacao, city) ? Date.now() > new Date(getProgramacaoDate(currentProgramacao, city)).getTime() && !arrivalDelayReason.trim() : false}
                   />
                 </div>
@@ -2261,7 +2148,7 @@ const ProgramadasEntregas = () => {
                     onConfirm={() => compressAndUpload('inicioDesova', 'EM_DESOVA', 'desovaProgress', { desovaStartAt: new Date().toISOString() })}
                     onBack={() => goToStep('confirmDesova')}
                     buttonLabel={`✓ Confirmar ${city === 'itajai' ? 'ovação' : 'desova'}`}
-                    buttonColor={FLOW_PRIMARY}
+                    buttonColor="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700"
                   />
                 </div>
               )}
@@ -2365,7 +2252,7 @@ const ProgramadasEntregas = () => {
                     onConfirm={() => compressAndUpload('fimDesova', 'ANEXANDO_DOCUMENTOS_FINAIS', 'finalDocs', { desovaEndAt: new Date().toISOString() })}
                     onBack={() => goToStep('desovaProgress')}
                     buttonLabel={`✓ ${city === 'itajai' ? 'Ovação' : 'Desova'} concluída`}
-                    buttonColor={FLOW_PRIMARY}
+                    buttonColor="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700"
                   />
                 </div>
               )}
@@ -2512,7 +2399,7 @@ const ProgramadasEntregas = () => {
                     onConfirm={() => compressAndUpload('saidaCliente', 'RETORNANDO_PORTO', 'arrivingPort', { saidaClienteAt: new Date().toISOString() })}
                     onBack={() => goToStep('finalDocs')}
                     buttonLabel="Confirmar saida do cliente"
-                    buttonColor={FLOW_PRIMARY}
+                    buttonColor="bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700"
                   />
                 </div>
               )}
@@ -2532,7 +2419,7 @@ const ProgramadasEntregas = () => {
                     onConfirm={() => compressAndUpload('chegadaPorto', 'CHEGOU_PORTO', 'portReturn', { chegadaPortoAt: new Date().toISOString() })}
                     onBack={() => goToStep('leavingClient')}
                     buttonLabel="Confirmar chegada no porto"
-                    buttonColor={FLOW_PRIMARY}
+                    buttonColor="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
                   />
                 </div>
               )}
@@ -2552,7 +2439,7 @@ const ProgramadasEntregas = () => {
                     onConfirm={() => compressAndUpload('devolucaoVazio', 'FINALIZADO', 'agradecimento', { horarioDevolucaoVazio: new Date().toISOString() })}
                     onBack={() => goToStep('arrivingPort')}
                     buttonLabel="Finalizar devolucao"
-                    buttonColor={FLOW_PRIMARY}
+                    buttonColor="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
                   />
                 </div>
               )}

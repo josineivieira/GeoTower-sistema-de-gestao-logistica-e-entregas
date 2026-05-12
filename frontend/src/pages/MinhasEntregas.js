@@ -61,16 +61,17 @@ const fmtMonth = (d) => formatarDataApenasLocal(d, { month: 'short', year: '2-di
 /* ── build chart data from programacoes ── */
 function buildChartData(list) {
   /* Status distribution */
-  const statusCount = {};
+  const statusCount = { entregues: 0, pendentes: 0, cancelados: 0 };
   list.forEach((p) => {
-    const key = String(p.status || 'PENDENTE').toUpperCase();
-    statusCount[key] = (statusCount[key] || 0) + 1;
+    if (isFinishedDelivery(p.status)) statusCount.entregues++;
+    else if (isCanceledDelivery(p.status)) statusCount.cancelados++;
+    else statusCount.pendentes++;
   });
-  const pieData = Object.entries(statusCount).map(([k, v]) => ({
-    name:  (STATUS_CONFIG[k] || STATUS_CONFIG.PENDENTE).label,
-    value: v,
-    color: (STATUS_CONFIG[k] || STATUS_CONFIG.PENDENTE).color,
-  }));
+  const pieData = [
+    { name: 'Entregues', value: statusCount.entregues, color: '#10b981' },
+    { name: 'Pendentes', value: statusCount.pendentes, color: '#f97316' },
+    { name: 'Cancelados', value: statusCount.cancelados, color: '#ef4444' },
+  ].filter(item => item.value > 0);
 
   /* Deliveries per month */
   const monthMap = {};
@@ -89,7 +90,9 @@ function buildChartData(list) {
   const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const dayMap   = Object.fromEntries(dayNames.map((d) => [d, { day: d, entregas: 0 }]));
   list.forEach((p) => {
-    const idx = new Date(p.dataAgendamento).getDay();
+    const date = new Date(p.dataAgendamento);
+    if (Number.isNaN(date.getTime())) return;
+    const idx = date.getDay();
     dayMap[dayNames[idx]].entregas++;
   });
   const lineData = Object.values(dayMap);
@@ -510,6 +513,10 @@ const MinhasEntregas = () => {
   const [toast,                 setToast]                 = useState(null);
   const [activeView,            setActiveView]            = useState('dashboard'); // 'dashboard' | 'list'
 
+  const visibleProgramacoes = useMemo(() => (
+    allProgramacoes.filter(p => !(Array.isArray(p.missingDocumentsAtSubmit) && p.missingDocumentsAtSubmit.length > 0))
+  ), [allProgramacoes]);
+
   /* ── Debounce ── */
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(searchTerm), 350);
@@ -528,9 +535,7 @@ const MinhasEntregas = () => {
 
   /* ── Filter ── */
   useEffect(() => {
-    let filtered = allProgramacoes.filter(
-      p => !(Array.isArray(p.missingDocumentsAtSubmit) && p.missingDocumentsAtSubmit.length > 0)
-    );
+    let filtered = [...visibleProgramacoes];
 
     if (filter === 'pendentes') {
       filtered = filtered.filter(p => !isFinishedDelivery(p.status) && !isCanceledDelivery(p.status));
@@ -549,7 +554,7 @@ const MinhasEntregas = () => {
     }
 
     setDisplayedProgramacoes(filtered);
-  }, [filter, debouncedSearch, allProgramacoes]);
+  }, [filter, debouncedSearch, visibleProgramacoes]);
 
   const loadProgramacoes = async () => {
     setLoading(true);
@@ -567,15 +572,15 @@ const MinhasEntregas = () => {
   };
 
   const FILTERS = useMemo(() => {
-    const tot = allProgramacoes.length;
-    const pen = allProgramacoes.filter(p => !isFinishedDelivery(p.status) && !isCanceledDelivery(p.status)).length;
-    const env = allProgramacoes.filter(p => isFinishedDelivery(p.status)).length;
+    const tot = visibleProgramacoes.length;
+    const pen = visibleProgramacoes.filter(p => !isFinishedDelivery(p.status) && !isCanceledDelivery(p.status)).length;
+    const env = visibleProgramacoes.filter(p => isFinishedDelivery(p.status)).length;
     return [
       { label: 'Todas',     value: 'all',      count: tot },
       { label: 'Pendentes', value: 'pendentes', count: pen },
       { label: 'Enviadas',  value: 'enviadas',  count: env },
     ];
-  }, [allProgramacoes]);
+  }, [visibleProgramacoes]);
 
   /* ──────────────────────────────────────────────────── */
   return (
@@ -683,7 +688,7 @@ const MinhasEntregas = () => {
             {[...Array(3)].map((_, i) => <Skeleton key={i} />)}
           </div>
         ) : activeView === 'dashboard' ? (
-          <DashboardView data={allProgramacoes} />
+          <DashboardView data={visibleProgramacoes} />
         ) : (
           <ListView data={displayedProgramacoes} navigate={navigate} city={city} />
         )}

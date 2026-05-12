@@ -6,14 +6,14 @@ import { formatarDataApenasLocal, formatarHoraLocal } from '../utils/date';
 import Footer from '../components/Footer';
 import {
   FaChartBar, FaFileAlt, FaUsers, FaCalendarAlt,
-  FaCheckCircle, FaBoxes, FaTruck, FaTachometerAlt,
+  FaBoxes, FaTruck, FaTachometerAlt,
   FaLayerGroup, FaIdCard, FaTable, FaArrowRight,
-  FaShieldAlt, FaClock, FaMapMarkerAlt, FaStar,
-  FaBell, FaRocket, FaChevronRight, FaBolt,
+  FaShieldAlt, FaClock,
+  FaChevronRight, FaBolt,
   // ── novos ──
   FaUserTie, FaWater, FaBullseye, FaSatelliteDish,
   FaCog, FaChartLine, FaDatabase, FaSun, FaMoon,
-  FaCloudSun, FaTasks, FaClipboardList,
+  FaCloudSun, FaClipboardList,
 } from 'react-icons/fa';
 import { HiSparkles } from 'react-icons/hi';
 
@@ -687,6 +687,94 @@ const HeroKpiRow = ({ statsToday }) => (
 /* ═══════════════════════════════════════════════════════════
    MAIN PAGE
 ═══════════════════════════════════════════════════════════ */
+const HomeCommandPanel = ({ role, statsToday, actions }) => (
+  <div className="g-fade delay-4 w-full lg:w-[390px] flex-shrink-0">
+    <div
+      className="rounded-[28px] overflow-hidden"
+      style={{
+        background: 'rgba(255,255,255,.08)',
+        border: '1px solid rgba(255,255,255,.16)',
+        boxShadow: '0 24px 70px rgba(2,6,23,.32), inset 0 1px 0 rgba(255,255,255,.12)',
+        backdropFilter: 'blur(16px)',
+      }}
+    >
+      <div className="p-5 border-b border-white/10">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[.18em] text-white/40">Central de operacao</p>
+            <h2 className="mt-1 text-lg font-black text-white tracking-tight">Acesso rapido</h2>
+          </div>
+          <div
+            className="w-10 h-10 rounded-2xl flex items-center justify-center"
+            style={{
+              background: 'linear-gradient(135deg,rgba(108,79,248,.35),rgba(16,185,129,.24))',
+              border: '1px solid rgba(255,255,255,.14)',
+              color: '#C4B5FD',
+            }}
+          >
+            <FaBolt />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2.5">
+          {[
+            { label: 'Hoje', value: statsToday.total, color: '#A78BFA' },
+            { label: 'Concluidas', value: statsToday.completed, color: '#34D399' },
+            { label: 'Em rota', value: statsToday.inProgress, color: '#60A5FA' },
+          ].map(item => (
+            <div key={item.label} className="rounded-2xl px-3 py-3" style={{ background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.1)' }}>
+              <p className="text-[10px] font-bold text-white/45 truncate">{item.label}</p>
+              <p className="mt-1 text-2xl font-black tabular-nums leading-none" style={{ color: item.color }}>{item.value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-3 space-y-2">
+        {actions.map(action => (
+          <button
+            key={action.label}
+            onClick={action.onClick}
+            className="w-full rounded-2xl px-4 py-3.5 text-left transition active:scale-[.98] group"
+            style={{
+              background: action.primary ? 'linear-gradient(135deg,rgba(108,79,248,.9),rgba(16,185,129,.78))' : 'rgba(255,255,255,.07)',
+              border: action.primary ? '1px solid rgba(255,255,255,.22)' : '1px solid rgba(255,255,255,.1)',
+              boxShadow: action.primary ? '0 14px 34px rgba(108,79,248,.22)' : 'none',
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: action.primary ? 'rgba(255,255,255,.18)' : `${action.color}24`,
+                  color: action.primary ? '#fff' : action.color,
+                }}
+              >
+                {action.icon}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-black text-white leading-tight">{action.label}</p>
+                <p className="text-[11px] text-white/48 mt-0.5 truncate">{action.description}</p>
+              </div>
+              <FaChevronRight className="text-white/35 text-xs group-hover:translate-x-0.5 transition" />
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="px-5 py-4 flex items-center justify-between border-t border-white/10">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400" style={{ animation: 'pulse-dot 2s infinite' }} />
+          <span className="text-xs font-bold text-white/62">Sistema operacional</span>
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-[.14em] text-white/35">
+          {role === 'driver' ? 'Motorista' : 'Gestao'}
+        </span>
+      </div>
+    </div>
+  </div>
+);
+
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -822,6 +910,50 @@ const Home = () => {
     { id:'general', label:'Geral', Icon: FaChartLine   },
   ];
 
+  const heroActions = role === 'driver'
+    ? [
+        {
+          label: 'Entregas Programadas',
+          description: 'Ver agenda vinculada ao seu perfil',
+          icon: <FaCalendarAlt />,
+          color: B.v,
+          primary: true,
+          onClick: () => navigate(`/entregas-programadas?motorista=${encodeURIComponent(user?.name || user?.username || '')}`)
+        },
+        {
+          label: 'Minhas Entregas',
+          description: 'Historico, status e acompanhamento',
+          icon: <FaBoxes />,
+          color: B.m,
+          onClick: () => navigate('/minhas-entregas')
+        }
+      ]
+    : [
+        ...(canAccessAdmin() && !hasAccess(['geomar']) ? [{
+          label: 'Dashboard Analytics',
+          description: 'KPIs e indicadores da operacao',
+          icon: <FaChartLine />,
+          color: B.v,
+          primary: true,
+          onClick: () => navigate('/admin')
+        }] : []),
+        ...(canAccessAdmin() ? [{
+          label: 'Torre de Controle',
+          description: 'Monitoramento em tempo real',
+          icon: <FaTachometerAlt />,
+          color: '#4F46E5',
+          primary: !canAccessAdmin() || hasAccess(['geomar']),
+          onClick: () => navigate('/monitor-entregas')
+        }] : []),
+        ...(hasAccess(['manager', 'admin']) ? [{
+          label: 'Programacoes',
+          description: 'Gerenciar agenda operacional',
+          icon: <FaLayerGroup />,
+          color: '#0891B2',
+          onClick: () => navigate('/programacoes')
+        }] : [])
+      ];
+
   return (
     <div style={{ background: B.bg, minHeight: '100%' }}>
       <GlobalStyles />
@@ -850,18 +982,14 @@ const Home = () => {
           }}
         />
 
-        {/* Glow orbs */}
+        {/* Subtle light bands */}
         <div
-          className="g-float-a absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full pointer-events-none"
-          style={{ background: `radial-gradient(circle,${B.v}35 0%,transparent 65%)` }}
+          className="absolute left-0 top-10 h-px w-full pointer-events-none"
+          style={{ background: 'linear-gradient(90deg,transparent,rgba(167,139,250,.32),transparent)' }}
         />
         <div
-          className="g-float-b absolute -bottom-24 -right-24 w-[420px] h-[420px] rounded-full pointer-events-none"
-          style={{ background: `radial-gradient(circle,${B.m}30 0%,transparent 65%)` }}
-        />
-        <div
-          className="g-float-c absolute top-1/3 right-1/3 w-64 h-64 rounded-full pointer-events-none"
-          style={{ background: `radial-gradient(circle,#3B82F625 0%,transparent 65%)` }}
+          className="absolute right-0 bottom-20 h-px w-2/3 pointer-events-none"
+          style={{ background: 'linear-gradient(90deg,transparent,rgba(52,211,153,.28),transparent)' }}
         />
 
         <div className="relative z-10 max-w-6xl mx-auto px-6 py-14 sm:py-20">
@@ -949,35 +1077,8 @@ const Home = () => {
               </div>
             </div>
 
-
-
-            {/* RIGHT: Illustration (non-driver) */}
-            {role !== 'driver' && (
-              <div className="g-fade delay-4 hidden lg:flex items-center justify-center flex-shrink-0">
-                <div className="relative w-44 h-44">
-                  <div
-                    className="absolute inset-0 rounded-full"
-                    style={{ border: `2px dashed rgba(108,79,248,.3)`, animation: 'spin-slow 20s linear infinite' }}
-                  />
-                  <div
-                    className="absolute inset-4 rounded-full"
-                    style={{ border: `1.5px dashed rgba(16,185,129,.2)`, animation: 'spin-slow 14s linear infinite reverse' }}
-                  />
-                  <div
-                    className="absolute inset-10 rounded-3xl flex items-center justify-center"
-                    style={{
-                      background: 'linear-gradient(135deg,rgba(108,79,248,.2),rgba(16,185,129,.15))',
-                      border: '1.5px solid rgba(255,255,255,.12)',
-                      backdropFilter: 'blur(10px)',
-                      boxShadow: '0 20px 60px rgba(108,79,248,.25)',
-                    }}
-                  >
-                    {/* Ícone profissional no lugar do emoji 📊 */}
-                    <FaChartBar style={{ fontSize: '2.8rem', color: '#A78BFA', opacity: 0.9 }} />
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* RIGHT: command panel */}
+            <HomeCommandPanel role={role} statsToday={statsToday} actions={heroActions} />
           </div>
         </div>
 

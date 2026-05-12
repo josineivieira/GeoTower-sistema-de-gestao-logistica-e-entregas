@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const icompanyController = require("../controllers/icompanyController");
 const { MongoClient } = require("mongodb");
+const auth = require("../middleware/auth");
 
 const MONGODB_URI = process.env.MONGODB_URI; // ⚠️ no Render tem que ser esse nome
 const DB_NAME = process.env.MONGO_DB || "delivery-docs";
@@ -118,20 +119,37 @@ function applyEstabCityFilter(filter, city) {
   return filter;
 }
 
+function escapeRegex(value = '') {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function applyContractorAccessFilter(filter, user) {
+  if (user?.role === 'gestor_contratado') {
+    const contratado = String(user.contratado || '').trim();
+    if (!contratado) {
+      filter._id = { $exists: false };
+      return filter;
+    }
+    filter.contratado = new RegExp(`^${escapeRegex(contratado)}$`, 'i');
+  }
+  return filter;
+}
+
 // --- new endpoints for the React Icompany page ------------------------------------------------
-router.get('/', async (req, res) => {
+router.get('/', auth, async (req, res) => {
   try {
     const c = await col();
 
     let filter = {};
     const city = req.city || 'manaus';
-    const cacheKey = `list:${city}`;
+    const cacheKey = `list:${city}:${req.user?.role || ''}:${req.user?.contratado || ''}`;
     const cached = listCache.get(cacheKey);
     if (cached && Date.now() - cached.createdAt < LIST_CACHE_MS) {
       res.set('Cache-Control', 'private, max-age=45');
       return res.json(cached.payload);
     }
     applyEstabCityFilter(filter, city);
+    applyContractorAccessFilter(filter, req.user);
 
     let data = await c.find(filter)
       .sort({ updatedAt: -1, _id: -1 })

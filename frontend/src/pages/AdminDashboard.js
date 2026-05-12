@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import KPIAnalytics from './KPIAnalytics';
 import { adminService } from '../services/authService';
+import { useAuth } from '../services/authContext';
 import { useCity } from '../contexts/CityContext';
 import { getProgramacaoDate } from '../utils/programacaoDate';
 import { formatarData, formatarDataApenas, formatarHora } from '../utils/date';
@@ -185,6 +186,7 @@ const filterDateISOToBR = (value) => {
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { city } = useCity();
+  const { user } = useAuth();
   const [deliveries,  setDeliveries]  = useState([]);
   const [programacoes,setProgramacoes]= useState([]);
   const [statistics,  setStatistics]  = useState(null);
@@ -258,6 +260,11 @@ const AdminDashboard = () => {
     .replace(/^#/, '')
     .replace(/\s+/g, ' ')
     .trim()
+    .toUpperCase();
+
+  const normalizeContractor = (value) => String(value || '')
+    .trim()
+    .replace(/\s+/g, ' ')
     .toUpperCase();
 
   const getIcompanyProcessNumber = (record) =>
@@ -394,6 +401,11 @@ const AdminDashboard = () => {
         container: record.container || record.placa,
         contratado: record.contratado
       };
+      }).filter(record => {
+        if (user?.role !== 'gestor_contratado') return true;
+        const userContractor = normalizeContractor(user?.contratado);
+        if (!userContractor) return false;
+        return normalizeContractor(record.contratado || record.userName) === userContractor;
       });
       
       setDeliveries(mappedDeliveries);
@@ -412,7 +424,7 @@ const AdminDashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [navigate, city]);
+  }, [navigate, city, user?.role, user?.contratado]);
 
   // Handler para aplicar filtros
   const handleApplyFilters = useCallback(() => {

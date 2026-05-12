@@ -13,6 +13,8 @@ const Delivery = require('../models/Delivery');
 const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
 const Icompany = require('../models/Icompany');
 
+const escapeRegex = (value = '') => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 /**
  * Obter estatísticas de entregas com performance otimizada
  * Usa aggregation pipeline ao invés de carregar tudo em memória
@@ -23,7 +25,7 @@ exports.getStatistics = async (cityCode = 'manaus', contratadobFilter = null, st
 
     // Se houver filtro de contratado (gestor_contratado), adicionar
     if (contratadobFilter) {
-      match.userName = contratadobFilter;
+      match.userName = new RegExp(`^${escapeRegex(contratadobFilter)}$`, 'i');
     }
 
     // Aplica filtros de data na camada de Delivery (submittedAt), para manter compatibilidade com /admin/deliveries
@@ -95,6 +97,9 @@ exports.getStatistics = async (cityCode = 'manaus', contratadobFilter = null, st
         { origem: '' },
         { origem: { $nin: ['MANAUS', 'MANAUS - COELTA BALY'] } }
       ];
+    }
+    if (contratadobFilter) {
+      progFilter.contratado = new RegExp(`^${escapeRegex(contratadobFilter)}$`, 'i');
     }
 
     const scheduleFilter = {};

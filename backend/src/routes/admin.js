@@ -640,6 +640,9 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
     let progFilter = {};
     applyProgramacaoCityFilter(progFilter, city);
+    if (req.user?.role === 'gestor_contratado' && req.user.contratado) {
+      progFilter.contratado = new RegExp(`^${escapeRegex(req.user.contratado)}$`, 'i');
+    }
     if (sentido && sentido !== 'all') progFilter.sentido = String(sentido || '').trim().toUpperCase();
     const programacoes = await ProgramacaoEntrega.find(progFilter)
       .select('processo processoLog recebedor remetente destinatario container armador dataAgendamento dtColeta contratado motorista status createdAt observacoes origem estab sentido')
@@ -951,7 +954,8 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     // NOVO: Se gestor_contratado, filtrar por contratado
     if (req.user && req.user.role === 'gestor_contratado' && req.user.contratado) {
       console.log('  ✓ Aplicando filtro de contratado para gestor:', req.user.contratado);
-      filtered = filtered.filter(d => d.userName === req.user.contratado);
+      const userContractor = String(req.user.contratado || '').trim().toUpperCase();
+      filtered = filtered.filter(d => String(d.userName || d.contratado || '').trim().toUpperCase() === userContractor);
     }
 
     if (processo && processo.trim()) {
@@ -3244,3 +3248,4 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
 });
 
 module.exports = router;
+

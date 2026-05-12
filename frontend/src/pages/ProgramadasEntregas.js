@@ -187,7 +187,7 @@ const getStepFromDeliveryStatus = (delivery) => {
     case 'DESOVA_FINALIZADA': case 'AGUARDANDO_AGENDAMENTO_DEVOLUCAO': restoredStep = 'finalDocs'; break;
     case 'SAINDO_CLIENTE': restoredStep = ['leavingClient', 'leavingClientPhoto'].includes(delivery?.currentStep) ? delivery.currentStep : 'leavingClient'; break;
     case 'RETORNANDO_PORTO': restoredStep = ['arrivingPort', 'arrivingPortPhoto', 'portReturn'].includes(delivery?.currentStep) ? delivery.currentStep : 'arrivingPort'; break;
-    case 'CHEGOU_PORTO': restoredStep = 'portReturn'; break;
+    case 'CHEGOU_PORTO': restoredStep = ['portReturn', 'portReturnPhoto'].includes(delivery?.currentStep) ? delivery.currentStep : 'portReturn'; break;
     case 'ENTREGUE': case 'DEVOLVENDO_CONTAINER': case 'FINALIZADO': restoredStep = 'welcome'; break;
     default: restoredStep = 'welcome';
   }
@@ -277,6 +277,7 @@ const FLOW_STEPS_BASE = [
 const STEP_INDEX = Object.fromEntries(FLOW_STEPS_BASE.map((s, i) => [s.key, i]));
 STEP_INDEX.leavingClientPhoto = STEP_INDEX.leavingClient;
 STEP_INDEX.arrivingPortPhoto = STEP_INDEX.arrivingPort;
+STEP_INDEX.portReturnPhoto = STEP_INDEX.portReturn;
 
 const FlowStepBar = ({ currentStep, city = 'manaus' }) => {
   const idx = STEP_INDEX[currentStep] ?? 0;
@@ -1234,7 +1235,8 @@ const ProgramadasEntregas = () => {
       leavingClientPhoto: 'leavingClient',
       arrivingPort: 'leavingClient',
       arrivingPortPhoto: 'arrivingPort',
-      portReturn: 'arrivingPort'
+      portReturn: 'arrivingPort',
+      portReturnPhoto: 'portReturn'
     };
 
     const handleAppBack = (event) => {
@@ -1471,6 +1473,13 @@ const ProgramadasEntregas = () => {
         card: 'bg-blue-50 border-blue-200',
         title: 'text-blue-800',
         button: 'from-blue-500 to-indigo-700 hover:from-blue-600 hover:to-indigo-800'
+      },
+      emerald: {
+        iconBg: 'bg-emerald-100',
+        iconText: 'text-emerald-600',
+        card: 'bg-emerald-50 border-emerald-200',
+        title: 'text-emerald-800',
+        button: 'from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700'
       }
     }[tone];
 
@@ -2528,6 +2537,21 @@ const ProgramadasEntregas = () => {
 
               {/* STEP: portReturn */}
               {currentStep === 'portReturn' && (
+                <FlowCallToActionStep
+                  icon={FaTruck}
+                  title="Devolucao CNTR Porto"
+                  subtitle="Chegada no porto confirmada. Agora anexe o comprovante de baixa no porto para finalizar a devolucao."
+                  timerStart={currentDelivery?.chegadaPortoAt || currentDelivery?.saidaClienteAt || currentDelivery?.createdAt}
+                  timerLabel="Tempo no porto"
+                  primaryLabel="Anexar comprovante de baixa no porto"
+                  onPrimary={() => goToStep('portReturnPhoto')}
+                  onBack={() => goToStep('arrivingPort')}
+                  tone="emerald"
+                />
+              )}
+
+              {/* STEP: portReturnPhoto */}
+              {currentStep === 'portReturnPhoto' && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center">
@@ -2539,7 +2563,7 @@ const ProgramadasEntregas = () => {
                   <p className="text-gray-500 text-sm">Anexe a foto/comprovante da devolucao do container no porto.</p>
                   <PhotoSection
                     onConfirm={() => compressAndUpload('devolucaoVazio', 'FINALIZADO', 'agradecimento', { horarioDevolucaoVazio: new Date().toISOString() })}
-                    onBack={() => goToStep('arrivingPort')}
+                    onBack={() => goToStep('portReturn')}
                     buttonLabel="Finalizar devolucao"
                     buttonColor="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
                   />

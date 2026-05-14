@@ -435,7 +435,7 @@ const ProgramadasEntregas = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [driverFilter, setDriverFilter] = useState('all');
+  const [driverFilter, setDriverFilter] = useState('');
   const [sortBy, setSortBy] = useState('data');
   const [sortOrder, setSortOrder] = useState('desc');
 
@@ -514,6 +514,12 @@ const ProgramadasEntregas = () => {
       }
     }
   }, [programacoes, location.search]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const motorista = params.get('motorista');
+    if (motorista) setDriverFilter(String(motorista).trim());
+  }, [location.search]);
 
   const loadProgramacoes = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -1375,6 +1381,7 @@ const ProgramadasEntregas = () => {
   ]);
 
   const getFilteredAndSorted = () => {
+    if (!driverFilter) return [];
     let result = programacoes;
     if (searchTerm.trim()) {
       const needle = searchTerm.toUpperCase();
@@ -1388,7 +1395,7 @@ const ProgramadasEntregas = () => {
       );
     }
     if (statusFilter !== 'all') result = result.filter(p => (p.status || 'pending').toUpperCase() === statusFilter.toUpperCase());
-    if (driverFilter !== 'all') result = result.filter(p => String(p.motorista || '').trim().toUpperCase() === driverFilter.toUpperCase());
+    result = result.filter(p => String(p.motorista || '').trim().toUpperCase() === driverFilter.toUpperCase());
     result = [...result].sort((a, b) => {
       let aVal = sortBy === 'data' ? new Date(getProgramacaoDate(a, city) || 0).getTime() : String(a.container || '').length;
       let bVal = sortBy === 'data' ? new Date(getProgramacaoDate(b, city) || 0).getTime() : String(b.container || '').length;
@@ -1672,7 +1679,7 @@ const ProgramadasEntregas = () => {
               onChange={e => setDriverFilter(e.target.value)}
               className="px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm appearance-none"
             >
-              <option value="all" className="bg-gray-900">Todos os motoristas</option>
+              <option value="" className="bg-gray-900">Selecione o motorista</option>
               {programacoes && [...new Set(programacoes.map(p => p.motorista).filter(Boolean))].sort().map(driver => (
                 <option key={driver} value={driver} className="bg-gray-900">{driver}</option>
               ))}
@@ -1718,6 +1725,14 @@ const ProgramadasEntregas = () => {
               <FaTruck className="absolute inset-0 m-auto text-white/60" size={22} />
             </div>
             <p className="text-white/60 font-medium">Carregando entregas...</p>
+          </div>
+        ) : !driverFilter ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center">
+              <FaTruck className="text-white/40" size={40} />
+            </div>
+            <p className="text-white/60 text-lg font-semibold">Selecione o motorista</p>
+            <p className="text-white/40 text-sm">As entregas aparecem apos escolher um motorista</p>
           </div>
         ) : filteredProgramacoes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4">

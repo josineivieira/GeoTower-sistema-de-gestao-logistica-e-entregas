@@ -134,6 +134,39 @@ const DeliveryModal = ({
   const getDesovaLabelBySentido = (sentido = 'DESTINO') =>
     String(sentido || '').trim().toUpperCase() === 'ORIGEM' ? 'Ovação' : 'Desova';
 
+  const getDocumentKeysBySentido = (sentido = 'DESTINO') => {
+    const sentidoKey = String(sentido || '').trim().toUpperCase();
+    const commonDocs = ['retiradaCheio'];
+    const finalDocs = sentidoKey === 'ORIGEM'
+      ? ['canhotCTE', 'canhotNF', 'diarioBordo']
+      : ['canhotCTE', 'canhotNF', 'diarioBordo'];
+    const returnDocs = ['devolucaoVazio'];
+    return [...commonDocs, ...finalDocs, ...returnDocs];
+  };
+
+  const getLabelsBySentido = (delivery, sentido = 'DESTINO') => {
+    const labels = getLabelsForDelivery(delivery);
+    const sentidoKey = String(sentido || '').trim().toUpperCase();
+    if (sentidoKey === 'ORIGEM') {
+      return {
+        ...labels,
+        canhotCTE: 'CONTRATO',
+        canhotNF: 'TACÓGRAFO / RIC ABASTECIMENTO',
+        diarioBordo: 'Diário de Bordo',
+        inicioDesova: 'Início da Ovação',
+        fimDesova: 'Finalização da Ovação',
+      };
+    }
+    return {
+      ...labels,
+      canhotCTE: 'Canhoto CTE',
+      canhotNF: 'Canhoto NF',
+      diarioBordo: 'Diário de Bordo',
+      inicioDesova: 'Início da Desova',
+      fimDesova: 'Finalização da Desova',
+    };
+  };
+
   const flowHistory = getFlowHistory(selectedDelivery);
   const normalizeKey = (s) => {
     if (!s) return '';
@@ -257,6 +290,7 @@ const DeliveryModal = ({
     ? selectedDelivery.containerNumero.filter(Boolean).join(', ')
     : selectedDelivery.containerNumero || selectedDelivery.container || selectedDelivery.cntr || selectedDelivery.numeroContainer || '';
   const armador = selectedDelivery.armador || selectedDelivery.linkedProgramacaoId?.armador || '';
+  const effectiveSentido = selectedDelivery.sentido || selectedSentido || 'DESTINO';
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
@@ -369,12 +403,12 @@ const DeliveryModal = ({
                 ['Motorista', selectedDelivery.driverName || '—'],
                 ['Placa', selectedDelivery.placaIcompany || selectedDelivery.vehiclePlate || '—'],
                 ['Entrega CNTR Porto', selectedDelivery.horarioDevolucaoVazio ? formatarData(selectedDelivery.horarioDevolucaoVazio, city) : '—'],
-                [getPartyLabelBySentido(selectedSentido), getPartyBySentido(selectedDelivery, selectedSentido)],
+                [getPartyLabelBySentido(effectiveSentido), getPartyBySentido(selectedDelivery, effectiveSentido)],
                 ['Agendamento', getProgramacaoDate(selectedDelivery, city) ? formatarAgendamento(getProgramacaoDate(selectedDelivery, city)) : '—'],
                 ['Montagem Container', selectedDelivery.containerMontadoAt ? formatarData(selectedDelivery.containerMontadoAt, city) : '—'],
                 ['Chegada', selectedDelivery.horarioChegada ? formatarData(selectedDelivery.horarioChegada, city) : '—'],
-                [`Início ${getDesovaLabelBySentido(selectedDelivery.sentido || selectedSentido)}`, selectedDelivery.horarioInicioDesova ? formatarData(selectedDelivery.horarioInicioDesova, city) : '—'],
-                [`Fim ${getDesovaLabelBySentido(selectedDelivery.sentido || selectedSentido)}`, selectedDelivery.horarioFimDesova ? formatarData(selectedDelivery.horarioFimDesova, city) : '—'],
+                [`Início ${getDesovaLabelBySentido(effectiveSentido)}`, selectedDelivery.horarioInicioDesova ? formatarData(selectedDelivery.horarioInicioDesova, city) : '—'],
+                [`Fim ${getDesovaLabelBySentido(effectiveSentido)}`, selectedDelivery.horarioFimDesova ? formatarData(selectedDelivery.horarioFimDesova, city) : '—'],
                 ['Saindo do Cliente', selectedDelivery.horarioSaidaCliente ? formatarData(selectedDelivery.horarioSaidaCliente, city) : '—'],
                 ['Chegada no Porto', selectedDelivery.horarioChegadaPorto ? formatarData(selectedDelivery.horarioChegadaPorto, city) : '—'],
               ].map(([label, value]) => {
@@ -405,10 +439,9 @@ const DeliveryModal = ({
               const comparisons = effectiveComparisons;
               const temInconsistenciaData = Object.values(comparisons || {}).some(comp => comp?.isInconsistent === true);
               
-              const labels = getLabelsForDelivery(selectedDelivery);
-              const docMap = getIcompanyDocumentMap(selectedDelivery.sentido || selectedSentido);
-              const temInconsistenciaDocumento = Object.keys(selectedDelivery.documents || {})
-                .filter((k) => !['chegadaCliente', 'inicioDesova', 'fimDesova'].includes(k))
+              const labels = getLabelsBySentido(selectedDelivery, effectiveSentido);
+              const docMap = getIcompanyDocumentMap(effectiveSentido);
+              const temInconsistenciaDocumento = getDocumentKeysBySentido(effectiveSentido)
                 .some((k) => {
                   const present = !!selectedDelivery.documents[k];
                   const icompanyFields = docMap[k] || [];
@@ -671,11 +704,15 @@ const DeliveryModal = ({
               )}
 
               {(() => {
-                const labels = getLabelsForDelivery(selectedDelivery);
-                const docMap = getIcompanyDocumentMap(selectedDelivery.sentido || selectedSentido);
+                const labels = getLabelsBySentido(selectedDelivery, effectiveSentido);
+                const docMap = getIcompanyDocumentMap(effectiveSentido);
 
-                const docRows = Object.keys(selectedDelivery.documents || {})
-                  .filter((k) => !['chegadaCliente', 'inicioDesova', 'fimDesova'].includes(k))
+                const hiddenPhotoKeys = ['chegadaCliente', 'inicioDesova', 'fimDesova', 'saidaCliente', 'chegadaPorto'];
+                const expectedDocKeys = getDocumentKeysBySentido(effectiveSentido);
+                const extraDocKeys = Object.keys(selectedDelivery.documents || {})
+                  .filter((k) => !hiddenPhotoKeys.includes(k) && !expectedDocKeys.includes(k));
+
+                const docRows = [...expectedDocKeys, ...extraDocKeys]
                   .map((k) => {
                     const present = !!selectedDelivery.documents[k];
                     const canRemoveThisDocument = present && canRemoveDocument;
@@ -728,8 +765,10 @@ const DeliveryModal = ({
 
                 const fotoFields = [
                   { key: 'chegadaCliente', label: 'Chegada no Cliente' },
-                  { key: 'inicioDesova', label: `Início da ${getDesovaLabelBySentido(selectedDelivery.sentido || selectedSentido)}` },
-                  { key: 'fimDesova', label: `Finalização da ${getDesovaLabelBySentido(selectedDelivery.sentido || selectedSentido)}` }
+                  { key: 'inicioDesova', label: `Início da ${getDesovaLabelBySentido(effectiveSentido)}` },
+                  { key: 'fimDesova', label: `Finalização da ${getDesovaLabelBySentido(effectiveSentido)}` },
+                  { key: 'saidaCliente', label: 'Saída do Cliente' },
+                  { key: 'chegadaPorto', label: 'Chegada no Porto' }
                 ];
 
                 const fotosRows = fotoFields.map((f) => {

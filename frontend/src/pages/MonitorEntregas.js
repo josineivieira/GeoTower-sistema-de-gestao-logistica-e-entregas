@@ -296,6 +296,15 @@ const getPartyBySentido = (delivery, sentido = 'DESTINO') => {
 const getPartyLabelBySentido = (sentido = 'DESTINO') =>
   String(sentido || '').trim().toUpperCase() === 'ORIGEM' ? 'Remetente' : 'Recebedor';
 
+const getDesovaLabelBySentido = (sentido = 'DESTINO') =>
+  String(sentido || '').trim().toUpperCase() === 'ORIGEM' ? 'Ovação' : 'Desova';
+
+const getFinalDocumentKeysBySentido = (sentido = 'DESTINO') => (
+  String(sentido || '').trim().toUpperCase() === 'ORIGEM'
+    ? ['canhotCTE', 'canhotNF', 'diarioBordo']
+    : ['canhotCTE', 'canhotNF', 'diarioBordo']
+);
+
 const DeliveryKanbanCard = ({ delivery, column, onOpen, currentTime, city = 'manaus', sentido = 'DESTINO' }) => (
     <button
       type="button"
@@ -1208,9 +1217,7 @@ const MonitorEntregas = () => {
 
   const allModalDocsComplete = (d) => {
     if (!d) return false;
-    const finalKeys = String(d.sentido || '').trim().toUpperCase() === 'ORIGEM'
-      ? ['canhotCTE', 'canhotNF', 'diarioBordo']
-      : ['canhotCTE', 'canhotNF', 'diarioBordo'];
+    const finalKeys = getFinalDocumentKeysBySentido(d.sentido || filters.sentido);
     const keys = ['retiradaCheio', ...finalKeys, 'devolucaoVazio', 'chegadaCliente', 'inicioDesova', 'fimDesova'];
     const newFlowStarted = !!(
       d.horarioSaidaCliente ||
@@ -1237,9 +1244,7 @@ const MonitorEntregas = () => {
 
   const getDocumentsStatus = (delivery) => {
     if (!delivery) return 'PENDENTE';
-    const finalRequired = String(delivery.sentido || '').trim().toUpperCase() === 'ORIGEM'
-      ? ['canhotCTE', 'canhotNF', 'diarioBordo']
-      : ['canhotCTE', 'canhotNF', 'diarioBordo'];
+    const finalRequired = getFinalDocumentKeysBySentido(delivery.sentido || filters.sentido);
     const required = [...finalRequired, 'devolucaoVazio'];
     const docs = delivery.documents || {};
     if (required.every((k) => docs[k])) return 'COMPLETO';
@@ -1448,12 +1453,17 @@ const MonitorEntregas = () => {
 
     // Documents
     const labels = getLabelsForDelivery(delivery);
-    const docKeys = Object.keys(delivery.documents || {}).filter(k => !['chegadaMontagem', 'chegadaCliente', 'inicioDesova', 'fimDesova', 'saidaCliente', 'chegadaPorto'].includes(k));
+    const expectedDocKeys = ['retiradaCheio', ...getFinalDocumentKeysBySentido(delivery.sentido || filters.sentido), 'devolucaoVazio'];
+    const hiddenPhotoKeys = ['chegadaMontagem', 'chegadaCliente', 'inicioDesova', 'fimDesova', 'saidaCliente', 'chegadaPorto'];
+    const extraDocKeys = Object.keys(delivery.documents || {})
+      .filter(k => !hiddenPhotoKeys.includes(k) && !expectedDocKeys.includes(k));
+    const docKeys = [...expectedDocKeys, ...extraDocKeys];
+    const desovaLabel = getDesovaLabelBySentido(delivery.sentido || filters.sentido);
     const fotoFields = [
       { key: 'chegadaMontagem', label: 'Chegada no Porto para Montagem' },
       { key: 'chegadaCliente', label: 'Chegada no Cliente' },
-      { key: 'inicioDesova', label: `Início da ${getDesovaStepLabel(city)}` },
-      { key: 'fimDesova', label: `Finalização da ${getDesovaStepLabel(city)}` },
+      { key: 'inicioDesova', label: `Início da ${desovaLabel}` },
+      { key: 'fimDesova', label: `Finalização da ${desovaLabel}` },
       { key: 'saidaCliente', label: 'Saida do Cliente' },
       { key: 'chegadaPorto', label: 'Chegada no Porto' }
     ];

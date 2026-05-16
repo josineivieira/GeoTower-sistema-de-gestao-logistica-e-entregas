@@ -93,6 +93,16 @@ function buildProgramacaoLookupFilter(deliveryNumber, city, programacaoId) {
   return { $and: [baseFilter, cityFilter] };
 }
 
+function getSentidoKey(value) {
+  return String(value || 'DESTINO').trim().toUpperCase();
+}
+
+function getFinalRequiredDocsForSentido(sentido) {
+  return getSentidoKey(sentido) === 'ORIGEM'
+    ? ['canhotCTE', 'canhotNF', 'diarioBordo']
+    : ['canhotCTE', 'canhotNF', 'diarioBordo'];
+}
+
 function mergeDeliveryObservations(programacao, observations) {
   const baseObservation = String(programacao?.observacoes || '').trim();
   const flowObservation = String(observations || '').trim();
@@ -1553,9 +1563,20 @@ router.post("/:id/submit", auth, async (req, res) => {
       return Boolean(val);
     };
 
-    // Determine required docs for city
-    // devolucaoVazio Ã© opcional nesta etapa (feito separadamente)
-    const requiredDocs = ['canhotNF', 'canhotCTE', 'diarioBordo', 'retiradaCheio'];
+    // Determine required final docs by delivery direction.
+    // devolucaoVazio/retiradaCheio acontecem em etapas separadas.
+    let sentido = delivery.sentido || req.body?.sentido || 'DESTINO';
+    const programacaoId = delivery.programacaoId || delivery.linkedProgramacaoId || req.body?.programacaoId || req.body?.linkedProgramacaoId;
+    if (programacaoId) {
+      try {
+        const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
+        const programacao = await ProgramacaoEntrega.findById(programacaoId).select('sentido').lean();
+        sentido = programacao?.sentido || sentido;
+      } catch (err) {
+        console.warn('[submitDelivery] Nao foi possivel buscar sentido da programacao:', err.message);
+      }
+    }
+    const requiredDocs = getFinalRequiredDocsForSentido(sentido);
 
     const missingDocs = requiredDocs.filter(doc => !docHasFiles(delivery.documents && delivery.documents[doc]));
 

@@ -1208,7 +1208,10 @@ const MonitorEntregas = () => {
 
   const allModalDocsComplete = (d) => {
     if (!d) return false;
-    const keys = ['retiradaCheio', 'canhotCTE', 'diarioBordo', 'canhotNF', 'devolucaoVazio', 'chegadaCliente', 'inicioDesova', 'fimDesova'];
+    const finalKeys = String(d.sentido || '').trim().toUpperCase() === 'ORIGEM'
+      ? ['canhotCTE', 'canhotNF', 'diarioBordo']
+      : ['canhotCTE', 'canhotNF', 'diarioBordo'];
+    const keys = ['retiradaCheio', ...finalKeys, 'devolucaoVazio', 'chegadaCliente', 'inicioDesova', 'fimDesova'];
     const newFlowStarted = !!(
       d.horarioSaidaCliente ||
       d.horarioChegadaPorto ||
@@ -1234,7 +1237,10 @@ const MonitorEntregas = () => {
 
   const getDocumentsStatus = (delivery) => {
     if (!delivery) return 'PENDENTE';
-    const required = ['canhotCTE', 'diarioBordo', 'canhotNF', 'devolucaoVazio'];
+    const finalRequired = String(delivery.sentido || '').trim().toUpperCase() === 'ORIGEM'
+      ? ['canhotCTE', 'canhotNF', 'diarioBordo']
+      : ['canhotCTE', 'canhotNF', 'diarioBordo'];
+    const required = [...finalRequired, 'devolucaoVazio'];
     const docs = delivery.documents || {};
     if (required.every((k) => docs[k])) return 'COMPLETO';
     const pending = required.filter((k) => !docs[k]).map((k) => getDocumentLabel(k, city)).join(' + ');
@@ -1284,11 +1290,18 @@ const MonitorEntregas = () => {
 
   const getLabelsForDelivery = (d) => {
     if (!d) return defaultDocumentLabels;
-    // Usar city do contexto se o delivery não tiver, ou verificar ambos
-    const deliveryCity = (d.city || city || '').toLowerCase();
-    // eslint-disable-next-line no-console
-    console.log('DEBUG getLabelsForDelivery:', { d_city: d.city, context_city: city, deliveryCity, isItajai: deliveryCity === 'itajai' });
-    return deliveryCity === 'itajai' ? itajaiDocumentLabels : defaultDocumentLabels;
+    const sentido = String(d.sentido || '').trim().toUpperCase();
+    if (sentido === 'ORIGEM') {
+      return {
+        ...defaultDocumentLabels,
+        canhotCTE: itajaiDocumentLabels.canhotCTE,
+        canhotNF: itajaiDocumentLabels.canhotNF,
+        diarioBordo: itajaiDocumentLabels.diarioBordo,
+        inicioDesova: 'Inicio da Ovacao',
+        fimDesova: 'Finalizacao da Ovacao',
+      };
+    }
+    return defaultDocumentLabels;
   };
 
   const removeProgramacaoInfo = (obs) => obs ? obs.replace(/Criada a partir da Programação [A-Z0-9]+/g, '').trim() : '';

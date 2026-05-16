@@ -131,6 +131,9 @@ const DeliveryModal = ({
   const getPartyLabelBySentido = (sentido = 'DESTINO') =>
     String(sentido || '').trim().toUpperCase() === 'ORIGEM' ? 'Remetente' : 'Recebedor';
 
+  const getDesovaLabelBySentido = (sentido = 'DESTINO') =>
+    String(sentido || '').trim().toUpperCase() === 'ORIGEM' ? 'Ovação' : 'Desova';
+
   const flowHistory = getFlowHistory(selectedDelivery);
   const normalizeKey = (s) => {
     if (!s) return '';
@@ -370,8 +373,8 @@ const DeliveryModal = ({
                 ['Agendamento', getProgramacaoDate(selectedDelivery, city) ? formatarAgendamento(getProgramacaoDate(selectedDelivery, city)) : '—'],
                 ['Montagem Container', selectedDelivery.containerMontadoAt ? formatarData(selectedDelivery.containerMontadoAt, city) : '—'],
                 ['Chegada', selectedDelivery.horarioChegada ? formatarData(selectedDelivery.horarioChegada, city) : '—'],
-                [`Início ${getDesovaStepLabel(city)}`, selectedDelivery.horarioInicioDesova ? formatarData(selectedDelivery.horarioInicioDesova, city) : '—'],
-                [`Fim ${getDesovaStepLabel(city)}`, selectedDelivery.horarioFimDesova ? formatarData(selectedDelivery.horarioFimDesova, city) : '—'],
+                [`Início ${getDesovaLabelBySentido(selectedDelivery.sentido || selectedSentido)}`, selectedDelivery.horarioInicioDesova ? formatarData(selectedDelivery.horarioInicioDesova, city) : '—'],
+                [`Fim ${getDesovaLabelBySentido(selectedDelivery.sentido || selectedSentido)}`, selectedDelivery.horarioFimDesova ? formatarData(selectedDelivery.horarioFimDesova, city) : '—'],
                 ['Saindo do Cliente', selectedDelivery.horarioSaidaCliente ? formatarData(selectedDelivery.horarioSaidaCliente, city) : '—'],
                 ['Chegada no Porto', selectedDelivery.horarioChegadaPorto ? formatarData(selectedDelivery.horarioChegadaPorto, city) : '—'],
               ].map(([label, value]) => {
@@ -725,8 +728,8 @@ const DeliveryModal = ({
 
                 const fotoFields = [
                   { key: 'chegadaCliente', label: 'Chegada no Cliente' },
-                  { key: 'inicioDesova', label: `Início da ${getDesovaStepLabel(city)}` },
-                  { key: 'fimDesova', label: `Finalização da ${getDesovaStepLabel(city)}` }
+                  { key: 'inicioDesova', label: `Início da ${getDesovaLabelBySentido(selectedDelivery.sentido || selectedSentido)}` },
+                  { key: 'fimDesova', label: `Finalização da ${getDesovaLabelBySentido(selectedDelivery.sentido || selectedSentido)}` }
                 ];
 
                 const fotosRows = fotoFields.map((f) => {

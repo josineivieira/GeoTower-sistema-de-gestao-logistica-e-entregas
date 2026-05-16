@@ -164,6 +164,35 @@ const hasReturnProof = (delivery) => (
   hasDocumentValue(delivery?.documents?.devolucaoContainerVazio)
 );
 
+const getSentidoKey = (...sources) => {
+  const found = sources.find(source => String(source?.sentido || source?.SENTIDO || '').trim());
+  return String(found?.sentido || found?.SENTIDO || 'DESTINO').trim().toUpperCase();
+};
+
+const isOrigemSentido = (...sources) => getSentidoKey(...sources) === 'ORIGEM';
+
+const getDesovaLabelBySentido = (...sources) => (
+  isOrigemSentido(...sources) ? 'Ovação' : 'Desova'
+);
+
+const getDesovaLowerLabelBySentido = (...sources) => (
+  isOrigemSentido(...sources) ? 'ovação' : 'desova'
+);
+
+const getFinalDocumentFields = (...sources) => (
+  isOrigemSentido(...sources)
+    ? [
+        { key: 'canhotCTE', label: 'CONTRATO', emoji: '📄' },
+        { key: 'canhotNF', label: 'TACÓGRAFO / RIC ABASTECIMENTO', emoji: '⏱️' },
+        { key: 'diarioBordo', label: 'Diário de Bordo', emoji: '📋' },
+      ]
+    : [
+        { key: 'canhotCTE', label: 'Canhoto CTE', emoji: '🚛' },
+        { key: 'canhotNF', label: 'Canhoto NF', emoji: '📦' },
+        { key: 'diarioBordo', label: 'Diário de Bordo', emoji: '📋' },
+      ]
+);
+
 const hasReturnMarker = (delivery) => {
   const observations = String(delivery?.observations || '');
   return observations.includes('(CONTAINER_VAZIO_DEVOLVIDO)') || observations.includes('(Baixa_Container)');
@@ -280,11 +309,11 @@ STEP_INDEX.leavingClientPhoto = STEP_INDEX.leavingClient;
 STEP_INDEX.arrivingPortPhoto = STEP_INDEX.arrivingPort;
 STEP_INDEX.portReturnPhoto = STEP_INDEX.portReturn;
 
-const FlowStepBar = ({ currentStep, city = 'manaus' }) => {
+const FlowStepBar = ({ currentStep, sentido = 'DESTINO' }) => {
   const idx = STEP_INDEX[currentStep] ?? 0;
   const getStepLabel = (step) => {
     if (step.labelKey === 'desova') {
-      return city === 'itajai' ? 'Ovação' : 'Desova';
+      return getDesovaLabelBySentido({ sentido });
     }
     return step.labelKey;
   };
@@ -438,6 +467,12 @@ const ProgramadasEntregas = () => {
   const [driverFilter, setDriverFilter] = useState('');
   const [sortBy, setSortBy] = useState('data');
   const [sortOrder, setSortOrder] = useState('desc');
+
+  const currentSentido = getSentidoKey(currentProgramacao, currentDelivery);
+  const currentDesovaLabel = getDesovaLabelBySentido({ sentido: currentSentido });
+  const currentDesovaLowerLabel = getDesovaLowerLabelBySentido({ sentido: currentSentido });
+  const finalDocumentFields = getFinalDocumentFields({ sentido: currentSentido });
+  const finalRequiredDocs = finalDocumentFields.map(doc => doc.key);
 
   useEffect(() => { loadProgramacoes(); }, [user]);
 
@@ -1154,9 +1189,9 @@ const ProgramadasEntregas = () => {
   const getDesovaObservationLabel = () => {
     const statusKey = String(currentDelivery?.status || '').toUpperCase();
     if (statusKey === 'EM_DESOVA') {
-      return city === 'itajai' ? 'OVAÇÃO EM ANDAMENTO' : 'DESOVA EM ANDAMENTO';
+      return `${currentDesovaLabel.toUpperCase()} EM ANDAMENTO`;
     }
-    return city === 'itajai' ? 'AGUARDANDO OVAÇÃO' : 'AGUARDANDO DESOVA';
+    return `AGUARDANDO ${currentDesovaLabel.toUpperCase()}`;
   };
 
   const handleJustificationSubmit = async () => {
@@ -1172,7 +1207,7 @@ const ProgramadasEntregas = () => {
     } catch (_) { setToast({ message: 'Erro ao enviar justificativa', type: 'error' }); }
   };
   const handleFinalUploadAndSubmit = async () => {
-    const requiredDocs = ['canhotCTE', 'diarioBordo', 'canhotNF'];
+    const requiredDocs = finalRequiredDocs;
     // list missing so we can pass observation when forcing submit
     const missing = requiredDocs.filter(k => !(documentsUpload[k] && documentsUpload[k].length > 0));
     const allOk = missing.length === 0;
@@ -1191,9 +1226,19 @@ const ProgramadasEntregas = () => {
 
       // submit the delivery so the backend records missingDocumentsAtSubmit (if any)
       if (allOk) {
-        await deliveryService.submitDelivery(currentDelivery._id);
+        await deliveryService.submitDelivery(currentDelivery._id, {
+          sentido: currentSentido,
+          programacaoId: currentProgramacao?._id || currentDelivery.programacaoId || currentDelivery.linkedProgramacaoId || '',
+          linkedProgramacaoId: currentProgramacao?._id || currentDelivery.linkedProgramacaoId || currentDelivery.programacaoId || ''
+        });
       } else {
-        await deliveryService.submitDelivery(currentDelivery._id, { force: true, observation: documentsJustification });
+        await deliveryService.submitDelivery(currentDelivery._id, {
+          force: true,
+          observation: documentsJustification,
+          sentido: currentSentido,
+          programacaoId: currentProgramacao?._id || currentDelivery.programacaoId || currentDelivery.linkedProgramacaoId || '',
+          linkedProgramacaoId: currentProgramacao?._id || currentDelivery.linkedProgramacaoId || currentDelivery.programacaoId || ''
+        });
       }
       const fresh = await deliveryService.getDelivery(currentDelivery._id);
       const existingObs = fresh.data.delivery.observations || '';
@@ -2236,7 +2281,7 @@ const ProgramadasEntregas = () => {
                   <FaTimes size={14} />
                 </button>
               </div>
-              <FlowStepBar currentStep={currentStep} city={city} />
+              <FlowStepBar currentStep={currentStep} sentido={currentSentido} />
             </div>
 
             {/* Modal body */}
@@ -2390,17 +2435,17 @@ const ProgramadasEntregas = () => {
                     <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center">
                       <FaWarehouse className="text-orange-600" size={14} />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Confirme a {city === 'itajai' ? 'Ovação' : 'Desova'}</h3>
+                    <h3 className="text-lg font-bold text-gray-900">Confirme a {currentDesovaLabel}</h3>
                   </div>
-                  <StepTimer start={currentDelivery?.arrivedAt || currentDelivery?.createdAt} label={`Aguardando ${city === 'itajai' ? 'ovação' : 'desova'}`} />
+                  <StepTimer start={currentDelivery?.arrivedAt || currentDelivery?.createdAt} label={`Aguardando ${currentDesovaLowerLabel}`} />
                   <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-                    <p className="text-amber-800 font-semibold text-sm mb-1">📦 {city === 'itajai' ? 'Ovação' : 'Desova'} iniciada?</p>
+                    <p className="text-amber-800 font-semibold text-sm mb-1">📦 {currentDesovaLabel} iniciada?</p>
                     <p className="text-gray-600 text-sm">Indique se a descarga do container foi iniciada ou não</p>
                   </div>
                   <div className="flex gap-3">
                     <button onClick={() => goToStep('desovaStart')}
                       className="flex-1 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-bold text-base shadow-md active:scale-95 transition flex items-center justify-center gap-2">
-                      ✓ {city === 'itajai' ? 'Ovação' : 'Desova'} iniciada
+                      ✓ {currentDesovaLabel} iniciada
                     </button>
                     <button onClick={() => goToStep('desovaJustify')}
                       className="flex-1 py-4 bg-gradient-to-r from-red-400 to-rose-500 text-white rounded-2xl font-bold text-base shadow-md active:scale-95 transition flex items-center justify-center gap-2">
@@ -2421,7 +2466,7 @@ const ProgramadasEntregas = () => {
                   </div>
                   <StepTimer start={currentDelivery?.arrivedAt || currentDelivery?.createdAt} label="Tempo aguardando" />
                   <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-                    <p className="text-red-800 text-sm font-medium">Por que a {city === 'itajai' ? 'ovação' : 'desova'} não foi iniciada?</p>
+                    <p className="text-red-800 text-sm font-medium">Por que a {currentDesovaLowerLabel} não foi iniciada?</p>
                   </div>
                   <textarea
                     value={justification}
@@ -2450,14 +2495,14 @@ const ProgramadasEntregas = () => {
                     <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center">
                       <FaCamera className="text-orange-600" size={14} />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Início da {city === 'itajai' ? 'Ovação' : 'Desova'}</h3>
+                    <h3 className="text-lg font-bold text-gray-900">Início da {currentDesovaLabel}</h3>
                   </div>
                   <StepTimer start={currentDelivery?.arrivedAt || currentDelivery?.createdAt} label="Tempo no cliente" />
-                  <p className="text-gray-500 text-sm">Tire fotos do início da {city === 'itajai' ? 'ovação' : 'desova'} para registro</p>
+                  <p className="text-gray-500 text-sm">Tire fotos do início da {currentDesovaLowerLabel} para registro</p>
                   <PhotoSection
                     onConfirm={() => compressAndUpload('inicioDesova', 'EM_DESOVA', 'desovaProgress', { desovaStartAt: new Date().toISOString() })}
                     onBack={() => goToStep('confirmDesova')}
-                    buttonLabel={`✓ Confirmar ${city === 'itajai' ? 'ovação' : 'desova'}`}
+                    buttonLabel={`✓ Confirmar ${currentDesovaLowerLabel}`}
                     buttonColor="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700"
                   />
                 </div>
@@ -2470,11 +2515,11 @@ const ProgramadasEntregas = () => {
                     <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
                       <FaWarehouse className="text-blue-600" size={14} />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">{city === 'itajai' ? 'Ovação' : 'Desova'} em Andamento</h3>
+                    <h3 className="text-lg font-bold text-gray-900">{currentDesovaLabel} em Andamento</h3>
                   </div>
-                  <StepTimer start={currentDelivery?.desovaStartAt || currentDelivery?.arrivedAt} label={`Tempo em ${city === 'itajai' ? 'ovação' : 'desova'}`} />
+                  <StepTimer start={currentDelivery?.desovaStartAt || currentDelivery?.arrivedAt} label={`Tempo em ${currentDesovaLowerLabel}`} />
                   <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
-                    <p className="text-blue-800 font-semibold text-sm">A {city === 'itajai' ? 'ovação' : 'desova'} já finalizou?</p>
+                    <p className="text-blue-800 font-semibold text-sm">A {currentDesovaLowerLabel} já finalizou?</p>
                     <p className="text-gray-600 text-sm mt-1">Indique se a descarga foi completada</p>
                   </div>
                   <div className="flex gap-3">
@@ -2539,7 +2584,7 @@ const ProgramadasEntregas = () => {
                 <div className="space-y-4 text-center py-4">
                   <div className="text-5xl">👍</div>
                   <h3 className="text-xl font-bold text-emerald-700">Perfeito!</h3>
-                  <p className="text-gray-600">Quando a {city === 'itajai' ? 'ovação' : 'desova'} finalizar, nos informe!</p>
+                  <p className="text-gray-600">Quando a {currentDesovaLowerLabel} finalizar, nos informe!</p>
                   <button onClick={() => goToStep('desovaProgress')}
                     className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-base active:scale-95 transition mt-4">
                     Verificar novamente
@@ -2554,14 +2599,14 @@ const ProgramadasEntregas = () => {
                     <div className="w-8 h-8 rounded-xl bg-teal-100 flex items-center justify-center">
                       <FaCamera className="text-teal-600" size={14} />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">Finalização da {city === 'itajai' ? 'Ovação' : 'Desova'}</h3>
+                    <h3 className="text-lg font-bold text-gray-900">Finalização da {currentDesovaLabel}</h3>
                   </div>
-                  <StepTimer start={currentDelivery?.desovaStartAt || currentDelivery?.arrivedAt} label={`Tempo em ${city === 'itajai' ? 'ovação' : 'desova'}`} />
-                  <p className="text-gray-500 text-sm">Registre com foto a finalização da {city === 'itajai' ? 'ovação' : 'desova'}</p>
+                  <StepTimer start={currentDelivery?.desovaStartAt || currentDelivery?.arrivedAt} label={`Tempo em ${currentDesovaLowerLabel}`} />
+                  <p className="text-gray-500 text-sm">Registre com foto a finalização da {currentDesovaLowerLabel}</p>
                   <PhotoSection
                     onConfirm={() => compressAndUpload('fimDesova', 'ANEXANDO_DOCUMENTOS_FINAIS', 'finalDocs', { desovaEndAt: new Date().toISOString() })}
                     onBack={() => goToStep('desovaProgress')}
-                    buttonLabel={`✓ ${city === 'itajai' ? 'Ovação' : 'Desova'} concluída`}
+                    buttonLabel={`✓ ${currentDesovaLabel} concluída`}
                     buttonColor="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700"
                   />
                 </div>
@@ -2589,18 +2634,19 @@ const ProgramadasEntregas = () => {
 
                   {/* Progress summary bar */}
                   {(() => {
-                    const requiredDocs = ['canhotCTE', 'diarioBordo', 'canhotNF'];
+                    const requiredDocs = finalRequiredDocs;
+                    const total = requiredDocs.length || 1;
                     const done = requiredDocs.filter(k => documentsUpload[k] && documentsUpload[k].length > 0).length;
                     return (
                       <div className="bg-gray-50 rounded-xl p-3 border border-gray-200">
                         <div className="flex justify-between text-xs font-semibold text-gray-500 mb-1.5">
                           <span>Documentos anexados</span>
-                          <span className={done === 3 ? 'text-emerald-600' : 'text-amber-600'}>{done}/3</span>
+                          <span className={done === requiredDocs.length ? 'text-emerald-600' : 'text-amber-600'}>{done}/{requiredDocs.length}</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all ${done === 3 ? 'bg-emerald-500' : 'bg-amber-400'}`}
-                            style={{ width: `${(done / 3) * 100}%` }}
+                            className={`h-full rounded-full transition-all ${done === requiredDocs.length ? 'bg-emerald-500' : 'bg-amber-400'}`}
+                            style={{ width: `${(done / total) * 100}%` }}
                           />
                         </div>
                       </div>
@@ -2608,11 +2654,7 @@ const ProgramadasEntregas = () => {
                   })()}
 
                   <div className="grid grid-cols-1 gap-3">
-                    {[
-                      { key: 'canhotCTE', label: city === 'itajai' ? 'CONTRATO' : 'Canhoto CTE', emoji: city === 'itajai' ? '📄' : '🚛' },
-                      { key: 'canhotNF', label: city === 'itajai' ? 'TACÓGRAFO / RIC ABASTECINENTO' : 'Canhoto NF', emoji: city === 'itajai' ? '⏱️' : '📦' },
-                      { key: 'diarioBordo', label: 'Diário de Bordo', emoji: '📋' },
-                    ].map(doc => (
+                    {finalDocumentFields.map(doc => (
                       <DocUploadCard
                         key={doc.key}
                         docType={doc.key}
@@ -2648,7 +2690,7 @@ const ProgramadasEntregas = () => {
                     ))}
                   </div>
 
-                  {!['canhotCTE', 'diarioBordo', 'canhotNF'].every(k => documentsUpload[k] && documentsUpload[k].length > 0) && (
+                  {!finalRequiredDocs.every(k => documentsUpload[k] && documentsUpload[k].length > 0) && (
                     <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <FaExclamationTriangle className="text-amber-500" size={14} />

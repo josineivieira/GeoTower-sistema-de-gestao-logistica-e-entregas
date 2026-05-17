@@ -997,11 +997,38 @@ const ProgramadasEntregas = () => {
     return prev.filter(photo => photo.id !== id);
   });
 
+  const isLikelyImageFile = (file) => {
+    if (!file) return false;
+    if (file.type?.startsWith('image/')) return true;
+    return /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name || '');
+  };
+
+  const normalizeCameraFile = (file) => {
+    if (!file || file.type?.startsWith('image/')) return file;
+    const name = file.name || `foto_${Date.now()}.jpg`;
+    const lower = name.toLowerCase();
+    const type =
+      lower.endsWith('.png') ? 'image/png' :
+      lower.endsWith('.webp') ? 'image/webp' :
+      lower.endsWith('.heic') ? 'image/heic' :
+      lower.endsWith('.heif') ? 'image/heif' :
+      'image/jpeg';
+    return new File([file], name, { type, lastModified: file.lastModified || Date.now() });
+  };
+
   const addPhotoFiles = (files) => {
     const maxPhotos = 2;
-    const validFiles = files.filter(file => file && file.type?.startsWith('image/'));
+    const validFiles = files
+      .filter(file => file && file.size > 0 && isLikelyImageFile(file))
+      .map(normalizeCameraFile);
 
-    if (validFiles.length === 0) return;
+    if (validFiles.length === 0) {
+      setToast({
+        message: 'A foto nao foi capturada. Tente novamente.',
+        type: 'warning'
+      });
+      return 0;
+    }
 
     const newPhotos = validFiles.map(file => ({
       id: Date.now() + Math.random(),
@@ -1009,6 +1036,7 @@ const ProgramadasEntregas = () => {
       preview: URL.createObjectURL(file)
     }));
 
+    let addedCount = 0;
     flushSync(() => {
       setPhotos(prev => {
         if (prev.length >= maxPhotos) {
@@ -1023,6 +1051,7 @@ const ProgramadasEntregas = () => {
         const accepted = newPhotos.slice(0, available);
         const rejected = newPhotos.slice(available);
         revokePhotoPreviews(rejected);
+        addedCount = accepted.length;
         if (rejected.length > 0) {
           setToast({
             message: `Apenas ${accepted.length} foto(s) adicionada(s). Limite de ${maxPhotos} atingido.`,
@@ -1032,6 +1061,7 @@ const ProgramadasEntregas = () => {
         return [...prev, ...accepted];
       });
     });
+    return addedCount;
   };
 
   const handleCameraCapture = async (e) => {
@@ -1040,13 +1070,20 @@ const ProgramadasEntregas = () => {
       e.target.value = null;
       return;
     }
+    processingPhotoRef.current = true;
     setProcessingPhoto(true);
 
     try {
-      addPhotoFiles(files);
+      const added = addPhotoFiles(files);
+      if (added > 0) {
+        setToast({ message: `${added} foto(s) adicionada(s)`, type: 'success' });
+        setTimeout(() => setToast(null), 1800);
+      }
     } finally {
+      processingPhotoRef.current = false;
       setProcessingPhoto(false);
       e.target.value = null;
+      setCameraInputKey(prev => prev + 1);
     }
   };
 
@@ -1054,6 +1091,7 @@ const ProgramadasEntregas = () => {
     if (processingPhotoRef.current || submittingRef.current) return false;
 
     try {
+      processingPhotoRef.current = true;
       setProcessingPhoto(true);
       const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
 
@@ -1077,7 +1115,11 @@ const ProgramadasEntregas = () => {
         type: blob.type || `image/${image.format || 'jpeg'}`
       });
 
-      addPhotoFiles([file]);
+      const added = addPhotoFiles([file]);
+      if (added > 0) {
+        setToast({ message: `${added} foto(s) adicionada(s)`, type: 'success' });
+        setTimeout(() => setToast(null), 1800);
+      }
       return true;
     } catch (err) {
       if (err?.message && !String(err.message).toLowerCase().includes('cancel')) {
@@ -1085,6 +1127,7 @@ const ProgramadasEntregas = () => {
       }
       return false;
     } finally {
+      processingPhotoRef.current = false;
       setProcessingPhoto(false);
     }
   };
@@ -1146,7 +1189,8 @@ const ProgramadasEntregas = () => {
     const photosToUpload = (photosRef.current || photos || []).filter(photo => photo?.file || photo?.data);
     if (photosToUpload.length === 0) { setToast({ message: 'Tire ao menos uma foto', type: 'error' }); return; }
     if (!currentDelivery?._id) { setToast({ message: 'Entrega nao encontrada. Feche e abra o fluxo novamente.', type: 'error' }); return; }
-    setSubmitting(true); setUploadProgress(0);
+    submittingRef.current = true;
+    setSubmitting(true); setUploadProgress(1);
     try {
       const compressedFiles = [];
       for (let i = 0; i < photosToUpload.length; i++) {
@@ -1172,6 +1216,7 @@ const ProgramadasEntregas = () => {
       console.error(err);
       setToast({ message: err.response?.data?.message || 'Erro ao enviar fotos', type: 'error' });
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
       setTimeout(() => setUploadProgress(0), 1000);
     }
@@ -1212,8 +1257,10 @@ const ProgramadasEntregas = () => {
   };
 
   const handleClientRefusalSubmit = async () => {
+    if (submittingRef.current) return;
     if (!justification.trim()) { setToast({ message: 'Informe a justificativa da recusa', type: 'error' }); return; }
     if (!currentDelivery?._id) { setToast({ message: 'Entrega nao encontrada', type: 'error' }); return; }
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const fresh = await deliveryService.getDelivery(currentDelivery._id);
@@ -1236,13 +1283,16 @@ const ProgramadasEntregas = () => {
     } catch (err) {
       setToast({ message: err.response?.data?.message || 'Erro ao registrar recusa', type: 'error' });
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
 
   const handleUncoupledSubmit = async () => {
+    if (submittingRef.current) return;
     if (!justification.trim()) { setToast({ message: 'Informe a justificativa do desatrelamento', type: 'error' }); return; }
     if (!currentDelivery?._id) { setToast({ message: 'Entrega nao encontrada', type: 'error' }); return; }
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const fresh = await deliveryService.getDelivery(currentDelivery._id);
@@ -1265,11 +1315,13 @@ const ProgramadasEntregas = () => {
     } catch (err) {
       setToast({ message: err.response?.data?.message || 'Erro ao registrar desatrelamento', type: 'error' });
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
 
   const handleFinalUploadAndSubmit = async () => {
+    if (submittingRef.current) return;
     const requiredDocs = finalRequiredDocs;
     // list missing so we can pass observation when forcing submit
     const missing = requiredDocs.filter(k => !(documentsUpload[k] && documentsUpload[k].length > 0));
@@ -1277,6 +1329,7 @@ const ProgramadasEntregas = () => {
     if (!allOk && !documentsJustification.trim()) {
       setToast({ message: 'Anexe todos os documentos ou justifique', type: 'error' }); return;
     }
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       // upload any new docs
@@ -1321,6 +1374,7 @@ const ProgramadasEntregas = () => {
     } catch (err) {
       setToast({ message: 'Erro ao enviar documentos', type: 'error' });
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -1614,10 +1668,17 @@ const ProgramadasEntregas = () => {
   // ─────────────────────────────────────────────
   const PhotoSection = ({ onConfirm, onBack, buttonLabel = 'Enviar registro', buttonColor = 'bg-emerald-600 hover:bg-emerald-700', confirmDisabled = false }) => (
     <div className="space-y-4">
-      {uploadProgress > 0 && (
-        <div className="space-y-1">
-          <div className="flex justify-between text-xs font-semibold text-gray-600">
-            <span>Enviando fotos...</span><span>{Math.round(uploadProgress)}%</span>
+      {(submitting || uploadProgress > 0) && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 space-y-2">
+          <div className="flex items-center justify-between gap-3 text-xs font-semibold text-emerald-800">
+            <span className="flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+              </svg>
+              {uploadProgress < 5 ? 'Preparando envio...' : 'Enviando fotos...'}
+            </span>
+            <span>{Math.round(uploadProgress)}%</span>
           </div>
           <ProgressBar progress={uploadProgress} />
         </div>
@@ -1657,7 +1718,7 @@ const ProgramadasEntregas = () => {
             </span>
           ) : buttonLabel}
         </button>
-        <button onClick={onBack} className="action-btn flex-1 px-3 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-base active:scale-95 transition">
+        <button onClick={onBack} disabled={submitting || processingPhoto} className="action-btn flex-1 px-3 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-base active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed">
           Voltar
         </button>
       </div>
@@ -2524,7 +2585,7 @@ const ProgramadasEntregas = () => {
               )}
 
               {currentStep === 'confirmDesova' && currentSentido === 'DESTINO' && (
-                <div className="-mt-2">
+                <div className="pt-1">
                   <button
                     onClick={() => { setJustification(''); goToStep('clientRefusal'); }}
                     className="w-full py-3.5 bg-gradient-to-r from-red-600 to-rose-700 text-white rounded-2xl font-bold text-sm shadow-md active:scale-95 transition"
@@ -2647,7 +2708,7 @@ const ProgramadasEntregas = () => {
               )}
 
               {currentStep === 'desovaProgress' && (
-                <div className="-mt-2">
+                <div className="pt-1">
                   <button
                     onClick={() => { setJustification(''); goToStep('containerUncoupled'); }}
                     className="w-full py-3.5 bg-gradient-to-r from-slate-600 to-blue-700 text-white rounded-2xl font-bold text-sm shadow-md active:scale-95 transition"

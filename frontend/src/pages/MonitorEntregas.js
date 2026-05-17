@@ -465,10 +465,27 @@ const DeliveryKanbanColumn = ({ column, deliveries, onOpen, currentTime, city = 
 /* ─────────────────────────────────────────────────────────────
    PROGRESS
 ───────────────────────────────────────────────────────────── */
-const progressStatuses = [
-  'AGENDADO', 'NO PORTO AGUARDANDO MONTAGEM', 'CONTAINER MONTADO', 'A CAMINHO DO CLIENTE',
-  'AGUARDANDO DESOVA', 'EM DESOVA', 'DESATRELADO', 'ANEXANDO DOCUMENTOS FINAIS', 'ENTREGUE'
-];
+const progressByStatus = {
+  AGENDADO: 0,
+  PENDING: 0,
+  'NO PORTO AGUARDANDO MONTAGEM': 12,
+  'CONTAINER MONTADO': 24,
+  'A CAMINHO DO CLIENTE': 36,
+  'AGUARDANDO DESOVA': 48,
+  'EM DESOVA': 60,
+  DESATRELADO: 60,
+  'DESOVA FINALIZADA': 72,
+  'AGUARDANDO ANEXO': 72,
+  'ANEXANDO DOCUMENTOS FINAIS': 72,
+  'SAINDO CLIENTE': 80,
+  'RETORNANDO PORTO': 88,
+  'CHEGOU PORTO': 94,
+  ENTREGUE: 100,
+  SUBMITTED: 100,
+  'ENTREGUE COM PENDENCIA CANHOTO': 100,
+  'DOCUMENTOS ENTREGUES': 100,
+  'RECUSADO CLIENTE': 100,
+};
 
 const getProgress = (delivery) => {
   const key = normalizeKey(delivery.status);
@@ -477,9 +494,7 @@ const getProgress = (delivery) => {
     : key === 'PENDING' || key === 'A CAMINHO DO CLIENTE' ? 'A CAMINHO DO CLIENTE'
     : key;
   if (norm === 'CANCELADO' || !norm) return 0;
-  const idx = progressStatuses.indexOf(norm);
-  if (idx === -1) return 0;
-  return Math.round((idx / (progressStatuses.length - 1)) * 100);
+  return progressByStatus[norm] ?? 0;
 };
 
 // ProgressDots agora importado como MemoizedProgressDots

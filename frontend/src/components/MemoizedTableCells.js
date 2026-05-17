@@ -58,6 +58,14 @@ const getStatusConfig = (city = 'manaus') => {
       icon: '📦', gradient: 'from-violet-500 to-violet-700',
       ring: 'ring-violet-400/30', dot: 'bg-violet-500', hex: '#8b5cf6'
     },
+    DESATRELADO: {
+      label: 'Desatrelado',
+      bg: 'bg-blue-700', light: 'bg-blue-50', text: 'text-blue-700',
+      border: 'border-blue-300',
+      badge: 'bg-blue-100 text-blue-800 border border-blue-300',
+      icon: 'DESATRELADO', gradient: 'from-blue-600 to-slate-700',
+      ring: 'ring-blue-400/30', dot: 'bg-blue-500', hex: '#2563eb'
+    },
     'ANEXANDO DOCUMENTOS FINAIS': {
       label: 'Anexando Docs',
       bg: 'bg-pink-600', light: 'bg-pink-50', text: 'text-pink-700',
@@ -73,6 +81,14 @@ const getStatusConfig = (city = 'manaus') => {
       badge: 'bg-emerald-100 text-emerald-800 border border-emerald-300',
       icon: '✅', gradient: 'from-emerald-500 to-emerald-700',
       ring: 'ring-emerald-400/30', dot: 'bg-emerald-500', hex: '#10b981'
+    },
+    'RECUSADO CLIENTE': {
+      label: 'Recusado Cliente',
+      bg: 'bg-red-600', light: 'bg-red-50', text: 'text-red-700',
+      border: 'border-red-300',
+      badge: 'bg-red-100 text-red-800 border border-red-300',
+      icon: 'RECUSADO', gradient: 'from-red-500 to-rose-700',
+      ring: 'ring-red-400/30', dot: 'bg-red-500', hex: '#dc2626'
     },
     CANCELADO: {
       label: 'Cancelado',
@@ -112,10 +128,27 @@ export const MemoizedBadge = memo(({ status, city = 'manaus' }) => {
 MemoizedBadge.displayName = 'MemoizedBadge';
 
 // Memoized Progress Dots
-const progressStatuses = [
-  'AGENDADO', 'NO PORTO AGUARDANDO MONTAGEM', 'CONTAINER MONTADO', 'A CAMINHO DO CLIENTE',
-  'AGUARDANDO DESOVA', 'EM DESOVA', 'ANEXANDO DOCUMENTOS FINAIS', 'ENTREGUE'
-];
+const progressByStatus = {
+  AGENDADO: 0,
+  PENDING: 0,
+  'NO PORTO AGUARDANDO MONTAGEM': 12,
+  'CONTAINER MONTADO': 24,
+  'A CAMINHO DO CLIENTE': 36,
+  'AGUARDANDO DESOVA': 48,
+  'EM DESOVA': 60,
+  DESATRELADO: 60,
+  'DESOVA FINALIZADA': 72,
+  'AGUARDANDO ANEXO': 72,
+  'ANEXANDO DOCUMENTOS FINAIS': 72,
+  'SAINDO CLIENTE': 80,
+  'RETORNANDO PORTO': 88,
+  'CHEGOU PORTO': 94,
+  ENTREGUE: 100,
+  SUBMITTED: 100,
+  'ENTREGUE COM PENDENCIA CANHOTO': 100,
+  'DOCUMENTOS ENTREGUES': 100,
+  'RECUSADO CLIENTE': 100,
+};
 
 const getProgress = (delivery) => {
   const key = normalizeKey(delivery.status);
@@ -124,9 +157,7 @@ const getProgress = (delivery) => {
     : key === 'PENDING' || key === 'A CAMINHO DO CLIENTE' ? 'A CAMINHO DO CLIENTE'
     : key;
   if (norm === 'CANCELADO' || !norm) return 0;
-  const idx = progressStatuses.indexOf(norm);
-  if (idx === -1) return 0;
-  return Math.round((idx / (progressStatuses.length - 1)) * 100);
+  return progressByStatus[norm] ?? 0;
 };
 
 export const MemoizedProgressDots = memo(({ delivery, allModalDocsComplete }) => {

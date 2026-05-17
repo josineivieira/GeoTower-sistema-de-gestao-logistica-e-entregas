@@ -1,12 +1,45 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authService } from './authService';
 
 const AuthContext = createContext();
+const LOGIN_PATH = '/login';
+
+const getTokenExpiration = (token) => {
+  try {
+    const payload = token?.split('.')[1];
+    if (!payload) return null;
+
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), '=');
+    const decoded = JSON.parse(atob(padded));
+
+    return typeof decoded.exp === 'number' ? decoded.exp * 1000 : null;
+  } catch (error) {
+    return null;
+  }
+};
+
+const redirectToLogin = () => {
+  if (window.location.pathname !== LOGIN_PATH) {
+    window.location.replace(LOGIN_PATH);
+  }
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const clearSession = useCallback((redirect = false) => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setToken(null);
+    setUser(null);
+
+    if (redirect) {
+      redirectToLogin();
+    }
+  }, []);
 
   useEffect(() => {
     // Load from localStorage on mount
@@ -15,17 +48,47 @@ export const AuthProvider = ({ children }) => {
 
     if (savedToken && savedUser) {
       try {
+        const expiresAt = getTokenExpiration(savedToken);
+        if (expiresAt && expiresAt <= Date.now()) {
+          clearSession(true);
+          setLoading(false);
+          return;
+        }
+
         setToken(savedToken);
         setUser(JSON.parse(savedUser));
       } catch (e) {
         // Se houver erro ao parsear, limpa
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        clearSession();
       }
     }
 
     setLoading(false);
-  }, []);
+  }, [clearSession]);
+
+  useEffect(() => {
+    const handleAuthExpired = () => clearSession(true);
+    window.addEventListener('auth:expired', handleAuthExpired);
+
+    return () => window.removeEventListener('auth:expired', handleAuthExpired);
+  }, [clearSession]);
+
+  useEffect(() => {
+    if (!token) return undefined;
+
+    const expiresAt = getTokenExpiration(token);
+    if (!expiresAt) return undefined;
+
+    const delay = expiresAt - Date.now();
+    if (delay <= 0) {
+      clearSession(true);
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => clearSession(true), Math.min(delay, 2147483647));
+
+    return () => window.clearTimeout(timer);
+  }, [token, clearSession]);
 
   const login = async (username, password, city) => {
   try {
@@ -69,10 +132,7 @@ export const AuthProvider = ({ children }) => {
 
     return data;
   } catch (error) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
+    clearSession();
     throw error;
   }
 };
@@ -98,20 +158,14 @@ export const AuthProvider = ({ children }) => {
 
     return resData;
   } catch (error) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
+    clearSession();
     throw error;
   }
 };
 
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
+    clearSession();
   };
 
   const updateUser = (userData) => {

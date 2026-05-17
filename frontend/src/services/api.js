@@ -41,6 +41,12 @@ const api = axios.create({
   timeout: 60000,
 });
 
+const redirectToLogin = () => {
+  if (window.location.pathname !== '/login') {
+    window.location.replace('/login');
+  }
+};
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   const city = localStorage.getItem('city') || 'manaus';
@@ -76,7 +82,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      window.dispatchEvent(new Event('auth:expired'));
+      redirectToLogin();
       return Promise.reject({ ...error, isAuthError: true, handled: true });
     }
 

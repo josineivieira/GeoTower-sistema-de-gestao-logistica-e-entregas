@@ -58,7 +58,7 @@ const contentSecurityPolicy = [
   "manifest-src 'self'"
 ].join('; ');
 
-const allowedCorsOrigins = (process.env.CORS_ORIGINS || [
+const defaultCorsOrigins = [
   'https://entregascomgeotransportes.onrender.com',
   'https://geotower.com.br',
   'https://www.geotower.com.br',
@@ -68,10 +68,14 @@ const allowedCorsOrigins = (process.env.CORS_ORIGINS || [
   'http://localhost:8100',
   'capacitor://localhost',
   'ionic://localhost'
-].join(','))
+];
+
+const envCorsOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
+
+const allowedCorsOrigins = Array.from(new Set([...defaultCorsOrigins, ...envCorsOrigins]));
 
 const corsOptions = {
   origin(origin, callback) {

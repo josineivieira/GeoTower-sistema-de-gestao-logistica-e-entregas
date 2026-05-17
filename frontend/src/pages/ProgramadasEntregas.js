@@ -533,7 +533,7 @@ const ProgramadasEntregas = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [driverFilter, setDriverFilter] = useState('');
-  const [sortBy, setSortBy] = useState('data');
+  const sortBy = 'data';
   const [sortOrder, setSortOrder] = useState('desc');
 
   const currentSentido = getSentidoKey(currentProgramacao, currentDelivery);
@@ -1913,7 +1913,7 @@ const ProgramadasEntregas = () => {
       <div className="max-w-2xl mx-auto px-4 py-4 pb-24 space-y-4">
 
         {/* ── SEARCH & FILTERS ── */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20 space-y-3">
+        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 sm:p-4 border border-white/20 space-y-3">
           {/* Search input */}
           <div className="relative">
             <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={14} />
@@ -1926,11 +1926,11 @@ const ProgramadasEntregas = () => {
             />
           </div>
           {/* Filter row */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_auto] gap-2">
             <select
               value={driverFilter}
               onChange={e => setDriverFilter(e.target.value)}
-              className="px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm appearance-none"
+              className="w-full min-w-0 px-3 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm appearance-none"
             >
               <option value="" className="bg-gray-900">Selecione o motorista</option>
               {programacoes && [...new Set(programacoes.map(p => p.motorista).filter(Boolean))].sort().map(driver => (
@@ -1940,7 +1940,7 @@ const ProgramadasEntregas = () => {
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
-              className="px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm appearance-none"
+              className="w-full min-w-0 px-3 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm appearance-none"
             >
               <option value="all" className="bg-gray-900">Todos os status</option>
               <option value="pending" className="bg-gray-900">Agendado</option>
@@ -1952,18 +1952,11 @@ const ProgramadasEntregas = () => {
               <option value="DEVOLVENDO_CONTAINER" className="bg-gray-900">Devolvendo Container</option>
               <option value="FINALIZADO" className="bg-gray-900">Pendente Devolução</option>
             </select>
-            <div className="flex gap-1.5">
-              <select
-                value={sortBy}
-                onChange={e => setSortBy(e.target.value)}
-                className="flex-1 px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none text-sm appearance-none"
-              >
-                <option value="data" className="bg-gray-900">Por data</option>
-                <option value="tamanho" className="bg-gray-900">Tamanho</option>
-              </select>
+            <div className="flex">
               <button
                 onClick={() => setSortOrder(o => o === 'desc' ? 'asc' : 'desc')}
-                className="px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-base hover:bg-white/20 transition"
+                className="w-full sm:w-12 px-3 py-3 bg-white/10 border border-white/20 rounded-xl text-white text-base hover:bg-white/20 transition"
+                title={sortOrder === 'desc' ? 'Mais recentes primeiro' : 'Mais antigos primeiro'}
               >
                 {sortOrder === 'desc' ? '↓' : '↑'}
               </button>

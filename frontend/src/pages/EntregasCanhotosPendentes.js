@@ -406,13 +406,9 @@ const EntregasCanhotosPendentes = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [city]);
 
-  const filteredItems = useMemo(() => {
+  const searchedItems = useMemo(() => {
     const term = search.trim().toLowerCase();
     return items.filter((item) => {
-      if (getPendenciaResponsavel(item) !== ownerFilter) {
-        return false;
-      }
-
       if (!term) return true;
 
       return [
@@ -427,7 +423,13 @@ const EntregasCanhotosPendentes = () => {
         item.retornoGeoLog,
       ].some((value) => String(value || '').toLowerCase().includes(term));
     });
-  }, [items, ownerFilter, search]);
+  }, [items, search]);
+
+  const filteredItems = useMemo(() => {
+    return searchedItems.filter((item) => getPendenciaResponsavel(item) === ownerFilter);
+  }, [ownerFilter, searchedItems]);
+
+  const visibleItems = viewMode === 'list' ? searchedItems : filteredItems;
 
   useEffect(() => {
     setOwnerFilter(userPendenciaGroup || 'geomar');
@@ -753,7 +755,7 @@ const EntregasCanhotosPendentes = () => {
           </div>
         )}
 
-        {!loading && filteredItems.length === 0 && (
+        {!loading && visibleItems.length === 0 && (
           <div className="rounded-3xl border border-slate-200 bg-white shadow-sm p-10 sm:p-14 text-center">
             <div className="mx-auto w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
               <FaCheckCircle size={28} />
@@ -767,25 +769,113 @@ const EntregasCanhotosPendentes = () => {
           </div>
         )}
 
-        {!loading && filteredItems.length > 0 && viewMode === 'list' && (
+        {!loading && visibleItems.length > 0 && viewMode === 'list' && (
           <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.22em] text-slate-400 font-black">
-                    Lista operacional
+                    Lista estilo planilha
                   </p>
                   <h2 className="text-lg font-black text-slate-900">
-                    {filteredItems.length} entrega{filteredItems.length === 1 ? '' : 's'} com documentos pendentes
+                    {visibleItems.length} entrega{visibleItems.length === 1 ? '' : 's'} com documentos pendentes
                   </h2>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Use os cards para anexar documentos e fazer repasses.
+                  Inclui pendências com GeoMar e GeoLog.
                 </p>
               </div>
             </div>
 
-            <div className="divide-y divide-slate-100">
+            <div className="overflow-x-auto">
+              <table className="min-w-[1180px] w-full border-collapse text-left">
+                <thead>
+                  <tr className="bg-slate-100 border-b border-slate-200">
+                    {[
+                      'Processo principal',
+                      'Processo Log',
+                      'Container',
+                      'Recebedor',
+                      'Agendamento',
+                      'Contratado',
+                      'Motorista',
+                      'Responsável',
+                      'Justificativa e último retorno',
+                    ].map((column) => (
+                      <th
+                        key={column}
+                        className="px-4 py-3 text-[10px] uppercase tracking-[0.16em] font-black text-slate-500 border-r border-slate-200 last:border-r-0"
+                      >
+                        {column}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {visibleItems.map((item) => {
+                    const scheduleInfo = getScheduleInfo(item, city);
+                    const currentOwner = getPendenciaResponsavel(item);
+                    const currentConfig = RESPONSAVEL_CONFIG[currentOwner];
+                    const history = Array.isArray(item.pendenciaHistorico)
+                      ? item.pendenciaHistorico
+                      : [];
+                    const lastHistory = history[history.length - 1];
+                    const partyValue = item.recebedor || item.destinatario || item.remetente;
+                    const containerValue = Array.isArray(item.containerNumero)
+                      ? item.containerNumero.join(', ')
+                      : item.container || item.deliveryNumber;
+                    const justification = item.submissionObservation || item.documentsJustification || '';
+                    const lastReturn = lastHistory?.message || '';
+
+                    return (
+                      <tr key={item._id} className="odd:bg-white even:bg-slate-50/70 hover:bg-amber-50/60 transition">
+                        <td className="px-4 py-3 text-sm font-black text-slate-900 border-r border-slate-100 align-top">
+                          {item.processoCAB || item.deliveryNumber || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-slate-700 border-r border-slate-100 align-top">
+                          {item.processoLog || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-mono text-slate-700 border-r border-slate-100 align-top">
+                          {containerValue || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-slate-700 border-r border-slate-100 align-top">
+                          {partyValue || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-700 border-r border-slate-100 align-top">
+                          {scheduleInfo.value || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-700 border-r border-slate-100 align-top">
+                          {item.userName || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-700 border-r border-slate-100 align-top">
+                          {item.driverName || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm border-r border-slate-100 align-top">
+                          <span className={cn(
+                            'inline-flex rounded-full px-3 py-1 text-xs font-black border',
+                            currentConfig.badge
+                          )}>
+                            {currentConfig.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-700 align-top min-w-[280px] max-w-[420px]">
+                          <div className="whitespace-pre-wrap leading-relaxed">
+                            {justification || 'Sem justificativa registrada.'}
+                            {lastReturn && (
+                              <div className="mt-2 text-xs text-slate-500">
+                                <span className="font-black text-slate-700">Último retorno:</span> {lastReturn}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="hidden">
               {filteredItems.map((item) => {
                 const pendingDocs = item.missingDocumentsAtSubmit || [];
                 const scheduleInfo = getScheduleInfo(item, city);

@@ -58,6 +58,31 @@ const contentSecurityPolicy = [
   "manifest-src 'self'"
 ].join('; ');
 
+const allowedCorsOrigins = (process.env.CORS_ORIGINS || [
+  'https://entregascomgeotransportes.onrender.com',
+  'https://grupogeobackend.onrender.com',
+  'http://localhost:3000',
+  'http://localhost:5000',
+  'http://localhost:8100',
+  'capacitor://localhost',
+  'ionic://localhost'
+].join(','))
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin || allowedCorsOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Origem nao permitida pelo CORS'));
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-City"],
+};
+
 // Global error handlers to help diagnose crashes
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION:', err && err.stack ? err.stack : err);
@@ -78,15 +103,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ CORS permissivo (permite qualquer origem)
-app.use(
-  cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-City"],
-  })
-);
-app.options("*", cors());
+// CORS restrito aos dominios oficiais, localhost e WebViews mobile.
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -281,3 +300,4 @@ async function startServer() {
 startServer();
 
 module.exports = app;
+

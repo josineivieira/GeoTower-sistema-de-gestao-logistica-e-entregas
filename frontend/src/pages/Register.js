@@ -72,7 +72,6 @@ const Register = () => {
               e.target.onerror = null;
               e.target.src = '/GeoTower.svg';
             }}
-            onLoad={() => console.debug('Register logo loaded')}
           />
           <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
             GeoTower

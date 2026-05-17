@@ -9,7 +9,11 @@ module.exports = function auth(req, res, next) {
       return res.status(401).json({ message: "Token ausente" });
     }
 
-    const secret = process.env.JWT_SECRET || "dev_secret_change_me";
+    const secret = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? null : "dev_secret_change_me");
+    if (!secret) {
+      return res.status(500).json({ message: "JWT_SECRET nao configurado" });
+    }
+
     const decoded = jwt.verify(token, secret);
 
     // payload esperado: { id, name, email, role }

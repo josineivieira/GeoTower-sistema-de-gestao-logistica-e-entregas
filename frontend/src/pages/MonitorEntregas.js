@@ -1756,8 +1756,6 @@ const MonitorEntregas = () => {
 
 
     if (!icompanyRecord) {
-      // DEBUG: não encontrado; pode ser que esteja em outro formato no iCompany
-      console.debug('[Icompany compare] no match for', { deliveryKeys: processoKeys, rowCount: icompanyData.length });
       return { __notFound: true, mensagem: `Nenhum registro iCompany encontrado para ${processoKeys[0] || 'N/D'}` };
     }
 

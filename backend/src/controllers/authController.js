@@ -2,6 +2,7 @@ const mockdb = require('../mockdb');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const isProduction = process.env.NODE_ENV === 'production';
 
 const generateToken = (userId, name, role, contratado = null, city = null) => {
   // Expira em 8 horas
@@ -12,7 +13,12 @@ const generateToken = (userId, name, role, contratado = null, city = null) => {
   if (city) {
     payload.city = city;
   }
-  return jwt.sign(payload, process.env.JWT_SECRET || 'seu_jwt_secret_super_seguro_aqui_mude_em_producao', { expiresIn: '8h' });
+  const secret = process.env.JWT_SECRET || (isProduction ? null : 'dev_secret_change_me');
+  if (!secret) {
+    throw new Error('JWT_SECRET nao configurado');
+  }
+
+  return jwt.sign(payload, secret, { expiresIn: '8h' });
 };
 
 const hashPassword = (pwd) => {
@@ -106,12 +112,12 @@ exports.login = async (req, res) => {
     const db = req.mockdb;
     
     // Debug: log incoming city / header to help diagnose mobile/ngrok issues
-    console.log('🔐 LOGIN ATTEMPT:', { username, passwordLength: password?.length });
-    console.log('🔎 Request headers city:', req.header('x-city'), 'resolved req.city:', req.city, 'origin:', req.headers.origin);
+    if (!isProduction) console.log('🔐 LOGIN ATTEMPT:', { username, passwordLength: password?.length });
+    if (!isProduction) console.log('🔎 Request headers city:', req.header('x-city'), 'resolved req.city:', req.city, 'origin:', req.headers.origin);
 
     // Validate input
     if (!username || !password) {
-      console.log('❌ Missing credentials');
+      if (!isProduction) console.log('❌ Missing credentials');
       return res.status(400).json({ success: false, message: 'Usuário e senha obrigatórios' });
     }
 
@@ -122,11 +128,11 @@ exports.login = async (req, res) => {
     driver = await db.findOne('drivers', { username: loginKey });
     if (!driver) driver = await db.findOne('drivers', { email: loginKey });
 
-    console.log('👤 Driver found:', driver ? driver.username : 'NOT FOUND');
-    console.log('🔐 Driver password type:', driver?.password ? (driver.password.startsWith('$2') ? 'bcrypt' : 'sha256/other') : 'no password');
+    if (!isProduction) console.log('👤 Driver found:', driver ? driver.username : 'NOT FOUND');
+    if (!isProduction) console.log('🔐 Driver password type:', driver?.password ? (driver.password.startsWith('$2') ? 'bcrypt' : 'sha256/other') : 'no password');
 
     if (!driver) {
-      console.log('❌ Driver not found for:', loginKey);
+      if (!isProduction) console.log('❌ Driver not found for:', loginKey);
       return res.status(401).json({ success: false, message: 'Credenciais inválidas' });
     }
 
@@ -162,7 +168,7 @@ exports.login = async (req, res) => {
         // 3) assume bcrypt
         try {
           passwordMatch = await bcrypt.compare(password, driver.password || '');
-          console.log('🔐 bcrypt.compare result:', passwordMatch, 'with password:', (driver.password || '').substring(0, 20) + '...');
+          if (!isProduction) console.log('bcrypt.compare result:', passwordMatch);
         } catch (e) {
           console.error('Error comparing bcrypt password:', e);
         }
@@ -188,21 +194,21 @@ exports.login = async (req, res) => {
       }
     }
 
-    console.log('🔑 Password check:', { providedSha256: hashedSha256.substring(0,10)+'...', passwordMatch });
+    if (!isProduction) console.log('Password check:', { passwordMatch });
     if (!passwordMatch) {
-      console.log('❌ Password mismatch');
+      if (!isProduction) console.log('❌ Password mismatch');
       return res.status(401).json({ success: false, message: 'Senha incorreta' });
     }
 
     // Check if driver is active
     if (!driver.isActive) {
-      console.log('❌ Driver inactive');
+      if (!isProduction) console.log('❌ Driver inactive');
       return res.status(401).json({ success: false, message: 'Motorista desativado' });
     }
 
     const driverName = driver.name || driver.fullName || driver.username || 'Usuário';
     const token = generateToken(driver._id, driverName, driver.role, driver.contratado || null, driver.city || null);
-    console.log('✅ Login success:', driver.username);
+    if (!isProduction) console.log('✅ Login success:', driver.username);
     res.json({
       success: true,
       message: 'Login realizado com sucesso',
@@ -353,7 +359,7 @@ exports.requestPasswordReset = async (req, res) => {
 
     await db.updateOne('drivers', { _id: driver._id }, { resetPasswordToken: token, resetPasswordExpires: expires });
 
-    // Send email if SMTP configured - else log token for developer
+    // Send email if SMTP configured. In production, never print reset tokens.
     if (process.env.SMTP_HOST) {
       try {
         const nodemailer = require('nodemailer');
@@ -373,7 +379,7 @@ exports.requestPasswordReset = async (req, res) => {
       } catch (e) {
         console.warn('Failed to send reset email:', e && e.message ? e.message : e);
       }
-    } else {
+    } else if (process.env.NODE_ENV !== 'production') {
       console.log('Password reset token for', driver.email, token);
     }
 

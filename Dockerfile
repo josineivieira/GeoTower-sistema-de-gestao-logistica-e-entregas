@@ -15,6 +15,13 @@ RUN npm install
 WORKDIR /app
 COPY . .
 
+# Build frontend assets inside the deploy image because frontend/build is not
+# sent in the Docker context.
+WORKDIR /app/frontend
+RUN npm install && npm run build
+
+WORKDIR /app
+
 # Render usa a variável PORT
 EXPOSE 10000
 

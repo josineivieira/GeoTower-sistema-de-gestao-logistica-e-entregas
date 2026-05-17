@@ -2,11 +2,15 @@ const express = require("express");
 const multer = require("multer");
 const { PutObjectCommand } = require("@aws-sdk/client-s3");
 const r2 = require("../r2Client");
+const auth = require("../middleware/auth");
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 }
+});
 
-router.post("/upload", upload.single("file"), async (req, res) => {
+router.post("/upload", auth, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "Envie um arquivo no campo 'file'." });
 

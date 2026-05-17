@@ -15,21 +15,31 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const { city, setCity } = useCity();
 
-  // Carregar credenciais salvas ao montar o componente
+  // Carregar login salvo ao montar o componente. A senha nunca e gravada.
   useEffect(() => {
+    const queryUsername = new URLSearchParams(window.location.search).get('username') || '';
     const savedCredentials = localStorage.getItem('loginCredentials');
     const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
 
     if (savedRememberMe && savedCredentials) {
       try {
         const credentials = JSON.parse(savedCredentials);
-        setFormData(credentials);
+        setFormData((current) => ({
+          ...current,
+          username: credentials.username || '',
+          password: ''
+        }));
+        if (credentials.password) {
+          localStorage.setItem('loginCredentials', JSON.stringify({ username: credentials.username || '' }));
+        }
         setRememberMe(true);
       } catch (e) {
         // Se houver erro ao parsear, limpa
         localStorage.removeItem('loginCredentials');
         localStorage.removeItem('rememberMe');
       }
+    } else if (queryUsername) {
+      setFormData((current) => ({ ...current, username: queryUsername }));
     }
   }, []);
 
@@ -52,11 +62,10 @@ const Login = () => {
         setCity(currentCity);
       }
 
-      // Salvar credenciais se "Manter conectado" estiver marcado
+      // Salvar login se a opcao estiver marcada. Nunca salvar a senha.
       if (rememberMe) {
         localStorage.setItem('loginCredentials', JSON.stringify({
-          username: formData.username,
-          password: formData.password
+          username: formData.username
         }));
         localStorage.setItem('rememberMe', 'true');
       } else {
@@ -242,7 +251,7 @@ const Login = () => {
                   className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
                 />
                 <label htmlFor="rememberMe" className="ml-2 text-sm font-medium text-gray-700">
-                  Manter conectado
+                  Salvar login
                 </label>
               </div>
 

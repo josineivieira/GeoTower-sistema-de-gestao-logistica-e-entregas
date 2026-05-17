@@ -3,9 +3,6 @@ import api from './api';
 export const authService = {
   register: (data, city) => api.post('/auth/register', data, { headers: { 'X-City': city || localStorage.getItem('city') || 'manaus' }, timeout: 60000 }),
   login: (username, password, city) => {
-    try {
-      console.debug('🔐 authService.login called', { username, city });
-    } catch (e) {}
     // Login pode demorar mais por causa da busca no banco e validações, então aumenta timeout
     return api.post('/auth/login', { username, password }, { headers: { 'X-City': city || localStorage.getItem('city') || 'manaus' }, timeout: 90000 });
   },

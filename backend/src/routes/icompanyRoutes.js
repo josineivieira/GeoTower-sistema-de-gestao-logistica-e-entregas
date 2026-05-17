@@ -3,6 +3,7 @@ const router = express.Router();
 const icompanyController = require("../controllers/icompanyController");
 const { MongoClient } = require("mongodb");
 const auth = require("../middleware/auth");
+const managerOnly = require("../middleware/managerOnly");
 
 const MONGODB_URI = process.env.MONGODB_URI; // ⚠️ no Render tem que ser esse nome
 const DB_NAME = process.env.MONGO_DB || "delivery-docs";
@@ -135,8 +136,19 @@ function applyContractorAccessFilter(filter, user) {
   return filter;
 }
 
+function allowIcompanyRead(req, res, next) {
+  const allowedRoles = ['admin', 'manager', 'geomar', 'gestor', 'gestor_contratado'];
+  if (!allowedRoles.includes(req.user?.role)) {
+    return res.status(403).json({ ok: false, message: 'Sem permissao para acessar Icompany' });
+  }
+  next();
+}
+
+router.use(auth);
+router.use(allowIcompanyRead);
+
 // --- new endpoints for the React Icompany page ------------------------------------------------
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const c = await col();
 
@@ -341,7 +353,7 @@ router.get('/search', async (req, res) => {
 });
 
 // Debug endpoint: mostra exemplo de registros de ambas as coleções
-router.get('/debug-comparison', async (req, res) => {
+router.get('/debug-comparison', managerOnly, async (req, res) => {
   try {
     const client = new MongoClient(MONGODB_URI);
     await client.connect();
@@ -486,7 +498,7 @@ router.get('/search', async (req, res) => {
   }
 });
 
-router.get('/export', async (req, res) => {
+router.get('/export', managerOnly, async (req, res) => {
   try {
     const c = await col();
     
@@ -594,7 +606,7 @@ router.get("/entregas", async (req, res) => {
  * PATCH /api/icompany/entregas/:processo
  * Admin pode editar qualquer campo (cuidado: aqui é “poder total”)
  */
-router.patch("/entregas/:processo", async (req, res) => {
+router.patch("/entregas/:processo", managerOnly, async (req, res) => {
   try {
     const c = await col();
     const { processo } = req.params;
@@ -618,7 +630,7 @@ router.patch("/entregas/:processo", async (req, res) => {
  * Admin define motorista para a entrega
  * body: { motoristaId, motoristaNome }
  */
-router.patch("/entregas/:processo/atribuir-motorista", async (req, res) => {
+router.patch("/entregas/:processo/atribuir-motorista", managerOnly, async (req, res) => {
   try {
     const c = await col();
     const { processo } = req.params;

@@ -48,11 +48,11 @@ const contentSecurityPolicy = [
   "object-src 'none'",
   "frame-ancestors 'self'",
   "form-action 'self'",
-  "script-src https://entregascomgeotransportes.onrender.com/static/js/",
+  "script-src https://entregascomgeotransportes.onrender.com/static/js/ https://geotower.com.br/static/js/ https://www.geotower.com.br/static/js/",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
-  "connect-src 'self' https://grupogeobackend.onrender.com https://entregascomgeotransportes.onrender.com",
+  "connect-src 'self' https://grupogeobackend.onrender.com https://entregascomgeotransportes.onrender.com https://geotower.com.br https://www.geotower.com.br",
   "media-src 'self' blob: https:",
   "worker-src 'self' blob:",
   "manifest-src 'self'"
@@ -60,6 +60,8 @@ const contentSecurityPolicy = [
 
 const allowedCorsOrigins = (process.env.CORS_ORIGINS || [
   'https://entregascomgeotransportes.onrender.com',
+  'https://geotower.com.br',
+  'https://www.geotower.com.br',
   'https://grupogeobackend.onrender.com',
   'http://localhost:3000',
   'http://localhost:5000',

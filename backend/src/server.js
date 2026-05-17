@@ -52,7 +52,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
-  "connect-src 'self' https://grupogeobackend.onrender.com https://entregascomgeotransportes.onrender.com https://geotower.com.br https://www.geotower.com.br",
+  "connect-src 'self' https://grupogeobackend.onrender.com https://entregascomgeotransportes.onrender.com https://geotower.com.br https://www.geotower.com.br capacitor://localhost http://localhost https://localhost",
   "media-src 'self' blob: https:",
   "worker-src 'self' blob:",
   "manifest-src 'self'"
@@ -63,6 +63,8 @@ const defaultCorsOrigins = [
   'https://geotower.com.br',
   'https://www.geotower.com.br',
   'https://grupogeobackend.onrender.com',
+  'http://localhost',
+  'https://localhost',
   'http://localhost:3000',
   'http://localhost:5000',
   'http://localhost:8100',

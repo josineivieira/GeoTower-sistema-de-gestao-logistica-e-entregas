@@ -1005,7 +1005,8 @@ const ProgramadasEntregas = () => {
 
   const normalizeCameraFile = (file) => {
     if (!file || file.type?.startsWith('image/')) return file;
-    const name = file.name || `foto_${Date.now()}.jpg`;
+    const hasImageExtension = /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name || '');
+    const name = hasImageExtension ? file.name : `foto_${Date.now()}.jpg`;
     const lower = name.toLowerCase();
     const type =
       lower.endsWith('.png') ? 'image/png' :
@@ -1016,10 +1017,10 @@ const ProgramadasEntregas = () => {
     return new File([file], name, { type, lastModified: file.lastModified || Date.now() });
   };
 
-  const addPhotoFiles = (files) => {
+  const addPhotoFiles = (files, { trustCamera = false } = {}) => {
     const maxPhotos = 2;
     const validFiles = files
-      .filter(file => file && file.size > 0 && isLikelyImageFile(file))
+      .filter(file => file && file.size > 0 && (trustCamera || isLikelyImageFile(file)))
       .map(normalizeCameraFile);
 
     if (validFiles.length === 0) {
@@ -1074,7 +1075,7 @@ const ProgramadasEntregas = () => {
     setProcessingPhoto(true);
 
     try {
-      const added = addPhotoFiles(files);
+      const added = addPhotoFiles(files, { trustCamera: true });
       if (added > 0) {
         setToast({ message: `${added} foto(s) adicionada(s)`, type: 'success' });
         setTimeout(() => setToast(null), 1800);
@@ -1115,7 +1116,7 @@ const ProgramadasEntregas = () => {
         type: blob.type || `image/${image.format || 'jpeg'}`
       });
 
-      const added = addPhotoFiles([file]);
+      const added = addPhotoFiles([file], { trustCamera: true });
       if (added > 0) {
         setToast({ message: `${added} foto(s) adicionada(s)`, type: 'success' });
         setTimeout(() => setToast(null), 1800);

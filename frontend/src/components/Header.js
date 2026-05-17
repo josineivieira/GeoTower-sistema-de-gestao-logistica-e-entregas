@@ -22,7 +22,7 @@ const routeLabel = {
   '/nova-entrega': 'Nova Entrega',
   '/minhas-entregas': 'Minhas Entregas',
   '/entregas-programadas': 'Entregas Programadas',
-  '/entregas-canhotos-pendentes': 'Canhotos Pendentes',
+  '/entregas-canhotos-pendentes': 'Documentos Pendentes',
   '/entregas-em-andamento': 'Entregas em Andamento',
   '/admin': 'Dashboard',
   '/monitor-entregas': 'Torre de Controle',

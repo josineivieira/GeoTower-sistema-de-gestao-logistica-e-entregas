@@ -1076,7 +1076,7 @@ const Home = () => {
                   accentDark="#92400E"
                   icon={<FaFileAlt />}
                   titleIcon={<FaClipboardList />}
-                  title="Canhotos Pendentes"
+                  title="Documentos Pendentes"
                   description="Acompanhe entregas finalizadas com documentos faltantes e registre os retornos GeoMar e GeoLog."
                   viewOnly={hasAccess(['manager'])}
                   delay={180}

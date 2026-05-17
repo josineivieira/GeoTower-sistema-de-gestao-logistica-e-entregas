@@ -17,7 +17,9 @@ import {
   FaRegCommentDots,
   FaExchangeAlt,
   FaHistory,
+  FaList,
   FaLock,
+  FaThLarge,
 } from 'react-icons/fa';
 import Toast from '../components/Toast';
 import { adminService } from '../services/authService';
@@ -160,6 +162,22 @@ const getPartyLabel = (item, city) => {
   if (sentido === 'ORIGEM') return 'Remetente';
   if (sentido === 'DESTINO') return 'Recebedor';
   return city === 'itajai' ? 'Remetente' : 'Recebedor';
+};
+
+const formatSentido = (value) => {
+  const sentido = String(value || '').trim().toUpperCase();
+  if (sentido === 'ORIGEM') return 'Origem';
+  if (sentido === 'DESTINO') return 'Destino';
+  return '-';
+};
+
+const formatDeliveryStatus = (value) => {
+  if (!value) return '-';
+  const key = String(value).trim();
+  if (key === 'submitted' || key === 'ENTREGUE') return 'OPERAÇÃO FINALIZADA';
+  if (key === 'ENTREGUE_COM_PENDENCIA_CANHOTO') return 'FINALIZADO COM PENDÊNCIA';
+  if (key === 'pending' || key === 'PENDING') return 'A CAMINHO DO CLIENTE';
+  return key.replace(/_/g, ' ');
 };
 
 const RESPONSAVEL_CONFIG = {
@@ -328,6 +346,17 @@ const DeliveryCardSkeleton = () => (
   </div>
 );
 
+const ListCell = ({ label, value }) => (
+  <div className="min-w-0">
+    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400 font-black">
+      {label}
+    </p>
+    <p className="mt-1 text-sm font-bold text-slate-800 break-words">
+      {value || '-'}
+    </p>
+  </div>
+);
+
 const EntregasCanhotosPendentes = () => {
   const navigate = useNavigate();
   const { city } = useCity();
@@ -343,6 +372,7 @@ const EntregasCanhotosPendentes = () => {
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState('');
   const [ownerFilter, setOwnerFilter] = useState(userPendenciaGroup || 'geomar');
+  const [viewMode, setViewMode] = useState('cards');
 
   const loadPendencias = async () => {
     setLoading(true);
@@ -364,7 +394,7 @@ const EntregasCanhotosPendentes = () => {
     } catch (err) {
       setToast({
         type: 'error',
-        message: err.response?.data?.message || 'Erro ao carregar canhotos pendentes',
+        message: err.response?.data?.message || 'Erro ao carregar documentos pendentes',
       });
     } finally {
       setLoading(false);
@@ -630,7 +660,7 @@ const EntregasCanhotosPendentes = () => {
                 </div>
 
                 <h1 className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">
-                  Canhotos Pendentes
+                  Documentos Pendentes
                 </h1>
                 <p className="text-sm sm:text-base text-slate-500 mt-1">
                   Acompanhe entregas finalizadas com documentos faltantes e registre retornos operacionais com mais clareza.
@@ -639,6 +669,37 @@ const EntregasCanhotosPendentes = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
+              <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-100 p-1 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('cards')}
+                  className={cn(
+                    'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition',
+                    viewMode === 'cards'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  )}
+                  title="Visualizar em cards"
+                >
+                  <FaThLarge size={12} />
+                  Cards
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={cn(
+                    'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition',
+                    viewMode === 'list'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  )}
+                  title="Visualizar em lista"
+                >
+                  <FaList size={12} />
+                  Lista
+                </button>
+              </div>
+
               <div className="relative">
                 <FaSearch
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
@@ -706,7 +767,121 @@ const EntregasCanhotosPendentes = () => {
           </div>
         )}
 
-        {!loading && filteredItems.length > 0 && (
+        {!loading && filteredItems.length > 0 && viewMode === 'list' && (
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.22em] text-slate-400 font-black">
+                    Lista operacional
+                  </p>
+                  <h2 className="text-lg font-black text-slate-900">
+                    {filteredItems.length} entrega{filteredItems.length === 1 ? '' : 's'} com documentos pendentes
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Use os cards para anexar documentos e fazer repasses.
+                </p>
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              {filteredItems.map((item) => {
+                const pendingDocs = item.missingDocumentsAtSubmit || [];
+                const scheduleInfo = getScheduleInfo(item, city);
+                const currentOwner = getPendenciaResponsavel(item);
+                const currentConfig = RESPONSAVEL_CONFIG[currentOwner];
+                const CurrentIcon = currentConfig.icon;
+                const history = Array.isArray(item.pendenciaHistorico)
+                  ? item.pendenciaHistorico
+                  : [];
+                const lastHistory = history[history.length - 1];
+                const partyValue = item.recebedor || item.destinatario || item.remetente;
+
+                return (
+                  <div key={item._id} className="p-4 sm:p-5 hover:bg-slate-50/80 transition">
+                    <div className="flex flex-col xl:flex-row xl:items-start gap-4">
+                      <div className="xl:w-72 min-w-0">
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400 font-black">
+                          Processo principal
+                        </p>
+                        <h3 className="mt-1 text-lg font-black text-slate-900 break-words">
+                          {item.processoCAB || item.deliveryNumber || '-'}
+                        </h3>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 border border-slate-200">
+                            {formatDeliveryStatus(item.status)}
+                          </span>
+                          <span className={cn(
+                            'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-black border',
+                            currentConfig.badge
+                          )}>
+                            <CurrentIcon size={10} />
+                            {currentConfig.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6 gap-4 flex-1 min-w-0">
+                        <ListCell label="Processo Log" value={item.processoLog} />
+                        <ListCell
+                          label="Container"
+                          value={Array.isArray(item.containerNumero) ? item.containerNumero.join(', ') : item.container || item.deliveryNumber}
+                        />
+                        <ListCell label={scheduleInfo.label} value={scheduleInfo.value} />
+                        <ListCell label="Contratado" value={item.userName} />
+                        <ListCell label="Motorista" value={item.driverName} />
+                        <ListCell label={getPartyLabel(item, city)} value={partyValue} />
+                        <ListCell label="Sentido" value={formatSentido(item.sentido)} />
+                        <ListCell label="Armador" value={item.armador} />
+                        <ListCell label="Atualizado em" value={item.retornosPendenciaUpdatedAt ? formatarData(item.retornosPendenciaUpdatedAt, city) : '-'} />
+                        <ListCell label="Atualizado por" value={item.retornosPendenciaUpdatedBy} />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-3">
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-amber-700 font-black mb-2">
+                          Documentos pendentes
+                        </p>
+                        {pendingDocs.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {pendingDocs.map((doc) => (
+                              <span key={doc} className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-amber-800 border border-amber-200">
+                                {getDocumentLabel(doc, city)}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm font-semibold text-emerald-700">
+                            Nenhum documento pendente.
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400 font-black mb-2">
+                          Justificativa e último retorno
+                        </p>
+                        <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                          {item.submissionObservation || item.documentsJustification || 'Sem justificativa registrada.'}
+                        </p>
+                        {lastHistory && (
+                          <p className="mt-2 text-xs text-slate-500 whitespace-pre-wrap leading-relaxed">
+                            <span className="font-black text-slate-700">Último retorno:</span>{' '}
+                            {lastHistory.message || '-'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {!loading && filteredItems.length > 0 && viewMode === 'cards' && (
           <div className="space-y-5">
             {filteredItems.map((item) => {
               const draft = drafts[item._id] || {};

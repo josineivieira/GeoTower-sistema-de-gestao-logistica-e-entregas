@@ -946,6 +946,9 @@ const MonitorEntregas = () => {
   const [controleProtocolosLookupStatus, setControleProtocolosLookupStatus] = useState('idle');
   const lastIcompanyQueryRef = useRef('');
   const lastControleProtocolosQueryRef = useRef('');
+  const deliveriesLoadingRef = useRef(false);
+  const verificationSyncInFlightRef = useRef(false);
+  const verificationSyncFailedRef = useRef(false);
   // Novo template para expandir a tabela e mostrar colunas completas
   const EXPANDED_COL_TEMPLATE = [
     'minmax(200px, 2.5fr)',   // Processo
@@ -1096,18 +1099,23 @@ const MonitorEntregas = () => {
   // Sincronizar verificações com o servidor ao carregar
   useEffect(() => {
     const syncVerificationsFromServer = async () => {
+      if (verificationSyncInFlightRef.current || document.hidden) return;
+
+      verificationSyncInFlightRef.current = true;
       try {
         const response = await adminService.getVerificationsList();
         const payload = response?.data;
         if (payload?.success && payload?.data) {
+          verificationSyncFailedRef.current = false;
           setIcompanyVerified(payload.data);
           // Também salvamos no localStorage como backup
           localStorage.setItem('icompanyVerified', JSON.stringify(payload.data));
-          // Trigger para outras abas/navegadores
-          localStorage.setItem('icompanyVerifiedRefresh', Date.now().toString());
         }
       } catch (e) {
-        console.warn('Aviso ao sincronizar verificações do servidor:', e);
+        if (!verificationSyncFailedRef.current) {
+          console.warn('Aviso ao sincronizar verificações do servidor:', e);
+        }
+        verificationSyncFailedRef.current = true;
         // Se falhar, carregar do localStorage como fallback
         try {
           const saved = localStorage.getItem('icompanyVerified');
@@ -1117,6 +1125,8 @@ const MonitorEntregas = () => {
         } catch (e2) {
           console.error('Erro ao carregar verificações do localStorage:', e2);
         }
+      } finally {
+        verificationSyncInFlightRef.current = false;
       }
     };
 
@@ -1130,8 +1140,8 @@ const MonitorEntregas = () => {
 
     syncVerificationsFromServer();
 
-    // Polling a cada 30 segundos para sincronizar mudanças (otimizado de 10s)
-    const syncInterval = setInterval(syncVerificationsFromServer, 30000);
+    // Polling leve para sincronizar mudanças sem sobrepor requisições.
+    const syncInterval = setInterval(syncVerificationsFromServer, 120000);
 
     return () => {
       clearInterval(syncInterval);
@@ -1559,6 +1569,9 @@ const MonitorEntregas = () => {
   };
 
   const loadDeliveries = useCallback(async () => {
+    if (deliveriesLoadingRef.current) return;
+
+    deliveriesLoadingRef.current = true;
     try {
       setLoading(true);
 
@@ -1622,6 +1635,7 @@ const MonitorEntregas = () => {
         setTimeout(() => setToast(null), 5000);
       }
     } finally {
+      deliveriesLoadingRef.current = false;
       setLoading(false);
     }
   }, [filters, statsPeriod, city]);
@@ -1859,8 +1873,6 @@ const MonitorEntregas = () => {
     loadIcompanyData(); // Carregar dados da Icompany na inicialização
     if (autoRefresh) {
       const t = setInterval(() => {
-        // eslint-disable-next-line no-console
-        console.log('DEBUG autoRefresh triggered, filters:', filters);
         loadDeliveries();
       }, refreshInterval * 1000);
       return () => clearInterval(t);

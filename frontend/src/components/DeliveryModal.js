@@ -158,18 +158,22 @@ const DeliveryModal = ({
     if (sentidoKey === 'ORIGEM') {
       return {
         ...labels,
+        retiradaCheio: 'RIC DEPOT',
         canhotCTE: 'CONTRATO',
         canhotNF: 'TACÓGRAFO / RIC ABASTECIMENTO',
-        diarioBordo: 'Diário de Bordo',
+        diarioBordo: 'DIARIO DE BORDO',
+        devolucaoVazio: 'RIC PORTO',
         inicioDesova: 'Início da Ovação',
         fimDesova: 'Finalização da Ovação',
       };
     }
     return {
       ...labels,
-      canhotCTE: 'Canhoto CTE',
-      canhotNF: 'Canhoto NF',
-      diarioBordo: 'Diário de Bordo',
+      retiradaCheio: 'RIC PORTO DESTINO',
+      canhotCTE: 'CANHOTO CTE',
+      canhotNF: 'CANHOTO DE DANFE',
+      diarioBordo: 'DIARIO DE BORDO',
+      devolucaoVazio: 'RIC DEPOT DESTINO',
       inicioDesova: 'Início da Desova',
       fimDesova: 'Finalização da Desova',
     };

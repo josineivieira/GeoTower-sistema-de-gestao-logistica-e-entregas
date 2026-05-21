@@ -1355,14 +1355,23 @@ const MonitorEntregas = () => {
     if (sentido === 'ORIGEM') {
       return {
         ...defaultDocumentLabels,
+        retiradaCheio: 'RIC DEPOT',
         canhotCTE: itajaiDocumentLabels.canhotCTE,
         canhotNF: itajaiDocumentLabels.canhotNF,
-        diarioBordo: itajaiDocumentLabels.diarioBordo,
+        diarioBordo: 'DIARIO DE BORDO',
+        devolucaoVazio: 'RIC PORTO',
         inicioDesova: 'Inicio da Ovacao',
         fimDesova: 'Finalizacao da Ovacao',
       };
     }
-    return defaultDocumentLabels;
+    return {
+      ...defaultDocumentLabels,
+      retiradaCheio: 'RIC PORTO DESTINO',
+      canhotCTE: 'CANHOTO CTE',
+      canhotNF: 'CANHOTO DE DANFE',
+      diarioBordo: 'DIARIO DE BORDO',
+      devolucaoVazio: 'RIC DEPOT DESTINO',
+    };
   };
 
   const removeProgramacaoInfo = (obs) => obs ? obs.replace(/Criada a partir da Programação [A-Z0-9]+/g, '').trim() : '';

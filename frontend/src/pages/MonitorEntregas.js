@@ -648,7 +648,7 @@ const SettingsPanel = ({
                 <div>
                   <label className="block text-xs text-gray-500 mb-2">Intervalo (segundos)</label>
                   <div className="flex items-center gap-3">
-                    {[10, 30, 60, 120].map((v) => (
+                    {[15, 45, 90, 120].map((v) => (
                       <button
                         key={v}
                         onClick={() => setRefreshInterval(v)}
@@ -913,7 +913,7 @@ const MonitorEntregas = () => {
   const [toast, setToast] = useState(null);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [refreshInterval, setRefreshInterval] = useState(30);
+  const [refreshInterval, setRefreshInterval] = useState(45);
   const [editingDelivery, setEditingDelivery] = useState(null);
   const [editForm, setEditForm] = useState({
     deliveryNumber: '', userName: '', driverName: '', vehiclePlate: '',

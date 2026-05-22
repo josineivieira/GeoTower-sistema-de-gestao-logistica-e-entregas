@@ -14,6 +14,7 @@ const router = express.Router();
 const canhotoUpload = multer({ storage: multer.memoryStorage() });
 const shortCache = new Map();
 const SHORT_CACHE_MS = 30000;
+const ADMIN_DELIVERIES_CACHE_MS = 90000;
 const ENABLE_CONTROLE_PROTOCOLOS_COMPARISON = false;
 
 const clearShortCacheByPrefix = (prefix) => {
@@ -630,8 +631,8 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     const city = req.city || 'manaus';
     const responseCacheKey = `admin:deliveries:${city}:${req.user?.id || ''}:${req.user?.role || ''}:${req.user?.contratado || ''}:${JSON.stringify(req.query || {})}`;
     const cachedResponse = shortCache.get(responseCacheKey);
-    if (cachedResponse && Date.now() - cachedResponse.createdAt < SHORT_CACHE_MS) {
-      res.set('Cache-Control', 'private, max-age=20');
+    if (cachedResponse && Date.now() - cachedResponse.createdAt < ADMIN_DELIVERIES_CACHE_MS) {
+      res.set('Cache-Control', 'private, max-age=60');
       return res.json(cachedResponse.value);
     }
     console.log('📋 GET /admin/deliveries recebido com filtros:', { status, q, processo, container, recebedor, pontualidade, horaStatusStart, horaStatusEnd, agendamentoStart, agendamentoEnd, tempoStatusMin, tempoStatusMax, sentido, startDate, endDate, period, periodDate, city });
@@ -1281,7 +1282,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     console.log(`📤 Retornando ${deliveriesWithComparisons.length} entregas`);
     const payload = { deliveries: deliveriesWithComparisons };
     shortCache.set(responseCacheKey, { createdAt: Date.now(), value: payload });
-    res.set('Cache-Control', 'private, max-age=20');
+    res.set('Cache-Control', 'private, max-age=60');
     return res.json(payload);
   } catch (err) {
     console.error('❌ Erro em /admin/deliveries:', err);
@@ -2257,7 +2258,7 @@ router.get('/persistence/test', auth, onlyAdmin, async (req, res) => {
     // cleanup
     try { fs.unlinkSync(testFile); } catch(e){}
 
-    return res.json({ success: true, mongodbConnected: !!process.env.MONGO_URI, deliveriesCount: total, uploadsWritable: !!exists, uploadsPath: base });
+    return res.json({ success: true, mongodbConnected: !!(process.env.MONGODB_URI || process.env.MONGO_URI), deliveriesCount: total, uploadsWritable: !!exists, uploadsPath: base });
   } catch (err) {
     console.error('Persistence test error:', err);
     return res.status(500).json({ success: false, message: 'Persistence test failed', error: err.message });

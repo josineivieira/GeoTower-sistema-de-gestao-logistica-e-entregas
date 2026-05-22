@@ -197,7 +197,18 @@ app.use("/api/controle-protocolos", require("./routes/controleProtocolos"));
 
 // Health check
 app.get("/api/health", (req, res) => {
-  res.json({ success: true, message: "Server is running" });
+  const { mongoose } = require('./db/mongo');
+  res.json({
+    success: true,
+    message: "Server is running",
+    mongo: {
+      configured: Boolean(process.env.MONGODB_URI || process.env.MONGO_URI),
+      readyState: mongoose.connection.readyState,
+      connected: mongoose.connection.readyState === 1,
+      dbName: mongoose.connection.name || null,
+      host: mongoose.connection.host || null
+    }
+  });
 });
 
 app.get(["/.well-known/security.txt", "/security.txt"], (req, res) => {

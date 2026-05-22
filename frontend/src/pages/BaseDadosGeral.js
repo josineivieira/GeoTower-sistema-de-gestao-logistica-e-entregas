@@ -45,17 +45,6 @@ const toDatetimeLocal = (val) => {
   return `${year}-${month}-${date}T${hours}:${minutes}`;
 };
 
-const normalizeLookupKey = (value) => String(value || '').trim().toUpperCase();
-
-const addLookup = (map, key, delivery) => {
-  const normalized = normalizeLookupKey(key);
-  if (!normalized || !delivery) return;
-  const existing = map[normalized];
-  if (!existing || new Date(delivery.updatedAt || delivery.createdAt || 0) >= new Date(existing.updatedAt || existing.createdAt || 0)) {
-    map[normalized] = delivery;
-  }
-};
-
 /* ─────────────────────────────────────────
    Status helpers
 ───────────────────────────────────────── */
@@ -475,35 +464,11 @@ const BaseDadosGeral = () => {
   const carregarDados = async () => {
     setLoading(true);
     try {
-      const [progRes, entrRes] = await Promise.all([
-        adminService.getProgramacoes(),
-        adminService.getDeliveries({}),
-      ]);
+      const progRes = await adminService.getProgramacoes();
       const programacoes = progRes.data.programacoes || [];
-      const entregas = entrRes.data.deliveries || [];
-      const map = {};
-      const byProgramacao = {};
-      entregas.forEach((e) => {
-        addLookup(map, e.deliveryNumber, e);
-        addLookup(map, e.processoLog, e);
-        addLookup(map, e.processo, e);
-        addLookup(map, e.container, e);
-        [e.programacaoId, e.linkedProgramacaoId].filter(Boolean).forEach((id) => {
-          const key = String(id);
-          const existing = byProgramacao[key];
-          if (!existing || new Date(e.updatedAt || e.createdAt || 0) >= new Date(existing.updatedAt || existing.createdAt || 0)) {
-            byProgramacao[key] = e;
-          }
-        });
-      });
       const enriched = programacoes.map((p) => ({
         ...p,
-        _entrega:
-          byProgramacao[String(p._id)] ||
-          map[normalizeLookupKey(p.processoLog)] ||
-          map[normalizeLookupKey(p.container)] ||
-          map[normalizeLookupKey(p.processo)] ||
-          null,
+        _entrega: p._entrega || null,
       }));
       setDados(enriched);
       aplicarFiltros(enriched);

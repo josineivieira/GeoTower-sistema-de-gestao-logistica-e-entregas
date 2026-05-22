@@ -12,6 +12,8 @@ import {
 import * as XLSX from 'xlsx';
 import '../styles/MotoristaManagement.css';
 
+const PAGE_SIZE = 50;
+
 const ProgramacaoManagement = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -31,6 +33,8 @@ const ProgramacaoManagement = () => {
   const [syncLoading, setSyncLoading] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [selectedProgramacoes, setSelectedProgramacoes] = useState(new Set());
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ page: 1, limit: PAGE_SIZE, total: 0, totalPages: 1 });
 
   const [filters, setFilters] = useState({ search: '', status: 'all', startDate: '', endDate: '' });
   const [showFilters, setShowFilters] = useState(false);
@@ -70,7 +74,14 @@ const ProgramacaoManagement = () => {
     return merged;
   };
 
-  useEffect(() => { loadProgramacoes(); loadAllMotoristas(); }, []);
+  useEffect(() => { loadAllMotoristas(); }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadProgramacoes();
+    }, filters.search ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [page, filters]);
 
   const loadAllMotoristas = async () => {
     try {
@@ -82,10 +93,22 @@ const ProgramacaoManagement = () => {
   const loadProgramacoes = async (options = {}) => {
     try {
       setLoading(true);
-      const response = await adminService.getProgramacoes(
-        options.forceRefresh ? { _refresh: Date.now() } : {}
-      );
+      const response = await adminService.getProgramacoes({
+        page,
+        limit: PAGE_SIZE,
+        search: filters.search,
+        status: filters.status,
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        ...(options.forceRefresh ? { _refresh: Date.now() } : {})
+      });
       setProgramacoes(response.data.programacoes || []);
+      setPagination(response.data.pagination || {
+        page,
+        limit: PAGE_SIZE,
+        total: response.data.programacoes?.length || 0,
+        totalPages: 1
+      });
     } catch (err) {
       showToast('Erro ao carregar programações', 'error');
     } finally {
@@ -163,6 +186,7 @@ const ProgramacaoManagement = () => {
     }
     if (filters.endDate) {
       const ed = new Date(filters.endDate);
+      ed.setHours(23, 59, 59, 999);
       data = data.filter(p => {
         const dateVal = getProgramacaoDate(p);
         return dateVal && new Date(dateVal) <= ed;
@@ -566,7 +590,7 @@ const ProgramacaoManagement = () => {
               Programação de Entregas
             </h1>
             <p style={{ margin: 0, fontSize: 12, color: '#a5b4fc', marginTop: 2 }}>
-              {filteredProgramacoes.length} registro{filteredProgramacoes.length !== 1 ? 's' : ''}
+              {pagination.total} registro{pagination.total !== 1 ? 's' : ''} • pÃ¡gina {pagination.page || page} de {pagination.totalPages || 1}
               {isGeoMar() && <span style={{ marginLeft: 8, padding: '2px 8px', backgroundColor: '#fbbf24', color: '#78350f', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>VISUALIZAÇÃO</span>}
             </p>
           </div>
@@ -651,14 +675,14 @@ const ProgramacaoManagement = () => {
                 <FaSearch style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: 13 }} />
                 <input
                   type="text" value={filters.search}
-                  onChange={e => setFilters({...filters, search: e.target.value})}
+                  onChange={e => { setPage(1); setFilters({...filters, search: e.target.value}); }}
                   placeholder="Buscar processo, remetente, recebedor, motorista..."
                   style={{ ...inputStyle(false), paddingLeft: 36 }}
                 />
               </div>
               <select
                 value={filters.status}
-                onChange={e => setFilters({...filters, status: e.target.value})}
+                onChange={e => { setPage(1); setFilters({...filters, status: e.target.value}); }}
                 style={{ ...inputStyle(false), cursor: 'pointer' }}
               >
                 <option value="all">Todos os status</option>
@@ -669,11 +693,11 @@ const ProgramacaoManagement = () => {
                 <option value="CANCELADO">Cancelado</option>
               </select>
               <input type="date" value={filters.startDate}
-                onChange={e => setFilters({...filters, startDate: e.target.value})}
+                onChange={e => { setPage(1); setFilters({...filters, startDate: e.target.value}); }}
                 style={{ ...inputStyle(false), cursor: 'pointer' }}
               />
               <input type="date" value={filters.endDate}
-                onChange={e => setFilters({...filters, endDate: e.target.value})}
+                onChange={e => { setPage(1); setFilters({...filters, endDate: e.target.value}); }}
                 style={{ ...inputStyle(false), cursor: 'pointer' }}
               />
             </div>
@@ -773,8 +797,39 @@ const ProgramacaoManagement = () => {
                     <span style={{ fontSize: 13, color: '#4b5563' }}>{selectedProgramacoes.size} selecionada(s)</span>
                   )}
                 </div>
-                <div style={{ fontSize: 13, color: '#6b7280' }}>
-                  Selecione linhas para excluir várias programações de uma vez.
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 13, color: '#6b7280' }}>
+                    {filteredProgramacoes.length} nesta pÃ¡gina de {pagination.total} total
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                    disabled={loading || page <= 1}
+                    style={{
+                      padding: '8px 12px', borderRadius: 8, border: '1px solid #d1d5db',
+                      background: page <= 1 ? '#f3f4f6' : '#fff',
+                      color: page <= 1 ? '#9ca3af' : '#374151',
+                      cursor: page <= 1 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    Anterior
+                  </button>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#374151', minWidth: 76, textAlign: 'center' }}>
+                    {page} / {pagination.totalPages || 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage(prev => Math.min(pagination.totalPages || 1, prev + 1))}
+                    disabled={loading || page >= (pagination.totalPages || 1)}
+                    style={{
+                      padding: '8px 12px', borderRadius: 8, border: '1px solid #d1d5db',
+                      background: page >= (pagination.totalPages || 1) ? '#f3f4f6' : '#fff',
+                      color: page >= (pagination.totalPages || 1) ? '#9ca3af' : '#374151',
+                      cursor: page >= (pagination.totalPages || 1) ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    PrÃ³xima
+                  </button>
                 </div>
               </div>
               <div style={{ overflowX: 'auto' }}>

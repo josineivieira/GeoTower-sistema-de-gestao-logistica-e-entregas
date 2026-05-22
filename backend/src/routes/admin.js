@@ -2758,8 +2758,8 @@ router.delete("/motoristas/:id", auth, managerOnly, async (req, res) => {
  */
 router.get("/programacoes", auth, async (req, res) => {
   try {
-    const { period, periodDate, startDate, endDate, page = 1, limit = 500, _refresh } = req.query;
-    console.log('[PROGRAMACAO] Listando programações de entrega, filtros:', { period, periodDate, startDate, endDate, page, limit });
+    const { period, periodDate, startDate, endDate, page = 1, limit = 500, q, status, _refresh } = req.query;
+    console.log('[PROGRAMACAO] Listando programações de entrega, filtros:', { period, periodDate, startDate, endDate, page, limit, q, status });
 
     const ProgramacaoEntrega = require("../models/ProgramacaoEntrega");
     
@@ -2803,12 +2803,39 @@ router.get("/programacoes", auth, async (req, res) => {
     }
 
     const dbFilter = { ...cityFilter };
+    const addProgramacaoAndFilter = (clause) => {
+      dbFilter.$and = [...(dbFilter.$and || []), clause];
+    };
+
+    if (q && String(q).trim()) {
+      const search = new RegExp(escapeRegex(String(q).trim()), 'i');
+      addProgramacaoAndFilter({
+        $or: [
+          { processo: search },
+          { processoLog: search },
+          { recebedor: search },
+          { remetente: search },
+          { destinatario: search },
+          { container: search },
+          { armador: search },
+          { contratado: search },
+          { motorista: search }
+        ]
+      });
+    }
+
+    if (status && status !== 'all') {
+      const statusKey = String(status || '').trim().toUpperCase();
+      addProgramacaoAndFilter({ status: statusKey === 'EM_ROTA' ? 'A_CAMINHO_DO_CLIENTE' : statusKey });
+    }
     if (effectiveDate) {
       if (city === 'itajai') {
         const cityOr = dbFilter.$or || [];
+        const existingAnd = dbFilter.$and || [];
         delete dbFilter.$or;
         dbFilter.$and = [
           { $or: cityOr },
+          ...existingAnd,
           {
             $or: [
               { dtColeta: effectiveDate },
@@ -2823,12 +2850,27 @@ router.get("/programacoes", auth, async (req, res) => {
     }
 
     if (!effectiveDate && (rangeStart || rangeEnd)) {
-      console.log('📅 Aplicando filtro de data por intervalo:', { rangeStart, rangeEnd });
-      // dbFilter cannot reliably compare string dates, aplicamos filtro em memória abaixo
+      console.log('[PROGRAMACAO] Aplicando filtro de data por intervalo:', { rangeStart, rangeEnd });
+      const rangeFilter = {};
+      if (startDate) rangeFilter.$gte = `${startDate}T00:00`;
+      if (endDate) rangeFilter.$lte = `${endDate}T23:59`;
+      if (Object.keys(rangeFilter).length) {
+        if (city === 'itajai') {
+          addProgramacaoAndFilter({
+            $or: [
+              { dtColeta: rangeFilter },
+              { dtColeta: { $in: [null, '', undefined] }, dataAgendamento: rangeFilter }
+            ]
+          });
+        } else {
+          addProgramacaoAndFilter({ dataAgendamento: rangeFilter });
+        }
+      }
     }
 
     const limitNum = Math.min(Math.max(parseInt(limit, 10) || 500, 10), 1000);
     const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const total = await ProgramacaoEntrega.countDocuments(dbFilter);
 
     const programacoes = await ProgramacaoEntrega.find(dbFilter)
       .select('processo processoLog recebedor remetente destinatario container armador dataAgendamento dtColeta contratado motorista linkedDeliveryId status containerReturned observacoes origem estab sentido ativo createdAt updatedAt')
@@ -2890,23 +2932,68 @@ router.get("/programacoes", auth, async (req, res) => {
       });
       console.log(`  ✓ ${filtered.length} programações após filtro por intervalo`);
     }
-
-    // também trazemos entregas para permitir associação com motoristas (apenas da mesma cidade)
-    // Otimizado: busca apenas entregas ativas/recentes para evitar timeout
-    const db = await getDb(req);
-    const allDeliveries = await db.find("deliveries", {
+    // tambem trazemos entregas para permitir associacao com motoristas, limitado a pagina atual
+    const Delivery = require("../models/Delivery");
+    const programacaoIds = filtered.map((p) => p._id).filter(Boolean);
+    const linkedDeliveryIds = filtered.map((p) => p.linkedDeliveryId).filter(Boolean);
+    const lookupKeys = [
+      ...new Set(filtered.flatMap((p) => [p.processoLog, p.processo, p.container]).map(cleanLookupKey).filter(Boolean))
+    ];
+    const deliveryOr = [
+      ...(linkedDeliveryIds.length ? [{ _id: { $in: linkedDeliveryIds } }] : []),
+      ...(programacaoIds.length ? [
+        { linkedProgramacaoId: { $in: programacaoIds } },
+        { programacaoId: { $in: programacaoIds } }
+      ] : []),
+      ...(lookupKeys.length ? [
+        { deliveryNumber: { $in: lookupKeys } },
+        { processoLog: { $in: lookupKeys } },
+        { processo: { $in: lookupKeys } },
+        { processoCAB: { $in: lookupKeys } },
+        { processNumber: { $in: lookupKeys } },
+        { container: { $in: lookupKeys } },
+        { containerNumero: { $in: lookupKeys } }
+      ] : [])
+    ];
+    const allDeliveries = deliveryOr.length ? await Delivery.find({
       cityCode: city,
-      // Limita a entregas dos últimos 90 dias para performance
-      createdAt: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) }
-    });
+      isCanceled: { $ne: true },
+      $or: deliveryOr
+    })
+      .select('_id deliveryNumber vehiclePlate observations driverName status arrivedAt tripStartedAt chegadaMontagemAt containerMontadoAt desovaStartAt desovaEndAt saidaClienteAt chegadaPortoAt horarioDevolucaoVazio recebedor armador userId userName userEmail deliveryDate cityCode linkedProgramacaoId programacaoId documents isCanceled canceledAt createdAt updatedAt processoCAB processoLog processo processNumber container dataAgendamento dtColeta missingDocumentsAtSubmit containerReturned')
+      .lean() : [];
 
     // Cria mapas de entregas para lookup O(1)
     const deliveryNumberMap = new Map();
     const deliveryIdMap = new Map();
+    const deliveryProgramacaoMap = new Map();
+    const deliveryLookupMap = new Map();
+    const addDeliveryLookup = (delivery, value) => {
+      const key = cleanLookupKey(value);
+      if (!key) return;
+      const existing = deliveryLookupMap.get(key);
+      if (!existing || new Date(delivery.updatedAt || delivery.createdAt || 0) >= new Date(existing.updatedAt || existing.createdAt || 0)) {
+        deliveryLookupMap.set(key, delivery);
+      }
+    };
     allDeliveries.forEach(d => {
       const num = String(d.deliveryNumber || '').trim().toUpperCase();
       if (num) deliveryNumberMap.set(num, d);
       if (d._id) deliveryIdMap.set(String(d._id), d);
+      [d.programacaoId, d.linkedProgramacaoId].filter(Boolean).forEach((id) => {
+        const key = String(id);
+        const existing = deliveryProgramacaoMap.get(key);
+        if (!existing || new Date(d.updatedAt || d.createdAt || 0) >= new Date(existing.updatedAt || existing.createdAt || 0)) {
+          deliveryProgramacaoMap.set(key, d);
+        }
+      });
+      addDeliveryLookup(d, d.deliveryNumber);
+      addDeliveryLookup(d, d.processoLog);
+      addDeliveryLookup(d, d.processo);
+      addDeliveryLookup(d, d.processoCAB);
+      addDeliveryLookup(d, d.processNumber);
+      addDeliveryLookup(d, d.container);
+      addDeliveryLookup(d, d.containerNumero);
     });
 
     // vincular id de entrega correspondente (se existir) usando mapas otimizados
@@ -2920,22 +3007,29 @@ router.get("/programacoes", auth, async (req, res) => {
       }
 
       if (!match) {
-        const num = String(p.processoLog || p.processo || p.container || '').trim().toUpperCase();
-        match = num ? deliveryNumberMap.get(num) : null;
+        match = deliveryProgramacaoMap.get(String(obj._id));
+      }
+
+      if (!match) {
+        match = [p.processoLog, p.container, p.processo]
+          .map((value) => deliveryLookupMap.get(cleanLookupKey(value)) || deliveryNumberMap.get(cleanLookupKey(value)))
+          .find(Boolean) || null;
       }
 
       if (match) {
-        obj.linkedDeliveryId = match._id;
-        obj.status = match.status || obj.status;
-        obj.missingDocumentsAtSubmit = match.missingDocumentsAtSubmit || [];
-        const hasReturnProof = hasDocumentValue(match.documents?.devolucaoVazio) || hasDocumentValue(match.documents?.devolucaoContainerVazio);
-        if (match.horarioDevolucaoVazio || hasReturnProof) {
-          obj.horarioDevolucaoVazio = match.horarioDevolucaoVazio;
+        const normalizedMatch = normalizeDeliveryForResponse(match);
+        obj._entrega = normalizedMatch;
+        obj.linkedDeliveryId = normalizedMatch._id;
+        obj.status = normalizedMatch.status || obj.status;
+        obj.missingDocumentsAtSubmit = normalizedMatch.missingDocumentsAtSubmit || [];
+        const hasReturnProof = hasDocumentValue(normalizedMatch.documents?.devolucaoVazio) || hasDocumentValue(normalizedMatch.documents?.devolucaoContainerVazio);
+        if (normalizedMatch.horarioDevolucaoVazio || hasReturnProof) {
+          obj.horarioDevolucaoVazio = normalizedMatch.horarioDevolucaoVazio;
           obj.containerReturned = true;
           obj.status = 'FINALIZADO';
         }
-        if (match.containerReturned !== undefined) {
-          obj.containerReturned = match.containerReturned;
+        if (normalizedMatch.containerReturned !== undefined) {
+          obj.containerReturned = normalizedMatch.containerReturned;
         }
       }
 
@@ -2947,7 +3041,15 @@ router.get("/programacoes", auth, async (req, res) => {
     const payload = {
       success: true,
       programacoes: enriched,
-      city: city
+      city: city,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limitNum)),
+        hasNextPage: pageNum * limitNum < total,
+        hasPrevPage: pageNum > 1
+      }
     };
     shortCache.set(responseCacheKey, { createdAt: Date.now(), value: payload });
     res.set('Cache-Control', 'private, max-age=20');

@@ -15,6 +15,7 @@ const canhotoUpload = multer({ storage: multer.memoryStorage() });
 const shortCache = new Map();
 const SHORT_CACHE_MS = 30000;
 const ADMIN_DELIVERIES_CACHE_MS = 90000;
+const ADMIN_ICOMPANY_CACHE_MS = 10 * 60 * 1000;
 const ENABLE_CONTROLE_PROTOCOLOS_COMPARISON = false;
 
 const clearShortCacheByPrefix = (prefix) => {
@@ -662,6 +663,17 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       progFilter.contratado = new RegExp(`^${escapeRegex(req.user.contratado)}$`, 'i');
     }
     if (sentido && sentido !== 'all') progFilter.sentido = String(sentido || '').trim().toUpperCase();
+    const exactContainerFilter = container && container.trim() ? new RegExp(escapeRegex(container.trim()), 'i') : null;
+    const exactProcessFilter = processo && processo.trim() ? new RegExp(escapeRegex(processo.trim()), 'i') : null;
+    if (exactContainerFilter) {
+      progFilter.container = exactContainerFilter;
+    }
+    if (exactProcessFilter) {
+      progFilter.$and = [
+        ...(progFilter.$and || []),
+        { $or: [{ processo: exactProcessFilter }, { processoLog: exactProcessFilter }] }
+      ];
+    }
     const programacoes = await ProgramacaoEntrega.find(progFilter)
       .select('processo processoLog recebedor remetente destinatario container armador dataAgendamento dtColeta contratado motorista linkedDeliveryId chegadaMontagemAt status createdAt observacoes origem estab sentido')
       .lean();
@@ -689,13 +701,13 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
 
     // *** UNIFIED LOGIC BELOW ***
     // buscamos entregas iniciadas e também levamos em conta programações não iniciadas
-    const db = await getDb(req);
+    const Delivery = require('../models/Delivery');
 
     // antes de cruzar, carregar dados do Icompany para termos placas (tracao)
     const Icompany = require('../models/Icompany');
     const icompanyRecords = await getCached(`admin:icompany:${city}`, () => Icompany.find({})
       .select('geomaritima processo codigo numero NUMERO NÚMERO container containerNumero armador tracao contratado entradaDistrito dtColeta remetente dtChegadaPlanta dtDevolucaoCNTR dtAgendamentoDescarga destinatario dtRetiraPD dtInicioDescarga dtFimDescarga sentido SENTIDO')
-      .lean());
+      .lean(), ADMIN_ICOMPANY_CACHE_MS);
     markPerf('icompany-query', { count: icompanyRecords ? icompanyRecords.length : 0 });
     const ycByProcess = new Map();  // processo -> [array de registros yc]
     const ycByContainer = new Map(); // container -> [array de registros yc]
@@ -727,7 +739,44 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       deliveryFilter.isCanceled = { $ne: true };
     }
 
-    const allDeliveries = await db.find("deliveries", deliveryFilter);
+    const addDeliveryAndFilter = (clause) => {
+      deliveryFilter.$and = [...(deliveryFilter.$and || []), clause];
+    };
+    if (exactContainerFilter) {
+      addDeliveryAndFilter({
+        $or: [
+          { deliveryNumber: exactContainerFilter },
+          { container: exactContainerFilter },
+          { containerNumero: exactContainerFilter }
+        ]
+      });
+    }
+    if (exactProcessFilter) {
+      addDeliveryAndFilter({
+        $or: [
+          { processoCAB: exactProcessFilter },
+          { processo: exactProcessFilter },
+          { processNumber: exactProcessFilter },
+          { deliveryNumber: exactProcessFilter }
+        ]
+      });
+    }
+
+    const deliveryFields = [
+      '_id', 'deliveryNumber', 'vehiclePlate', 'observations', 'driverName', 'status',
+      'arrivedAt', 'tripStartedAt', 'chegadaMontagemAt', 'containerMontadoAt',
+      'desovaStartAt', 'desovaEndAt', 'desovaStartedAt', 'docsStartedAt',
+      'saidaClienteAt', 'chegadaPortoAt', 'horarioDevolucaoVazio',
+      'recebedor', 'armador', 'userId', 'userName', 'userEmail', 'deliveryDate',
+      'cityCode', 'linkedProgramacaoId', 'programacaoId', 'documents',
+      'isCanceled', 'canceledAt', 'createdAt', 'updatedAt',
+      'processoCAB', 'processoLog', 'processo', 'processNumber', 'container',
+      'dataAgendamento', 'dtColeta', 'finalizedAt', 'cancelledAt'
+    ].join(' ');
+    const allDeliveries = await Delivery.find(deliveryFilter)
+      .select(deliveryFields)
+      .lean()
+      .exec();
     markPerf('deliveries-query', { count: allDeliveries ? allDeliveries.length : 0 });
     console.log('  ℹ️  Total de entregas na DB (' + city + '):', allDeliveries ? allDeliveries.length : 0);
 

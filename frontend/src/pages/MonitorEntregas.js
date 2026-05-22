@@ -1577,7 +1577,7 @@ const MonitorEntregas = () => {
     return { blob, fileName };
   };
 
-  const loadDeliveries = useCallback(async () => {
+  const loadDeliveries = useCallback(async (options = {}) => {
     if (deliveriesLoadingRef.current) return;
 
     deliveriesLoadingRef.current = true;
@@ -1585,6 +1585,9 @@ const MonitorEntregas = () => {
       setLoading(true);
 
       let backendFilters = { ...filters };
+      if (options.forceRefresh) {
+        backendFilters._refresh = Date.now();
+      }
       const selectedStatuses = getSelectedStatuses();
       if (selectedStatuses.length === 1 && selectedStatuses[0] === 'CANCELADO') {
         backendFilters.status = 'CANCELADO';
@@ -1882,7 +1885,7 @@ const MonitorEntregas = () => {
     loadIcompanyData(); // Carregar dados da Icompany na inicialização
     if (autoRefresh) {
       const t = setInterval(() => {
-        loadDeliveries();
+        loadDeliveries({ forceRefresh: true });
       }, refreshInterval * 1000);
       return () => clearInterval(t);
     }
@@ -2440,7 +2443,7 @@ const MonitorEntregas = () => {
           </button>
 
           <button
-            onClick={loadDeliveries}
+            onClick={() => loadDeliveries({ forceRefresh: true })}
             disabled={loading}
             title="Atualizar"
             className="w-9 h-9 rounded-xl bg-purple-600/80 hover:bg-purple-600 text-white flex items-center justify-center transition disabled:opacity-40"

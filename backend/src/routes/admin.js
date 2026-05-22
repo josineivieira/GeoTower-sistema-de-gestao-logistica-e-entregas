@@ -628,7 +628,7 @@ router.get("/statistics", auth, onlyAdmin, async (req, res) => {
  */
 router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
   try {
-    const { status, q, startDate, endDate, period, periodDate, processo, container, recebedor, sentido, pontualidade, horaStatusStart, horaStatusEnd, agendamentoStart, agendamentoEnd, tempoStatusMin, tempoStatusMax } = req.query;
+    const { status, q, startDate, endDate, period, periodDate, processo, container, recebedor, sentido, pontualidade, horaStatusStart, horaStatusEnd, agendamentoStart, agendamentoEnd, tempoStatusMin, tempoStatusMax, _refresh } = req.query;
     const city = req.city || 'manaus';
     const perfId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
     const perfStartedAt = Date.now();
@@ -645,9 +645,11 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       const logger = totalMs >= 2000 ? console.warn : console.log;
       logger('[PERF] admin/deliveries', payload);
     };
-    const responseCacheKey = `admin:deliveries:${city}:${req.user?.id || ''}:${req.user?.role || ''}:${req.user?.contratado || ''}:${JSON.stringify(req.query || {})}`;
+    const cacheQuery = { ...(req.query || {}) };
+    delete cacheQuery._refresh;
+    const responseCacheKey = `admin:deliveries:${city}:${req.user?.id || ''}:${req.user?.role || ''}:${req.user?.contratado || ''}:${JSON.stringify(cacheQuery)}`;
     const cachedResponse = shortCache.get(responseCacheKey);
-    if (cachedResponse && Date.now() - cachedResponse.createdAt < ADMIN_DELIVERIES_CACHE_MS) {
+    if (!_refresh && cachedResponse && Date.now() - cachedResponse.createdAt < ADMIN_DELIVERIES_CACHE_MS) {
       res.set('Cache-Control', 'private, max-age=60');
       markPerf('cache-hit', { ageMs: Date.now() - cachedResponse.createdAt });
       logPerf('cache', cachedResponse.value?.deliveries?.length || 0);

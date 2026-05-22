@@ -30,6 +30,7 @@ export const adminService = {
     if (filters.endDate) params.agendamentoEnd = filters.endDate;
     if (filters.tempoStatusMin) params.tempoStatusMin = filters.tempoStatusMin;
     if (filters.tempoStatusMax) params.tempoStatusMax = filters.tempoStatusMax;
+    if (filters._refresh) params._refresh = filters._refresh;
     if (statsPeriod && statsPeriod !== 'general') params.period = statsPeriod;
     if (periodDate) params.periodDate = periodDate;
     return api.get('/admin/deliveries', { params });

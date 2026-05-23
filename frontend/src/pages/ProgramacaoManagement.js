@@ -590,7 +590,7 @@ const ProgramacaoManagement = () => {
               Programação de Entregas
             </h1>
             <p style={{ margin: 0, fontSize: 12, color: '#a5b4fc', marginTop: 2 }}>
-              {pagination.total} registro{pagination.total !== 1 ? 's' : ''} • pÃ¡gina {pagination.page || page} de {pagination.totalPages || 1}
+              {pagination.total} registro{pagination.total !== 1 ? 's' : ''} - pagina {pagination.page || page} de {pagination.totalPages || 1}
               {isGeoMar() && <span style={{ marginLeft: 8, padding: '2px 8px', backgroundColor: '#fbbf24', color: '#78350f', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>VISUALIZAÇÃO</span>}
             </p>
           </div>
@@ -799,7 +799,7 @@ const ProgramacaoManagement = () => {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 13, color: '#6b7280' }}>
-                    {filteredProgramacoes.length} nesta pÃ¡gina de {pagination.total} total
+                    {filteredProgramacoes.length} nesta pagina de {pagination.total} total
                   </span>
                   <button
                     type="button"
@@ -828,7 +828,7 @@ const ProgramacaoManagement = () => {
                       cursor: page >= (pagination.totalPages || 1) ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    PrÃ³xima
+                    Proxima
                   </button>
                 </div>
               </div>

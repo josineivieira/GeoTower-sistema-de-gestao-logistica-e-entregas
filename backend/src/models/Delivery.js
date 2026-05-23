@@ -146,6 +146,8 @@ DeliverySchema.index({ driverId: 1 });
 DeliverySchema.index({ cityCode: 1, status: 1 });
 DeliverySchema.index({ cityCode: 1, isCanceled: 1 });
 DeliverySchema.index({ cityCode: 1, createdAt: -1 });
+DeliverySchema.index({ cityCode: 1, isCanceled: 1, updatedAt: -1 });
+DeliverySchema.index({ cityCode: 1, isCanceled: 1, createdAt: -1 });
 DeliverySchema.index({ cityCode: 1, userName: 1 });
 DeliverySchema.index({ status: 1, createdAt: -1 });
 DeliverySchema.index({ userName: 1, createdAt: -1 });

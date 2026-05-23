@@ -26,6 +26,7 @@ import { getDesovaStatusLabel, getDesovaStepLabel } from '../utils/cityLabels';
 
 const DeliveryModal = lazy(() => import('../components/DeliveryModal'));
 const ENABLE_CONTROLE_PROTOCOLOS_LOOKUP = false;
+const GENERAL_PAGE_SIZE = 50;
 
 /* ─────────────────────────────────────────────────────────────
    KANBAN - MESMA LÓGICA DO MONITOR DE PROCESSOS
@@ -934,6 +935,8 @@ const MonitorEntregas = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [statsPeriod, setStatsPeriod] = useState('today');
   const [stats, setStats] = useState({ total: 0, statusCounts: {}, byDriver: 0 });
+  const [deliveryPage, setDeliveryPage] = useState(1);
+  const [deliveryPagination, setDeliveryPagination] = useState({ page: 1, limit: GENERAL_PAGE_SIZE, total: 0, totalPages: 1 });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [icompanyVerified, setIcompanyVerified] = useState({});
   const [confirmRemoveVerification, setConfirmRemoveVerification] = useState(false);
@@ -1057,7 +1060,7 @@ const MonitorEntregas = () => {
   };
 
   useEffect(() => {
-    const t = setInterval(() => setCurrentTime(new Date()), 1000);
+    const t = setInterval(() => setCurrentTime(new Date()), 30000);
     return () => clearInterval(t);
   }, []);
 
@@ -1588,6 +1591,10 @@ const MonitorEntregas = () => {
       if (options.forceRefresh) {
         backendFilters._refresh = Date.now();
       }
+      if (statsPeriod === 'general') {
+        backendFilters.page = deliveryPage;
+        backendFilters.limit = GENERAL_PAGE_SIZE;
+      }
       const selectedStatuses = getSelectedStatuses();
       if (selectedStatuses.length === 1 && selectedStatuses[0] === 'CANCELADO') {
         backendFilters.status = 'CANCELADO';
@@ -1607,6 +1614,7 @@ const MonitorEntregas = () => {
       // Backend ja devolve entregas e programacoes combinadas.
       const delivRes = await adminService.getDeliveries(backendFilters, statsPeriod, periodDate);
       const enrichedDeliveries = delivRes?.data?.deliveries || [];
+      const paginationPayload = delivRes?.data?.pagination;
       const normalized = enrichedDeliveries.map((d) => {
         if (d.status === 'ENTREGUE_COM_PENDENCIA_CANHOTO') d.status = 'FINALIZADO';
         return d;
@@ -1628,6 +1636,12 @@ const MonitorEntregas = () => {
         city: d.city || city // Adiciona city do contexto se não tiver
       }));
       setDeliveries(enrichedWithCity);
+      setDeliveryPagination(paginationPayload || {
+        page: deliveryPage,
+        limit: GENERAL_PAGE_SIZE,
+        total: enrichedWithCity.length,
+        totalPages: 1
+      });
 
       const sc = {};
       normalized.forEach((d) => {
@@ -1636,7 +1650,7 @@ const MonitorEntregas = () => {
       });
 
       const drivers = new Set(normalized.map((d) => d.driverName).filter(Boolean));
-      setStats({ total: normalized.length, statusCounts: sc, byDriver: drivers.size });
+      setStats({ total: paginationPayload?.total || normalized.length, statusCounts: sc, byDriver: drivers.size });
       setToast(null);
     } catch (err) {
       if (err?.response?.status === 401) {
@@ -1650,7 +1664,7 @@ const MonitorEntregas = () => {
       deliveriesLoadingRef.current = false;
       setLoading(false);
     }
-  }, [filters, statsPeriod, city]);
+  }, [filters, statsPeriod, city, deliveryPage]);
 
   useEffect(() => {
     setSelectedDelivery(null);
@@ -1883,13 +1897,17 @@ const MonitorEntregas = () => {
   useEffect(() => {
     loadDeliveries();
     loadIcompanyData(); // Carregar dados da Icompany na inicialização
-    if (autoRefresh) {
+    if (autoRefresh && statsPeriod !== 'general') {
       const t = setInterval(() => {
         loadDeliveries({ forceRefresh: true });
       }, refreshInterval * 1000);
       return () => clearInterval(t);
     }
-  }, [loadDeliveries, loadIcompanyData, autoRefresh, refreshInterval, city]);
+  }, [loadDeliveries, loadIcompanyData, autoRefresh, refreshInterval, city, statsPeriod]);
+
+  useEffect(() => {
+    setDeliveryPage(1);
+  }, [statsPeriod, filters, city]);
 
   useEffect(() => {
     if (!selectedDelivery) {
@@ -2514,8 +2532,31 @@ const MonitorEntregas = () => {
             </button>
           )}
 
-          <div className="ml-auto text-xs text-gray-500 font-semibold">
-            {filteredDeliveries.length} / {stats.total}
+          <div className="ml-auto flex items-center gap-2 text-xs text-gray-500 font-semibold">
+            <span>{filteredDeliveries.length} / {stats.total}</span>
+            {statsPeriod === 'general' && (
+              <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-1">
+                <button
+                  type="button"
+                  onClick={() => setDeliveryPage((prev) => Math.max(1, prev - 1))}
+                  disabled={loading || deliveryPage <= 1}
+                  className="rounded-lg px-2 py-1 text-gray-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Anterior
+                </button>
+                <span className="text-gray-300">
+                  {deliveryPagination.page || deliveryPage} / {deliveryPagination.totalPages || 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDeliveryPage((prev) => Math.min(deliveryPagination.totalPages || 1, prev + 1))}
+                  disabled={loading || deliveryPage >= (deliveryPagination.totalPages || 1)}
+                  className="rounded-lg px-2 py-1 text-gray-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Proxima
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

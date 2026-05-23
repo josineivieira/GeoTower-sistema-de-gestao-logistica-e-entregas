@@ -628,7 +628,7 @@ router.get("/statistics", auth, onlyAdmin, async (req, res) => {
  */
 router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
   try {
-    const { status, q, startDate, endDate, period, periodDate, processo, container, recebedor, sentido, pontualidade, horaStatusStart, horaStatusEnd, agendamentoStart, agendamentoEnd, tempoStatusMin, tempoStatusMax, _refresh } = req.query;
+    const { status, q, startDate, endDate, period, periodDate, processo, container, recebedor, sentido, pontualidade, horaStatusStart, horaStatusEnd, agendamentoStart, agendamentoEnd, tempoStatusMin, tempoStatusMax, page, limit, _refresh } = req.query;
     const city = req.city || 'manaus';
     const perfId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
     const perfStartedAt = Date.now();
@@ -656,6 +656,9 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       return res.json(cachedResponse.value);
     }
     console.log('📋 GET /admin/deliveries recebido com filtros:', { status, q, processo, container, recebedor, pontualidade, horaStatusStart, horaStatusEnd, agendamentoStart, agendamentoEnd, tempoStatusMin, tempoStatusMax, sentido, startDate, endDate, period, periodDate, city });
+    const limitNum = Math.min(Math.max(parseInt(limit, 10) || 0, 0), 200);
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const shouldPaginate = limitNum > 0;
     
     // Buscar programações filtradas por cidade
     const ProgramacaoEntrega = require('../models/ProgramacaoEntrega');
@@ -863,6 +866,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     ].join(' ');
     const allDeliveries = await Delivery.find(deliveryFilter)
       .select(deliveryFields)
+      .sort({ updatedAt: -1, createdAt: -1 })
       .lean()
       .exec();
     markPerf('deliveries-query', { count: allDeliveries ? allDeliveries.length : 0 });
@@ -1236,6 +1240,11 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     }
 
     markPerf('filters', { count: filtered.length });
+    const filteredTotal = filtered.length;
+    if (shouldPaginate) {
+      filtered = filtered.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+      markPerf('pagination', { count: filtered.length, total: filteredTotal, page: pageNum, limit: limitNum });
+    }
 
     const deliveriesWithFiles = filtered.map(delivery => {
       const uploadedFiles = Object.entries(delivery.documents || {})
@@ -1447,7 +1456,17 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
 
     console.log(`📤 Retornando ${deliveriesWithComparisons.length} entregas`);
     markPerf('comparisons', { count: deliveriesWithComparisons.length });
-    const payload = { deliveries: deliveriesWithComparisons };
+    const payload = {
+      deliveries: deliveriesWithComparisons,
+      pagination: shouldPaginate ? {
+        page: pageNum,
+        limit: limitNum,
+        total: filteredTotal,
+        totalPages: Math.max(1, Math.ceil(filteredTotal / limitNum)),
+        hasNextPage: pageNum * limitNum < filteredTotal,
+        hasPrevPage: pageNum > 1
+      } : undefined
+    };
     shortCache.set(responseCacheKey, { createdAt: Date.now(), value: payload });
     res.set('Cache-Control', 'private, max-age=60');
     logPerf('fresh', deliveriesWithComparisons.length);

@@ -752,27 +752,30 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
     // antes de cruzar, carregar dados do Icompany para termos placas (tracao)
     const Icompany = require('../models/Icompany');
     const icompanyRecords = await getCached(`admin:icompany:${city}`, () => Icompany.find({})
-      .select('geomaritima processo codigo numero NUMERO NÚMERO container containerNumero armador tracao contratado entradaDistrito dtColeta remetente dtChegadaPlanta dtDevolucaoCNTR dtAgendamentoDescarga destinatario dtRetiraPD dtInicioDescarga dtFimDescarga sentido SENTIDO')
+      .select('geomaritima processo codigo nrProcesso numero NUMERO NÚMERO container containerNumero armador tracao contratado entradaDistrito dtColeta remetente dtChegadaPlanta dtDevolucaoCNTR dtAgendamentoDescarga destinatario dtRetiraPD dtInicioDescarga dtFimDescarga sentido SENTIDO')
       .lean(), ADMIN_ICOMPANY_CACHE_MS);
     markPerf('icompany-query', { count: icompanyRecords ? icompanyRecords.length : 0 });
-    const ycByProcess = new Map();  // processo -> [array de registros yc]
-    const ycByContainer = new Map(); // container -> [array de registros yc]
+    const ycByProcess = new Map();  // Nr. do processo -> [array de registros yc]
     icompanyRecords.forEach(y => {
-      const proc = String(y.processo || '').trim().toUpperCase();
+      const proc = cleanLookupKey(y.nrProcesso || y['Nr. do processo'] || y['Nr do processo'] || y['Nro. do processo']);
       if (proc) {
         if (!ycByProcess.has(proc)) ycByProcess.set(proc, []);
         ycByProcess.get(proc).push(y);
       }
-      // container pode estar em `numero` ou `containerNumero`
-      const cont = String(y.numero || y.NUMERO || y['NÚMERO'] || y.containerNumero || '').trim().toUpperCase();
-      if (cont) {
-        if (!ycByContainer.has(cont)) ycByContainer.set(cont, []);
-        ycByContainer.get(cont).push(y);
-      }
     });
 
-    // Cruzar dados de programação (por container) e construir lista combinada
-    markPerf('icompany-index', { processKeys: ycByProcess.size, containerKeys: ycByContainer.size });
+    // Cruzar dados de programação pelo Nr. do processo e construir lista combinada
+    const getIcompanyRecordsByNrProcesso = (...values) => {
+      for (const value of values) {
+        const key = cleanLookupKey(value);
+        if (!key) continue;
+        const records = ycByProcess.get(key);
+        if (records && records.length) return records;
+      }
+      return [];
+    };
+
+    markPerf('icompany-index', { processKeys: ycByProcess.size });
     const deliveryFilter = { cityCode: city };
     if (status && status !== 'all') {
       if (status === 'CANCELADO') {
@@ -918,9 +921,14 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
 
     let deliveriesWithProgramacao = normalizedDeliveries.map(delivery => {
       const prog = findProgramacaoForDelivery(delivery);
-      const keyProc = cleanLookupKey(prog?.processo || delivery.processoCAB || delivery.deliveryNumber);
-      const keyCont = cleanLookupKey(prog?.container || delivery.container || delivery.deliveryNumber);
-      const yrecArray = ycByProcess.get(keyProc) || ycByContainer.get(keyCont) || [];
+      const yrecArray = getIcompanyRecordsByNrProcesso(
+        prog?.processoLog,
+        delivery.processoLog,
+        delivery.processNumber,
+        delivery.processoCAB,
+        prog?.processo,
+        delivery.processo
+      );
       const yrec = Array.isArray(yrecArray) ? yrecArray[0] : yrecArray;  // pega o primeiro para placa
       const placaY = yrec ? (yrec.tracao || '') : '';
       const containerNumeros = Array.isArray(yrecArray) 
@@ -960,9 +968,7 @@ router.get("/deliveries", auth, onlyAdmin, async (req, res) => {
       const exists = programacaoKeys.some(key => deliveryNumbers.has(key));
       if (!exists) {
         // também incluir placaIcompany se existir
-        const keyProc = (prog.processo || '').toUpperCase();
-        const keyCont = (prog.container || '').toUpperCase();
-        const yrecArray2 = ycByProcess.get(keyProc) || ycByContainer.get(keyCont) || [];
+        const yrecArray2 = getIcompanyRecordsByNrProcesso(prog.processoLog, prog.processo);
         const yrec2 = Array.isArray(yrecArray2) ? yrecArray2[0] : yrecArray2;
         const placaY2 = yrec2 ? (yrec2.tracao || '') : '';
         

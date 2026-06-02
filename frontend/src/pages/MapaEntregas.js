@@ -17,6 +17,9 @@ import { formatarAgendamento } from '../utils/date';
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 const LIVE_MS = 2 * 60 * 1000;
 const RECENT_MS = 10 * 60 * 1000;
+const TILE_SIZE = 256;
+const TILE_RADIUS = 4;
+const TILE_RANGE = Array.from({ length: TILE_RADIUS * 2 + 1 }, (_, index) => index - TILE_RADIUS);
 
 const formatCoordinate = (value) =>
   typeof value === 'number' ? value.toFixed(6) : '-';
@@ -88,19 +91,22 @@ const DriverTileMap = ({ location, item }) => {
   const tile = lngLatToTile(location.latitude, location.longitude, zoom);
   const centerX = Math.floor(tile.x);
   const centerY = Math.floor(tile.y);
-  const offsetX = (tile.x - centerX) * 256;
-  const offsetY = (tile.y - centerY) * 256;
+  const offsetX = (tile.x - centerX) * TILE_SIZE;
+  const offsetY = (tile.y - centerY) * TILE_SIZE;
+  const tileGridSize = TILE_RANGE.length * TILE_SIZE;
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-slate-800">
       <div
-        className="absolute left-1/2 top-1/2 h-[768px] w-[768px]"
+        className="absolute left-1/2 top-1/2"
         style={{
+          height: `${tileGridSize}px`,
+          width: `${tileGridSize}px`,
           transform: `translate(calc(-50% - ${offsetX}px), calc(-50% - ${offsetY}px))`,
         }}
       >
-        {[-1, 0, 1].flatMap((dy) =>
-          [-1, 0, 1].map((dx) => {
+        {TILE_RANGE.flatMap((dy) =>
+          TILE_RANGE.map((dx) => {
             const x = clampTile(centerX + dx, zoom);
             const y = clampTile(centerY + dy, zoom);
             return (
@@ -109,7 +115,7 @@ const DriverTileMap = ({ location, item }) => {
                 src={`https://tile.openstreetmap.org/${zoom}/${x}/${y}.png`}
                 alt=""
                 className="absolute h-64 w-64 select-none"
-                style={{ left: `${(dx + 1) * 256}px`, top: `${(dy + 1) * 256}px` }}
+                style={{ left: `${(dx + TILE_RADIUS) * TILE_SIZE}px`, top: `${(dy + TILE_RADIUS) * TILE_SIZE}px` }}
                 draggable={false}
               />
             );
@@ -119,9 +125,9 @@ const DriverTileMap = ({ location, item }) => {
 
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-slate-950/20 pointer-events-none" />
 
-      <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full">
+      <div className="absolute left-1/2 top-1/2 z-10 max-w-[calc(100%-32px)] -translate-x-1/2 -translate-y-full">
         <div className="relative flex flex-col items-center">
-          <div className="rounded-2xl border border-cyan-200/60 bg-slate-950/95 px-3 py-2 text-center shadow-2xl">
+          <div className="max-w-[260px] rounded-2xl border border-cyan-200/60 bg-slate-950/95 px-3 py-2 text-center shadow-2xl">
             <p className="max-w-[220px] truncate text-xs font-black text-white">
               {item?.driverName || item?.userName || 'Motorista'}
             </p>
@@ -135,7 +141,7 @@ const DriverTileMap = ({ location, item }) => {
       </div>
 
       {Number.isFinite(location.accuracy) && location.accuracy > 0 && (
-        <div className="absolute bottom-3 left-3 rounded-xl border border-white/15 bg-slate-950/85 px-3 py-2 text-xs font-bold text-slate-100">
+        <div className="absolute bottom-3 left-3 max-w-[calc(100%-120px)] rounded-xl border border-white/15 bg-slate-950/85 px-3 py-2 text-xs font-bold text-slate-100">
           Precisao aproximada: {Math.round(location.accuracy)} m
         </div>
       )}
@@ -221,31 +227,31 @@ const MapaEntregas = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="border-b border-white/10 bg-gradient-to-r from-violet-800 via-indigo-800 to-cyan-800">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-6 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-start gap-4">
+        <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-4 px-3 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between xl:px-8">
+          <div className="flex min-w-0 items-start gap-3 sm:gap-4">
             <button
               type="button"
               onClick={() => navigate('/home')}
-              className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20"
+              className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20"
               title="Voltar"
             >
               <FaArrowLeft />
             </button>
-            <div>
+            <div className="min-w-0">
               <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100">
                 <FaSatelliteDish />
                 Mapa operacional
               </div>
-              <h1 className="text-2xl font-black leading-tight sm:text-3xl">
+              <h1 className="text-2xl font-black leading-tight sm:text-3xl lg:text-[32px]">
                 Mapa das Entregas
               </h1>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-cyan-50/80">
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-cyan-50/80">
                 Acompanhe em tempo real o ultimo GPS compartilhado pelos motoristas em rota.
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex shrink-0 flex-wrap items-center gap-3">
             {lastRefresh && (
               <span className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-bold text-cyan-50/80">
                 Atualizado {formatLocationAge({ updatedAt: lastRefresh })}
@@ -263,14 +269,14 @@ const MapaEntregas = () => {
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[1fr_400px]">
+      <div className="mx-auto grid w-full max-w-[1760px] gap-4 px-3 py-4 sm:px-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] xl:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] xl:px-8 2xl:grid-cols-[minmax(0,1fr)_minmax(400px,480px)]">
         <section className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
-          <div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-3">
-            <div>
+          <div className="flex min-h-[84px] items-center justify-between gap-4 border-b border-white/10 px-4 py-3">
+            <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">
                 Motorista selecionado
               </p>
-              <p className="mt-1 text-sm font-semibold text-slate-200">
+              <p className="mt-1 truncate text-sm font-semibold text-slate-200">
                 {selectedItem
                   ? `${selectedItem.driverName || selectedItem.userName || 'Motorista'} - ${selectedItem.processoCAB || selectedItem.processo || selectedItem.deliveryNumber || '-'}`
                   : 'Nenhum GPS ativo no momento'}
@@ -282,7 +288,7 @@ const MapaEntregas = () => {
               )}
             </div>
             <span className={cn(
-              'rounded-full px-3 py-1 text-xs font-black',
+              'shrink-0 rounded-full px-3 py-1 text-xs font-black',
               selectedLocationState === 'live' && 'bg-emerald-400/15 text-emerald-200',
               selectedLocationState === 'recent' && 'bg-amber-400/15 text-amber-200',
               selectedLocationState === 'stale' && 'bg-slate-700 text-slate-200'
@@ -291,7 +297,7 @@ const MapaEntregas = () => {
             </span>
           </div>
 
-          <div className="relative h-[62vh] min-h-[420px] bg-slate-800">
+          <div className="relative h-[54vh] min-h-[340px] bg-slate-800 sm:h-[58vh] lg:h-[clamp(420px,calc(100vh-430px),760px)]">
             {selectedLocation ? (
               <DriverTileMap location={selectedLocation} item={selectedItem} />
             ) : (
@@ -307,7 +313,7 @@ const MapaEntregas = () => {
             )}
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-white/10 px-4 py-3 text-xs text-slate-300 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-h-[48px] flex-col gap-3 border-t border-white/10 px-4 py-3 text-xs text-slate-300 sm:flex-row sm:items-center sm:justify-between">
             <span>
               Precisao: {selectedLocation?.accuracy ? `${Math.round(selectedLocation.accuracy)} m` : '-'}
             </span>
@@ -325,8 +331,8 @@ const MapaEntregas = () => {
           </div>
         </section>
 
-        <aside className="rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
-          <div className="border-b border-white/10 px-4 py-4">
+        <aside className="min-h-0 rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
+          <div className="border-b border-white/10 px-4 py-3">
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">
               Entregas rastreadas
             </p>
@@ -335,7 +341,7 @@ const MapaEntregas = () => {
             </h2>
           </div>
 
-          <div className="max-h-[68vh] overflow-y-auto p-3">
+          <div className="max-h-[70vh] overflow-y-auto p-3 lg:max-h-[clamp(520px,calc(100vh-285px),900px)]">
             {sortedItems.length === 0 && !loadingItems ? (
               <div className="rounded-xl border border-dashed border-white/15 px-4 py-10 text-center text-sm text-slate-400">
                 Nenhuma entrega encontrada para hoje.

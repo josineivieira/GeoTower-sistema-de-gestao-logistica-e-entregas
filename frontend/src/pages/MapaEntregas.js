@@ -35,6 +35,19 @@ const getContainerValue = (item) => {
   return item.container || item.containerNumero || item.deliveryNumber || '-';
 };
 
+const getItemKey = (item) =>
+  String(item?._id || item?.linkedProgramacaoId || item?.programacaoId || item?.processoCAB || item?.processo || item?.deliveryNumber || '').trim();
+
+const mergeDeliveries = (...groups) => {
+  const map = new Map();
+  groups.flat().forEach((item) => {
+    const key = getItemKey(item);
+    if (!key) return;
+    if (!map.has(key)) map.set(key, item);
+  });
+  return Array.from(map.values());
+};
+
 const getLocation = (item) => {
   const loc = item?.lastLocation;
   const latitude = Number(loc?.latitude);
@@ -171,8 +184,15 @@ const MapaEntregas = () => {
     if (!silent) setLoadingItems(true);
     setRefreshing(true);
     try {
-      const res = await adminService.getDeliveries({ _refresh: Date.now() }, 'today');
-      setItems(res.data?.deliveries || []);
+      const refreshToken = Date.now();
+      const [todayRes, tomorrowRes] = await Promise.all([
+        adminService.getDeliveries({ _refresh: refreshToken }, 'today'),
+        adminService.getDeliveries({ _refresh: refreshToken }, 'tomorrow')
+      ]);
+      setItems(mergeDeliveries(
+        todayRes.data?.deliveries || [],
+        tomorrowRes.data?.deliveries || []
+      ));
       setLastRefresh(new Date().toISOString());
     } catch (_) {
       setItems([]);
@@ -344,7 +364,7 @@ const MapaEntregas = () => {
           <div className="max-h-[70vh] overflow-y-auto p-3 lg:max-h-[clamp(520px,calc(100vh-285px),900px)]">
             {sortedItems.length === 0 && !loadingItems ? (
               <div className="rounded-xl border border-dashed border-white/15 px-4 py-10 text-center text-sm text-slate-400">
-                Nenhuma entrega encontrada para hoje.
+                Nenhuma entrega encontrada para hoje ou amanha.
               </div>
             ) : (
               <div className="space-y-3">

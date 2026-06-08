@@ -15,9 +15,21 @@ const DEFAULT_CITY = process.env.ICOMPANY_DEFAULT_CITY || "manaus";
 const DEFAULT_ORIGEM = process.env.ICOMPANY_DEFAULT_ORIGEM || "MANAUS";
 const DEFAULT_UF = process.env.ICOMPANY_DEFAULT_UF || "AM";
 const WATCH_INTERVAL_MS = Number(process.env.ICOMPANY_WATCH_INTERVAL_MS || 5000);
+const CONNECT_RETRY_DELAYS_MS = String(
+  process.env.ICOMPANY_CONNECT_RETRY_DELAYS_MS || "10000,30000,60000,120000"
+)
+  .split(",")
+  .map((value) => Number(value.trim()))
+  .filter((value) => Number.isFinite(value) && value > 0);
+const CONNECT_MAX_RETRIES = Number(
+  process.env.ICOMPANY_CONNECT_MAX_RETRIES || (process.argv.includes("--once") ? 5 : 0)
+);
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const RUN_ONCE = process.argv.includes("--once") || DRY_RUN;
+
+let isImporting = false;
+let pendingImport = false;
 
 function firstValue(row, keys) {
   for (const key of keys) {
@@ -290,6 +302,45 @@ function readExcel() {
     .filter((doc) => hasValue(doc.codigo) || hasValue(doc.processo) || hasValue(doc.containerNumero));
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientMongoError(error) {
+  const text = `${error?.code || ""} ${error?.syscall || ""} ${error?.message || ""}`;
+  return /ETIMEOUT|querySrv|ENOTFOUND|EAI_AGAIN|ECONNRESET|ECONNREFUSED|MongoNetworkError|MongoServerSelectionError/i.test(text);
+}
+
+function getRetryDelay(attempt) {
+  if (!CONNECT_RETRY_DELAYS_MS.length) return 30000;
+  return CONNECT_RETRY_DELAYS_MS[Math.min(attempt - 1, CONNECT_RETRY_DELAYS_MS.length - 1)];
+}
+
+async function connectMongoWithRetry(mongo) {
+  let attempt = 1;
+
+  while (true) {
+    try {
+      await mongo.connect();
+      if (attempt > 1) {
+        console.log("Conexao MongoDB restabelecida.");
+      }
+      return;
+    } catch (error) {
+      if (!isTransientMongoError(error)) throw error;
+      if (CONNECT_MAX_RETRIES > 0 && attempt >= CONNECT_MAX_RETRIES) throw error;
+
+      const delay = getRetryDelay(attempt);
+      console.error(
+        `Falha temporaria ao conectar no MongoDB (${error.code || error.message}). ` +
+        `Tentando novamente em ${Math.round(delay / 1000)}s...`
+      );
+      attempt += 1;
+      await sleep(delay);
+    }
+  }
+}
+
 async function importarExcel(origem = "manual") {
   let mongo;
 
@@ -322,7 +373,7 @@ async function importarExcel(origem = "manual") {
     }
 
     mongo = new MongoClient(MONGO_URI);
-    await mongo.connect();
+    await connectMongoWithRetry(mongo);
 
     const col = mongo.db(DB_NAME).collection(COLLECTION_NAME);
     const processos = docsToInsert.map((doc) => doc.processo).filter(Boolean);
@@ -358,8 +409,28 @@ async function importarExcel(origem = "manual") {
   }
 }
 
+async function runImport(origem) {
+  if (isImporting) {
+    pendingImport = true;
+    console.log("Importacao Icompany ja esta em andamento; nova carga marcada como pendente.");
+    return;
+  }
+
+  isImporting = true;
+  try {
+    await importarExcel(origem);
+  } finally {
+    isImporting = false;
+  }
+
+  if (pendingImport) {
+    pendingImport = false;
+    await runImport("pendente");
+  }
+}
+
 async function main() {
-  await importarExcel("startup");
+  await runImport("startup");
 
   if (RUN_ONCE) return;
 
@@ -374,7 +445,7 @@ async function main() {
       const stats = fs.statSync(EXCEL_PATH);
       if (stats.mtimeMs !== ultimaModificacao) {
         ultimaModificacao = stats.mtimeMs;
-        importarExcel("watcher").catch(console.error);
+        runImport("watcher").catch(console.error);
       }
     } catch (error) {
       console.error("Erro no monitor Icompany:", error);

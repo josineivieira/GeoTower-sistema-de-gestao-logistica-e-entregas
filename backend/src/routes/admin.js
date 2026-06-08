@@ -3507,8 +3507,10 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
     // Buscar todos os processos já existentes para evitar duplicação e permitir atualização
     const existingFilter = {};
     applyProgramacaoCityFilter(existingFilter, city);
+    const syncKey = (processo, estab) =>
+      `${String(processo || '').trim().toUpperCase()}::${String(estab || cfg.estab).trim().toUpperCase()}`;
     const existingProgramacoes = await ProgramacaoEntrega.find(existingFilter).lean();
-    const existingMap = new Map(existingProgramacoes.map(p => [String(p.processo || '').trim().toUpperCase(), p]));
+    const existingMap = new Map(existingProgramacoes.map(p => [syncKey(p.processo, p.estab), p]));
 
     console.log(`[SYNC ICOMPANY] ${existingMap.size} processos já existentes`);
 
@@ -3543,14 +3545,13 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
     };
     let updatedCount = 0;
     let insertedCount = 0;
+    let duplicatedInBatch = 0;
     const novosRegistros = [];
+    const novosMap = new Map();
 
     for (const y of icompanyRecords) {
       const processoRaw = String(y.processo || '').trim();
       if (!processoRaw) continue;
-
-      const processoKey = processoRaw.toUpperCase();
-      const existing = existingMap.get(processoKey);
 
       let dataAgendamento = formatSyncDate(y.dtAgendamentoDescarga);
       if (!dataAgendamento) dataAgendamento = formatSyncDate(y.dtColeta);
@@ -3578,23 +3579,35 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
         sentido: String(y.sentido || y.SENTIDO || '').trim().toUpperCase(),
         observacoes: observacaoIcompany || `Sincronizado do Icompany - ${y.situacao || 'N/A'}`
       };
+      const processoKey = syncKey(processoRaw, mappedData.estab);
+      const existing = existingMap.get(processoKey);
 
       if (existing) {
         // Atualiza dados, mas mantém status atual
         await ProgramacaoEntrega.updateOne({ _id: existing._id }, { $set: mappedData });
         updatedCount++;
       } else {
-        novosRegistros.push({
+        if (novosMap.has(processoKey)) {
+          duplicatedInBatch++;
+          continue;
+        }
+        const novoRegistro = {
           processo: processoRaw,
           ...mappedData,
           status: 'AGENDADO'
-        });
+        };
+        novosMap.set(processoKey, novoRegistro);
+        novosRegistros.push(novoRegistro);
       }
     }
 
     console.log(`[SYNC ICOMPANY] ${updatedCount} registros existentes atualizados`);
 
     console.log(`[SYNC ICOMPANY] ${novosRegistros.length} novos registros para importar (sem duplicação)`);
+
+    if (duplicatedInBatch > 0) {
+      console.log(`[SYNC ICOMPANY] ${duplicatedInBatch} duplicado(s) no proprio lote foram ignorados`);
+    }
 
     if (novosRegistros.length === 0) {
       if (updatedCount > 0) clearShortCacheByPrefix('admin:programacoes:');
@@ -3604,6 +3617,7 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
         atualizados: updatedCount,
         sincronizados: updatedCount,
         duplicados: icompanyRecords.length - updatedCount,
+        duplicadosNoLote: duplicatedInBatch,
         total: icompanyRecords.length
       });
     }
@@ -3622,6 +3636,7 @@ router.get("/programacoes/sync/icompany", auth, managerOnly, async (req, res) =>
       atualizados: updatedCount,
       inseridos: insertedCount,
       duplicados: icompanyRecords.length - (updatedCount + insertedCount),
+      duplicadosNoLote: duplicatedInBatch,
       total: icompanyRecords.length,
       registros: inserted
     });

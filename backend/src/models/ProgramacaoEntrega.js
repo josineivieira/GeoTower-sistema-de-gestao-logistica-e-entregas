@@ -4,9 +4,7 @@ const programacaoEntregaSchema = new mongoose.Schema({
   processo: {
     type: String,
     required: [true, 'Processo é obrigatório'],
-    trim: true,
-    unique: true,
-    sparse: true
+    trim: true
   },
   processoLog: {
     type: String,
@@ -148,6 +146,7 @@ programacaoEntregaSchema.pre('save', function(next) {
 
 // Índices para performance de consultas
 // Índices simples
+programacaoEntregaSchema.index({ processo: 1, estab: 1 }, { unique: true });
 programacaoEntregaSchema.index({ processo: 1 });
 programacaoEntregaSchema.index({ dataAgendamento: 1 });
 programacaoEntregaSchema.index({ status: 1 });

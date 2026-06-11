@@ -23,6 +23,51 @@ import {
 /* ─── Paleta ─── */
 const PALETTE = ['#818cf8', '#22d3ee', '#34d399', '#fbbf24', '#fb7185'];
 
+const DELAY_REASON_CATEGORIES = [
+  { label: 'SOLICITAÇÃO <18HS', color: '#f97316', aliases: ['SOLICITACAO <18HS', 'SOLICITACAO 18HS', 'MENOS DE 18HS', 'MENOS DE 18 HORAS'] },
+  { label: 'FALTA VEICULO', color: '#ef4444', aliases: ['FALTA VEICULO', 'FALTA DE VEICULO'] },
+  { label: 'FALTA JANELA DEPOT', color: '#f59e0b', aliases: ['FALTA JANELA DEPOT', 'FALTA DE JANELA DEPOT'] },
+  { label: 'FALTA CONTAINER', color: '#eab308', aliases: ['FALTA CONTAINER', 'FALTA DE CONTAINER'] },
+  { label: 'FALTA GATE TERMINAL', color: '#fb7185', aliases: ['FALTA GATE TERMINAL', 'FALTA DE GATE TERMINAL'] },
+  { label: 'ERRO DE BOOKING', color: '#a855f7', aliases: ['ERRO DE BOOKING', 'BOOKING'] },
+  { label: 'QUEBRA PNEU', color: '#38bdf8', aliases: ['QUEBRA PNEU', 'PNEU FURADO'] },
+  { label: 'QUEBRA MECANICA', color: '#60a5fa', aliases: ['QUEBRA MECANICA', 'QUEBRA MECANICA', 'QUEBRA DO CAMINHAO'] },
+  { label: 'QUEBRA ACIDENTE', color: '#f43f5e', aliases: ['QUEBRA ACIDENTE', 'ACIDENTE'] },
+  { label: 'TRANSITO CONGESTIONADO', color: '#06b6d4', aliases: ['TRANSITO CONGESTIONADO', 'TRANSITO', 'CONGESTIONADO'] },
+  { label: 'FALHA OPERACIONAL', color: '#8b5cf6', aliases: ['FALHA OPERACIONAL'] },
+  { label: 'NAVIO EM OPERAÇÃO', color: '#14b8a6', aliases: ['NAVIO EM OPERACAO'] },
+  { label: 'NÃO DESCARREGADO', color: '#22c55e', aliases: ['NAO DESCARREGADO'] },
+  { label: 'LIBERAÇÃO SEFAZ', color: '#84cc16', aliases: ['LIBERACAO SEFAZ', 'SEFAZ'] },
+  { label: 'LIBERAÇÃO FINANCEIRA', color: '#e879f9', aliases: ['LIBERACAO FINANCEIRA', 'FINANCEIRA'] },
+  { label: 'OUTROS', color: '#94a3b8', aliases: ['OUTROS', 'OUTRO'] }
+];
+
+const normalizeDelayText = (value) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .toUpperCase();
+
+const getDelayObservation = (delivery) => String(
+  delivery?.observacao ||
+  delivery?.observacoes ||
+  delivery?.observations ||
+  ''
+).trim();
+
+const getDelayReasonCategory = (delivery) => {
+  const normalized = normalizeDelayText(getDelayObservation(delivery));
+  if (!normalized) return null;
+
+  const matched = DELAY_REASON_CATEGORIES.find((category) =>
+    category.aliases.some((alias) => normalized.includes(normalizeDelayText(alias)))
+  );
+  if (matched) return matched.label;
+
+  return /\bATRAS/.test(normalized) ? 'OUTROS' : null;
+};
+
 /* ─── Tooltip customizado ─── */
 const CustomTooltip = ({ active, payload, label, formatter, labelFormatter }) => {
   if (!active || !payload?.length) return null;
@@ -342,7 +387,9 @@ const AdminDashboard = () => {
         contratado: first.contratado || item.contratado,
         userName: first.userName || item.userName,
         driverName: first.driverName || item.driverName,
-        container: first.container || item.container
+        container: first.container || item.container,
+        observacao: first.observacao || item.observacao || item.observacoes,
+        observacoes: first.observacoes || item.observacoes || item.observacao
       });
     });
 
@@ -399,7 +446,9 @@ const AdminDashboard = () => {
         destinatario: record.destinatario,
         recebedor: getClienteBySentido(record),
         container: record.container || record.placa,
-        contratado: record.contratado
+        contratado: record.contratado,
+        observacao: record.observacao || record.observacoes || '',
+        observacoes: record.observacoes || record.observacao || ''
       };
       }).filter(record => {
         if (user?.role !== 'gestor_contratado') return true;
@@ -692,6 +741,47 @@ const AdminDashboard = () => {
     return { onTime, late, total, otdPercentage, classification, color, bgColor, borderColor, dotColor };
   }, [dashboardDeliveries]);
 
+  const delayReasonMetrics = React.useMemo(() => {
+    const counts = new Map();
+    const rowsByReason = new Map();
+    let lateWithObservation = 0;
+
+    dashboardDeliveries.forEach((delivery) => {
+      if (!delivery.dataAgendamento || !delivery.horarioChegada) return;
+      const scheduled = new Date(delivery.dataAgendamento).getTime();
+      const arrived = new Date(delivery.horarioChegada).getTime();
+      if (isNaN(scheduled) || isNaN(arrived) || arrived <= scheduled) return;
+
+      const reason = getDelayReasonCategory(delivery);
+      if (!reason) return;
+
+      lateWithObservation++;
+      counts.set(reason, (counts.get(reason) || 0) + 1);
+      if (!rowsByReason.has(reason)) rowsByReason.set(reason, []);
+      rowsByReason.get(reason).push({ ...delivery, _delayReason: reason });
+    });
+
+    const data = DELAY_REASON_CATEGORIES
+      .map((category) => {
+        const count = counts.get(category.label) || 0;
+        return {
+          name: category.label,
+          count,
+          percentage: lateWithObservation > 0 ? Number(((count / lateWithObservation) * 100).toFixed(1)) : 0,
+          fill: category.color
+        };
+      })
+      .filter((item) => item.count > 0)
+      .sort((a, b) => b.count - a.count);
+
+    return {
+      data,
+      rowsByReason,
+      totalCategorized: lateWithObservation,
+      withoutCategory: Math.max(otdMetrics.late - lateWithObservation, 0)
+    };
+  }, [dashboardDeliveries, otdMetrics.late]);
+
   // Produtividade por Faixa de Horas
   const productivityByHours = React.useMemo(() => {
     const faixas = {
@@ -887,6 +977,9 @@ const AdminDashboard = () => {
     return type === 'late' ? arrived > scheduled : arrived <= scheduled;
   });
 
+  const getDelayReasonRows = (reason) =>
+    delayReasonMetrics.rowsByReason.get(reason) || [];
+
   const getProductivityHours = (delivery) => {
     if (!delivery?.horarioChegada || !delivery?.horarioFimDesova) return null;
     const start = getProductivityStartTime(delivery);
@@ -949,6 +1042,9 @@ const AdminDashboard = () => {
     const hours = getProductivityHours(delivery);
     return hours == null ? '-' : `${hours.toFixed(2)}h`;
   };
+
+  const getDetailDelayReason = (delivery) =>
+    delivery?._delayReason || getDelayReasonCategory(delivery) || '-';
 
   const handleExportPDF = async () => {
     if (!statistics) return;
@@ -1204,6 +1300,102 @@ const AdminDashboard = () => {
                       <Tooltip formatter={v => `${v} entregas`} contentStyle={{ background: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }} />
                     </PieChart>
                   </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ══════ MOTIVOS DE ATRASO ══════ */}
+          {delayReasonMetrics.data.length > 0 && (
+            <div className="bg-gradient-to-br from-rose-500/[0.10] via-white/[0.03] to-transparent backdrop-blur-xl rounded-2xl shadow-xl border border-white/[0.08] p-6 hover:border-rose-500/30 hover:shadow-rose-500/10 transition-all duration-300">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="xl:col-span-2">
+                  <ChartHeader
+                    title="Atrasos por Motivo Operacional"
+                    subtitle="Categorias identificadas na observação do Icompany"
+                    dotColor="#fb7185"
+                  />
+                  <ResponsiveContainer width="100%" height={Math.max(300, delayReasonMetrics.data.length * 36 + 80)}>
+                    <BarChart
+                      data={delayReasonMetrics.data}
+                      layout="vertical"
+                      margin={{ top: 10, right: 32, left: 18, bottom: 10 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} horizontal={false} />
+                      <XAxis
+                        type="number"
+                        stroke={axisStroke}
+                        tick={{ fontSize: 11, fill: tickFill }}
+                        axisLine={false}
+                        tickLine={false}
+                        allowDecimals={false}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        width={160}
+                        stroke={axisStroke}
+                        tick={{ fontSize: 10, fill: tickFill }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="bg-slate-800 border border-white/10 rounded-lg p-3 shadow-lg">
+                                <p className="text-white font-medium">{data.name}</p>
+                                <p className="text-rose-300">Atrasos: {data.count}</p>
+                                <p className="text-slate-300">Participação: {data.percentage}%</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                        cursor={{ fill: 'rgba(251, 113, 133, 0.10)' }}
+                      />
+                      <Bar
+                        dataKey="count"
+                        radius={[0, 6, 6, 0]}
+                        onClick={(data) => openDetailModal(`Motivo de atraso - ${data?.name || '-'}`, getDelayReasonRows(data?.name))}
+                        animationDuration={700}
+                      >
+                        {delayReasonMetrics.data.map((item, i) => (
+                          <Cell key={i} fill={item.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-3">
+                  <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-4">
+                    <p className="text-xs text-slate-400 uppercase tracking-wider">Atrasos classificados</p>
+                    <p className="mt-1 text-3xl font-black text-rose-300">{delayReasonMetrics.totalCategorized}</p>
+                    <p className="mt-1 text-xs text-slate-400">de {otdMetrics.late} atraso(s) no período</p>
+                  </div>
+                  {delayReasonMetrics.withoutCategory > 0 && (
+                    <div className="rounded-lg border border-white/10 bg-white/[0.05] p-4">
+                      <p className="text-xs text-slate-400 uppercase tracking-wider">Sem categoria na observação</p>
+                      <p className="mt-1 text-2xl font-bold text-slate-200">{delayReasonMetrics.withoutCategory}</p>
+                    </div>
+                  )}
+                  <div className="max-h-[280px] overflow-auto pr-1">
+                    {delayReasonMetrics.data.map((item) => (
+                      <button
+                        type="button"
+                        key={item.name}
+                        onClick={() => openDetailModal(`Motivo de atraso - ${item.name}`, getDelayReasonRows(item.name))}
+                        className="mb-2 flex w-full items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-left transition hover:bg-white/[0.08]"
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: item.fill }} />
+                          <span className="truncate text-xs font-semibold text-slate-200">{item.name}</span>
+                        </span>
+                        <span className="flex-shrink-0 text-xs font-bold text-rose-200">{item.count}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1681,7 +1873,7 @@ const AdminDashboard = () => {
             </div>
 
             <div className="max-h-[calc(88vh-76px)] overflow-auto">
-              <table className="w-full min-w-[1100px] text-left text-sm">
+              <table className="w-full min-w-[1250px] text-left text-sm">
                 <thead className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur">
                   <tr className="border-b border-white/10 text-xs font-bold uppercase tracking-widest text-slate-500">
                     <th className="px-4 py-3">Nr. processo</th>
@@ -1693,12 +1885,13 @@ const AdminDashboard = () => {
                     <th className="px-4 py-3">Chegada</th>
                     <th className="px-4 py-3">Fim</th>
                     <th className="px-4 py-3">Tempo</th>
+                    <th className="px-4 py-3">Motivo atraso</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.06]">
                   {detailModal.rows.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-10 text-center text-sm text-slate-400">
+                      <td colSpan={10} className="px-4 py-10 text-center text-sm text-slate-400">
                         Nenhuma entrega encontrada para este indicador.
                       </td>
                     </tr>
@@ -1718,6 +1911,9 @@ const AdminDashboard = () => {
                         <td className="px-4 py-3 text-slate-300">{getDeliveryDateLabel(delivery.horarioChegada)}</td>
                         <td className="px-4 py-3 text-slate-300">{getDeliveryDateLabel(delivery.horarioFimDesova)}</td>
                         <td className="px-4 py-3 font-semibold text-violet-300">{getDetailHoursLabel(delivery)}</td>
+                        <td className="max-w-[180px] truncate px-4 py-3 text-rose-200" title={getDelayObservation(delivery) || getDetailDelayReason(delivery)}>
+                          {getDetailDelayReason(delivery)}
+                        </td>
                       </tr>
                     ))
                   )}

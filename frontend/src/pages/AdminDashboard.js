@@ -1046,6 +1046,9 @@ const AdminDashboard = () => {
   const getDetailDelayReason = (delivery) =>
     delivery?._delayReason || getDelayReasonCategory(delivery) || '-';
 
+  const getDetailDelayObservation = (delivery) =>
+    getDelayObservation(delivery) || getDetailDelayReason(delivery);
+
   const handleExportPDF = async () => {
     if (!statistics) return;
     setExporting(e => ({ ...e, pdf: true }));
@@ -1873,7 +1876,7 @@ const AdminDashboard = () => {
             </div>
 
             <div className="max-h-[calc(88vh-76px)] overflow-auto">
-              <table className="w-full min-w-[1250px] text-left text-sm">
+              <table className="w-full min-w-[1450px] text-left text-sm">
                 <thead className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur">
                   <tr className="border-b border-white/10 text-xs font-bold uppercase tracking-widest text-slate-500">
                     <th className="px-4 py-3">Nr. processo</th>
@@ -1885,7 +1888,7 @@ const AdminDashboard = () => {
                     <th className="px-4 py-3">Chegada</th>
                     <th className="px-4 py-3">Fim</th>
                     <th className="px-4 py-3">Tempo</th>
-                    <th className="px-4 py-3">Motivo atraso</th>
+                    <th className="px-4 py-3">Observação atraso</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.06]">
@@ -1911,8 +1914,15 @@ const AdminDashboard = () => {
                         <td className="px-4 py-3 text-slate-300">{getDeliveryDateLabel(delivery.horarioChegada)}</td>
                         <td className="px-4 py-3 text-slate-300">{getDeliveryDateLabel(delivery.horarioFimDesova)}</td>
                         <td className="px-4 py-3 font-semibold text-violet-300">{getDetailHoursLabel(delivery)}</td>
-                        <td className="max-w-[180px] truncate px-4 py-3 text-rose-200" title={getDelayObservation(delivery) || getDetailDelayReason(delivery)}>
-                          {getDetailDelayReason(delivery)}
+                        <td className="max-w-[340px] px-4 py-3 text-rose-100" title={getDetailDelayObservation(delivery)}>
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-rose-300">
+                              {getDetailDelayReason(delivery)}
+                            </p>
+                            <p className="whitespace-normal break-words text-xs leading-relaxed text-slate-200">
+                              {getDetailDelayObservation(delivery)}
+                            </p>
+                          </div>
                         </td>
                       </tr>
                     ))
